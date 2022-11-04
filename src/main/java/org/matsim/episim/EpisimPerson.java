@@ -155,7 +155,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
-	private int quarantineDate = -1;
+	private int quarantineDate = Integer.MIN_VALUE;
 
 	/**
 	 * Iteration when this person was tested. Negative if person was never tested.
@@ -707,15 +707,22 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Days elapsed since person was put into quarantine.
 	 *
+	 * Doesn't check if person has ever been in quarantine
+	 *
 	 * @param currentDay current day (iteration)
 	 * @apiNote This is currently not used much and may change similar to {@link #daysSince(DiseaseStatus, int)}.
 	 */
 	@Beta
 	public int daysSinceQuarantine(int currentDay) {
-
 		// yyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
 		// -> api now marked as unstable and containing an api note, because it is used by the models it has to be public. chr, apr'20
-		if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
+
+		//check removed; when starting simulation with immunisation history, quarantine date can very well be negative. -jr, nov'22
+		if (quarantineDate == Integer.MIN_VALUE) {
+
+			throw new IllegalStateException("Person was never quarantined");
+
+		}
 
 		return currentDay - quarantineDate;
 	}

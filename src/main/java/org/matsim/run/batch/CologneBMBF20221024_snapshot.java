@@ -391,8 +391,8 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 		if (!params.startDate.equals("fromTheStart")) {
 			episimConfig.setStartDate(LocalDate.parse(params.startDate));
-			episimConfig.setStartFromImmunization("");//TODO!!!
-			episimConfig.setImmunizationPrefix(String.valueOf(params.seed)); //TODO
+			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2022-11-04/1-snap/immunisation-history/");//TODO!!!
+//			episimConfig.setImmunizationPrefix(String.valueOf(params.seed)); //TODO
 		}
 
 		//snapshot

@@ -1004,7 +1004,13 @@ public final class InfectionEventHandler implements Externalizable {
 		log.info("Reading immunization from {}", history);
 
 		InitialImmunizationHandler handler = new InitialImmunizationHandler(personMap,episimConfig, antibodyModel,progressionModel);
-		AnalysisCommand.forEachEvent(history, s -> {}, true, handler);
+		//TODO: change history from folder -> file
+		List<String> days = AnalysisCommand.forEachEvent(history, handler, true, handler);
+
+
+		if (handler.isContinueProcessingEvents()) {
+			throw new RuntimeException("Immunisation history is not long enough (only contains " + days.size() + "days)");
+		}
 
 	}
 

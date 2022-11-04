@@ -127,7 +127,7 @@ public final class EpisimRunner {
 		// be superceded by the config of the current simulation. Thus, the antibody development
 		// during the snapshot can be rewritten without modifying the immunity event history.
 
-		antibodyModel.init(handler.getPersons(), iteration);
+ 		antibodyModel.init(handler.getPersons(), iteration);
 
 		reporting.reportCpuTime(0, "Init", "finished", -1);
 

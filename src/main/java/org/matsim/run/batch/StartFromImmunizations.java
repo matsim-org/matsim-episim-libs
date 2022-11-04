@@ -103,8 +103,8 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 
 		//snapshot
 
-		episimConfig.setStartDate(LocalDate.parse("2020-02-29"));
-		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-03");
+		episimConfig.setStartDate(LocalDate.parse("2020-03-29"));
+		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-03xsfdsadfasdfasdf");
 
 //		episimConfig.setImmunizationPrefix("imm-" + String.valueOf(params.seed));
 
