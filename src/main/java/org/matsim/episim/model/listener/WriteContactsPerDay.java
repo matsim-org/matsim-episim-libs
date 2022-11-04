@@ -32,15 +32,17 @@ public class WriteContactsPerDay implements SimulationListener {
 	@Override
 	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 		this.persons = persons;
-		this.writer = reporting.registerWriter("contactsPerDay.tsv");
-		this.reporting.writeAsync(writer, "date\tavgContacts");
-		this.persons = persons;
 	}
 
 	@Override
 	public void onIterationEnd(int iteration, LocalDate date) {
 
-		reporting.writeAsync(writer, date + "\t" + reporting.getTotalContacts() / (double) persons.size());
+		if (writer == null) {
+			writer = reporting.registerWriter("contactsPerDay.tsv");
+			reporting.writeAsync(writer, "date\tavgContacts\n");
+		}
+
+		reporting.writeAsync(writer, date + "\t" + reporting.getTotalContacts() / (double) persons.size() + "\n");
 
 	}
 }
