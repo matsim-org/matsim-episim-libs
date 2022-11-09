@@ -262,6 +262,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		metadata.put("info", "_info.txt");
 		metadata.put("zipFolder", "summaries");
 		metadata.put("timestamp", LocalDate.now());
+		metadata.put("viewerVersion", 2);
 
 		metadata.putAll(run.getMetadata());
 		mapper.writeValue(yamlWriter, metadata);
