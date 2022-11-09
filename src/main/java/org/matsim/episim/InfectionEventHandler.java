@@ -560,8 +560,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	void onSnapshotLoaded(int iteration) {
 
-		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
-		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
+		// Listener and vaccinations should already be present
 
 		for (SimulationListener s : listener) {
 			s.onSnapshotLoaded(iteration, localRnd, personMap, pseudoFacilityMap, vehicleMap);
