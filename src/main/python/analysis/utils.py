@@ -217,9 +217,15 @@ def aggregate_batch_run(run):
                 if idx not in idMap or f.endswith(".xml"):
                     continue
 
-                with z.open(f) as zf:
-                    df = pd.read_csv(zf, sep="\t")
-                    runs[idMap[idx]][filename].append(df)
+                with z.open(f) as zf:                    
+                    try:
+                        df = pd.read_csv(zf, sep="\t")
+                        runs[idMap[idx]][filename].append(df)
+                    except pd.errors.EmptyDataError as e:
+                        print("WARN: " + f + " is empty")
+                    except:
+                        print("Error reading " + f)
+                        
 
     with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
                          mode="w", compresslevel=9,
