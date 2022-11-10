@@ -207,7 +207,16 @@ public class DefaultTestingModel implements TestingModel {
 					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||
 					person.getVirusStrain() == VirusStrain.OMICRON_BA5 ||
 					person.getVirusStrain() == VirusStrain.STRAIN_A ||
-					person.getVirusStrain() == VirusStrain.STRAIN_B)) {
+					person.getVirusStrain() == VirusStrain.STRAIN_B ||
+					person.getVirusStrain() == VirusStrain.STRAIN_C ||
+					person.getVirusStrain() == VirusStrain.STRAIN_D ||
+					person.getVirusStrain() == VirusStrain.STRAIN_E ||
+					person.getVirusStrain() == VirusStrain.STRAIN_F ||
+					person.getVirusStrain() == VirusStrain.STRAIN_G ||
+					person.getVirusStrain() == VirusStrain.STRAIN_H ||
+					person.getVirusStrain() == VirusStrain.STRAIN_I ||
+					person.getVirusStrain() == VirusStrain.STRAIN_J ||
+					person.getVirusStrain() == VirusStrain.STRAIN_K)) {
 				rate = 0.5;
 			}
 
