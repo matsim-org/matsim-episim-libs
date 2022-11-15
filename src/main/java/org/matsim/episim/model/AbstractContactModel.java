@@ -73,6 +73,11 @@ public abstract class AbstractContactModel implements ContactModel {
 	private Map<String, Restriction> restrictions;
 
 	/**
+	 * Count number of contacts per day.
+	 */
+	protected int numContacts = 0;
+
+	/**
 	 * Curfew compliance valid for the day.
 	 */
 	private double curfewCompliance;
@@ -355,6 +360,11 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.infectionModel.setIteration(iteration);
 		this.curfewCompliance = EpisimUtils.findValidEntry(episimConfig.getCurfewCompliance(), 1.0,
 				episimConfig.getStartDate().plusDays(iteration - 1));
+		this.numContacts = 0;
+	}
+
+	public int getNumContacts() {
+		return numContacts;
 	}
 
 	/**

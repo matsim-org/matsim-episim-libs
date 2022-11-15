@@ -67,6 +67,7 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  */
 public final class EpisimReporting implements BasicEventHandler, Closeable, Externalizable {
 
+
 	/**
 	 * Age groups used for various outputs. AgeGroup -> minimum age of age group.
 	 * Important: age groups must be in descending order
@@ -128,6 +129,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+
+	private int totalContacts;
 
 	/**
 	 * Whether all events are written into one file.
@@ -719,6 +722,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	}
 
+	/**
+	 * Set number of total contacts.
+	 * @param totalContacts
+	 */
+	public void reportTotalContacts(int totalContacts) {
+		this.totalContacts = totalContacts;
+	}
+
+	public int getTotalContacts() {
+		return totalContacts;
+	}
 
 	/**
 	 * Report the successful tracing between two persons.
