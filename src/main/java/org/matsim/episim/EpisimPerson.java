@@ -438,19 +438,19 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		// TODO: add max antibodies
 	}
 
-	/**
-	 * Add an infection or vaccination from immunization history.
-	 */
-	void addImmunizationRecord(double time, boolean virus, String type) {
-
-		if (virus) {
-			virusStrains.add(VirusStrain.valueOf(type));
-			infectionDates.add(time * DAY);
-		} else {
-			vaccinations.add(VaccinationType.valueOf(type));
-			vaccinationDates.add((int) time);
-		}
-	}
+//	/**
+//	 * Add an infection or vaccination from immunization history.
+//	 */
+//	void addImmunizationRecord(double time, boolean virus, String type) {
+//
+//		if (virus) {
+//			virusStrains.add(VirusStrain.valueOf(type));
+//			infectionDates.add(time * DAY);
+//		} else {
+//			vaccinations.add(VaccinationType.valueOf(type));
+//			vaccinationDates.add((int) time);
+//		}
+//	}
 
 	/**
 	 * Adds an infection possibility to this person. Will be executed in {@link #checkInfection()}

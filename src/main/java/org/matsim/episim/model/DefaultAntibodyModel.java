@@ -35,6 +35,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			// mu = log(median); log(1)=0
 
+
 			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
 			double immuneResponseMultiplier = 0;
 			while (immuneResponseMultiplier < 0.1 || immuneResponseMultiplier > 10) {
@@ -43,15 +44,29 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
-			// start from snapshot
-			if (iteration > 1 && episimConfig.getStartFromSnapshot() != null) {
-				for (int it = 1; it < iteration; it++) {
-					updateAntibodies(person, it);
-				}
-			}
 		}
 
 
+	}
+
+	@Override
+	public void recalculateAntibodiesAfterSnapshot(Collection<EpisimPerson> persons, int iteration) {
+		for (EpisimPerson person : persons) {
+
+			// reset to 0.0
+			for (VirusStrain strain : VirusStrain.values()) {
+				person.setAntibodies(strain, 0.0);
+			}
+
+			// recalculate antibodies from immune history
+			for (int it = 1; it < iteration; it++) {
+				updateAntibodies(person, it);
+
+//				if (person.getPersonId().toString().equals("1280b24")) {
+//					System.out.println("it " + it + ", " + person.getAntibodies(VirusStrain.SARS_CoV_2));
+//				}
+			}
+		}
 	}
 
 	/**
@@ -65,12 +80,11 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
 
-		// todo: is this needed, now that we have an init
-		if (day == 0) {
-			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
-			}
-		}
+//		if (day == 0) {
+//			for (VirusStrain strain : VirusStrain.values()) {
+//				person.setAntibodies(strain, 0.0);
+//			}
+//		}
 
 		//handle vaccination
 		if (person.getVaccinationDates().contains(day - 1)) {

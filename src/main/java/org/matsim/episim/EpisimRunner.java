@@ -116,18 +116,21 @@ public final class EpisimRunner {
 			}
 
 			handler.onSnapshotLoaded(iteration);
+
+			// recalculate antibodies for every agent if starting from snapshot.
+			// The antibodies profile is generated using the immunity event history in the
+			// snapshot; the antibody model config of the snapshot simulation will
+			// be superceded by the config of the current simulation. Thus, the antibody development
+			// during the snapshot can be rewritten without modifying the immunity event history.
+			antibodyModel.recalculateAntibodiesAfterSnapshot(handler.getPersons(), iteration);
+
 		} else if (episimConfig.getStartFromImmunization() != null) {
 
+			antibodyModel.init(handler.getPersons(), iteration);
 			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));
+		} else {
+			antibodyModel.init(handler.getPersons(), iteration);
 		}
-
-		// recalculate antibodies for every agent if starting from snapshot.
-		// The antibodies profile is generated using the immunity event history in the
-		// snapshot; the antibody model config of the snapshot simulation will
-		// be superceded by the config of the current simulation. Thus, the antibody development
-		// during the snapshot can be rewritten without modifying the immunity event history.
-
- 		antibodyModel.init(handler.getPersons(), iteration);
 
 		reporting.reportCpuTime(0, "Init", "finished", -1);
 
@@ -137,7 +140,7 @@ public final class EpisimRunner {
 
 			if (episimConfig.getSnapshotInterval() > 0 && iteration % episimConfig.getSnapshotInterval() == 0) {
 				writeSnapshot(output, iteration);
-				writeImmunization(output, iteration);
+//				writeImmunization(output, iteration);
 			}
 
 			if (iteration % 10 == 0)
@@ -260,38 +263,38 @@ public final class EpisimRunner {
 	 * @param output    output path
 	 * @param iteration current iteration
 	 */
-	private void writeImmunization(Path output, int iteration) {
-
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
-
-		Path path = output.resolve(episimConfig.getImmunizationPrefix() + String.format("-%03d-%s.tsv.gz", iteration, date));
-
-		log.info("Writing immunization history to {}", path);
-
-		InfectionEventHandler handler = handlerProvider.get();
-
-		try (CSVPrinter out = new CSVPrinter(new OutputStreamWriter(new GzipCompressorOutputStream(Files.newOutputStream(path))), CSVFormat.TDF)) {
-
-			out.printRecord("personId", "date", "virus_or_vaccine", "type");
-
-			for (EpisimPerson person : handler.getPersons()) {
-				for (int i = 0; i < person.getNumInfections(); i++) {
-					String occurrence = episimConfig.getStartDate().plusDays((long) ((person.getInfectionDates().getDouble(i) / EpisimUtils.DAY) - 1)).toString();
-					out.printRecord(person.getPersonId(), occurrence, "virus", person.getVirusStrain(i));
-				}
-
-				for (int i = 0; i < person.getNumVaccinations(); i++) {
-					String occurrence = episimConfig.getStartDate().plusDays(person.getVaccinationDates().getInt(i) - 1).toString();
-					out.printRecord(person.getPersonId(), occurrence, "vaccine", person.getVaccinationType(i));
-				}
-			}
-
-		} catch (IOException e) {
-			throw new UncheckedIOException("Could not write immunization history", e);
-		}
-	}
+//	private void writeImmunization(Path output, int iteration) {
+//
+//		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+//
+//		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+//
+//		Path path = output.resolve(episimConfig.getImmunizationPrefix() + String.format("-%03d-%s.tsv.gz", iteration, date));
+//
+//		log.info("Writing immunization history to {}", path);
+//
+//		InfectionEventHandler handler = handlerProvider.get();
+//
+//		try (CSVPrinter out = new CSVPrinter(new OutputStreamWriter(new GzipCompressorOutputStream(Files.newOutputStream(path))), CSVFormat.TDF)) {
+//
+//			out.printRecord("personId", "date", "virus_or_vaccine", "type");
+//
+//			for (EpisimPerson person : handler.getPersons()) {
+//				for (int i = 0; i < person.getNumInfections(); i++) {
+//					String occurrence = episimConfig.getStartDate().plusDays((long) ((person.getInfectionDates().getDouble(i) / EpisimUtils.DAY) - 1)).toString();
+//					out.printRecord(person.getPersonId(), occurrence, "virus", person.getVirusStrain(i));
+//				}
+//
+//				for (int i = 0; i < person.getNumVaccinations(); i++) {
+//					String occurrence = episimConfig.getStartDate().plusDays(person.getVaccinationDates().getInt(i) - 1).toString();
+//					out.printRecord(person.getPersonId(), occurrence, "vaccine", person.getVaccinationType(i));
+//				}
+//			}
+//
+//		} catch (IOException e) {
+//			throw new UncheckedIOException("Could not write immunization history", e);
+//		}
+//	}
 
 	/**
 	 * Read snapshot from disk and initialize simulation state

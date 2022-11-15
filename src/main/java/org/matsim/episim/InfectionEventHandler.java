@@ -771,6 +771,10 @@ public final class InfectionEventHandler implements Externalizable {
 			progressionModel.updateState(person, iteration);
 			antibodyModel.updateAntibodies(person, iteration);
 
+//			if (person.getPersonId().toString().equals("1280b24")) {
+//				System.out.println("it " + iteration + ", " + person.getAntibodies(VirusStrain.SARS_CoV_2));
+//			}
+
 			for (Object2DoubleMap.Entry<VirusStrain> kv : person.getAntibodies().object2DoubleEntrySet()) {
 				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);
 			}

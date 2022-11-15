@@ -129,20 +129,25 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
-				double immuneSigma = 3.0;
+
+				double immuneSigma = 0.0;
 				if (params != null) {
-					antibodyConfig.setImmuneReponseSigma(immuneSigma);
+					immuneSigma = params.immuneSigma;
 				}
+				antibodyConfig.setImmuneReponseSigma(immuneSigma);
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
 				if (params == null) return;
 
+
+
 				// HOUSEHOLD SUSCEPTIBILITY
 				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
+				double pHouseholds = params.pHh;
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
-								.withSusceptibleHouseholds(0.35, 0.01)
+								.withSusceptibleHouseholds(pHouseholds, 0.01)
 //								.withNonVaccinableHouseholds(params.nonVaccinableHh)
 //								.withShape(SnzCologneProductionScenario.INPUT.resolve("CologneDistricts.zip"))
 //								.withFeature("STT_NAME", vingst, altstadtNord, bickendorf, weiden)
@@ -359,11 +364,11 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/"),
-				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
+//				new VaccinationEffectiveness().withArgs(),
+//				new RValuesFromEvents().withArgs(),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+				new FilterEvents().withArgs("--output","./output/")
+//				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
@@ -389,14 +394,20 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
-		if (!params.startDate.equals("fromTheStart")) {
-			episimConfig.setStartDate(LocalDate.parse(params.startDate));
-			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2022-11-04/1-snap/immunisation-history/");//TODO!!!
-//			episimConfig.setImmunizationPrefix(String.valueOf(params.seed)); //TODO
+
+		if (params.simStart.equals("createSnapshot")) {
+			episimConfig.setSnapshotInterval(630);
+			episimConfig.setSnapshotPrefix(params.immuneSigma + "-" + params.pHh);
+		} else if (params.simStart.equals("startFromSnapshot")) {
+			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/runs/jakob/2022-11-05/1-snap/snapshot/" + params.immuneSigma + "-" + params.pHh + "-630-2021-11-15.zip");
+			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		} else {
+			episimConfig.setStartDate(LocalDate.parse(params.simStart));
+			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2022-11-05/1-snap/imm-history-640/"+params.immuneSigma + "-" + params.pHh+"/");
 		}
 
 		//snapshot
-//		episimConfig.setSnapshotInterval(30);
+//		episimConfig.setSnapshotInterval(90);
 //		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
@@ -653,11 +664,17 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(20)
 		public long seed;
 
-		@StringParameter({"fromTheStart","2020-06-01", "2020-12-01", "2021-06-01", "2021-12-01", "2022-06-01", "2022-09-15"})
-		public String startDate;
+		@Parameter({0.0, 3.0})
+		public double immuneSigma;
+
+		@Parameter({0.0, 0.35})
+		public double pHh;
+
+		@StringParameter({"startFromSnapshot"})//"2021-11-15"}) //"startFromSnapshot"})//"createSnapshot","2020-06-01", "2020-12-01", "2021-06-01", "2021-12-01", "2022-06-01", "2022-09-15"})
+		public String simStart;
 
 		//IFSG
 		@StringParameter({"base"})

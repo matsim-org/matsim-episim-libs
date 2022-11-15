@@ -55,6 +55,9 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 
 			}
 		});
+
+		//ANTIBODY Model
+
 	}
 
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
@@ -103,19 +106,14 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 
 		//snapshot
 
-		episimConfig.setStartDate(LocalDate.parse("2020-03-29"));
-		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-03xsfdsadfasdfasdf");
+//		episimConfig.setSnapshotInterval(15);
+//
+//		episimConfig.setStartDate(LocalDate.parse("2020-03-10"));
+//		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15");
 
-//		episimConfig.setImmunizationPrefix("imm-" + String.valueOf(params.seed));
 
-//		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/imm-" + String.valueOf(params.seed)+"-960-2022-10-11.tsv.gz");
-//		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/imm-4711-210-2020-09-21.tsv.gz");
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
-
-//		episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA5).put(startDate, 144_380 / 4);
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-//		episimConfig.setSnapshotInterval(10);
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		episimConfig.setStartFromSnapshot("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15/episim-snapshot-015-2020-03-10.zip");
 
 
 		//---------------------------------------

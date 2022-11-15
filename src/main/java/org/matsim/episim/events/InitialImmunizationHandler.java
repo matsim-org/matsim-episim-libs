@@ -94,8 +94,9 @@ public final class InitialImmunizationHandler implements Function<String, Boolea
 				antibodyModel.updateAntibodies(person, this.maxIterationReachedSoFar - this.iterationOffset);
 				progressionModel.updateState(person, this.maxIterationReachedSoFar - this.iterationOffset);
 
-//				if (person.getPersonId().toString().equals("1238c80")) {
+//				if (person.getPersonId().toString().equals("1280b24")) {
 //					System.out.println("it " + currentIteration + ", " + person.getAntibodies(VirusStrain.SARS_CoV_2));
+//				}
 //					System.out.println("		" + person.getDiseaseStatus());
 //					System.out.println("		" + person.getQuarantineStatus());
 //

@@ -239,7 +239,7 @@
 
 		 // antibody model
 		 AntibodyModel.Config antibodyConfig = new AntibodyModel.Config();
-		 antibodyConfig.setImmuneReponseSigma(3.0);
+		 antibodyConfig.setImmuneReponseSigma(0.0); // todo revert to 3.0?
 		 bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
 		/* Bremen:
