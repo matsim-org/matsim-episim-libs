@@ -382,7 +382,7 @@
 
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221023.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221102.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -538,7 +538,7 @@
 		 builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
 		 // mask mandate removed
-		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "leisure","leisPublic","leisPrivate","work", "business"); //todo: check
+		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher", "leisure","leisPublic","leisPrivate","work", "business");
 
 		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(Map.of(
 						 FaceMask.CLOTH, 0.0,

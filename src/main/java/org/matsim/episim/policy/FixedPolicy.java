@@ -101,7 +101,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 				if (days.getKey().startsWith("day")) continue;
 
 				LocalDate date = LocalDate.parse(days.getKey());
-				if (date.isBefore(start)) {
+				if (date.isBefore(start.plusDays(1))) {
 					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
 					entry.getValue().update(r);
 

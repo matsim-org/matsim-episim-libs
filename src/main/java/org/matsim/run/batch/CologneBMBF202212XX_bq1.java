@@ -9,6 +9,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
@@ -28,7 +29,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF20221024_snapshot.Params> {
+public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -129,25 +130,20 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
-
-				double immuneSigma = 0.0;
+				double immuneSigma = 3.0;
 				if (params != null) {
-					immuneSigma = params.immuneSigma;
+					antibodyConfig.setImmuneReponseSigma(immuneSigma);
 				}
-				antibodyConfig.setImmuneReponseSigma(immuneSigma);
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
 				if (params == null) return;
 
-
-
 				// HOUSEHOLD SUSCEPTIBILITY
 				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
-				double pHouseholds = params.pHh;
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
-								.withSusceptibleHouseholds(pHouseholds, 0.01)
+								.withSusceptibleHouseholds(0.35, 0.01)
 //								.withNonVaccinableHouseholds(params.nonVaccinableHh)
 //								.withShape(SnzCologneProductionScenario.INPUT.resolve("CologneDistricts.zip"))
 //								.withFeature("STT_NAME", vingst, altstadtNord, bickendorf, weiden)
@@ -364,11 +360,11 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-//				new VaccinationEffectiveness().withArgs(),
-//				new RValuesFromEvents().withArgs(),
-//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/")
-//				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
+				new VaccinationEffectiveness().withArgs(),
+				new RValuesFromEvents().withArgs(),
+				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+				new FilterEvents().withArgs("--output","./output/"),
+				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
@@ -394,22 +390,10 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
-
-		if (params.simStart.equals("createSnapshot")) {
-			episimConfig.setSnapshotInterval(630);
-			episimConfig.setSnapshotPrefix(params.immuneSigma + "-" + params.pHh);
-		} else if (params.simStart.equals("startFromSnapshot")) {
-			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/runs/jakob/2022-11-05/1-snap/snapshot/" + params.immuneSigma + "-" + params.pHh + "-630-2021-11-15.zip");
-			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-		} else {
-			episimConfig.setStartDate(LocalDate.parse(params.simStart));
-			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2022-11-05/1-snap/imm-history-640/"+params.immuneSigma + "-" + params.pHh+"/");
-		}
-
 		//snapshot
-//		episimConfig.setSnapshotInterval(90);
+//		episimConfig.setSnapshotInterval(30);
 //		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		//---------------------------------------
 		//		S T R A I N S
@@ -552,6 +536,44 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 				throw new RuntimeException("invalid parameter");
 		}
 
+		switch (params.maskPt) {
+			case "base":
+				break;
+			case "off":
+				builder.restrict(LocalDate.parse("2023-01-01"),
+						Restriction.ofMask(Map.of(
+								FaceMask.CLOTH, 0.0,
+								FaceMask.SURGICAL, 0.0,
+								FaceMask.N95, 0.0)),
+						"pt");
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		LocalDate dateToRemoveQuarantine = LocalDate.parse("2022-12-01");
+		switch (params.quarantine) {
+			case "base":
+				break;
+			case "nonSymptomatic0":
+				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
+				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.NON_SYMPTOMATIC);
+				break;
+			case "withSymptoms0":
+				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
+				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.WITH_SYMPTOMS);
+				break;
+			case "susceptible0":
+				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
+				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE);
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
+
+
 		// vary amount of "school" activity that takes place during vacation
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.8, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
@@ -664,17 +686,25 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(20)
+		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.0, 3.0})
-		public double immuneSigma;
 
-		@Parameter({0.0, 0.35})
-		public double pHh;
+		@StringParameter({"base", "off"})
+		public String maskPt;
 
-		@StringParameter({"2021-11-15"})//"2021-11-15"}) //"startFromSnapshot"})//"createSnapshot","2020-06-01", "2020-12-01", "2021-06-01", "2021-12-01", "2022-06-01", "2022-09-15"})
-		public String simStart;
+
+		@StringParameter({"base", "nonSymptomatic0", "withSymptoms0", "susceptible0"})
+		public String quarantine;
+
+
+		// BQ 1
+		@StringParameter({"off","2.0", "2.25", "2.5", "2.75", "3.0"})
+		public String StrainA;
+
+		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})
+		public String strainADate;
+
 
 		//IFSG
 		@StringParameter({"base"})
@@ -696,11 +726,6 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 		@StringParameter({"base"})
 		public String edu;
 
-		@StringParameter({"3.0"})
-		public String StrainA;
-
-		@StringParameter({"2022-09-19"})
-		public String strainADate;
 
 
 	}
@@ -708,7 +733,7 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF20221024_snapshot.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202212XX_soup.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),

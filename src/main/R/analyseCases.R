@@ -7,14 +7,15 @@ library(readr)
 rm(list=ls())
 source("/Users/jakob/git/matsim-episim/src/main/R/masterJR-utils.R", encoding = 'utf-8')
 
-# directory_snap <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-05/2-imm-snap/"
-directory_snap <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-15/1-imm-snap/"
-directory_imm <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-05/2b-imm-hist/"
+# directory_snap_old <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-05/2-imm-snap/"
+directory_snap <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-15/2-imm-snap/"
+directory_imm <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-15/3-imm-hist/"
 # file_root<- "antibodies.tsv"
 
 #infections
 file_root_inf<- "infections.txt.csv"
 snap_inf_raw <- read_combine_episim_output_zipped(directory_snap, file_root_inf )
+# snap_inf_raw_old <- read_combine_episim_output_zipped(directory_snap, file_root_inf )
 imm_inf_raw <- read_combine_episim_output_zipped(directory_imm, file_root_inf)
 
 
@@ -46,7 +47,7 @@ imm_ab_raw <- read_combine_episim_output_zipped(directory_imm, file_root_ab)
 
 
 start_date <- ymd("2021-11-15")
-end_date <- ymd("2021-11-30")
+end_date <- ymd("2029-11-30")
 snap_ab <- snap_ab_raw %>%
   filter(date >= start_date) %>%
   filter(date <= end_date) %>%
