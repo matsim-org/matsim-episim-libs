@@ -8,6 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		{
 			double igaFactor = 0.0;
-
 			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
 			if (target.hadStrain(infector.getVirusStrain())) {
 
@@ -108,17 +108,41 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 //				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
 				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 
-			} else if (vaccinationConfig.getUseIgA()) {
-				List<VirusStrain> crossImmunityStrainsOmicron = List.of(VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5, VirusStrain.STRAIN_A, VirusStrain.STRAIN_B, 
-						VirusStrain.STRAIN_C, VirusStrain.STRAIN_D, VirusStrain.STRAIN_E, VirusStrain.STRAIN_F, VirusStrain.STRAIN_G, VirusStrain.STRAIN_H, VirusStrain.STRAIN_I, 
-						VirusStrain.STRAIN_J, VirusStrain.STRAIN_K);
-				
+			}  
+			
+			ArrayList<VirusStrain> strainsLineA = new ArrayList<VirusStrain>();
+			strainsLineA.add(VirusStrain.OMICRON_BA1);
+			strainsLineA.add(VirusStrain.OMICRON_BA2);
+			strainsLineA.add(VirusStrain.OMICRON_BA5);
+			strainsLineA.add(VirusStrain.STRAIN_A);
+			strainsLineA.add(VirusStrain.STRAIN_B);
 
-				if(crossImmunityStrainsOmicron.contains(infector.getVirusStrain())){
+			ArrayList<VirusStrain> strainsLineB = new ArrayList<VirusStrain>();
+			strainsLineB.add(VirusStrain.OMICRON_BA1);
+			strainsLineB.add(VirusStrain.OMICRON_BA2);
+			strainsLineB.add(VirusStrain.OMICRON_BA5);
+			strainsLineB.add(VirusStrain.STRAIN_A);
+			strainsLineB.add(VirusStrain.STRAIN_B);
+			
+			if (vaccinationConfig.getUseIgA()) {
+				
+				for (VirusStrain str : VirusStrain.values()) {
+					if (str.toString().startsWith("A_"))
+						strainsLineA.add(str);
+				}
+				for (VirusStrain str : VirusStrain.values()) {
+					if (str.toString().startsWith("B_"))
+						strainsLineB.add(str);
+				}
+			}
+			
+//			if (vaccinationConfig.getUseIgA()) {
+
+				if(strainsLineA.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;
 					boolean targetHadStrain = false;
 					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (crossImmunityStrainsOmicron.contains(target.getVirusStrain(ii))){
+						if (strainsLineA.contains(target.getVirusStrain(ii))){
 							targetHadStrain = true;
 							lastInfectionWithStrain = ii;
 						}
@@ -130,8 +154,43 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 						igaFactor = Math.max(fac, igaFactor);
 					}
 				}
-			}
-			susceptibility = susceptibility * (1.0 - igaFactor);
+				
+				if(strainsLineB.contains(infector.getVirusStrain())){
+					int lastInfectionWithStrain = 0;
+					boolean targetHadStrain = false;
+					for (int ii = 0; ii < target.getNumInfections();  ii++) {
+						if (strainsLineB.contains(target.getVirusStrain(ii))){
+							targetHadStrain = true;
+							lastInfectionWithStrain = ii;
+						}
+					}
+
+					if (targetHadStrain) {
+						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
+						fac = fac / 1.4;
+						igaFactor = Math.max(fac, igaFactor);
+					}
+				}
+				
+//				if(strainsLineA.contains(infector.getVirusStrain()) || strainsLineB.contains(infector.getVirusStrain())){
+//					int lastInfectionWithStrain = 0;
+//					boolean targetHadStrain = false;
+//					for (int ii = 0; ii < target.getNumInfections();  ii++) {
+//						if (strainsLineA.contains(target.getVirusStrain(ii)) || strainsLineB.contains(target.getVirusStrain(ii))){
+//							targetHadStrain = true;
+//							lastInfectionWithStrain = ii;
+//						}
+//					}
+//
+//					if (targetHadStrain) {
+//						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
+//						fac = fac / 1.4 / 1.4;
+//						igaFactor = Math.max(fac, igaFactor);
+//					}
+//				}
+				
+				susceptibility = susceptibility * (1.0 - igaFactor);
+//			}	
 		}
 
 
