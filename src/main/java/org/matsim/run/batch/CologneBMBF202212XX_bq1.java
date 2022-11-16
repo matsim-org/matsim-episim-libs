@@ -7,10 +7,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
@@ -391,9 +388,18 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 		//snapshot
-//		episimConfig.setSnapshotInterval(30);
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+		episimConfig.setSnapshotInterval(960);
+		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+
+		//idk
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
+//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+
+		//newer snapshot modiefied slightly
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-960-2022-10-11.zip");
+//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		//from last bericht
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		//---------------------------------------
 		//		S T R A I N S
@@ -551,26 +557,29 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 				throw new RuntimeException("invalid parameter");
 		}
 
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		LocalDate dateToRemoveQuarantine = LocalDate.parse("2022-12-01");
-		switch (params.quarantine) {
-			case "base":
-				break;
-			case "nonSymptomatic0":
-				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
-				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.NON_SYMPTOMATIC);
-				break;
-			case "withSymptoms0":
-				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
-				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.WITH_SYMPTOMS);
-				break;
-			case "susceptible0":
-				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
-				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE);
-				break;
-			default:
-				throw new RuntimeException("invalid parameter");
-		}
+		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		vaccinationConfig.setTEMP_updatedProbaOfTransitioningToShowingSymptoms(params.probaShowSymptoms);
+
+//		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+//		LocalDate dateToRemoveQuarantine = LocalDate.parse("2022-12-01");
+//		switch (params.quarantine) {
+//			case "base":
+//				break;
+//			case "nonSymptomatic0":
+//				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
+//				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.NON_SYMPTOMATIC);
+//				break;
+//			case "withSymptoms0":
+//				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
+//				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.WITH_SYMPTOMS);
+//				break;
+//			case "susceptible0":
+//				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
+//				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE);
+//				break;
+//			default:
+//				throw new RuntimeException("invalid parameter");
+//		}
 
 
 
@@ -693,16 +702,22 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		@StringParameter({"base", "off"})
 		public String maskPt;
 
+		@Parameter({0.2, 0.4, 0.6, 0.8, 1.0})
+		public double probaShowSymptoms;
 
-		@StringParameter({"base", "nonSymptomatic0", "withSymptoms0", "susceptible0"})
-		public String quarantine;
+
+
+//		@StringParameter({"base", "nonSymptomatic0", "withSymptoms0", "susceptible0"})
+//		public String quarantine;
 
 
 		// BQ 1
-		@StringParameter({"off","2.0", "2.25", "2.5", "2.75", "3.0"})
+//		@StringParameter({"off", "2.0", "2.25", "2.5", "2.75", "3.0"})
+		@StringParameter({"2.0"})
 		public String StrainA;
 
-		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})
+//		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})
+		@StringParameter({"2022-09-19"})
 		public String strainADate;
 
 
@@ -733,7 +748,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202212XX_soup.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202212XX_bq1.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),

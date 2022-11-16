@@ -143,6 +143,9 @@ public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_so
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
+
+				UtilsJR.printInitialAntibodiesToConsole(initialAntibodies);
+
 				if (params == null) return;
 
 				// HOUSEHOLD SUSCEPTIBILITY
@@ -431,11 +434,11 @@ public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_so
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.vacCamp.equals("emergency180")) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
-				runCount++;
-			} else {
-				return null;
-			}
+//			if (runCount == 0 && params.escape(12.)) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+//				runCount++;
+//			} else {
+//				return null;
+//			}
 		}
 
 		SnzCologneProductionScenario module = getBindings(0.0, params);
