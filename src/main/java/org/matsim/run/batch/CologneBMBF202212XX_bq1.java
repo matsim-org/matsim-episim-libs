@@ -388,11 +388,11 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 		//snapshot
-		episimConfig.setSnapshotInterval(960);
-		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+//		episimConfig.setSnapshotInterval(960);
+//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
 
 		//idk
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-11-17/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 		//newer snapshot modiefied slightly
@@ -542,19 +542,14 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 				throw new RuntimeException("invalid parameter");
 		}
 
-		switch (params.maskPt) {
-			case "base":
-				break;
-			case "off":
-				builder.restrict(LocalDate.parse("2023-01-01"),
-						Restriction.ofMask(Map.of(
-								FaceMask.CLOTH, 0.0,
-								FaceMask.SURGICAL, 0.0,
-								FaceMask.N95, 0.0)),
-						"pt");
-				break;
-			default:
-				throw new RuntimeException("invalid parameter");
+		if ("base".equals(params.maskPt)) {
+		} else {
+			builder.restrict(LocalDate.parse(params.maskPt),
+					Restriction.ofMask(Map.of(
+							FaceMask.CLOTH, 0.0,
+							FaceMask.SURGICAL, 0.0,
+							FaceMask.N95, 0.0)),
+					"pt");
 		}
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -699,10 +694,10 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		public long seed;
 
 
-		@StringParameter({"base", "off"})
+		@StringParameter({"base", "2022-11-15", "2022-12-01", "2022-12-15", "2023-01-01"})
 		public String maskPt;
 
-		@Parameter({0.2, 0.4, 0.6, 0.8, 1.0})
+		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
 		public double probaShowSymptoms;
 
 

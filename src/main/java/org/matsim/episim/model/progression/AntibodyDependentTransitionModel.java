@@ -34,7 +34,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 				double probaOfTransitioningToShowingSymptoms = getProbaOfTransitioningToShowingSymptoms(person);
 
-				if (day >= 981  // hardcoded: 2022-11-01
+				if (day >= 1011  // hardcoded: 2022-12-01
 						&& vaccinationConfig.getTEMP_updatedProbaOfTransitioningToShowingSymptoms() >= 0.0
 						&& vaccinationConfig.getTEMP_updatedProbaOfTransitioningToShowingSymptoms() <= 1.0) {
 					probaOfTransitioningToShowingSymptoms = vaccinationConfig.getTEMP_updatedProbaOfTransitioningToShowingSymptoms();

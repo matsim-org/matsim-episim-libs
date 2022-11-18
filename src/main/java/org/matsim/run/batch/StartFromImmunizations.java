@@ -112,8 +112,8 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 //		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15");
 
 
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-//		episimConfig.setStartFromSnapshot("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15/episim-snapshot-015-2020-03-10.zip");
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		episimConfig.setStartFromSnapshot("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15/episim-snapshot-015-2020-03-10.zip");
 
 
 		//---------------------------------------

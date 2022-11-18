@@ -19,6 +19,7 @@ import tech.tablesaw.table.TableSliceGroup;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -148,28 +149,57 @@ public class UtilsJR {
 	}
 
 
-    protected static void printInitialAntibodiesToConsole(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies) {
+    protected static void printInitialAntibodiesToConsole(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies, boolean ignoreSuperfluous) {
+
+		List<ImmunityEvent> ignoredEvents = new ArrayList<>();
+		if (ignoreSuperfluous) {
+			ignoredEvents = List.of(VirusStrain.STRAIN_B, VirusStrain.B1351, VaccinationType.generic, VaccinationType.natural, VaccinationType.ba1Update, VaccinationType.ba5Update);
+		}
         System.out.print("immunityGiver");
         for (VirusStrain immunityFrom : VirusStrain.values()) {
-            if (immunityFrom == VirusStrain.OMICRON_BA1) {
-                System.out.print( "," + "BA.1");
-            } else 		if (immunityFrom == VirusStrain.OMICRON_BA2) {
-                System.out.print( "," + "BA.2");
-            } else {
-                System.out.print( "," + immunityFrom);
-            }
+			if (ignoredEvents.contains(immunityFrom)) {
+				continue;
+			}
+
+//			if (immunityFrom == VirusStrain.OMICRON_BA1) {
+//				System.out.print("," + "BA.1");
+//			} else if (immunityFrom == VirusStrain.OMICRON_BA2) {
+//				System.out.print("," + "BA.2");
+//			} else if (immunityFrom == VirusStrain.OMICRON_BA5) {
+//				System.out.print("," + "BA.5");
+//			} else {
+			System.out.print("," + immunityFrom);
+//			}
+
         }
 
 
         for (ImmunityEvent immunityGiver : VaccinationType.values()) {
+
+			if (ignoredEvents.contains(immunityGiver)) {
+				continue;
+			}
+
             System.out.print("\n" + immunityGiver);
             for (VirusStrain immunityFrom : VirusStrain.values()) {
+				if (ignoredEvents.contains(immunityFrom)) {
+					continue;
+				}
                 System.out.print("," +  String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
             }
         }
         for (ImmunityEvent immunityGiver : VirusStrain.values()) {
+
+			if (ignoredEvents.contains(immunityGiver)) {
+				continue;
+			}
             System.out.print("\n" + immunityGiver);
             for (VirusStrain immunityFrom : VirusStrain.values()) {
+
+				if (ignoredEvents.contains(immunityFrom)) {
+					continue;
+				}
+
                 System.out.print("," + String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
             }
         }
