@@ -24,12 +24,12 @@ end_date <- ymd("2029-07-05")
 snap_inf <- snap_inf_raw %>%
   filter(date >= start_date) %>%
   filter(date <= end_date) %>%
-  filter(pHh == 0.0, immuneSigma == 0.0)
+  filter(pHh == 0.35, immuneSigma == 3.0)
   # mutate(vax = generic + mRNA + vector + ba1Update + ba5Update + natural)
 imm_inf <- imm_inf_raw %>%
   filter(date >= start_date) %>%
   filter(date <= end_date) %>%
-  filter(pHh == 0.0, immuneSigma == 0.0)
+  filter(pHh == 0.35, immuneSigma == 3.0)
   # mutate(vax = generic + mRNA + vector + ba1Update + ba5Update + natural)
 ggplot() + #nShowingSymptoms # SARS_CoV_2
   geom_line(imm_inf, mapping = aes(date, nShowingSymptoms , group = seed, col = "imm-hist")) +
@@ -37,6 +37,7 @@ ggplot() + #nShowingSymptoms # SARS_CoV_2
   scale_color_manual(name='Regression Model',
                        breaks=c('snapshot', 'imm-hist'),
                        values=c('snapshot'='red', 'imm-hist'='blue'))+
+  facet_wrap(pHh ~ immuneSigma)+
   ggtitle("Infections")
 
 
@@ -51,7 +52,7 @@ end_date <- ymd("2029-11-30")
 snap_ab <- snap_ab_raw %>%
   filter(date >= start_date) %>%
   filter(date <= end_date) %>%
-  filter(pHh == 0.0, immuneSigma == 0.0)
+  filter(pHh == 0.35, immuneSigma == 3.0)
 # mutate(vax = generic + mRNA + vector + ba1Update + ba5Update + natural)
 imm_ab <- imm_ab_raw %>%
   filter(date >= start_date) %>%
