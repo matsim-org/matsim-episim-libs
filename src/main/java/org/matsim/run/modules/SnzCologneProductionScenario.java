@@ -677,8 +677,6 @@
 
 		 testingConfigGroup.setTestAllPersonsAfter(LocalDate.parse("2021-10-01"));
 
-
-
 		 testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 
 		 List<String> actsList = new ArrayList<String>();
@@ -750,8 +748,7 @@
 //		 kigaPrimaryTests.put(LocalDate.of(2022, 4, 25), 0.0);
 		 eduTests.put(LocalDate.of(2022, 4, 25), 0.0);
 		 uniTests.put(LocalDate.of(2022, 4, 25), 0.0);
-		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);  // no more regulation regarding test, we assume once every 2 weeks
-
+		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.0);
 
 		 Map<String, Map<LocalDate, Double>> testingRatePerAct = new HashMap<>(Map.of(
 				 "leisure", leisureTests,
