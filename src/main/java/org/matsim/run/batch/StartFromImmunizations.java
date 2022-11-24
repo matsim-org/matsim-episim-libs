@@ -9,7 +9,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.vaccination.VaccinationModel;
@@ -108,8 +107,10 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 
 //		episimConfig.setSnapshotInterval(15);
 //
-		episimConfig.setStartDate(LocalDate.parse("2022-04-01"));
-		episimConfig.setStartFromImmunization("/Users/jakob/imm-hist-970-2022-10-21");
+//		episimConfig.setStartDate(LocalDate.parse("2022-04-01"));
+//		episimConfig.setStartFromImmunization("/Users/jakob/imm-hist-970-2022-10-21");
+		episimConfig.setStartDate(LocalDate.parse("2022-03-15"));
+		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/seed_4711-1846/calibration1.events_reduced.tar");
 
 
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);

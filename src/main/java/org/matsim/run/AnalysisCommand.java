@@ -227,10 +227,22 @@ public class AnalysisCommand implements Runnable {
 	@Nullable
 	public static Path getEvents(Path scenario, boolean preferReducedEvents) {
 
+
+		// if a path to an events file is entered, return that directly
+		if (Files.isRegularFile(scenario)) {
+			if (scenario.getFileName().toString().endsWith("events_reduced.tar") || scenario.getFileName().toString().endsWith("events.tar")) {
+				return scenario;
+			} else {
+				throw new RuntimeException("A file was specified; however, it doesn't follow the naming conventions for events files");
+			}
+		}
+
+		// if a path to a directory called "events is passed", return that directory
 		if (Files.isDirectory(scenario.resolve("events")) && !isEmpty(scenario.resolve("events"))) {
 			return scenario.resolve("events");
 		}
 
+		// otherwise, search directory for *events_reduced.tar or *events.tar
 		try {
 			Optional<Path> o;
 			if (preferReducedEvents) {
