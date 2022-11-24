@@ -99,7 +99,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));
 			}
 
-			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies, maxAntibodies);
+			int vaccinationCnt = -1;
+			attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);
+			if (attr != null)
+				vaccinationCnt = Integer.parseInt(attr);
+
+			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies, maxAntibodies, vaccinationCnt);
 		};
 	}
 
@@ -149,7 +154,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));
 			}
 
-			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies);
+			int vaccinationCnt = -1;
+			String attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);
+			if (attr != null)
+				vaccinationCnt = Integer.parseInt(attr);
+
+			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies, vaccinationCnt);
 		};
 	}
 

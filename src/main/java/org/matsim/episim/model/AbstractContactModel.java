@@ -398,8 +398,8 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		personWrapper.possibleInfection(
 				new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-				container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob,
-						personWrapper.getAntibodies(infector.getVirusStrain()),personWrapper.getMaxAntibodies(infector.getVirusStrain()))
+						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob,
+						personWrapper.getAntibodies(infector.getVirusStrain()), personWrapper.getMaxAntibodies(infector.getVirusStrain()), personWrapper.getNumVaccinations())
 		);
 
 		// check infection immediately if there is only one thread

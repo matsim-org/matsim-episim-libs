@@ -63,7 +63,7 @@ public class InitialImmunizationHandlerTest {
 		manager.processEvent(new EpisimStartEvent(date1, "..."));
 
 		// initial infection (from import) on day 2
-		manager.processEvent(new EpisimInitialInfectionEvent(2 * EpisimUtils.DAY, patient0.getPersonId(), VirusStrain.SARS_CoV_2, -1, -1));
+		manager.processEvent(new EpisimInitialInfectionEvent(2 * EpisimUtils.DAY, patient0.getPersonId(), VirusStrain.SARS_CoV_2, -1, -1, -1));
 
 		assertThat(patient0.getNumInfections()).isEqualTo(1);
 		assertThat(patient0.getNumVaccinations()).isEqualTo(0);
@@ -73,7 +73,7 @@ public class InitialImmunizationHandlerTest {
 		assertTrue(patient0.getInfectionDates().contains(-2 * EpisimUtils.DAY));
 
 		// infection on day 3
-		manager.processEvent(new EpisimInfectionEvent(3 * EpisimUtils.DAY, patient0.getPersonId(), patient0.getPersonId(), null, "undefined", 1, VirusStrain.SARS_CoV_2, 1.0, -1,-1));
+		manager.processEvent(new EpisimInfectionEvent(3 * EpisimUtils.DAY, patient0.getPersonId(), patient0.getPersonId(), null, "undefined", 1, VirusStrain.SARS_CoV_2, 1.0, -1,-1,-1));
 
 		assertThat(patient0.getNumInfections()).isEqualTo(2);
 		assertThat(patient0.getNumVaccinations()).isEqualTo(0);
@@ -96,7 +96,7 @@ public class InitialImmunizationHandlerTest {
 
 		// vaccination on day 5 and infection on day 6; neither should be registered because they occur on or after start date of new simulation
 		manager.processEvent(new EpisimVaccinationEvent(5 * EpisimUtils.DAY, patient0.getPersonId(), VaccinationType.mRNA,1 ));
-		manager.processEvent(new EpisimInfectionEvent(6 * EpisimUtils.DAY, patient0.getPersonId(), patient0.getPersonId(), null, "undefined", 1, VirusStrain.SARS_CoV_2, 1.0, -1,-1));
+		manager.processEvent(new EpisimInfectionEvent(6 * EpisimUtils.DAY, patient0.getPersonId(), patient0.getPersonId(), null, "undefined", 1, VirusStrain.SARS_CoV_2, 1.0, -1,-1,-1));
 
 		assertThat(patient0.getNumInfections()).isEqualTo(2);
 		assertThat(patient0.getInfectionDates().size()).isEqualTo(2);

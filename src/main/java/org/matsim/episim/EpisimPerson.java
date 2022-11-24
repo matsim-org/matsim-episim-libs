@@ -427,7 +427,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public void setInitialInfection(double now, VirusStrain strain) {
 
-		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain)));
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain),getNumInfections()));
 
 		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);

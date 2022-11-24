@@ -123,8 +123,8 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		int numVaccinations = person.getNumVaccinations();
 		int numInfections = person.getNumInfections() - 1;
 
-		if (numVaccinations == 0 && numInfections == 0)
-			return 1.0;
+//		if (numVaccinations == 0 && numInfections == 0)
+//			return 1.0;
 
 		VirusStrain strain = person.getVirusStrain();
 

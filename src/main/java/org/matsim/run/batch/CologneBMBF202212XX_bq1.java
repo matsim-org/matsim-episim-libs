@@ -29,11 +29,12 @@ import java.util.*;
 public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1.Params> {
 
 	boolean DEBUG_MODE = false;
+
+	String START_DATE = "2022-04-01";
 	int runCount = 0;
 
 	LocalDate restrictionDatePhase1 = LocalDate.parse("2022-12-01");
 	LocalDate restrictionDatePhase2 = restrictionDatePhase1.plusDays(10);
-
 
 	@Nullable
 	@Override
@@ -357,11 +358,11 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/"),
-				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
+				new VaccinationEffectiveness().withArgs("--start-date", START_DATE),
+				new RValuesFromEvents().withArgs("--start-date", START_DATE),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+				new FilterEvents().withArgs("--output", "./output/"),
+				new HospitalNumbersFromEvents().withArgs("--output", "./output/", "--input", "/scratch/projects/bzz0020/episim-input", "--start-date", START_DATE)
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
@@ -370,7 +371,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.vacCamp.equals("emergency180")) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
@@ -387,12 +388,18 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
+
+
+		episimConfig.setStartDate(LocalDate.parse(START_DATE));
+		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/imm-hist-970-2022-10-21/");
+
+
 		//snapshot
 //		episimConfig.setSnapshotInterval(960);
 //		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
 
 		//idk
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-11-17/" + params.seed + "-960-2022-10-11.zip");
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-11-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 		//newer snapshot modiefied slightly
@@ -694,10 +701,12 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		public long seed;
 
 
-		@StringParameter({"base", "2022-11-15", "2022-12-01", "2022-12-15", "2023-01-01"})
+//		@StringParameter({"base", "2022-11-15", "2022-12-01", "2022-12-15", "2023-01-01"})
+		@StringParameter({"base"})
 		public String maskPt;
 
-		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
+		//		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
+		@Parameter({0.8, 1.0})
 		public double probaShowSymptoms;
 
 

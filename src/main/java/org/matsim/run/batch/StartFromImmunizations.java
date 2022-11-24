@@ -84,8 +84,8 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 //				new VaccinationEffectiveness().withArgs(),
 //				new RValuesFromEvents().withArgs(),
 //				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/")
-//				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
+				new FilterEvents().withArgs("--output","./output/"),
+				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/Users/jakob/git/shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
@@ -108,12 +108,12 @@ public class StartFromImmunizations implements BatchRun<StartFromImmunizations.P
 
 //		episimConfig.setSnapshotInterval(15);
 //
-//		episimConfig.setStartDate(LocalDate.parse("2020-03-10"));
-//		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15");
+		episimConfig.setStartDate(LocalDate.parse("2022-04-01"));
+		episimConfig.setStartFromImmunization("/Users/jakob/imm-hist-970-2022-10-21");
 
 
-		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-		episimConfig.setStartFromSnapshot("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15/episim-snapshot-015-2020-03-10.zip");
+//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+//		episimConfig.setStartFromSnapshot("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-15/episim-snapshot-015-2020-03-10.zip");
 
 
 		//---------------------------------------

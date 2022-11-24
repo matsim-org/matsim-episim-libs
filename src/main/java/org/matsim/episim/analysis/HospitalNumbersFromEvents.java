@@ -60,8 +60,9 @@
 
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-//	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-10-18/3-meas/analysis/")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/A_originalImmHist")
+//	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/B_startedFromImmHist")
+//	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-10-18/3-meas/analysis/")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -71,7 +72,8 @@
 	 @CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
 	 private String populationFile;
 
-	 @CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
+//	 @CommandLine.Option(names = "--start-date", defaultValue = "2022-04-01")
+	 @CommandLine.Option(names = "--start-date", defaultValue = "2020-02-25")
 	 private LocalDate startDate;
 
 	 @CommandLine.Option(names = "--district", description = "District to filter for", defaultValue = "Köln")
@@ -223,8 +225,8 @@
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
 		 //TODO: move to other class
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
 
@@ -334,7 +336,7 @@
 	 }
 
 
-	 public static final class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler{
+	 public static final class Handler implements EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler{
 		 final Map<Id<Person>, ImmunizablePerson> data;
 		 private final String name;
 		 private final Population population;
@@ -360,13 +362,7 @@
 		 private final Int2IntMap incBaseImmunity;
 		 private final Int2IntMap incBoostered;
 
-//		 private final EpisimWriter episimWriter;
-		  BufferedWriter hospCalibration;
-
-//		 private CSVPrinter printer;
-
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
-
 
 		 Handler(String name, Population population, ConfigHolder holder, double paxlovidCompliance) {
 
@@ -406,7 +402,6 @@
 		 }
 
 
-		 //TODO: add INITIAL INFECTION EVENT
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
@@ -424,6 +419,7 @@
 			 person.addInfection(event.getTime());
 //			 person.setAntibodyLevelAtInfection(event.getAntibodies()); // commented out as we're only using the max antibody level from now on
 			 person.setVirusStrain(virusStrain);
+			 person.setNumVaccinations(event.getNumVaccinations());
 
 			 person.updateMaxAntibodies(virusStrain, event.getMaxAntibodies());
 
@@ -460,40 +456,40 @@
 
 		 }
 
-
-
-		 @Override
-		 public void handleEvent(EpisimVaccinationEvent event) {
-
-//			 if (!event.getPersonId().toString().equals("12102f5"))
-//				 return;
-
-			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
-
-			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
-
-			 if (!district.equals("Köln")){
-				 return;
-			 }
-
-			 int day = (int) (event.getTime() / 86_400);
-
-			 if (person.getNumVaccinations()==0) {
-				 changeBaseImmunity.mergeInt(day, 1, Integer::sum);
-				 changeNoImmunity.mergeInt(day, -1, Integer::sum);
-			 } else if (person.getNumVaccinations() == 1) {
-				 changeBoostered.mergeInt(day, 1, Integer::sum);
-				 changeBaseImmunity.mergeInt(day, -1, Integer::sum);
-			 }
-
-
-			 person.addVaccination(day);
-		 }
-
 		 @Override
 		 public void handleEvent(EpisimInitialInfectionEvent event) {
 			 handleEvent(event.asInfectionEvent());
 		 }
+
+
+//		 @Override
+//		 public void handleEvent(EpisimVaccinationEvent event) {
+//
+////			 if (!event.getPersonId().toString().equals("12102f5"))
+////				 return;
+//
+//			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
+//
+//			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
+//
+//			 if (!district.equals("Köln")){
+//				 return;
+//			 }
+//
+//			 int day = (int) (event.getTime() / 86_400);
+//
+//			 if (person.getNumVaccinations()==0) {
+//				 changeBaseImmunity.mergeInt(day, 1, Integer::sum);
+//				 changeNoImmunity.mergeInt(day, -1, Integer::sum);
+//			 } else if (person.getNumVaccinations() == 1) {
+//				 changeBoostered.mergeInt(day, 1, Integer::sum);
+//				 changeBaseImmunity.mergeInt(day, -1, Integer::sum);
+//			 }
+//
+//
+//			 person.addVaccination(day);
+
+//		 }
 
 		 private int getAge(Id<Person> personId) {
 			 return (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
@@ -583,9 +579,20 @@
 		  */
 		 private boolean goToHospital(ImmunizablePerson person, int day) {
 
+
+			 if (List.of("12c304f").contains(person.personId.toString())) {
+				 System.out.println();
+			 }
+
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
 			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
+
+			 if (List.of("12c304f").contains(person.personId.toString())) {
+				 System.out.println(person.getMaxAntibodies());
+				 System.out.println(person.getPersonId() + " ---- age " + ageFactor + ", strain " + strainFactor + ", immunity " + immunityFactor);
+
+			 }
 
 			 double paxlovidFactor = 1.0;
 			 if (person.getAge() > 60 && day >= this.paxlovidDay) {
@@ -654,6 +661,8 @@
 
 			 private int age;
 
+			 private int numVaccinations;
+
 			 ImmunizablePerson(Id<Person> personId, int age) {
 				 this.personId = personId;
 				 this.age = age;
@@ -666,7 +675,11 @@
 
 			 @Override
 			 public int getNumVaccinations() {
-				 return vaccinationDates.size();
+				 return numVaccinations;
+			 }
+			 public void setNumVaccinations(int numVaccinations) {
+				 this.numVaccinations = numVaccinations;
+
 			 }
 
 			 @Override
@@ -684,9 +697,9 @@
 				 return strain;
 			 }
 
-			 public void addVaccination(int day) {
-				 vaccinationDates.add(day);
-			 }
+//			 public void addVaccination(int day) {
+//				 vaccinationDates.add(day);
+//			 }
 
 			 @Override
 			 public IntList getVaccinationDates() {
