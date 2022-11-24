@@ -381,7 +381,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		// start from immunization history
 //		episimConfig.setStartDate(LocalDate.parse(START_DATE));
 //		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/imm-hist-970-2022-10-21/");
-		
+
 		//---------------------------------------
 		//		S T R A I N S
 		//---------------------------------------
@@ -521,10 +521,6 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 					"pt");
 		}
 
-		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setTEMP_updatedProbaOfTransitioningToShowingSymptoms(params.probaShowSymptoms);
-
-
 
 		// vary amount of "school" activity that takes place during vacation
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.8, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -560,7 +556,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 			}
 			infPerDayStrA.put(strADate.plusDays(7), 1);
 		}
-		
+
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
@@ -573,18 +569,13 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(20)
+		@GenerateSeeds(5)
 		public long seed;
 
 
 //		@StringParameter({"base", "2022-11-15", "2022-12-01", "2022-12-15", "2023-01-01"})
 		@StringParameter({"base"})
 		public String maskPt;
-
-		//		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
-		@Parameter({0.8})
-		public double probaShowSymptoms;
-
 
 
 //		@StringParameter({"base", "nonSymptomatic0", "withSymptoms0", "susceptible0"})
@@ -593,7 +584,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 		// BQ 1
 //		@StringParameter({"off", "2.0", "2.25", "2.5", "2.75", "3.0"})
-		@StringParameter({"2.0"})
+		@StringParameter({"1.0", "1.2", "1.4", "1.6", "1.8", "2.0"})
 		public String StrainA;
 
 //		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})

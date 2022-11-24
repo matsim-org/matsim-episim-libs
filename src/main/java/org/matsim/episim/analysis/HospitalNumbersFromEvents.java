@@ -514,20 +514,9 @@
 		  */
 		 private boolean goToHospital(ImmunizablePerson person, int day) {
 
-
-			 if (List.of("12c304f").contains(person.personId.toString())) {
-				 System.out.println();
-			 }
-
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
 			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
-
-			 if (List.of("12c304f").contains(person.personId.toString())) {
-				 System.out.println(person.getMaxAntibodies());
-				 System.out.println(person.getPersonId() + " ---- age " + ageFactor + ", strain " + strainFactor + ", immunity " + immunityFactor);
-
-			 }
 
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor

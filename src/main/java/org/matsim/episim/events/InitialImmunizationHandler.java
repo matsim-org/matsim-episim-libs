@@ -31,13 +31,6 @@ public final class InitialImmunizationHandler implements Function<String, Boolea
 
 	int maxIterationReachedSoFar = 0;
 
-
-	// 0		1		2		3		4
-	// 0		DAY		2Day	3Day	4Day
-	//			startDate
-	// 							startDate2
-	//			-1		0		1		2
-	//			-86..	0		86..
 	public InitialImmunizationHandler(Map<Id<Person>, EpisimPerson> personMap, EpisimConfigGroup episimConfig, AntibodyModel antibodyModel, ProgressionModel progressionModel) {
 		this.personMap = personMap;
 		this.episimConfig = episimConfig;
@@ -50,8 +43,6 @@ public final class InitialImmunizationHandler implements Function<String, Boolea
 		this.iterationOffset = (int) ChronoUnit.DAYS.between(event.getStartDate(), episimConfig.getStartDate());
 		this.startTimeOffset = this.iterationOffset * DAY;
 	}
-
-
 
 	@Override
 	public void handleEvent(EpisimInfectionEvent event) {
@@ -93,14 +84,6 @@ public final class InitialImmunizationHandler implements Function<String, Boolea
 			for (EpisimPerson person : personMap.values()) {
 				antibodyModel.updateAntibodies(person, this.maxIterationReachedSoFar - this.iterationOffset);
 				progressionModel.updateState(person, this.maxIterationReachedSoFar - this.iterationOffset);
-
-//				if (person.getPersonId().toString().equals("1280b24")) {
-//					System.out.println("it " + currentIteration + ", " + person.getAntibodies(VirusStrain.SARS_CoV_2));
-//				}
-//					System.out.println("		" + person.getDiseaseStatus());
-//					System.out.println("		" + person.getQuarantineStatus());
-//
-//				}
 			}
 		}
 	}

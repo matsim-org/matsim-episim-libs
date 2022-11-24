@@ -62,9 +62,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			for (int it = 1; it < iteration; it++) {
 				updateAntibodies(person, it);
 
-//				if (person.getPersonId().toString().equals("1280b24")) {
-//					System.out.println("it " + it + ", " + person.getAntibodies(VirusStrain.SARS_CoV_2));
-//				}
 			}
 		}
 	}
@@ -79,12 +76,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	 */
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
-
-//		if (day == 0) {
-//			for (VirusStrain strain : VirusStrain.values()) {
-//				person.setAntibodies(strain, 0.0);
-//			}
-//		}
 
 		//handle vaccination
 		if (person.getVaccinationDates().contains(day - 1)) {

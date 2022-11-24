@@ -493,12 +493,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Release persons without showing symptoms.
 		 */
-		NON_SYMPTOMATIC,
-
-		/**
-		 * Release all people except those in hospital
-		 */
-		WITH_SYMPTOMS
+		NON_SYMPTOMATIC
 
 	}
 

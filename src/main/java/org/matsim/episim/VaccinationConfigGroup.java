@@ -36,11 +36,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String GROUPNAME = "episimVaccination";
 
-	private static final String TEMP_UPDATED_PROBA_OF_TRANSITIONING_TO_SHOWING_SYMPTOMS = "TEMP_updatedShowingSymptomsFactor";
-
-	private static final String TEMP_UPDATED_PROBA_OF_TRANSITIONING_TO_SHOWING_SYMPTOMS_DATE = "TEMP_updatedShowingSymptomsDate";
-
-
 	/**
 	 * Amount of vaccinations available per day.
 	 */
@@ -91,9 +86,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Holds all specific vaccination params.
 	 */
 	private final Map<VaccinationType, VaccinationParams> params = new EnumMap<>(VaccinationType.class);
-
-	//TODO: temp, remove or modify
-	private double TEMP_updatedProbaOfTransitioningToShowingSymptoms = -1;
 
 
 	/**
@@ -186,17 +178,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(compliance);
 	}
 
-
-	//TODO: temp, remove or modify
-	@StringGetter(TEMP_UPDATED_PROBA_OF_TRANSITIONING_TO_SHOWING_SYMPTOMS)
-	public double getTEMP_updatedProbaOfTransitioningToShowingSymptoms() {
-		return TEMP_updatedProbaOfTransitioningToShowingSymptoms;
-	}
-
-	@StringSetter(TEMP_UPDATED_PROBA_OF_TRANSITIONING_TO_SHOWING_SYMPTOMS)
-	public void setTEMP_updatedProbaOfTransitioningToShowingSymptoms(double TEMP_updatedProbaOfTransitioningToShowingSymptoms) {
-		this.TEMP_updatedProbaOfTransitioningToShowingSymptoms = TEMP_updatedProbaOfTransitioningToShowingSymptoms;
-	}
 
 	/**
 	 * Sets the vaccination capacity for individual days. If a day has no entry the previous will be still valid.

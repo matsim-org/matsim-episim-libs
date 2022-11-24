@@ -32,15 +32,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 				return EpisimPerson.DiseaseStatus.contagious;
 			case contagious:
 
-				double probaOfTransitioningToShowingSymptoms = getProbaOfTransitioningToShowingSymptoms(person);
-
-				if (day >= 1011  // hardcoded: 2022-12-01
-						&& vaccinationConfig.getTEMP_updatedProbaOfTransitioningToShowingSymptoms() >= 0.0
-						&& vaccinationConfig.getTEMP_updatedProbaOfTransitioningToShowingSymptoms() <= 1.0) {
-					probaOfTransitioningToShowingSymptoms = vaccinationConfig.getTEMP_updatedProbaOfTransitioningToShowingSymptoms();
-				}
-
-				if (rnd.nextDouble() < probaOfTransitioningToShowingSymptoms * getShowingSymptomsFactor(person, vaccinationConfig, day))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))
 					return EpisimPerson.DiseaseStatus.showingSymptoms;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
