@@ -105,19 +105,8 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 
 				if (params != null) {
-//					mutEscBa1 = params.ba1Esc;
-//					mutEscBa5 = params.ba5Esc;
 
-//					String StrainA = "6.0";
-					String StrainB = "off";
-
-
-					if (!params.StrainA.equals("off")) {
-						mutEscStrainA = Double.parseDouble(params.StrainA);
-					}
-					if (!StrainB.equals("off")) {
-						mutEscStrainB = Double.parseDouble(StrainB);
-					}
+					mutEscStrainA = Double.parseDouble(params.StrainA);
 
 				}
 
@@ -371,7 +360,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0) {
 				runCount++;
 			} else {
 				return null;
@@ -389,25 +378,10 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 
-
-		episimConfig.setStartDate(LocalDate.parse(START_DATE));
-		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/imm-hist-970-2022-10-21/");
-
-
-		//snapshot
-//		episimConfig.setSnapshotInterval(960);
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-
-		//idk
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-11-18/" + params.seed + "-960-2022-10-11.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
-
-		//newer snapshot modiefied slightly
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-960-2022-10-11.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
-		//from last bericht
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		// start from immunization history
+//		episimConfig.setStartDate(LocalDate.parse(START_DATE));
+//		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/imm-hist-970-2022-10-21/");
+		
 		//---------------------------------------
 		//		S T R A I N S
 		//---------------------------------------
@@ -417,23 +391,11 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		double ba5Inf = virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).getInfectiousness();
 		double ba5Hos = virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).getFactorSeriouslySick();
 
-//		STRAIN_A
-		if (!params.StrainA.equals("off")) {
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(ba5Inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(ba5Hos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(ba5Hos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(ba5Hos);
-		}
-
-//		STRAIN_B
-//		if (!params.StrainB.equals("off")) {
-//
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA5).getInfectiousness() * ba5Inf);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(ba5Hos);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(ba5Hos);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(ba5Hos);
-//		}
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(ba5Inf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(ba5Hos);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(ba5Hos);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(ba5Hos);
 
 		//---------------------------------------
 		//		I M P O R T
@@ -562,27 +524,6 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setTEMP_updatedProbaOfTransitioningToShowingSymptoms(params.probaShowSymptoms);
 
-//		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-//		LocalDate dateToRemoveQuarantine = LocalDate.parse("2022-12-01");
-//		switch (params.quarantine) {
-//			case "base":
-//				break;
-//			case "nonSymptomatic0":
-//				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
-//				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.NON_SYMPTOMATIC);
-//				break;
-//			case "withSymptoms0":
-//				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
-//				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.WITH_SYMPTOMS);
-//				break;
-//			case "susceptible0":
-//				tracingConfig.getQuarantineDuration().put(dateToRemoveQuarantine, 0);
-//				tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE);
-//				break;
-//			default:
-//				throw new RuntimeException("invalid parameter");
-//		}
-
 
 
 		// vary amount of "school" activity that takes place during vacation
@@ -608,12 +549,10 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
-//		Map<LocalDate, Integer> infPerDayStrB = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_B, new TreeMap<>()));
 
 		//StrainA
 		if (!params.StrainA.equals("off")) {
 			infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
-//			LocalDate strADate = LocalDate.parse("2022-11-01");
 			LocalDate strADate = LocalDate.parse(params.strainADate);
 
 			for (int i = 0; i < 7; i++) {
@@ -621,67 +560,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 			}
 			infPerDayStrA.put(strADate.plusDays(7), 1);
 		}
-
-		//StrainB
-//		if (!params.StrainB.equals("off")) {
-//			infPerDayStrB.put(LocalDate.parse("2020-01-01"), 0);
-//			LocalDate strBDate = LocalDate.parse("2022-11-01");
-//			for (int i = 0; i < 7; i++) {
-//				infPerDayStrB.put(strBDate.plusDays(i), 4);
-//			}
-//			infPerDayStrB.put(strBDate.plusDays(7), 1);
-//		}
-
-
-		// add projected disease import for vacation waves after initial disease import
-//		int facBa2 = 4;
-//		int facBa5 = 4;
-//		int facStrAB = 4;
-//
-//		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
-//		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
-//		LocalDate dateStrainAB = LocalDate.parse("2022-11-18"); // after vaca import
-
-//		String importSummer2022 = "off";
-//		if (importSummer2022.equals("on")) {
-//			NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
-//			LocalDate date = null;
-//			for (Map.Entry<LocalDate, Double> entry : data.entrySet()) {
-//				date = entry.getKey();
-//				double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
-////
-//				double cases = factor * entry.getValue();
-//
-//				if (date.isAfter(dateStrainAB) && (!params.StrainA.equals("off") || !params.StrainB.equals("off"))) {
-//					if (!params.StrainA.equals("off") && !params.StrainB.equals("off")) {
-//						infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
-//						infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
-//					}
-//					else if (!params.StrainA.equals("off")) {
-//						infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
-//					}
-//					else if (!params.StrainB.equals("off")) {
-//						infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
-//					}
-//					else {
-//						throw new RuntimeException();
-//					}
-//					infPerDayBa5.put(date, 1);
-//					infPerDayBa2.put(date, 1);
-//				} else if (date.isAfter(dateBa5)) {
-//					infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
-//					infPerDayBa2.put(date, 1);
-//				} else if (date.isAfter(dateBa2)) {
-//					infPerDayBa2.put(date, ((int) cases * facBa2) == 0 ? 1 : (int) (cases * facBa2));
-//				}
-//
-//			}
-//		} else if (importSummer2022.equals("off")) {
-//		} else {
-//			throw new RuntimeException();
-//		}
-
-
+		
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
@@ -690,14 +569,11 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		if (!params.StrainA.equals("off")) {
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
 		}
-//		if (!params.StrainB.equals("off")) {
-//			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_B, infPerDayStrB);
-//		}
 	}
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(20)
 		public long seed;
 
 
@@ -706,7 +582,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		public String maskPt;
 
 		//		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
-		@Parameter({0.8, 1.0})
+		@Parameter({0.8})
 		public double probaShowSymptoms;
 
 
