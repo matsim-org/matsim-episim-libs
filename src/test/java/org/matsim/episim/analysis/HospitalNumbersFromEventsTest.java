@@ -13,12 +13,9 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.events.EpisimInfectionEvent;
-import org.matsim.episim.events.EpisimVaccinationEvent;
-import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.Facility;
 import java.util.Map;
@@ -63,7 +60,7 @@ public class HospitalNumbersFromEventsTest {
 		Map<Id<Person>, Handler.ImmunizablePerson> data = new IdMap<>(Person.class, population.getPersons().size());
 		ConfigHolder configHolder = new ConfigHolder(episimConfig,vaccinationConfig,strainConfig);
 
-		handler = new Handler("xxx", population, configHolder, 0.);
+		handler = new Handler("xxx", population, configHolder);
 
 	}
 
