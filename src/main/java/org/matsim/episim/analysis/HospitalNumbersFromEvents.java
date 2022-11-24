@@ -340,16 +340,6 @@
 		 final Int2IntSortedMap postProcessHospitalFilledBeds;
 		 final Int2IntSortedMap postProcessHospitalFilledBedsICU;
 
-		 private final Int2IntSortedMap changeBaseImmunity;
-		 private final Int2IntMap changeNoImmunity;
-		 private final Int2IntMap changeBoostered;
-		 private final Int2IntMap hospNoImmunity;
-		 private final Int2IntMap hospBoostered;
-		 private final Int2IntMap hospBaseImmunity;
-		 private final Int2IntMap incNoImmunity;
-		 private final Int2IntMap incBaseImmunity;
-		 private final Int2IntMap incBoostered;
-
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
 
 		 Handler(String name, Population population, ConfigHolder holder) {
@@ -366,16 +356,6 @@
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
-
-			 this.changeNoImmunity = new Int2IntAVLTreeMap();
-			 this.changeBaseImmunity = new Int2IntAVLTreeMap();
-			 this.changeBoostered = new Int2IntAVLTreeMap();
-			 this.hospNoImmunity = new Int2IntAVLTreeMap();
-			 this.hospBoostered = new Int2IntAVLTreeMap();
-			 this.hospBaseImmunity = new Int2IntAVLTreeMap();
-			 this.incNoImmunity = new Int2IntAVLTreeMap();
-			 this.incBaseImmunity = new Int2IntAVLTreeMap();
-			 this.incBoostered = new Int2IntAVLTreeMap();
 
 			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
 
@@ -403,7 +383,6 @@
 
 			 VirusStrain virusStrain = event.getVirusStrain();
 			 person.addInfection(event.getTime());
-//			 person.setAntibodyLevelAtInfection(event.getAntibodies()); // commented out as we're only using the max antibody level from now on
 			 person.setVirusStrain(virusStrain);
 			 person.setNumVaccinations(event.getNumVaccinations());
 
@@ -414,14 +393,6 @@
 
 			 updateHospitalizationsPost(person, virusStrain, day);
 
-
-			 if (person.getNumVaccinations()==0) {
-				 incNoImmunity.mergeInt(day, 1, Integer::sum);
-			 } else if (person.getNumVaccinations()==1) {
-				 incBaseImmunity.mergeInt(day, 1, Integer::sum);
-			 } else {
-				 incBoostered.mergeInt(day, 1, Integer::sum);
-			 }
 
 			 // print to csv
 
@@ -499,16 +470,6 @@
 				 // newly admitted to hospital
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
-
-				// Currently not used TODO : Integrate into Covid-sim plots (i.e. hospitalizations unvaccinated vs vaccinated/boostered)
-				 if (person.getNumVaccinations() == 0) {
-					 hospNoImmunity.mergeInt(inHospital, 1, Integer::sum);
-				 } else if (person.getNumVaccinations() == 1) {
-					 hospBaseImmunity.mergeInt(inHospital, 1, Integer::sum);
-				 } else {
-					 hospBoostered.mergeInt(inHospital, 1, Integer::sum);
-				 }
-
 
 				 if (goToICU(person, inHospital)) {
 
@@ -625,7 +586,7 @@
 			  */
 			 private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 
-			 private int age;
+			 private final int age;
 
 			 private int numVaccinations;
 
