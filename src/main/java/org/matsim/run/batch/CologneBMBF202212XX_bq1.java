@@ -379,8 +379,15 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 
 		// start from immunization history
-//		episimConfig.setStartDate(LocalDate.parse(START_DATE));
-//		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/imm-hist-970-2022-10-21/");
+		episimConfig.setStartDate(LocalDate.parse(START_DATE));
+
+		if (params.startFromImm.equals("sepSeeds")) {
+			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/imm-cologne-2022-11-24/" + params.seed + "-events_reduced.tar");
+		} else if (params.startFromImm.equals("4711")) {
+			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/imm-cologne-2022-11-24/4711-events_reduced.tar");
+		} else {
+			throw new RuntimeException("invalid param");
+		}
 
 		//---------------------------------------
 		//		S T R A I N S
@@ -569,23 +576,24 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(20)
 		public long seed;
 
+		@StringParameter({"sepSeeds", "4711"})
+		public String startFromImm;
+
+		// BQ 1
+//		@StringParameter({"off", "2.0", "2.25", "2.5", "2.75", "3.0"})
+//		@StringParameter({"1.0", "1.2", "1.4", "1.6", "1.8", "2.0"})
+		@StringParameter({"2.0"})
+		public String StrainA;
 
 //		@StringParameter({"base", "2022-11-15", "2022-12-01", "2022-12-15", "2023-01-01"})
 		@StringParameter({"base"})
 		public String maskPt;
 
 
-//		@StringParameter({"base", "nonSymptomatic0", "withSymptoms0", "susceptible0"})
-//		public String quarantine;
 
-
-		// BQ 1
-//		@StringParameter({"off", "2.0", "2.25", "2.5", "2.75", "3.0"})
-		@StringParameter({"1.0", "1.2", "1.4", "1.6", "1.8", "2.0"})
-		public String StrainA;
 
 //		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})
 		@StringParameter({"2022-09-19"})

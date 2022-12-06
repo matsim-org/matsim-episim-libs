@@ -8,28 +8,35 @@ rm(list=ls())
 source("/Users/jakob/git/matsim-episim/src/main/R/masterJR-utils.R", encoding = 'utf-8')
 
 # directory_snap_old <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-05/2-imm-snap/"
-directory_snap <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-15/2-imm-snap/"
-directory_imm <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-15/3-imm-hist/"
+directory_base <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-24/1-makeImmHist/"
+directory_imm <- "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-11-24/3-imm-20seeds/"
 # file_root<- "antibodies.tsv"
 
 #infections
 file_root_inf<- "infections.txt.csv"
-snap_inf_raw <- read_combine_episim_output_zipped(directory_snap, file_root_inf )
+snap_inf_raw <- read_combine_episim_output_zipped(directory_base, file_root_inf )
 # snap_inf_raw_old <- read_combine_episim_output_zipped(directory_snap, file_root_inf )
 imm_inf_raw <- read_combine_episim_output_zipped(directory_imm, file_root_inf)
 
+unique(snap_inf_raw$seed)
 
-start_date <- ymd("2021-11-15")
-end_date <- ymd("2029-07-05")
+
+start_date <- ymd("2022-04-01")
+end_date <- ymd("2022-09-01")
 snap_inf <- snap_inf_raw %>%
   filter(date >= start_date) %>%
   filter(date <= end_date) %>%
-  filter(pHh == 0.0, immuneSigma == 0.0)
+  filter(seed %in% unique(imm_inf_raw$seed))
+  # filter(pHh == 0.0, immuneSigma == 0.0)
   # mutate(vax = generic + mRNA + vector + ba1Update + ba5Update + natural)
+
+
 imm_inf <- imm_inf_raw %>%
   filter(date >= start_date) %>%
   filter(date <= end_date) %>%
-  filter(pHh == 0.0, immuneSigma == 0.0)
+  filter(StrainA == 2.0 & startFromImm =="sepSeeds")
+
+
   # mutate(vax = generic + mRNA + vector + ba1Update + ba5Update + natural)
 ggplot() + #nShowingSymptoms # SARS_CoV_2
   geom_line(imm_inf, mapping = aes(date, nShowingSymptoms , group = seed, col = "imm-hist")) +
@@ -37,12 +44,14 @@ ggplot() + #nShowingSymptoms # SARS_CoV_2
   scale_color_manual(name='Regression Model',
                        breaks=c('snapshot', 'imm-hist'),
                        values=c('snapshot'='red', 'imm-hist'='blue'))+
+  labs(alt = "hello world") +
   ggtitle("Infections")
+
 
 
 # antibodies
 file_root_ab<- "antibodies.tsv"
-snap_ab_raw <- read_combine_episim_output_zipped(directory_snap, file_root_ab )
+snap_ab_raw <- read_combine_episim_output_zipped(directory_base, file_root_ab )
 imm_ab_raw <- read_combine_episim_output_zipped(directory_imm, file_root_ab)
 
 
