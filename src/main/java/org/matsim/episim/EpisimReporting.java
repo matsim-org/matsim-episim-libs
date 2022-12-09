@@ -67,6 +67,22 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  */
 public final class EpisimReporting implements BasicEventHandler, Closeable, Externalizable {
 
+	/**
+	 * Age groups used for various outputs. AgeGroup -> minimum age of age group.
+	 * Important: age groups must be in descending order
+	 */
+	public enum AgeGroup {
+		age_60_plus(60),
+		age_18_59(18),
+		age_12_17(12),
+		age_0_11(0);
+
+		public final int lowerBoundAge;
+
+		AgeGroup(int lowerBoundAge) {
+			this.lowerBoundAge = lowerBoundAge;
+		}
+	}
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 

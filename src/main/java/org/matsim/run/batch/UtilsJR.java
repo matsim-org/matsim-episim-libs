@@ -2,6 +2,8 @@ package org.matsim.run.batch;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
+import org.matsim.episim.model.ImmunityEvent;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import tech.tablesaw.api.DateColumn;
 import tech.tablesaw.api.DoubleColumn;
@@ -104,7 +106,7 @@ public class UtilsJR {
 //			}
 		}
 
-//		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain.html");
+//		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain-old22.html");
 
 
 
@@ -146,4 +148,32 @@ public class UtilsJR {
 	}
 
 
+    protected static void printInitialAntibodiesToConsole(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies) {
+        System.out.print("immunityGiver");
+        for (VirusStrain immunityFrom : VirusStrain.values()) {
+            if (immunityFrom == VirusStrain.OMICRON_BA1) {
+                System.out.print( "," + "BA.1");
+            } else 		if (immunityFrom == VirusStrain.OMICRON_BA2) {
+                System.out.print( "," + "BA.2");
+            } else {
+                System.out.print( "," + immunityFrom);
+            }
+        }
+
+
+        for (ImmunityEvent immunityGiver : VaccinationType.values()) {
+            System.out.print("\n" + immunityGiver);
+            for (VirusStrain immunityFrom : VirusStrain.values()) {
+                System.out.print("," +  String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
+            }
+        }
+        for (ImmunityEvent immunityGiver : VirusStrain.values()) {
+            System.out.print("\n" + immunityGiver);
+            for (VirusStrain immunityFrom : VirusStrain.values()) {
+                System.out.print("," + String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
+            }
+        }
+
+        System.out.println();
+    }
 }

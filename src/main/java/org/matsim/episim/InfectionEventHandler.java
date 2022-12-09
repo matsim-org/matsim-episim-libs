@@ -777,11 +777,13 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
-		/*
-		if (date.equals(LocalDate.parse("2022-07-23"))) {
-			reporting.reportDetailedPersonStats(date, personMap.values());
-		}
-		 */
+		// uncomment if you want immunisation stats to be printed on a certain
+		// date or e.g. every month. This produces a lot of large files so use
+		// sparingly.
+//		if (date.getDayOfMonth() == 1) {
+// 			reporting.reportDetailedPersonStats(date, personMap.values());
+// 		}
+
 
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);

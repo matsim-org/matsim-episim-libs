@@ -134,23 +134,30 @@ public class HospitalNumbersFromEventsPlotter {
 				rkiHospIncidence.put(day, incidence);
 
 				double incidenceAdj;
-				if (date.isBefore(LocalDate.of(2020, 12, 10))) {
-					incidenceAdj = incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 1, 11))) {
-					incidenceAdj = 23. / 16. * incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 3, 22))) {
-					incidenceAdj = 8. / 6. * incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 5, 3))) {
-					incidenceAdj = 15./11. * incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 11, 8))) {
-					incidenceAdj = incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 12, 6))) {
-					incidenceAdj = 16. / 13. * incidence;
-				} else if (date.isBefore(LocalDate.of(2022, 1, 24))) {
-					incidenceAdj = incidence;
-				} else {
-					incidenceAdj = 11./14 * incidence;
+				if (date.isBefore(LocalDate.of(2022, 11, 1))) {
+					incidenceAdj = incidence * 2 / 3;
+				} else{
+					incidenceAdj = incidence / 3;
 				}
+
+
+//				if (date.isBefore(LocalDate.of(2020, 12, 10))) {
+//					incidenceAdj = incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 1, 11))) {
+//					incidenceAdj = 23. / 16. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 3, 22))) {
+//					incidenceAdj = 8. / 6. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 5, 3))) {
+//					incidenceAdj = 15./11. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 11, 8))) {
+//					incidenceAdj = incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 12, 6))) {
+//					incidenceAdj = 16. / 13. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2022, 1, 24))) {
+//					incidenceAdj = incidence;
+//				} else {
+//					incidenceAdj = 11./14 * incidence;
+//				}
 				rkiHospIncidenceAdj.put(day, incidenceAdj);
 			}
 		}
@@ -278,35 +285,35 @@ public class HospitalNumbersFromEventsPlotter {
 
 
 		//https://www.dkgev.de/dkg/coronavirus-fakten-und-infos/aktuelle-bettenbelegung/
-		Int2DoubleMap reportedBedsNrw = new Int2DoubleAVLTreeMap();
-		Int2DoubleMap reportedBedsIcuNrw = new Int2DoubleAVLTreeMap();
-		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("/Users/jakob/Downloads/Covid_csvgesamt(2).csv")),
-				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
-
-			for (CSVRecord record : parser) {
-
-				if (!record.get("Bundesland").equals("Nordrhein-Westfalen")) {
-					continue;
-				}
-
-				String dateStr = record.get("Datum");
-				LocalDate date = LocalDate.parse(dateStr);
-				int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-				double incidence = 0.;
-				try {
-					incidence = Double.parseDouble(record.get("Betten")) * 100_000. / populationCntOfficialNrw;
-				} catch (NumberFormatException ignored) {
-				}
-
-				if (record.get("Bettenart").equals("Intensivbett")) {
-					reportedBedsIcuNrw.put(day, incidence);
-				} else if (record.get("Bettenart").equals("Normalbett")) {
-					reportedBedsNrw.put(day, incidence);
-				}
-
-			}
-		}
+//		Int2DoubleMap reportedBedsNrw = new Int2DoubleAVLTreeMap();
+//		Int2DoubleMap reportedBedsIcuNrw = new Int2DoubleAVLTreeMap();
+//		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("/Users/jakob/Downloads/Covid_csvgesamt(2).csv")),
+//				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
+//
+//			for (CSVRecord record : parser) {
+//
+//				if (!record.get("Bundesland").equals("Nordrhein-Westfalen")) {
+//					continue;
+//				}
+//
+//				String dateStr = record.get("Datum");
+//				LocalDate date = LocalDate.parse(dateStr);
+//				int day = (int) startDate.until(date, ChronoUnit.DAYS);
+//
+//				double incidence = 0.;
+//				try {
+//					incidence = Double.parseDouble(record.get("Betten")) * 100_000. / populationCntOfficialNrw;
+//				} catch (NumberFormatException ignored) {
+//				}
+//
+//				if (record.get("Bettenart").equals("Intensivbett")) {
+//					reportedBedsIcuNrw.put(day, incidence);
+//				} else if (record.get("Bettenart").equals("Normalbett")) {
+//					reportedBedsNrw.put(day, incidence);
+//				}
+//
+//			}
+//		}
 
 
 		// https://datawrapper.dwcdn.net/sjUZF/334/
@@ -404,7 +411,7 @@ public class HospitalNumbersFromEventsPlotter {
 				} else {
 					values.append(value);
 				}
-				groupings.append("reported: intakeHosp (rki, nrw adjusted)");
+				groupings.append("reported: intakeHosp (rki, nrw adjusted) WITH Covid");
 			}
 
 			for (Int2DoubleMap.Entry entry : rkiHospIncidenceAdj.int2DoubleEntrySet()) {
@@ -417,7 +424,7 @@ public class HospitalNumbersFromEventsPlotter {
 				} else {
 					values.append(value);
 				}
-				groupings.append("reported: intakeHosp (rki, nrw adjusted, SARI)");
+				groupings.append("reported: intakeHosp (rki, nrw adjusted) FROM Covid");
 			}
 
 			for (Int2DoubleMap.Entry entry : hospIncidenceKoeln.int2DoubleEntrySet()) {
@@ -509,26 +516,26 @@ public class HospitalNumbersFromEventsPlotter {
 			}
 
 
-			for (Int2DoubleMap.Entry entry : reportedBedsNrw.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
+//			for (Int2DoubleMap.Entry entry : reportedBedsNrw.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(entry.getDoubleValue());
+//				groupings.append("Reported: General Beds (NRW)");
+//
+//			}
 
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: General Beds (NRW)");
 
-			}
-
-
-			for (Int2DoubleMap.Entry entry : reportedBedsIcuNrw.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: ICU Beds (NRW)");
-
-			}
+//			for (Int2DoubleMap.Entry entry : reportedBedsIcuNrw.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(entry.getDoubleValue());
+//				groupings.append("Reported: ICU Beds (NRW)");
+//
+//			}
 
 			for (Int2DoubleMap.Entry entry : reportedBedsNrw2.int2DoubleEntrySet()) {
 				int day = entry.getIntKey();

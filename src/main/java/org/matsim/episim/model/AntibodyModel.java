@@ -50,7 +50,6 @@ public interface AntibodyModel {
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors;
 		private double immuneReponseSigma = 0.;
 
-
 		public Config() {
 
 			//initial antibodies
@@ -162,7 +161,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha / mutEscBa5);
 			initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha);
             Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
-			
+
             for (VaccinationType immunityType : VaccinationType.values()) {
 				antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
 				for (VirusStrain virusStrain : VirusStrain.values()) {
@@ -209,6 +208,7 @@ public interface AntibodyModel {
 		public void setImmuneReponseSigma(double immuneReponseSigma) {
 			this.immuneReponseSigma = immuneReponseSigma;
 		}
+
 	}
 
 }

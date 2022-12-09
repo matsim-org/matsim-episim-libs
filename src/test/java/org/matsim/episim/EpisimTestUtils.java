@@ -190,7 +190,7 @@ public class EpisimTestUtils {
 	 * Helper method to infect a person.
 	 */
 	public static EpisimPerson infectPerson(EpisimPerson p, VirusStrain strain, double now) {
-		p.possibleInfection(new EpisimInfectionEvent(now, p.getPersonId(), p.getPersonId(), null, "undefined", 1, strain, 1.0, -1));
+		p.possibleInfection(new EpisimInfectionEvent(now, p.getPersonId(), p.getPersonId(), null, "undefined", 1, strain, 1.0, -1,-1));
 		p.checkInfection();
 		return p;
 	}

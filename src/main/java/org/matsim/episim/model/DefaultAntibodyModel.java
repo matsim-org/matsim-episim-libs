@@ -6,7 +6,6 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.SplittableRandom;
 
 public class DefaultAntibodyModel implements AntibodyModel {
@@ -42,6 +41,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
+				person.updateMaxAntibodies(strain, 0.0);
 			}
 
 			if (iteration > 1) {
@@ -110,6 +110,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				// should always be the case for initial immunization
+				person.updateMaxAntibodies(strain2, antibodies);
 			}
 
 
@@ -120,20 +124,20 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				// antibodies before refresh
 				double antibodies = person.getAntibodies(strain2);
 
-				// refresh antibodies; ensure that antibody level does not decrease.
-				if (refreshFactor * person.getImmuneResponseMultiplier() >= 1) {
-					antibodies = antibodies * refreshFactor * person.getImmuneResponseMultiplier();
-				}
+				// refresh antibodies
+				antibodies = antibodies * refreshFactor;
 
 				// check that new antibody level at least as high as initial antibodies
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
-
 				// check that new antibody level is at most 150
 				antibodies = Math.min(150., antibodies);
 
 				person.setAntibodies(strain2, antibodies);
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				person.updateMaxAntibodies(strain2, antibodies);
 			}
 		}
 	}

@@ -224,6 +224,7 @@ public class VaccinationFromData extends VaccinationByAge {
 			VaccinationFromData.AgeGroup ag = ageGroups.get(ii);
 			double share = entry.getDouble(ii);
 
+			// vaccinations left per age group
 			int vaccinationsLeft = (int) ((ag.size * share) - ag.vaccinated);
 
 			List<EpisimPerson> candidates = perAge[ii];

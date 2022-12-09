@@ -178,12 +178,15 @@ public class DefaultAntibodyModelTest {
 	@Test
 	public void testMixOfVaccinesAndInfections() {
 
-		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA, VaccinationType.ba1Update);
-		IntList immunityEventDays = IntList.of(1, 181, 451);
+		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.mRNA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5);
+		IntList immunityEventDays = IntList.of(538, 644,720,736,845,958,979);
 //		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 //		IntList immunityEventDays = IntList.of(1);
 
-		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750, EpisimTestUtils.createPerson());
+		EpisimPerson person = EpisimTestUtils.createPerson();
+		person.setImmuneResponseMultiplier(0.1);
+
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 1000, person);
 
 		// Plot 1: nAb
 		{
@@ -222,7 +225,7 @@ public class DefaultAntibodyModelTest {
 
 					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
 
-					var beta = 1.;
+					var beta = 1.2;
 					var fact = 0.001;
 					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
 					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
@@ -244,7 +247,7 @@ public class DefaultAntibodyModelTest {
 	 * Tests the immuneResponseMultiplier of EpisimPerson; the agent w/ a higher immune response to vaccination/infection
 	 * will have a multiplier of 2 while the "normal" agent has a multiplier of 1.
 	 * a) 1st immunity event: high-response agent will gain 2x antibodies as regular-response agent
-	 * b) 2nd immunity event: high-response agent will have their antibodies multiplied/refreshed by a factor 2x as high as the regular-response agent
+	 * b) 2nd immunity event: high-response agent will have their antibodies multiplied/refreshed by a factor exactly the same as regular-response agent
 	 */
 	@Test
 	public void testImmunityResponseMultiplier() {
@@ -289,18 +292,16 @@ public class DefaultAntibodyModelTest {
 			}
 		}
 
-		// antibody jump after 2nd infection will be 2x higher for high immunity agent.
+		// antibody jump after 2nd infection will be same for high immunity agent.
 		for (VirusStrain strain : strainsToCheck) {
 			double jumpNormal = antibodyLevelsNormal.get(secondImmunityEvent + 1).getDouble(strain) / antibodyLevelsNormal.get(secondImmunityEvent).getDouble(strain);
 			double jumpHigh = antibodyLevelsHigh.get(secondImmunityEvent + 1).getDouble(strain) / antibodyLevelsHigh.get(secondImmunityEvent).getDouble(strain);
 
-			assertThat(jumpHigh).isCloseTo(2 * jumpNormal, OFFSET);
+			assertThat(jumpHigh).isCloseTo(jumpNormal, OFFSET);
 
 		}
 
 	}
-
-
 
 	@Test
 	public void immunizationByBa1() {

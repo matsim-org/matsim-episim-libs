@@ -245,14 +245,25 @@ def aggregate_batch_run(run):
             with zipfile.ZipFile(zip_buffer, "w", compresslevel=9, compression=zipfile.ZIP_DEFLATED) as zInner:
 
                 for filename, dfs in files.items():
+                                                                
                     concat = pd.concat(dfs)
-                    by_row_index = concat.groupby(concat.index)
 
-                    # Ignore files that can't be aggregated
-                    try:
-                        means = by_row_index.mean()
-                    except Exception as e:
-                        continue
+                    # Tidy data needs to be aggregated separatly
+                    if "vaccinationsDetailed.tsv" in filename:
+                        
+                        grouped = concat.groupby(["day", "date", "type", "number"])                        
+                        means = grouped.agg(amount=("amount", "mean"))
+                        means = means.reset_index()
+                        
+                    else:
+
+                        # Aggregate by computung the mean
+                        try:
+                            by_row_index = concat.groupby(concat.index)
+                            means = by_row_index.mean()
+                        except Exception as e:
+                            # Ignore files that can't be aggregated
+                            continue
 
                     # attach non numeric columns without aggregating
                     nonNumeric = dfs[0].columns.difference(means.columns)

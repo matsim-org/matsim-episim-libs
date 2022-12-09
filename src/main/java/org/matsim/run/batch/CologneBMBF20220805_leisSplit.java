@@ -761,7 +761,7 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 							FaceMask.CLOTH, 0.0,
 							FaceMask.N95, 0.45,
 							FaceMask.SURGICAL, 0.45)),
-					 "educ_secondary", "educ_tertiary", "educ_other");
+					"educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
 							FaceMask.CLOTH, 0.0,
 							FaceMask.N95, 0.90)),

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
- * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependen additions.
+ * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
  */
 public final class InfectionModelWithAntibodies implements InfectionModel {
 
@@ -134,6 +134,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 
 		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
+		// remaining risk --> lower val, lower risk, max risk at 1
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection

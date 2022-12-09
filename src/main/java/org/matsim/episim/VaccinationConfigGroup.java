@@ -253,7 +253,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(TIME_PERIOD_IGA)
-	public void setTimePeriodIgA(double timePeriodIgA){
+	public void setTimePeriodIgA(double timePeriodIgA) {
 		this.timePeriodIgA = timePeriodIgA;
 	}
 
