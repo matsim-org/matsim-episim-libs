@@ -26,8 +26,6 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.*;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -39,7 +37,7 @@ import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
@@ -47,14 +45,11 @@ import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.nio.file.Files;
+import java.io.*;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -62,9 +57,9 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 
-import static org.matsim.episim.EpisimUtils.readChars;
-import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.*;
 
 /**
  * Main event handler of episim.
@@ -286,6 +281,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 	/**
 	 * Update events data and internal person data structure.
+	 *
 	 * @param events
 	 */
 	void updateEvents(Map<DayOfWeek, List<Event>> events) {
@@ -564,8 +560,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	void onSnapshotLoaded(int iteration) {
 
-		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
-		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
+		// Listener and vaccinations should already be present
 
 		for (SimulationListener s : listener) {
 			s.onSnapshotLoaded(iteration, localRnd, personMap, pseudoFacilityMap, vehicleMap);
@@ -758,6 +753,9 @@ public final class InfectionEventHandler implements Externalizable {
 		if (paramsMap.size() > 1000)
 			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
+		if (iteration == 1)
+			reporting.reportStart(episimConfig.getStartDate(), episimConfig.getStartFromImmunization());
+
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
@@ -777,7 +775,7 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
-		// uncomment if you want immunisation stats to be printed on a certain
+		// uncomment if you want immunization stats to be printed on a certain
 		// date or e.g. every month. This produces a lot of large files so use
 		// sparingly.
 //		if (date.getDayOfMonth() == 1) {
@@ -991,8 +989,31 @@ public final class InfectionEventHandler implements Externalizable {
 		infections.stream().sorted()
 				.forEach(reporting::reportInfection);
 
+
+		int totalContacts = handlers.stream().mapToInt(TrajectoryHandler::getNumContacts).sum();
+
+		reporting.reportTotalContacts(totalContacts);
+
 		for (SimulationListener l : listener) {
 			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
+		}
+
+	}
+
+
+	/**
+	 * Read immunization history and init persons.
+	 */
+	void initImmunization(Path history) {
+
+		log.info("Reading immunization from {}", history);
+
+		InitialImmunizationHandler handler = new InitialImmunizationHandler(personMap,episimConfig, antibodyModel,progressionModel);
+		List<String> days = AnalysisCommand.forEachEvent(history, handler, true, handler);
+
+
+		if (handler.isContinueProcessingEvents()) {
+			throw new RuntimeException("Immunisation history is not long enough (only contains " + days.size() + "days)");
 		}
 
 	}

@@ -217,9 +217,15 @@ def aggregate_batch_run(run):
                 if idx not in idMap or f.endswith(".xml"):
                     continue
 
-                with z.open(f) as zf:
-                    df = pd.read_csv(zf, sep="\t")
-                    runs[idMap[idx]][filename].append(df)
+                with z.open(f) as zf:                    
+                    try:
+                        df = pd.read_csv(zf, sep="\t")
+                        runs[idMap[idx]][filename].append(df)
+                    except pd.errors.EmptyDataError as e:
+                        print("WARN: " + f + " is empty")
+                    except:
+                        print("Error reading " + f)
+                        
 
     with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
                          mode="w", compresslevel=9,
@@ -281,6 +287,19 @@ def aggregate_batch_run(run):
                         buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
                         means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
                         buf.flush()
+                        
+                    if "infections.txt.csv" in filename:
+                                                
+                        cols = [dfs[0].day, dfs[0].date] + [df.nShowingSymptomsCumulative for df in dfs]
+                        columns = pd.concat(cols, axis=1)
+                        
+                        columns.columns = [columns.columns[0], columns.columns[1]] + ["%s_%d" % (name, i) for i, name in enumerate(columns.columns[2:])]
+                        
+                        with zInner.open(str(runId) + ".infectionsPerSeed.tsv", "w") as zf:                    
+                            buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+                            columns.to_csv(buf, sep="\t", mode="w", line_terminator="\n", index=False)
+                            buf.flush()
+
 
             with z.open("summaries/" + str(runId) + ".zip", "w") as f:
                 f.write(zip_buffer.getvalue())

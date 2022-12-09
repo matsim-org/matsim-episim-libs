@@ -41,6 +41,8 @@ public interface AntibodyModel {
 	 */
 	void init(Collection<EpisimPerson> persons, int iteration);
 
+	void recalculateAntibodiesAfterSnapshot(Collection<EpisimPerson> persons, int iteration);
+
 	/**
 	 * Class for antibody model configurations.
 	 */

@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
@@ -15,10 +16,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	private final AntibodyModel.Config antibodyConfig;
 	private final SplittableRandom localRnd;
 
+	private final EpisimConfigGroup episimConfig;
+
 
 	@Inject
-	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig) {
+	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
 		this.antibodyConfig = antibodyConfig;
+		this.episimConfig = episimConfigGroup;
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 
 
@@ -31,6 +35,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			// mu = log(median); log(1)=0
 
+
 			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
 			double immuneResponseMultiplier = 0;
 			while (immuneResponseMultiplier < 0.1 || immuneResponseMultiplier > 10) {
@@ -39,20 +44,26 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
-			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
-				person.updateMaxAntibodies(strain, 0.0);
-			}
-
-			if (iteration > 1) {
-				for (int it = 1; it < iteration; it++) {
-					updateAntibodies(person, it);
-				}
-
-			}
 		}
 
 
+	}
+
+	@Override
+	public void recalculateAntibodiesAfterSnapshot(Collection<EpisimPerson> persons, int iteration) {
+		for (EpisimPerson person : persons) {
+
+			// reset to 0.0
+			for (VirusStrain strain : VirusStrain.values()) {
+				person.setAntibodies(strain, 0.0);
+			}
+
+			// recalculate antibodies from immune history
+			for (int it = 1; it < iteration; it++) {
+				updateAntibodies(person, it);
+
+			}
+		}
 	}
 
 	/**
@@ -65,13 +76,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	 */
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
-
-		// todo: is this needed, now that we have an init
-		if (day == 0) {
-			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
-			}
-		}
 
 		//handle vaccination
 		if (person.getVaccinationDates().contains(day - 1)) {

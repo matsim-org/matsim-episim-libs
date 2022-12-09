@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.apache.log4j.Logger;
 import org.assertj.core.data.Offset;
 import org.junit.*;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.testcases.MatsimTestUtils;
@@ -53,7 +54,7 @@ public class DefaultAntibodyModelTest {
 	public void setup() {
 
 		antibodyConfig = AntibodyModel.newConfig();
-		model = new DefaultAntibodyModel(antibodyConfig);
+		model = new DefaultAntibodyModel(antibodyConfig,new EpisimConfigGroup());
 
 	}
 

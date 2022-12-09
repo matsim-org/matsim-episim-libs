@@ -36,7 +36,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String GROUPNAME = "episimVaccination";
 
-
 	/**
 	 * Amount of vaccinations available per day.
 	 */

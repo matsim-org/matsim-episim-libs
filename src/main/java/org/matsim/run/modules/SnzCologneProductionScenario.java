@@ -293,7 +293,7 @@
 		 //episim config
 		 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		 episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06);
+//		 episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06);
 
 		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_wt_%dpt_split_withLeisureSplit.xml.gz", sample))
 				 .addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -382,7 +382,7 @@
 
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221003.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221111.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -538,7 +538,7 @@
 		 builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
 		 // mask mandate removed
-		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "leisure","leisPublic","leisPrivate","work", "business"); //todo: check
+		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher", "leisure","leisPublic","leisPrivate","work", "business");
 
 		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(Map.of(
 						 FaceMask.CLOTH, 0.0,
@@ -677,8 +677,6 @@
 
 		 testingConfigGroup.setTestAllPersonsAfter(LocalDate.parse("2021-10-01"));
 
-
-
 		 testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 
 		 List<String> actsList = new ArrayList<String>();
@@ -750,8 +748,7 @@
 //		 kigaPrimaryTests.put(LocalDate.of(2022, 4, 25), 0.0);
 		 eduTests.put(LocalDate.of(2022, 4, 25), 0.0);
 		 uniTests.put(LocalDate.of(2022, 4, 25), 0.0);
-		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);  // no more regulation regarding test, we assume once every 2 weeks
-
+		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.0);
 
 		 Map<String, Map<LocalDate, Double>> testingRatePerAct = new HashMap<>(Map.of(
 				 "leisure", leisureTests,

@@ -33,12 +33,10 @@ import javax.annotation.Nullable;
 import javax.inject.Named;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
@@ -96,12 +94,16 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 			Config actConfig = config.getConfig(entry.getKey());
 
-			for (Map.Entry<String, ConfigValue> days : actConfig.root().entrySet()) {
+			List<Map.Entry<String, ConfigValue>> entries = actConfig.root().entrySet().stream().filter(e -> !e.getKey().startsWith("day"))
+					.sorted(Comparator.comparing(e -> LocalDate.parse(e.getKey())))
+					.collect(Collectors.toList());
+
+			for (Map.Entry<String, ConfigValue> days : entries) {
 
 				if (days.getKey().startsWith("day")) continue;
 
 				LocalDate date = LocalDate.parse(days.getKey());
-				if (date.isBefore(start)) {
+				if (date.isBefore(start.plusDays(1))) {
 					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
 					entry.getValue().update(r);
 

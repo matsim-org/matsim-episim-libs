@@ -49,8 +49,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static org.matsim.episim.EpisimUtils.readChars;
-import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.*;
 
 /**
  * Persons current state in the simulation.
@@ -156,7 +155,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
-	private int quarantineDate = -1;
+	private int quarantineDate = Integer.MIN_VALUE;
 
 	/**
 	 * Iteration when this person was tested. Negative if person was never tested.
@@ -428,7 +427,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public void setInitialInfection(double now, VirusStrain strain) {
 
-		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain)));
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain),getNumInfections()));
 
 		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
@@ -436,6 +435,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		antibodyLevelAtInfection = antibodies.getDouble(strain);
 
+		// TODO: add max antibodies
 	}
 
 	/**
@@ -698,10 +698,15 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	@Beta
 	public int daysSinceQuarantine(int currentDay) {
-
 		// yyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
 		// -> api now marked as unstable and containing an api note, because it is used by the models it has to be public. chr, apr'20
-		if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
+
+		//check removed; when starting simulation with immunisation history, quarantine date can very well be negative. -jr, nov'22
+		if (quarantineDate == Integer.MIN_VALUE) {
+
+			throw new IllegalStateException("Person was never quarantined");
+
+		}
 
 		return currentDay - quarantineDate;
 	}
