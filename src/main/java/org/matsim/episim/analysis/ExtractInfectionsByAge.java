@@ -232,7 +232,7 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 					}
 				}
 				,
-				(EpisimPersonStatusEventHandler) e -> {
+				false, (EpisimPersonStatusEventHandler) e -> {
 
 					if (!counts.containsKey(e.getDiseaseStatus()))
 						return;

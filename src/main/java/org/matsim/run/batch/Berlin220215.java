@@ -597,7 +597,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 				)
 		;
 
-		vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
+		vaccinationConfig.getOrAddParams(VaccinationType.ba1Update)
 		.setDaysBeforeFullEffect(fullEffectMRNA)
 		.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 				.atFullEffect(factorSymptomsMRNA)
@@ -697,7 +697,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 				.setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 		;
 
-		vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
+		vaccinationConfig.getOrAddParams(VaccinationType.ba1Update)
 		.setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 ;
 

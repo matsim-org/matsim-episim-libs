@@ -227,7 +227,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (release == TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE && status == DiseaseStatus.susceptible)
 			return true;
 
-		if (release == TracingConfigGroup.QuarantineRelease.NON_SYMPTOMS &&
+		if (release == TracingConfigGroup.QuarantineRelease.NON_SYMPTOMATIC &&
 				(status == DiseaseStatus.susceptible || status == DiseaseStatus.contagious || status == DiseaseStatus.infectedButNotContagious))
 			return true;
 

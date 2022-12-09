@@ -30,6 +30,7 @@
  import org.matsim.episim.model.activity.LocationBasedParticipationModel;
  import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
  import org.matsim.episim.model.listener.HouseholdSusceptibility;
+ import org.matsim.episim.model.listener.WriteAntibodies;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
  import org.matsim.episim.model.testing.TestType;
@@ -67,7 +68,6 @@
 		 public CarnivalModel carnivalModel = CarnivalModel.no;
 
 		 private boolean sebastianUpdate = true;
-
 
 
 		 public Builder() {
@@ -259,8 +259,13 @@
 					.withAgeGroup("60+", 151722)
 		 */
 
-		 Multibinder.newSetBinder(binder(), SimulationListener.class)
-				 .addBinding().to(HouseholdSusceptibility.class);
+		 Multibinder<SimulationListener> listener = Multibinder.newSetBinder(binder(), SimulationListener.class);
+
+		 listener.addBinding().to(HouseholdSusceptibility.class);
+
+		 // Write antibodies, iteration is hard-coded
+
+		 // listener.addBinding().to(WriteAntibodies.class);
 
 	 }
 
@@ -268,11 +273,10 @@
 	 @Singleton
 	 public Config config() {
 
-		 LocalDate restrictionDate = LocalDate.parse("2022-03-01");
 		 double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model, -> 2_352_480
 
-		if (this.sample != 25 && this.sample != 100)
-			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		 if (this.sample != 25 && this.sample != 100)
+			 throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		 //general config
 		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -284,18 +288,20 @@
 
 		 config.plans().setInputFile(inputForSample("cologne_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
+		 config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
+
 		 //episim config
 		 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		 episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 );
+//		 episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06);
 
-		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_wt_%dpt_split_withLeisureSplit.xml.gz", sample))
 				 .addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_sa_%dpt_split_withLeisureSplit.xml.gz", sample))
 				 .addDays(DayOfWeek.SATURDAY);
 
-		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_so_%dpt_split_withLeisureSplit.xml.gz", sample))
 				 .addDays(DayOfWeek.SUNDAY);
 
 		 episimConfig.setActivityHandling(activityHandling);
@@ -309,52 +315,74 @@
 		 episimConfig.setThreads(8);
 		 episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
-		 if (sebastianUpdate) {
-
-			 episimConfig.getOrAddContainerParams("work").setSeasonality(0.5);
-
-			 double leisCi = 0.6;
-
-			 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
-
-			 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("educ_other").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("errands").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("business").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("visit").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("home").setSeasonality(0.5);
-			 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonality(0.5);
-
-		 }
-
 		 //progression model
 		 //episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
-		 episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());// TODO: why does this immediately override?
+		 episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());
 
 
-		 //inital infections and import
+		 //---------------------------------------
+		 //		I M P O R T
+		 //---------------------------------------
 		 episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		 if (this.diseaseImport != DiseaseImport.no) {
 
-			 //			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
-			 //					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
-			 //disease import 2020
 			 configureDiseaseImport(cologneFactor, episimConfig);
 
 		 }
 
 
-		 //contact intensities
-		 SnzProductionScenario.configureContactIntensities(episimConfig);
+		 //----------------------------------------------------------------------------
+		 //		C O N T A C T     I N T E N S I T Y    /    S E A S O N A L I T Y
+		 //----------------------------------------------------------------------------
 
-		 //restrictions and masks
+		 SnzProductionScenario.configureContactIntensities(episimConfig);
+		 //work
+		 double workCiMod = 0.75;
+		 episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCiMod);
+		 episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCiMod);
+
+		 //leisure & visit
+		 double leisureCiMod = 0.4;
+		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCiMod);
+		 episimConfig.getOrAddContainerParams("leisPublic").setContactIntensity(episimConfig.getOrAddContainerParams("leisPublic").getContactIntensity() * leisureCiMod);
+		 episimConfig.getOrAddContainerParams("leisPrivate").setContactIntensity(episimConfig.getOrAddContainerParams("leisPrivate").getContactIntensity() * leisureCiMod);
+		 episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCiMod);
+
+
+		 //school
+		 double schoolCiMod = 0.75;
+		 episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCiMod);
+
+
+		 //SEASONALITY
+		 episimConfig.getOrAddContainerParams("work").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("educ_other").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("errands").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("business").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("visit").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("home").setSeasonality(0.5);
+		 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonality(0.5);
+
+		 //---------------------------------------
+		 //		R E S T R I C T I O N S
+		 //---------------------------------------
+
+		 Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
+		 inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
+
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220610.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221111.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -378,9 +406,10 @@
 		 //Herbstferien
 		 builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2020-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 //Weihnachtsferien TODO: check end date; shouldn't it be 2021-01-06
+		 //Weihnachtsferien
 		 builder.restrict(LocalDate.parse("2020-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 builder.restrict(LocalDate.parse("2021-01-11"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		 builder.restrict(LocalDate.parse("2021-02-21"), 0.5, "educ_primary");
+		 builder.restrict(LocalDate.parse("2021-03-15"), 0.5, "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 //Osterferien
 		 builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2021-04-10"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -409,15 +438,58 @@
 		 //Herbstferien
 		 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 //Weihnachtsferien
-		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		 //Weihnachtsferien todo: reinstate xmas
+//		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
-		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+//		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
+//		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+
+		 if (carnivalModel.equals(CarnivalModel.yes)) {
+			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
+			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business");
+			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
+			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
+
+			 builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure","leisPublic","leisPrivate");
+			 builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure","leisPublic","leisPrivate");
+			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
+		 }
+		 episimConfig.setInputDays(inputDays);
 
 
+		 //leisure & work factor
+		 if (this.restrictions != Restrictions.no) {
 
+			 if (leisureCorrection == 0.) {  // assume old factor of 1.9, only applied to leisure TODO: get rid of this artifact
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure","leisPublic","leisPrivate");
+			 } else if (leisureCorrection != 1) {
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "business", "errands", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "work");
+			 }
+
+			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
+			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
+
+			 builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
+			 builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
+			 builder.applyToRf("2020-10-09", "2020-10-23", workVacFactor, "work", "business");
+			 builder.applyToRf("2020-12-18", "2021-01-01", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-01-29", "2021-02-05", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-12-22", "2022-01-05", workVacFactor, "work", "business");
+			 builder.applyToRf("2022-04-11", "2022-04-23", workVacFactor, "work", "business");
+			 builder.applyToRf("2022-06-27", "2022-08-09", workVacFactor, "work", "business");
+
+			 builder.restrict(LocalDate.parse("2022-10-04"), 0.78 * 0.92, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-10-15"), 0.78, "work", "business");
+			 //todo: revert xmas factor
+//			 builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
+//			 builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
+		 }
+
+		 //MASKS
 		 {
 			 LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			 for (int ii = 0; ii <= 14; ii++) {
@@ -438,7 +510,7 @@
 		 }
 
 		 //curfew
-		 builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
+		 builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure","leisPublic","leisPrivate", "visit");
 		 Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		 curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
 		 curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
@@ -447,96 +519,46 @@
 		 // vaccinated individuals (even tho they are allowed to complete activities, they will naturally reduce their activities)
 		 LocalDate transition2gTo3g = LocalDate.of(2022, 3, 4);
 		 double leis = 1.0;
-		 builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
-		 builder.restrict(transition2gTo3g, Restriction.ofVaccinatedRf(leis), "leisure");
+		 builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure","leisPublic","leisPrivate");
+		 builder.restrict(transition2gTo3g, Restriction.ofVaccinatedRf(leis), "leisure","leisPublic","leisPrivate");
 
 		 //2G for unvaccinated susceptible agents  (will move more activities in private homes, thats why we assume 0.75 for both vaccinated and unvaccinated)
-		 builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
-		 builder.restrict(transition2gTo3g, Restriction.ofSusceptibleRf(leis), "leisure");
+		 builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure","leisPublic","leisPrivate");
+		 builder.restrict(transition2gTo3g, Restriction.ofSusceptibleRf(leis), "leisure","leisPublic","leisPrivate");
 
 		 double schoolFac = 0.5;
 		 builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+		 for (LocalDate date = LocalDate.parse("2020-04-21"); date.isBefore(LocalDate.parse("2021-05-01")); date = date.plusDays(1)) {
+			 builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.45, FaceMask.SURGICAL, 0.45)), "pt", "errands", "shop_daily", "shop_other");
+		 }
 
 		 builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
 		 // mask mandate removed
-		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "leisure", "work", "business"); //todo: check
+		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher", "leisure","leisPublic","leisPrivate","work", "business");
 
 		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(Map.of(
-				 FaceMask.CLOTH, 0.0,
-				 FaceMask.N95, 0.0,
-				 FaceMask.SURGICAL, 0.0)),
-		 "shop_daily", "shop_other", "errands");
+						 FaceMask.CLOTH, 0.0,
+						 FaceMask.N95, 0.0,
+						 FaceMask.SURGICAL, 0.0)),
+				 "shop_daily", "shop_other", "errands");
 
 		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(Map.of(
-				 FaceMask.CLOTH, 0.0,
-				 FaceMask.N95, 0.25,
-				 FaceMask.SURGICAL, 0.25)),
-		 "pt");
+						 FaceMask.CLOTH, 0.0,
+						 FaceMask.N95, 0.25,
+						 FaceMask.SURGICAL, 0.25)),
+				 "pt");
 
 
-		 //tracing
-		 if (this.tracing == Tracing.yes) {
-
-			 SnzProductionScenario.configureTracing(config, cologneFactor);
-
-		 }
 
 
-		 Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
-		 inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
-		 episimConfig.setInputDays(inputDays);
 
-		 //outdoorFractions
-		 if (this.weatherModel != WeatherModel.no) {
-
-			 double outdoorAlpha = sebastianUpdate ? 0.8 : 1.0;
-			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
-					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), outdoorAlpha
-			 );
-
-
-		 } else {
-			 episimConfig.setLeisureOutdoorFraction(Map.of(
-					 LocalDate.of(2020, 1, 1), 0.)
-			 );
-		 }
-
-		 //leisure & work factor
-		 if (this.restrictions != Restrictions.no) {
-
-			 if (leisureCorrection != 1)
-				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "leisure");
-			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
-
-			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
-
-			 builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
-			 builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
-			 builder.applyToRf("2020-10-09", "2020-10-23", workVacFactor, "work", "business");
-			 builder.applyToRf("2020-12-18", "2021-01-01", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-01-29", "2021-02-05", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-12-22", "2022-01-05", workVacFactor, "work", "business");
-
-
-			 builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-06-27"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-08-09"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-10-04"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-10-15"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
-
-
-		 }
-
+		 //---------------------------------------
+		 //		V A C C I N A T I O N S
+		 //---------------------------------------
 		 if (this.vaccinations.equals(Vaccinations.yes)) {
 
 			 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -576,74 +598,91 @@
 
 		 }
 
-		 if (carnivalModel.equals(CarnivalModel.yes)) {
-		 	// Friday 25.2 to Monday 28.2 (Rosenmontag)
-			builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
-			builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
-			builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
-
-			builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure");
-			builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure");
-
-			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
-		 }
-
 		 builder.setHospitalScale(this.scale);
 
 		 episimConfig.setPolicy(builder.build());
 
-		 //configure strains
-		 //alpha
-		 double aInf = sebastianUpdate ? 1.9 : 1.7; //todo: choose value, see CologneJR
-//		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
+		 //---------------------------------------
+		 //		S T R A I N S
+		 //---------------------------------------
+
 		 VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+
+
+		 //alpha
+		 double aInf = 1.9 * 1.4;
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(aInf);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
 
 
 		 //delta
-		 double deltaInf = sebastianUpdate ? 3.1 : 2.7 ; //todo: choose value, see CologneJR
-		 double deltaHos = sebastianUpdate ? 1.0 : 0.9;//todo: choose value, see CologneJR
+		 double deltaInf = 3.1 * 0.9;
+		 double deltaHos = 1.0;
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
 
 
-		 //omicron
-//		double oInf = params.ba1Inf;
-		 double oHos = sebastianUpdate ? 0.2 : 0.13;
-		 double ba1Inf = sebastianUpdate ? 2.2 : 2.4;
-
-		 if (ba1Inf > 0) {
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
-		 }
+		 //BA.1
+		 double oHos = 0.2;
+		 double ba1Inf = 1.9 * deltaInf;
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(ba1Inf);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
 
 
 		 //BA.2
-		 double ba2Inf= 1.7;
-		 if (ba2Inf > 0) {
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * ba1Inf * ba2Inf);
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
-			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
+		 double ba2Inf = 1.7 * ba1Inf;
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(ba2Inf);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
+
+		 //BA.5
+		 double ba5Inf = ba2Inf;
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setInfectiousness(ba5Inf);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(oHos);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySickVaccinated(oHos);
+		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(oHos);
+
+		 // remove age-differentiation in susceptibility for all strains expect WILD & ALPHA
+		 TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
+				 19, 1d,
+				 20, 1d
+		 ));
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 if (strain.equals(VirusStrain.SARS_CoV_2) || strain.equals(VirusStrain.ALPHA) || strain.equals(VirusStrain.B1351)) {
+				 continue;
+			 }
+			 virusStrainConfigGroup.getOrAddParams(strain).setAgeSusceptibility(nonSteppedAgeSusceptibility);
 		 }
 
-		 //testing
+		 //---------------------------------------
+		 //		T E S T I N G
+		 //---------------------------------------
+
+		 // this section is split into four nested sections:
+		 // A) RAPID test
+		 // 	i) unvaccinated
+		 //		ii) vaccinated
+		 // B) PCR Test
+		 //		i) unvaccinated
+		 //		ii) vaccinated
+
+		 // load testing config group and set general parameters
 		 TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 
 		 testingConfigGroup.setTestAllPersonsAfter(LocalDate.parse("2021-10-01"));
-
-		 TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
-		 TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
 
 		 testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 
 		 List<String> actsList = new ArrayList<String>();
 		 actsList.add("leisure");
+		 actsList.add("leisPublic");
+		 actsList.add("leisPrivate");
 		 actsList.add("work");
 		 actsList.add("business");
 		 actsList.add("educ_kiga");
@@ -654,37 +693,41 @@
 		 actsList.add("educ_higher");
 		 testingConfigGroup.setActivities(actsList);
 
+
+		 // 1) Rapid test
+		 TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 		 rapidTest.setFalseNegativeRate(0.3);
 		 rapidTest.setFalsePositiveRate(0.03);
 
-		 pcrTest.setFalseNegativeRate(0.1);
-		 pcrTest.setFalsePositiveRate(0.01);
+		//		1i) unvaccianted
 
 		 testingConfigGroup.setHouseholdCompliance(1.0);
-
-		 LocalDate testingStartDate = LocalDate.parse("2021-03-19");
 
 		 Map<LocalDate, Double> leisureTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> workTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> eduTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> kigaPrimaryTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> uniTests = new HashMap<LocalDate, Double>();
+
 		 leisureTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 workTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 kigaPrimaryTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 uniTests.put(LocalDate.parse("2020-01-01"), 0.);
 
+
+		 LocalDate testingStartDate = LocalDate.parse("2021-03-19");
+
 		 for (int i = 1; i <= 31; i++) {
 			 leisureTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
 			 workTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
-			 eduTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
-			 kigaPrimaryTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
 			 uniTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
 
 		 }
 
-		 kigaPrimaryTests.put(LocalDate.parse("2021-05-10"), 0.0);
+		 eduTests.put(LocalDate.parse("2021-04-25"), 0.4);
+
+//		 kigaPrimaryTests.put(LocalDate.parse("2021-05-10"), 0.0);
 
 		 workTests.put(LocalDate.parse("2021-06-04"), 0.05);
 
@@ -701,30 +744,30 @@
 		 // 3g removed for work
 		 workTests.put(LocalDate.of(2022, 3, 20), 0.);
 
-//		 if (testing.equals("no")) {
 		 // turn of school tests after easter break
-		 kigaPrimaryTests.put(LocalDate.of(2022,4,25), 0.0);
-		 eduTests.put(LocalDate.of(2022,4,25), 0.0);
-		 uniTests.put(LocalDate.of(2022,4,25), 0.0);
-//		 }
+//		 kigaPrimaryTests.put(LocalDate.of(2022, 4, 25), 0.0);
+		 eduTests.put(LocalDate.of(2022, 4, 25), 0.0);
+		 uniTests.put(LocalDate.of(2022, 4, 25), 0.0);
+		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.0);
 
-		 // no more regulation regarding test, we assume once every 2 weeks
-		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);
-
-
-
-		 rapidTest.setTestingRatePerActivityAndDate((Map.of(
+		 Map<String, Map<LocalDate, Double>> testingRatePerAct = new HashMap<>(Map.of(
 				 "leisure", leisureTests,
 				 "work", workTests,
 				 "business", workTests,
-				 "educ_kiga", eduTests,
-				 "educ_primary", eduTests,
+				 "educ_kiga", kigaPrimaryTests,
+				 "educ_primary", kigaPrimaryTests,
 				 "educ_secondary", eduTests,
 				 "educ_tertiary", eduTests,
 				 "educ_higher", uniTests,
 				 "educ_other", eduTests
-		 )));
+		 ));
 
+		 testingRatePerAct.put("leisPrivate", leisureTests);
+		 testingRatePerAct.put("leisPublic", leisureTests);
+
+		 rapidTest.setTestingRatePerActivityAndDate(testingRatePerAct);
+
+		 //		1ii) vaccinated
 		 Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<>();
 		 Map<LocalDate, Double> workTestsVaccinated = new HashMap<>();
 		 Map<LocalDate, Double> eduTestsVaccinated = new HashMap<>();
@@ -737,12 +780,12 @@
 
 //		 if (testing.equals("no")) {
 		 leisureTestsVaccinated.put(LocalDate.of(2022, 4, 25), 0.0);
-		 workTestsVaccinated.put(LocalDate.of(2022, 4, 25),0.0);
+		 workTestsVaccinated.put(LocalDate.of(2022, 4, 25), 0.0);
 		 eduTestsVaccinated.put(LocalDate.of(2022, 4, 25), 0.0);
 //		 }
 
 
-		 rapidTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
+		 Map<String, Map<LocalDate, Double>> testingRatePerActVac = new HashMap<>(Map.of(
 				 "leisure", leisureTestsVaccinated,
 				 "work", workTestsVaccinated,
 				 "business", workTestsVaccinated,
@@ -752,40 +795,53 @@
 				 "educ_tertiary", eduTestsVaccinated,
 				 "educ_higher", eduTestsVaccinated,
 				 "educ_other", eduTestsVaccinated
-		 )));
+		 ));
 
+		 testingRatePerActVac.put("leisPrivate", leisureTestsVaccinated);
+		 testingRatePerActVac.put("leisPublic", leisureTestsVaccinated);
+
+
+		 rapidTest.setTestingRatePerActivityAndDateVaccinated(testingRatePerActVac);
+
+
+		 // 2) PCR Test
+		 TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+		 pcrTest.setFalseNegativeRate(0.1);
+		 pcrTest.setFalsePositiveRate(0.01);
+
+		 // 	2i) unvaccinated
 
 		 Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
-		 Map<LocalDate, Double> kigaPramaryTestsPCR = new HashMap<LocalDate, Double>();
+		 Map<LocalDate, Double> kigaPrimaryTestsPCR = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> eduTestsPCR = new HashMap<LocalDate, Double>();
 
 		 leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		 workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-		 kigaPramaryTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+		 kigaPrimaryTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		 eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 
-		 kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
-
-//		 if (testing.equals("no")) {
-			 leisureTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-			 workTestsPCR.put(LocalDate.of(2022, 4, 25),0.0);
-			 kigaPramaryTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-			 eduTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-//		 }
+		 kigaPrimaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
+		 kigaPrimaryTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
 
 
-		 pcrTest.setTestingRatePerActivityAndDate((Map.of(
+		 Map<String, Map<LocalDate, Double>> testingRatePerActPCR = new HashMap<>(Map.of(
 				 "leisure", leisureTestsPCR,
 				 "work", workTestsPCR,
 				 "business", workTestsPCR,
-				 "educ_kiga", kigaPramaryTestsPCR,
-				 "educ_primary", kigaPramaryTestsPCR,
+				 "educ_kiga", kigaPrimaryTestsPCR,
+				 "educ_primary", kigaPrimaryTestsPCR,
 				 "educ_secondary", eduTestsPCR,
 				 "educ_tertiary", eduTestsPCR,
 				 "educ_higher", eduTestsPCR,
 				 "educ_other", eduTestsPCR
-		 )));
+		 ));
+
+		 testingRatePerActPCR.put("leisPrivate", leisureTestsPCR);
+		 testingRatePerActPCR.put("leisPublic", leisureTestsPCR);
+		 pcrTest.setTestingRatePerActivityAndDate(testingRatePerActPCR);
+
+		 // 	2ii) vaccinated
 
 		 Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<>();
 		 Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<>();
@@ -794,7 +850,7 @@
 		 workTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 		 eduTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 
-		 pcrTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
+		 Map<String, Map<LocalDate, Double>> testingRatePerActVacPCR = new HashMap<>(Map.of(
 				 "leisure", leisureTestsPCRVaccinated,
 				 "work", workTestsPCRVaccinated,
 				 "business", workTestsPCRVaccinated,
@@ -804,7 +860,11 @@
 				 "educ_tertiary", eduTestsPCRVaccinated,
 				 "educ_higher", eduTestsPCRVaccinated,
 				 "educ_other", eduTestsPCRVaccinated
-		 )));
+		 ));
+
+		 testingRatePerActVacPCR.put("leisPrivate", leisureTestsPCRVaccinated);
+		 testingRatePerActVacPCR.put("leisPublic", leisureTestsPCRVaccinated);
+		 pcrTest.setTestingRatePerActivityAndDateVaccinated(testingRatePerActVacPCR);
 
 		 rapidTest.setTestingCapacity_pers_per_day(Map.of(
 				 LocalDate.of(1970, 1, 1), 0,
@@ -814,7 +874,18 @@
 				 LocalDate.of(1970, 1, 1), 0,
 				 testingStartDate, Integer.MAX_VALUE));
 
-		 //tracing
+
+		 //---------------------------------------
+		 //		T R A C I N G
+		 //---------------------------------------
+
+
+		 if (this.tracing == Tracing.yes) {
+
+			 SnzProductionScenario.configureTracing(config, cologneFactor);
+
+		 }
+
 		 TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		 boolean qv = false;
 		 //		if (params.qV.equals("yes")) {
@@ -843,7 +914,24 @@
 				 //					restrictionDate, qs
 		 ));
 
-		 config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
+		 //---------------------------------------
+		 //		W E A T H E R
+		 //---------------------------------------
+		 if (this.weatherModel != WeatherModel.no) {
+
+			 double outdoorAlpha = 0.8;
+			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
+					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), outdoorAlpha
+			 );
+
+
+		 } else {
+			 episimConfig.setLeisureOutdoorFraction(Map.of(
+					 LocalDate.of(2020, 1, 1), 0.)
+			 );
+		 }
+
 
 		 return config;
 	 }
@@ -874,132 +962,95 @@
 		 infPerDayWild.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
 		 infPerDayWild.put(LocalDate.parse("2020-08-09"), 1);
 
-//		 episimConfig.setInfections_pers_per_day(infPerDayWild);
-
-		 if (sebastianUpdate) {
-
-			 for (Map.Entry<LocalDate, Integer> entry : infPerDayWild.entrySet()) {
-				 if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
-					 int value = entry.getValue();
-					 value = Math.max(1, value);
-					 infPerDayWild.put(entry.getKey(), value);
-				 }
+		 for (Map.Entry<LocalDate, Integer> entry : infPerDayWild.entrySet()) {
+			 if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
+				 int value = entry.getValue();
+				 value = Math.max(1, value);
+				 infPerDayWild.put(entry.getKey(), value);
 			 }
+		 }
 
-			 double facWild = 4.0;
-			 double facAlpha = 4.0;
-			 double facDelta = 4.0;
-			 double facBa1 = 4.0;
-			 double facBa2 = 4.0;
-			 double facBa5 = 4.0;
-
-			 LocalDate dateAlpha = LocalDate.parse("2021-01-23");
-			 LocalDate dateDelta = LocalDate.parse("2021-06-28");
-			 LocalDate dateBa1 = LocalDate.parse("2021-12-12");
-			 LocalDate dateBa2 = LocalDate.parse("2022-01-05");
+		 double facWild = 4.0;
+		 double facAlpha = 4.0;
+		 double facDelta = 4.0;
+		 double facBa1 = 4.0;
+		 double facBa2 = 4.0;
 
 
-			 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayBa5.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayBa5.put(LocalDate.parse("2020-01-01"), 0);
 
-			 NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv"));
+		 NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv"));
 
-			 NavigableMap<LocalDate, Map<VirusStrain, Double>> shares = DataUtils.readVOC(SnzCologneProductionScenario.INPUT.resolve("VOC_Cologne_RKI.csv"));
+		 NavigableMap<LocalDate, Map<VirusStrain, Double>> shares = DataUtils.readVOC(SnzCologneProductionScenario.INPUT.resolve("VOC_Cologne_RKI.csv"));
 
-			 // Get import share
-			 BiFunction<LocalDate, VirusStrain, Double> lookup = (date, strain) -> shares.floorEntry(date).getValue().getOrDefault(strain, 0d);
-			 LocalDate date = null;
+		 // Get import share
+		 BiFunction<LocalDate, VirusStrain, Double> lookup = (date, strain) -> shares.floorEntry(date).getValue().getOrDefault(strain, 0d);
+		 LocalDate date = null;
 
-			 for (Map.Entry<LocalDate, Double> e : data.entrySet()) {
+		 for (Map.Entry<LocalDate, Double> e : data.entrySet()) {
 
-				 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City, so we have to scale it to the whole model
+			 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City, so we have to scale it to the whole model
 
-				 double cases = factor * e.getValue();
-				 date = e.getKey();
+			 double cases = factor * e.getValue();
+			 date = e.getKey();
 
 //				 infPerDayBa5.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA5) * cases * facBa5));
-				 infPerDayBa2.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA2) * cases * facBa2));
-				 infPerDayBa1.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA1) * cases * facBa1));
-				 infPerDayDelta.put(date,(int) (lookup.apply(date, VirusStrain.DELTA) * cases * facDelta));
-				 infPerDayAlpha.put(date, (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facAlpha));
-				 infPerDayWild.put(date, (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facWild));
+			 infPerDayBa2.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA2) * cases * facBa2));
+			 infPerDayBa1.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA1) * cases * facBa1));
+			 infPerDayDelta.put(date, (int) (lookup.apply(date, VirusStrain.DELTA) * cases * facDelta));
+			 infPerDayAlpha.put(date, (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facAlpha));
+			 infPerDayWild.put(date, (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facWild));
 
-			 }
-
-			 LocalDate wildImportEnds = LocalDate.of(2021, 11, 21);
-			 infPerDayWild = infPerDayWild.entrySet().stream().filter(entry -> entry.getKey().isBefore(wildImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-			 infPerDayWild.put(wildImportEnds, 1);
-
-			 LocalDate alphaImportEnds = LocalDate.of(2021, 7, 17);
-			 infPerDayAlpha = infPerDayAlpha.entrySet().stream().filter(entry -> entry.getKey().isBefore(alphaImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-			 infPerDayAlpha.put(alphaImportEnds, 1);
-
-			 LocalDate deltaImportEnds = LocalDate.of(2022, 1, 16);
-			 infPerDayDelta = infPerDayDelta.entrySet().stream().filter(entry -> entry.getKey().isBefore(deltaImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-			 infPerDayDelta.put(deltaImportEnds, 1);
-
-
-			 LocalDate dateAfterCsvEnds = date.plusDays(1);
-			 infPerDayBa2.put(dateAfterCsvEnds, 1);
-
-
-
-
-		 } else {
-
-			 //ALPHA
-//			 Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
-			 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
-
-			 infPerDayAlpha.put(LocalDate.parse("2021-01-16"), 20);
-			 infPerDayAlpha.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
-			 infPerDayAlpha.put(LocalDate.parse("2020-12-31"), 1);
-
-//			 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
-
-			 // DELTA
-//			 Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
-			 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayDelta.put(LocalDate.parse("2021-06-21"), 4);
-			 infPerDayDelta.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
-
-			 LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
-			 int imp1 = 120;
-			 int imp2 = 10;
-			 int imp3 = 40;
-
-			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
-			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
-
-
-			 LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
-
-			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
-			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
-
-
-//			 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
-
-			 //BA.1
-			 String ba1Date = "2021-11-21";
-//			 Map<LocalDate, Integer> infPerDayBA1 = new HashMap<>();
-			 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayBa1.put(LocalDate.parse(ba1Date), 4);
-			 infPerDayBa1.put(LocalDate.parse(ba1Date).plusDays(7), 1);
-//			 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
-
-
-			 //BA.2
-			 String ba2Date = "2021-12-18";
-//			 Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
-			 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
-			 infPerDayBa2.put(LocalDate.parse(ba2Date), 4);
-			 infPerDayBa2.put(LocalDate.parse(ba2Date).plusDays(7), 1);
-//			 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		 }
+
+		 LocalDate wildImportEnds = LocalDate.of(2021, 11, 21);
+		 infPerDayWild = infPerDayWild.entrySet().stream().filter(entry -> entry.getKey().isBefore(wildImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+		 infPerDayWild.put(wildImportEnds, 1);
+
+		 LocalDate alphaImportEnds = LocalDate.of(2021, 7, 17);
+		 infPerDayAlpha = infPerDayAlpha.entrySet().stream().filter(entry -> entry.getKey().isBefore(alphaImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+		 infPerDayAlpha.put(alphaImportEnds, 1);
+
+		 LocalDate deltaImportEnds = LocalDate.of(2022, 1, 16);
+		 infPerDayDelta = infPerDayDelta.entrySet().stream().filter(entry -> entry.getKey().isBefore(deltaImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+		 infPerDayDelta.put(deltaImportEnds, 1);
+
+
+		 LocalDate dateAfterCsvEnds = date.plusDays(1);
+		 infPerDayBa2.put(dateAfterCsvEnds, 1);
+
+		 // initial import alpha
+		 LocalDate startDateAlpha = LocalDate.parse("2021-01-15");
+		 for (int i = 0; i < 7; i++) {
+			 infPerDayAlpha.put(startDateAlpha.plusDays(i), 4);
+		 }
+		 infPerDayAlpha.put(startDateAlpha.plusDays(7), 1);
+
+		 // initial import BA.1 // TODO: Why did we comment this out
+//		LocalDate ba1Date = LocalDate.parse(params.ba1Date);
+//		for (int i = 0; i < 7; i++) {
+//			infPerDayBa1.put(ba1Date.plusDays(i), 4);
+//		}
+//		infPerDayBa1.put(ba1Date.plusDays(7), 1);
+
+
+		 // initial import BA.2
+		 LocalDate ba2Date = LocalDate.parse("2021-12-18");
+		 for (int i = 0; i < 7; i++) {
+			 infPerDayBa2.put(ba2Date.plusDays(i), 4);
+		 }
+		 infPerDayBa2.put(ba2Date.plusDays(7), 1);
+
+		 // initial import BA.5
+		 LocalDate ba5Date = LocalDate.parse("2022-04-10");
+		 for (int i = 0; i < 7; i++) {
+			 infPerDayBa5.put(ba5Date.plusDays(i), 4);
+		 }
+		 infPerDayBa5.put(ba5Date.plusDays(7), 1);
 
 		 // set all initial infections
 		 episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
@@ -1026,7 +1077,7 @@
 				 .setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 		 ;
 
-		 vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
+		 vaccinationConfig.getOrAddParams(VaccinationType.ba1Update)
 				 .setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 		 ;
 

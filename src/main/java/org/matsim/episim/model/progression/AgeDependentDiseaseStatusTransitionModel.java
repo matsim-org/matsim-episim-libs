@@ -94,6 +94,8 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 			proba = 36. / 100;
 		}
 
+		return proba * episimConfig.getHospitalFactor();
+
 
 		// source 2
 //		if (age < 10) {
@@ -153,7 +155,7 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 //			proba = 27.3 / 100;
 //		}
 
-		return proba * episimConfig.getHospitalFactor();
+
 	}
 
 	@Override

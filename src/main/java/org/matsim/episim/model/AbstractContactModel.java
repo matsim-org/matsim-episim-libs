@@ -73,6 +73,11 @@ public abstract class AbstractContactModel implements ContactModel {
 	private Map<String, Restriction> restrictions;
 
 	/**
+	 * Count number of contacts per day.
+	 */
+	protected int numContacts = 0;
+
+	/**
 	 * Curfew compliance valid for the day.
 	 */
 	private double curfewCompliance;
@@ -355,6 +360,11 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.infectionModel.setIteration(iteration);
 		this.curfewCompliance = EpisimUtils.findValidEntry(episimConfig.getCurfewCompliance(), 1.0,
 				episimConfig.getStartDate().plusDays(iteration - 1));
+		this.numContacts = 0;
+	}
+
+	public int getNumContacts() {
+		return numContacts;
 	}
 
 	/**
@@ -388,8 +398,8 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		personWrapper.possibleInfection(
 				new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-				container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob,
-						personWrapper.getAntibodies(infector.getVirusStrain()))
+						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob,
+						personWrapper.getAntibodies(infector.getVirusStrain()), personWrapper.getMaxAntibodies(infector.getVirusStrain()), personWrapper.getNumVaccinations())
 		);
 
 		// check infection immediately if there is only one thread

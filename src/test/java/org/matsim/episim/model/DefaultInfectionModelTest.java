@@ -123,7 +123,7 @@ public class DefaultInfectionModelTest {
 
 		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
 
-		p.possibleInfection(new EpisimInfectionEvent(0, p.getPersonId(), p.getPersonId(), null, "somewhere", 1, VirusStrain.SARS_CoV_2, 1d, -1));
+		p.possibleInfection(new EpisimInfectionEvent(0, p.getPersonId(), p.getPersonId(), null, "somewhere", 1, VirusStrain.SARS_CoV_2, 1d, -1, -1, -1));
 		p.checkInfection();
 		p.setDiseaseStatus(1000, EpisimPerson.DiseaseStatus.recovered);
 		p.setDiseaseStatus(2000, EpisimPerson.DiseaseStatus.susceptible);

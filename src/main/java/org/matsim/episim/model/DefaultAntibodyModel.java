@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
@@ -10,14 +11,20 @@ import java.util.SplittableRandom;
 
 public class DefaultAntibodyModel implements AntibodyModel {
 
+	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?
+
 	private final AntibodyModel.Config antibodyConfig;
 	private final SplittableRandom localRnd;
 
+	private final EpisimConfigGroup episimConfig;
+
 
 	@Inject
-	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig) {
+	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
 		this.antibodyConfig = antibodyConfig;
+		this.episimConfig = episimConfigGroup;
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
+
 
 	}
 
@@ -28,6 +35,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			// mu = log(median); log(1)=0
 
+
 			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
 			double immuneResponseMultiplier = 0;
 			while (immuneResponseMultiplier < 0.1 || immuneResponseMultiplier > 10) {
@@ -36,19 +44,26 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
+		}
+
+
+	}
+
+	@Override
+	public void recalculateAntibodiesAfterSnapshot(Collection<EpisimPerson> persons, int iteration) {
+		for (EpisimPerson person : persons) {
+
+			// reset to 0.0
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
 			}
 
-			if (iteration > 1) {
-				for (int it = 1; it < iteration; it++) {
-					updateAntibodies(person, it);
-				}
+			// recalculate antibodies from immune history
+			for (int it = 1; it < iteration; it++) {
+				updateAntibodies(person, it);
 
 			}
 		}
-
-
 	}
 
 	/**
@@ -61,13 +76,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	 */
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
-
-		// todo: is this needed, now that we have an init
-		if (day == 0) {
-			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
-			}
-		}
 
 		//handle vaccination
 		if (person.getVaccinationDates().contains(day - 1)) {
@@ -88,9 +96,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
-			double halfLife_days = 60.;
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halfLife_days));
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS));
 		}
 
 	}
@@ -107,6 +114,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				// should always be the case for initial immunization
+				person.updateMaxAntibodies(strain2, antibodies);
 			}
 
 
@@ -117,10 +128,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				// antibodies before refresh
 				double antibodies = person.getAntibodies(strain2);
 
-				// refresh antibodies; ensure that antibody level does not decrease.
-				if (refreshFactor * person.getImmuneResponseMultiplier() >= 1) {
-					antibodies = antibodies * refreshFactor * person.getImmuneResponseMultiplier();
-				}
+				// refresh antibodies
+				antibodies = antibodies * refreshFactor;
 
 				// check that new antibody level at least as high as initial antibodies
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
@@ -130,8 +139,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				antibodies = Math.min(150., antibodies);
 
 				person.setAntibodies(strain2, antibodies);
-			}
 
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				person.updateMaxAntibodies(strain2, antibodies);
+			}
 		}
 	}
 

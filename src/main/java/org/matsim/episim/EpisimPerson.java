@@ -49,8 +49,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static org.matsim.episim.EpisimUtils.readChars;
-import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.*;
 
 /**
  * Persons current state in the simulation.
@@ -156,7 +155,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
-	private int quarantineDate = -1;
+	private int quarantineDate = Integer.MIN_VALUE;
 
 	/**
 	 * Iteration when this person was tested. Negative if person was never tested.
@@ -209,9 +208,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
 	/**
+	 * Maximal antibody level reached by agent w/ respect to each strain
+	 */
+	private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
+
+	/**
 	 * Antibody level at last infection.
 	 */
-	private double antibodyLevelAtInfection = 0;
+	private double antibodyLevelAtInfection = 0.;
 
 	/**
 	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event
@@ -304,6 +308,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 			antibodies.put(strain, in.readDouble());
 		}
 
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			VirusStrain strain = VirusStrain.values()[in.readInt()];
+			maxAntibodies.put(strain, in.readDouble());
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
@@ -371,6 +381,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 			out.writeDouble(kv.getDoubleValue());
 		}
 
+		out.writeInt(maxAntibodies.size());
+		for (Object2DoubleMap.Entry<VirusStrain> kv : maxAntibodies.object2DoubleEntrySet()) {
+			out.writeInt(kv.getKey().ordinal());
+			out.writeDouble(kv.getDoubleValue());
+		}
+
 		out.writeInt(status.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
@@ -411,7 +427,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public void setInitialInfection(double now, VirusStrain strain) {
 
-		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain)));
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain),getNumInfections()));
 
 		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
@@ -419,6 +435,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		antibodyLevelAtInfection = antibodies.getDouble(strain);
 
+		// TODO: add max antibodies
 	}
 
 	/**
@@ -576,6 +593,32 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return antibodyLevelAtInfection;
 	}
 
+	/**
+	 * get map with max antibodies reached per strain (before current infection)
+	 */
+	public Object2DoubleMap<VirusStrain> getMaxAntibodies() {
+		return maxAntibodies;
+	}
+
+	/**
+	 * Get max antibodies reached for a particular strain (before current infection)
+	 */
+	public double getMaxAntibodies(VirusStrain virusStrain) {
+		return maxAntibodies.getDouble(virusStrain);
+	}
+
+	/**
+	 * Updates maximum antibodies agent has had versus a particular strain (only if maxAb is in fact higher
+	 * than previous maximum)
+	 */
+	public void updateMaxAntibodies(VirusStrain strain, double maxAb) {
+
+		if (!this.maxAntibodies.containsKey(strain) || maxAb > this.maxAntibodies.getDouble(strain)) {
+			this.maxAntibodies.put(strain, maxAb);
+		}
+
+	}
+
 	public double getAntibodies(VirusStrain strain) {
 		return antibodies.getDouble(strain);
 	}
@@ -585,7 +628,9 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	public double setAntibodies(VirusStrain strain, double value) {
+
 		return antibodies.put(strain, value);
+
 	}
 
 	/**
@@ -653,10 +698,15 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	@Beta
 	public int daysSinceQuarantine(int currentDay) {
-
 		// yyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
 		// -> api now marked as unstable and containing an api note, because it is used by the models it has to be public. chr, apr'20
-		if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
+
+		//check removed; when starting simulation with immunisation history, quarantine date can very well be negative. -jr, nov'22
+		if (quarantineDate == Integer.MIN_VALUE) {
+
+			throw new IllegalStateException("Person was never quarantined");
+
+		}
 
 		return currentDay - quarantineDate;
 	}
@@ -1045,6 +1095,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		return null;
 	}
+
 
 	/**
 	 * Disease status of a person.

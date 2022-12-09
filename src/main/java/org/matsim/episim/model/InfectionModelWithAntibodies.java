@@ -8,12 +8,14 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
- * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependen additions.
+ * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
  */
 public final class InfectionModelWithAntibodies implements InfectionModel {
 
@@ -25,8 +27,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
-	private final double[] susceptibility = new double[128];
-	private final double[] infectivity = new double[susceptibility.length];
+	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
 	private final RealDistribution distribution;
 
 	/**
@@ -49,11 +51,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		this.reporting = reporting;
 		this.rnd = rnd;
 
-		// pre-compute interpolated age dependent entries
-		for (int i = 0; i < susceptibility.length; i++) {
-			susceptibility[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeSusceptibility(), i);
-			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
-		}
+		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+
 		// based on https://arxiv.org/abs/2007.06602
 		distribution = new NormalDistribution(0.5, 2.6);
 		scale = 1 / distribution.density(distribution.getNumericalMean());
@@ -80,8 +79,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
-		double susceptibility = this.susceptibility[target.getAge()];
-		double infectivity = this.infectivity[infector.getAge()];
+		double susceptibility = this.susceptibility.get(infector.getVirusStrain())[target.getAge()];
+		double infectivity = this.infectivity.get(infector.getVirusStrain())[infector.getAge()];
 
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
@@ -97,7 +96,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		{
 			double igaFactor = 0.0;
-
 			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
 			if (target.hadStrain(infector.getVirusStrain())) {
 
@@ -110,14 +108,41 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 //				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
 				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 
-			} else if (vaccinationConfig.getUseIgA()) {
-				List<VirusStrain> crossImmunityStrains = List.of(VirusStrain.OMICRON_BA1,VirusStrain.OMICRON_BA2,VirusStrain.OMICRON_BA5,VirusStrain.STRAIN_A);
+			}  
+			
+			ArrayList<VirusStrain> strainsLineA = new ArrayList<VirusStrain>();
+			strainsLineA.add(VirusStrain.OMICRON_BA1);
+			strainsLineA.add(VirusStrain.OMICRON_BA2);
+			strainsLineA.add(VirusStrain.OMICRON_BA5);
+			strainsLineA.add(VirusStrain.STRAIN_A);
+			strainsLineA.add(VirusStrain.STRAIN_B);
 
-				if(crossImmunityStrains.contains(infector.getVirusStrain())){
+			ArrayList<VirusStrain> strainsLineB = new ArrayList<VirusStrain>();
+			strainsLineB.add(VirusStrain.OMICRON_BA1);
+			strainsLineB.add(VirusStrain.OMICRON_BA2);
+			strainsLineB.add(VirusStrain.OMICRON_BA5);
+			strainsLineB.add(VirusStrain.STRAIN_A);
+			strainsLineB.add(VirusStrain.STRAIN_B);
+			
+			if (vaccinationConfig.getUseIgA()) {
+				
+				for (VirusStrain str : VirusStrain.values()) {
+					if (str.toString().startsWith("A_"))
+						strainsLineA.add(str);
+				}
+				for (VirusStrain str : VirusStrain.values()) {
+					if (str.toString().startsWith("B_"))
+						strainsLineB.add(str);
+				}
+			}
+			
+//			if (vaccinationConfig.getUseIgA()) {
+
+				if(strainsLineA.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;
 					boolean targetHadStrain = false;
 					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (crossImmunityStrains.contains(target.getVirusStrain(ii))){
+						if (strainsLineA.contains(target.getVirusStrain(ii))){
 							targetHadStrain = true;
 							lastInfectionWithStrain = ii;
 						}
@@ -129,13 +154,49 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 						igaFactor = Math.max(fac, igaFactor);
 					}
 				}
-			}
-			susceptibility = susceptibility * (1.0 - igaFactor);
+				
+				if(strainsLineB.contains(infector.getVirusStrain())){
+					int lastInfectionWithStrain = 0;
+					boolean targetHadStrain = false;
+					for (int ii = 0; ii < target.getNumInfections();  ii++) {
+						if (strainsLineB.contains(target.getVirusStrain(ii))){
+							targetHadStrain = true;
+							lastInfectionWithStrain = ii;
+						}
+					}
+
+					if (targetHadStrain) {
+						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
+						fac = fac / 1.4;
+						igaFactor = Math.max(fac, igaFactor);
+					}
+				}
+				
+//				if(strainsLineA.contains(infector.getVirusStrain()) || strainsLineB.contains(infector.getVirusStrain())){
+//					int lastInfectionWithStrain = 0;
+//					boolean targetHadStrain = false;
+//					for (int ii = 0; ii < target.getNumInfections();  ii++) {
+//						if (strainsLineA.contains(target.getVirusStrain(ii)) || strainsLineB.contains(target.getVirusStrain(ii))){
+//							targetHadStrain = true;
+//							lastInfectionWithStrain = ii;
+//						}
+//					}
+//
+//					if (targetHadStrain) {
+//						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
+//						fac = fac / 1.4 / 1.4;
+//						igaFactor = Math.max(fac, igaFactor);
+//					}
+//				}
+				
+				susceptibility = susceptibility * (1.0 - igaFactor);
+//			}	
 		}
 
 
 
 		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
+		// remaining risk --> lower val, lower risk, max risk at 1
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection

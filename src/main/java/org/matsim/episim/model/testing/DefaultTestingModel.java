@@ -203,9 +203,13 @@ public class DefaultTestingModel implements TestingModel {
 			double rate = params.getFalseNegativeRate();
 
 			// TODO: configurable
-			if (params.getType().equals (TestType.RAPID_TEST) && (person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||
+			if (params.getType().equals(TestType.RAPID_TEST) && (person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||
 					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||
-					person.getVirusStrain() == VirusStrain.OMICRON_BA5) ){
+					person.getVirusStrain() == VirusStrain.OMICRON_BA5 ||
+					person.getVirusStrain() == VirusStrain.STRAIN_A ||
+					person.getVirusStrain() == VirusStrain.STRAIN_B ||
+					person.getVirusStrain().toString().startsWith("A_") ||
+					person.getVirusStrain().toString().startsWith("B_"))) {
 				rate = 0.5;
 			}
 

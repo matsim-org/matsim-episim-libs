@@ -217,9 +217,15 @@ def aggregate_batch_run(run):
                 if idx not in idMap or f.endswith(".xml"):
                     continue
 
-                with z.open(f) as zf:
-                    df = pd.read_csv(zf, sep="\t")
-                    runs[idMap[idx]][filename].append(df)
+                with z.open(f) as zf:                    
+                    try:
+                        df = pd.read_csv(zf, sep="\t")
+                        runs[idMap[idx]][filename].append(df)
+                    except pd.errors.EmptyDataError as e:
+                        print("WARN: " + f + " is empty")
+                    except:
+                        print("Error reading " + f)
+                        
 
     with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
                          mode="w", compresslevel=9,
@@ -245,14 +251,25 @@ def aggregate_batch_run(run):
             with zipfile.ZipFile(zip_buffer, "w", compresslevel=9, compression=zipfile.ZIP_DEFLATED) as zInner:
 
                 for filename, dfs in files.items():
+                                                                
                     concat = pd.concat(dfs)
-                    by_row_index = concat.groupby(concat.index)
 
-                    # Ignore files that can't be aggregated
-                    try:
-                        means = by_row_index.mean()
-                    except Exception as e:
-                        continue
+                    # Tidy data needs to be aggregated separatly
+                    if "vaccinationsDetailed.tsv" in filename:
+                        
+                        grouped = concat.groupby(["day", "date", "type", "number"])                        
+                        means = grouped.agg(amount=("amount", "mean"))
+                        means = means.reset_index()
+                        
+                    else:
+
+                        # Aggregate by computung the mean
+                        try:
+                            by_row_index = concat.groupby(concat.index)
+                            means = by_row_index.mean()
+                        except Exception as e:
+                            # Ignore files that can't be aggregated
+                            continue
 
                     # attach non numeric columns without aggregating
                     nonNumeric = dfs[0].columns.difference(means.columns)
@@ -270,6 +287,19 @@ def aggregate_batch_run(run):
                         buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
                         means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
                         buf.flush()
+                        
+                    if "infections.txt.csv" in filename:
+                                                
+                        cols = [dfs[0].day, dfs[0].date] + [df.nShowingSymptomsCumulative for df in dfs]
+                        columns = pd.concat(cols, axis=1)
+                        
+                        columns.columns = [columns.columns[0], columns.columns[1]] + ["%s_%d" % (name, i) for i, name in enumerate(columns.columns[2:])]
+                        
+                        with zInner.open(str(runId) + ".infectionsPerSeed.tsv", "w") as zf:                    
+                            buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+                            columns.to_csv(buf, sep="\t", mode="w", line_terminator="\n", index=False)
+                            buf.flush()
+
 
             with z.open("summaries/" + str(runId) + ".zip", "w") as f:
                 f.write(zip_buffer.getvalue())
@@ -310,8 +340,16 @@ def calc_r_reduction(base_case, base_variables, df, group_by=None):
 
     return result
 
+
 if __name__ == "__main__":
     
-    aggregate_batch_run("../../../../output/summaries.zip")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Aggregate batch run over multiple seeds")
+    parser.add_argument("file", type=str, nargs=1, help="Path to summaries zip", default="../../../../output/summaries.zip")
     
-    
+    args = parser.parse_args()
+
+    aggregate_batch_run(args.file[0])
+
+

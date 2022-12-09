@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.Callable;
 
 
 @CommandLine.Command(
@@ -99,7 +98,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 
 		Handler handler = new Handler();
 
-		AnalysisCommand.forEachEvent(output, s -> {}, handler);
+		AnalysisCommand.forEachEvent(output, s -> {}, false, handler);
 
 		// Entries with rarely used vaccines are filtered
 		List<String> collect = new ArrayList<>(handler.vac.keySet());
