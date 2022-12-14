@@ -24,6 +24,9 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.commons.compress.archivers.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.Event;
@@ -35,17 +38,13 @@ import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -67,7 +66,7 @@ public final class EpisimRunner {
 
 	@Inject
 	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider, Provider<ReplayHandler> replay,
-	                    Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider) {
+						Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
@@ -104,7 +103,9 @@ public final class EpisimRunner {
 		Path output = Path.of(config.controler().getOutputDirectory());
 
 		int iteration = 1;
-		if (episimConfig.getStartFromSnapshot() != null) {
+		if (episimConfig.getStartFromSnapshot() != null && episimConfig.getStartFromImmunization() != null) {
+			throw new RuntimeException("Cannot start from snapshot and immunization history simultaneously. Choose one.");
+		} else if (episimConfig.getStartFromSnapshot() != null) {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
 			try {
@@ -115,15 +116,21 @@ public final class EpisimRunner {
 			}
 
 			handler.onSnapshotLoaded(iteration);
+
+			// recalculate antibodies for every agent if starting from snapshot.
+			// The antibodies profile is generated using the immunity event history in the
+			// snapshot; the antibody model config of the snapshot simulation will
+			// be superceded by the config of the current simulation. Thus, the antibody development
+			// during the snapshot can be rewritten without modifying the immunity event history.
+			antibodyModel.recalculateAntibodiesAfterSnapshot(handler.getPersons(), iteration);
+
+		} else if (episimConfig.getStartFromImmunization() != null) {
+
+			antibodyModel.init(handler.getPersons(), iteration);
+			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));
+		} else {
+			antibodyModel.init(handler.getPersons(), iteration);
 		}
-
-		// recalculate antibodies for every agent if starting from snapshot.
-		// The antibodies profile is generated using the immunity event history in the
-		// snapshot; the antibody model config of the snapshot simulation will
-		// be superceded by the config of the current simulation. Thus, the antibody development
-		// during the snapshot can be rewritten without modifying the immunity event history.
-
-		antibodyModel.init(handler.getPersons(), iteration);
 
 		reporting.reportCpuTime(0, "Init", "finished", -1);
 
@@ -131,8 +138,9 @@ public final class EpisimRunner {
 
 		for (; iteration <= maxIterations; iteration++) {
 
-			if (episimConfig.getSnapshotInterval() > 0 && iteration % episimConfig.getSnapshotInterval() == 0)
+			if (episimConfig.getSnapshotInterval() > 0 && iteration % episimConfig.getSnapshotInterval() == 0) {
 				writeSnapshot(output, iteration);
+			}
 
 			if (iteration % 10 == 0)
 				Gbl.printMemoryUsage();
@@ -149,6 +157,7 @@ public final class EpisimRunner {
 
 	/**
 	 * Update events data and internal person data structure.
+	 *
 	 * @param events
 	 */
 	public void updateEvents(Map<DayOfWeek, List<Event>> events) {

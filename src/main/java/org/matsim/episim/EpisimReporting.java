@@ -67,6 +67,23 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  */
 public final class EpisimReporting implements BasicEventHandler, Closeable, Externalizable {
 
+
+	/**
+	 * Age groups used for various outputs. AgeGroup -> minimum age of age group.
+	 * Important: age groups must be in descending order
+	 */
+	public enum AgeGroup {
+		age_60_plus(60),
+		age_18_59(18),
+		age_12_17(12),
+		age_0_11(0);
+
+		public final int lowerBoundAge;
+
+		AgeGroup(int lowerBoundAge) {
+			this.lowerBoundAge = lowerBoundAge;
+		}
+	}
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 
@@ -112,6 +129,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+
+	private int totalContacts;
 
 	/**
 	 * Whether all events are written into one file.
@@ -703,6 +722,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	}
 
+	/**
+	 * Set number of total contacts.
+	 * @param totalContacts
+	 */
+	public void reportTotalContacts(int totalContacts) {
+		this.totalContacts = totalContacts;
+	}
+
+	public int getTotalContacts() {
+		return totalContacts;
+	}
 
 	/**
 	 * Report the successful tracing between two persons.
@@ -904,6 +934,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				String.valueOf(taskId)});
 	}
 
+	void reportStart(LocalDate startDate, String startFromImmunization) {
+		manager.processEvent(new EpisimStartEvent(startDate, startFromImmunization));
+	}
+
 	@Override
 	public void close() {
 
@@ -940,11 +974,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public void handleEvent(Event event) {
 
 		// Events on 0th day are not needed
-		if (iteration == 0) return;
+		if (iteration == 0 && !(event instanceof EpisimStartEvent)) return;
 
 		// Crucial episim events are always written, others only if enabled
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent ||
-				event instanceof EpisimInitialInfectionEvent
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent
+				|| event instanceof EpisimInitialInfectionEvent || event instanceof EpisimStartEvent
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 

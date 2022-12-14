@@ -42,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
@@ -107,15 +108,25 @@ public class AnalysisCommand implements Runnable {
 	}
 
 	/**
+	 * See {@link #forEachEvent(Path, Function, boolean, EventHandler...)}. Callback will always return true.
+	 */
+	public static List<String> forEachEvent(Path scenario, Consumer<String> callback, boolean preferReducedEvents, EventHandler... handler) {
+		return forEachEvent(scenario, s-> {
+			callback.accept(s);
+			return true;
+		}, preferReducedEvents, handler);
+	}
+
+	/**
 	 * Reads in all event file from a scenario.
 	 *
 	 * @param scenario            path of the scenario, which contains the event folder
-	 * @param callback            will be executed before reading an event file and pass the path
+	 * @param callback            will be executed before reading an event file and pass the path. If false is returned, no more events will be read.
 	 * @param preferReducedEvents
 	 * @param handler             handler for the events
 	 * @return list of read event files
 	 */
-	public static List<String> forEachEvent(Path scenario, Consumer<String> callback, boolean preferReducedEvents, EventHandler... handler) {
+	public static List<String> forEachEvent(Path scenario, Function<String, Boolean> callback, boolean preferReducedEvents, EventHandler... handler) {
 
 		Path events = getEvents(scenario, preferReducedEvents);
 		if (events == null) {
@@ -146,7 +157,9 @@ public class AnalysisCommand implements Runnable {
 			for (Path p : eventFiles) {
 				try {
 					String name = p.getFileName().toString();
-					callback.accept(name);
+					if (!callback.apply(name)) {
+						break;
+					}
 					new EpisimEventsReader(manager).readFile(p.toString());
 
 					read.add(name);
@@ -160,7 +173,10 @@ public class AnalysisCommand implements Runnable {
 
 				ArchiveEntry entry;
 				while ((entry = ar.getNextEntry()) != null) {
-					callback.accept(entry.getName());
+
+					if (!callback.apply(entry.getName())) {
+						break;
+					}
 
 					new EpisimEventsReader(manager).parse(new NonClosingGZIPStream(ar));
 
@@ -211,10 +227,22 @@ public class AnalysisCommand implements Runnable {
 	@Nullable
 	public static Path getEvents(Path scenario, boolean preferReducedEvents) {
 
+
+		// if a path to an events file is entered, return that directly
+		if (Files.isRegularFile(scenario)) {
+			if (scenario.getFileName().toString().endsWith("events_reduced.tar") || scenario.getFileName().toString().endsWith("events.tar")) {
+				return scenario;
+			} else {
+				throw new RuntimeException("A file was specified; however, it doesn't follow the naming conventions for events files");
+			}
+		}
+
+		// if a path to a directory called "events is passed", return that directory
 		if (Files.isDirectory(scenario.resolve("events")) && !isEmpty(scenario.resolve("events"))) {
 			return scenario.resolve("events");
 		}
 
+		// otherwise, search directory for *events_reduced.tar or *events.tar
 		try {
 			Optional<Path> o;
 			if (preferReducedEvents) {

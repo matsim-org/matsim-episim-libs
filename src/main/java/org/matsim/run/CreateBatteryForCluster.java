@@ -84,10 +84,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms82G -Xmx82G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.CologneBMBF20220805_leisSplit")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.CologneBMBF202212XX_bq1")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.CologneBMBF20220805_leisSplit$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.CologneBMBF202212XX_bq1$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -262,6 +262,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		metadata.put("info", "_info.txt");
 		metadata.put("zipFolder", "summaries");
 		metadata.put("timestamp", LocalDate.now());
+		metadata.put("viewerVersion", 2);
 
 		metadata.putAll(run.getMetadata());
 		mapper.writeValue(yamlWriter, metadata);

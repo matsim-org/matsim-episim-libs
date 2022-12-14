@@ -14,22 +14,34 @@ import java.util.Map;
  */
 public class EpisimInitialInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
 
-	static final String EVENT_TYPE = "episimInitialInfection";
+	public static final String EVENT_TYPE = "episimInitialInfection";
 
 	private final Id<Person> personId;
 	private final VirusStrain virusStrain;
 	private final double antibodies;
+	private final double maxAntibodies;
+	private final int numVaccinations;
 
 
 	/**
 	 * Constructor.
 	 */
-	public EpisimInitialInfectionEvent(double time, Id<Person> personId, VirusStrain strain, double antibodies) {
+	public EpisimInitialInfectionEvent(double time, Id<Person> personId, VirusStrain strain, double antibodies, double maxAntibodies, int numVaccinations) {
+
 		super(time);
 
 		this.personId = personId;
 		this.virusStrain = strain;
 		this.antibodies = antibodies;
+		this.maxAntibodies = maxAntibodies;
+		this.numVaccinations = numVaccinations;
+	}
+
+	/**
+	 * Return initial infection as "normal" infection event.
+	 */
+	public EpisimInfectionEvent asInfectionEvent() {
+		return new EpisimInfectionEvent(getTime(), personId, null, null, null, -1, virusStrain, 0, antibodies, maxAntibodies, numVaccinations);
 	}
 
 	@Override
@@ -51,6 +63,8 @@ public class EpisimInitialInfectionEvent extends Event implements HasPersonId, C
 		Map<String, String> attr = super.getAttributes();
 		attr.put(EpisimInfectionEvent.VIRUS_STRAIN, virusStrain.toString());
 		attr.put(EpisimInfectionEvent.ANTIBODIES, Double.toString(antibodies));
+		attr.put(EpisimInfectionEvent.MAX_ANTIBODIES, Double.toString(maxAntibodies));
+		attr.put(EpisimInfectionEvent.NUM_VACCINATIONS, Integer.toString(numVaccinations));
 
 		return attr;
 	}

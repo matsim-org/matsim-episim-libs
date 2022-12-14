@@ -25,6 +25,8 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	static final String PROBABILITY = "probability";
 	static final String GROUP_SIZE = "groupSize";
 	static final String ANTIBODIES = "antibodies";
+	static final String MAX_ANTIBODIES = "maxAntibodies";
+	static final String NUM_VACCINATIONS = "numVaccinations";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
@@ -34,13 +36,16 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	private final VirusStrain virusStrain;
 	private final double probability;
 	private final double antibodies;
+	private final double maxAntibodies;
+
+	private final int numVaccinations;
 
 
 	/**
 	 * Constructor.
 	 */
 	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-								int groupSize, VirusStrain strain, double probability, double antibodies) {
+								int groupSize, VirusStrain strain, double probability, double antibodies, double maxAntibodies, int numVaccinations) {
 		super(time);
 
 		this.personId = personId;
@@ -51,6 +56,8 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		this.virusStrain = strain;
 		this.probability = probability;
 		this.antibodies = antibodies;
+		this.maxAntibodies = maxAntibodies;
+		this.numVaccinations = numVaccinations;
 	}
 
 	@Override
@@ -103,6 +110,20 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		return antibodies;
 	}
 
+	/**
+	 * Maximum antibodies ever reached by agent with respect to infecting strain
+	 */
+	public double getMaxAntibodies() {
+		return maxAntibodies;
+	}
+
+	/**
+	 * Number of vaccinations agent has received at time of infection
+	 */
+	public int getNumVaccinations(){
+		return numVaccinations;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
@@ -114,6 +135,8 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
 		attr.put(ANTIBODIES, Double.toString(antibodies));
+		attr.put(MAX_ANTIBODIES, Double.toString(maxAntibodies));
+		attr.put(NUM_VACCINATIONS, Integer.toString(numVaccinations));
 
 		return attr;
 	}
