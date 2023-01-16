@@ -106,7 +106,8 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 				if (params != null) {
 
-					mutEscStrainA = Double.parseDouble(params.StrainA);
+					mutEscBa5 = params.escBa5;
+					mutEscStrainA = Double.parseDouble(params.escStrA);
 
 				}
 
@@ -396,6 +397,8 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 		double ba5Inf = virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).getInfectiousness();
+		ba5Inf *= params.infBa5;
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setInfectiousness(ba5Inf);
 		double ba5Hos = virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).getFactorSeriouslySick();
 
 
@@ -530,7 +533,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 
 		// vary amount of "school" activity that takes place during vacation
-		builder.restrict(LocalDate.parse("2022-06-27"), 0.8, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-06-27"), params.eduRfVacation, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(builder.build());
 
@@ -554,7 +557,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
 
 		//StrainA
-		if (!params.StrainA.equals("off")) {
+		if (!params.escStrA.equals("off")) {
 			infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
 			LocalDate strADate = LocalDate.parse(params.strainADate);
 
@@ -569,31 +572,37 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
 
-		if (!params.StrainA.equals("off")) {
+		if (!params.escStrA.equals("off")) {
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
 		}
 	}
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(20)
+		@GenerateSeeds(5)
 		public long seed;
 
-		@StringParameter({"sepSeeds", "4711"})
+		@Parameter({0.0,0.2,0.4,0.6,0.8,1.0})
+		public double eduRfVacation;
+
+		@StringParameter({"sepSeeds"})
 		public String startFromImm;
+
+		@Parameter({4.2, 4.4, 4.6, 4.8, 5.0})
+		public double escBa5;
+
+		@Parameter({1.0})
+		public double infBa5;
 
 		// BQ 1
 //		@StringParameter({"off", "2.0", "2.25", "2.5", "2.75", "3.0"})
-//		@StringParameter({"1.0", "1.2", "1.4", "1.6", "1.8", "2.0"})
-		@StringParameter({"2.0"})
-		public String StrainA;
+		@StringParameter({"1.8"})
+//		@StringParameter({"2.0"})
+		public String escStrA;
 
 //		@StringParameter({"base", "2022-11-15", "2022-12-01", "2022-12-15", "2023-01-01"})
 		@StringParameter({"base"})
 		public String maskPt;
-
-
-
 
 //		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})
 		@StringParameter({"2022-09-19"})
@@ -619,8 +628,6 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		//edu
 		@StringParameter({"base"})
 		public String edu;
-
-
 
 	}
 
