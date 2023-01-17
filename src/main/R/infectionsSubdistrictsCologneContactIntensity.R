@@ -76,9 +76,9 @@ to_plot <- episim_incidence_district2 %>%
             Scenario == scenario_policyRich |
             Scenario == scenario_policyPoor) %>%
   mutate(Scenario = str_replace(Scenario, regex(scenario_policy), "policy")) %>%
-    mutate(Scenario = str_replace(Scenario, regex(scenario_policyPoor), "policyRich")) %>%
-    mutate(Scenario = str_replace(Scenario, regex(scenario_policyRich), "policyPoor")) %>%
-    mutate(Scenario = str_replace(Scenario, regex(scenario_base), "base"),)
+  mutate(Scenario = str_replace(Scenario, regex(scenario_policyPoor), "policyRich")) %>%
+  mutate(Scenario = str_replace(Scenario, regex(scenario_policyRich), "policyPoor")) %>%
+  mutate(Scenario = str_replace(Scenario, regex(scenario_base), "base"))
   #mutate(Scenario = factor(Scenario, levels = c("rki", "base", "policy")))
 
 ggplot(to_plot %>% filter(Scenario == "base" | Scenario == "policy")) +
@@ -97,14 +97,18 @@ ggplot(to_plot %>% filter(Scenario != "base")) +
   scale_x_date(date_breaks = "2 month", date_labels = "%b-%y") +
   facet_wrap(~status, ncol = 2)
 
-plot
-
+ggplot(to_plot %>% select(date,status,Scenario, infections) %>% group_by(date,Scenario) %>% summarise(infections = sum(infections))) +
+  geom_line(aes(date, infections, col = Scenario)) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust=1)) +
+  labs(x = "Date", y = "Infections") +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b-%y")
 
 # Plot 2
 lor <- st_read("/Users/jakob/git/shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/CologneDistricts/CologneDistricts.shp")
 
 infections <- episim_incidence_district %>%
-  select(date,district, ciModifier,vaxPoor, vaxRich,infections)%>%
+  select(date,district,ciModifier,vaxPoor, vaxRich,infections)%>%
   filter(date >= start_date & date <= end_date) %>%
   pivot_wider(names_from = c("ciModifier","vaxRich","vaxPoor"), names_glue = "ciMod{ciModifier}-vaxRich{vaxRich}-vaxPoor{vaxPoor}", values_from = "infections") %>%
   group_by(district) %>%
@@ -113,15 +117,14 @@ infections <- episim_incidence_district %>%
   rename(c("base" = scenario_base, "policy" = scenario_policy, "policyPoor" = scenario_policyRich, "policyRich" = scenario_policyPoor)) %>%
   select(!starts_with("ci")) %>%
   # NEW
-  left_join(distict_to_population,by="district") %>%
-  mutate(base = base / cnt * 100000, policy = policy / cnt * 100000, policyRich = policyRich / cnt * 100000, policyPoor = policyPoor / cnt * 100000)
-
+  # left_join(distict_to_population,by="district") %>%
+  # mutate(base = base / cnt * 100000, policy = policy / cnt * 100000, policyRich = policyRich / cnt * 100000, policyPoor = policyPoor / cnt * 100000)
   # OLD
- # mutate(policyRich = policyRich / policy, policyPoor = policyPoor / policy) %>%
- # mutate(policy = policy / base)
+ mutate(policyRich = policyRich / policy, policyPoor = policyPoor / policy) %>%
+ mutate(policy = policy / base)
 
-  joined <- lor %>% left_join(infections, by = c("STT_NAME" = "district")) %>%
-  pivot_longer(cols = (starts_with("policy") | starts_with("base")),names_to = "scenario", values_to = "infections")
+joined <- lor %>% left_join(infections, by = c("STT_NAME" = "district")) %>%
+pivot_longer(cols = (starts_with("policy") | starts_with("base")),names_to = "scenario", values_to = "infections")
 
 
 joined.fix <- st_make_valid(joined)
@@ -131,9 +134,9 @@ shp_high <- lor %>% filter(str_detect(STT_NAME, '^[A-L]'))
 shp_low <- lor %>% filter(str_detect(STT_NAME, '^[M-Z]'))
 tmap_mode("plot")
 # plot_m2_lor <- #tm_basemap(leaflet::providers$OpenStreetMap) +
-plot_policy <- tm_shape(joined.fix %>% filter(scenario == "base" | scenario == "policy")%>% rename(c("Change in Infections" = "infections"))) + #' )
+plot_policy <- tm_shape(joined.fix %>% filter(scenario == "policy")%>% rename(c("Change in Infections" = "infections"))) + #' )
   tm_facets(by = "scenario") +
-  tm_polygons(col = "Change in Infections", id = "STT_NAME", palette = viridis(10, direction = -1),alpha = 0.9, breaks = c(0,2000,4000,6000,8000,10000))+#, palette = viridis(9), alpha = 0.9,breaks = c(0.1,0.3,0.5,0.7,0.9,1.1,1.3,1.5,1.7,1.9))+
+  tm_polygons(col = "Change in Infections", id = "STT_NAME", palette = viridis(10),alpha = 0.9, palette = viridis(9), breaks = c(0.1,0.3,0.5,0.7,0.9,1.1,1.3,1.5,1.7,1.9))+ # , breaks = c(0,2000,4000,6000,8000,10000))+#,
   tm_shape(shp_high) +
   tm_borders(col = "red", lwd = 2, lty = "dashed") +
   tm_shape(shp_low) +
@@ -143,7 +146,7 @@ plot_policy <- tm_shape(joined.fix %>% filter(scenario == "base" | scenario == "
 
 plot_policy
 
-plot_policyRichPoor <- tm_shape(joined.fix %>% filter(scenario != "policy") %>% mutate(scenario = str_replace(scenario, "policyPoor", "Vaccinate Poor Neighborhoods"), scenario = str_replace(scenario, "policyRich", "Vaccinate Rich Neighborhoods"))) + #' %>% rename(c("policy vs. base" = "change"))
+plot_policyRichPoor <- tm_shape(joined.fix %>% filter(scenario == "policyRich" | scenario == "policyPoor") %>% mutate(scenario = str_replace(scenario, "policyPoor", "Vaccinate Poor Neighborhoods"), scenario = str_replace(scenario, "policyRich", "Vaccinate Rich Neighborhoods"))) + #' %>% rename(c("policy vs. base" = "change"))
   tm_facets(by = "scenario", nrow = 2) +
   tm_polygons(col = "infections", id = "STT_NAME", palette = viridis(9), alpha = 0.9,breaks = c(0.1,0.3,0.5,0.7,0.9,1.1,1.3,1.5,1.7,1.9))+
   tm_shape(shp_high) +
