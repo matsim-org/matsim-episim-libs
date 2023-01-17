@@ -26,7 +26,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1.Params> {
+public class CologneBMBF2023 implements BatchRun<CologneBMBF2023.Params> {
 
 	boolean DEBUG_MODE = false;
 
@@ -118,8 +118,8 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
-				double immuneSigma = 3.0;
 				if (params != null) {
+					double immuneSigma = params.immuneSigma;//3.0;
 					antibodyConfig.setImmuneReponseSigma(immuneSigma);
 				}
 
@@ -131,7 +131,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
-								.withSusceptibleHouseholds(0.35, 0.01)
+								.withSusceptibleHouseholds(params.pHouseholds, 0.01) //0.35
 //								.withNonVaccinableHouseholds(params.nonVaccinableHh)
 //								.withShape(SnzCologneProductionScenario.INPUT.resolve("CologneDistricts.zip"))
 //								.withFeature("STT_NAME", vingst, altstadtNord, bickendorf, weiden)
@@ -533,7 +533,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 
 		// vary amount of "school" activity that takes place during vacation
-		builder.restrict(LocalDate.parse("2022-06-27"), params.eduRfVacation, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2022-06-27"), params.eduRfVacation, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(builder.build());
 
@@ -553,8 +553,22 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 	private void configureFutureDiseaseImport(Params params, EpisimConfigGroup episimConfig) {
 		Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA1, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
-		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
+//		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
+
+		// Override BA5
+
+		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>();
+		infPerDayBa5.put(LocalDate.parse("2020-01-01"), 0);
+		LocalDate ba5Date = LocalDate.parse(params.ba5Date);
+
+		for (int i = 0; i < 7; i++) {
+			infPerDayBa5.put(ba5Date.plusDays(i), 4);
+		}
+		infPerDayBa5.put(ba5Date.plusDays(7), 1);
+
+
+
 
 		//StrainA
 		if (!params.escStrA.equals("off")) {
@@ -582,14 +596,27 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.0,0.2,0.4,0.6,0.8,1.0})
-		public double eduRfVacation;
+//		@Parameter({0.0,0.2,0.4,0.6,0.8,1.0})
+//		public double eduRfVacation;
+
+		@Parameter({0.0, 0.3, 0.6})
+		public double immuneSigma;
+
+		@Parameter({4.2, 4.6, 5.0})
+		public double escBa5;
+
+		@StringParameter({"2022-04-10", "2022-04-13", "2022-04-16","2022-04-19"})
+		public String ba5Date;
+
+		@Parameter({0.35, 0.5, 0.65})
+		public double pHouseholds;
+
+		@Parameter({1.0, 1.1, 1.2})
+		public double theta;
+
 
 		@StringParameter({"sepSeeds"})
 		public String startFromImm;
-
-		@Parameter({4.2, 4.4, 4.6, 4.8, 5.0})
-		public double escBa5;
 
 		@Parameter({1.0})
 		public double infBa5;
@@ -607,6 +634,8 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 //		@StringParameter({"2022-08-24", "2022-08-29", "2022-09-04", "2022-09-09", "2022-09-14", "2022-09-19"})
 		@StringParameter({"2022-09-19"})
 		public String strainADate;
+
+
 
 
 		//IFSG
@@ -634,7 +663,7 @@ public class CologneBMBF202212XX_bq1 implements BatchRun<CologneBMBF202212XX_bq1
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202212XX_bq1.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF2023.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
