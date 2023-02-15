@@ -547,8 +547,9 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 
+	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
+		//																																	// 18.5						25				18.5			18.5 -> move to 15?
 		Reader in = new FileReader(weatherCSV);
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");

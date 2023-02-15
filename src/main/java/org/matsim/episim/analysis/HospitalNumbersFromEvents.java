@@ -100,6 +100,8 @@
 					 VirusStrain.OMICRON_BA1, 14,
 					 VirusStrain.OMICRON_BA2, 14,
 					 VirusStrain.OMICRON_BA5, 14,
+					 VirusStrain.BQ_1_1, 14,
+					 VirusStrain.XBB_1_5, 14,
 					 VirusStrain.STRAIN_A, 14,
 					 VirusStrain.STRAIN_B, 14
 			 ));
@@ -112,6 +114,8 @@
 					 VirusStrain.OMICRON_BA1, 6,
 					 VirusStrain.OMICRON_BA2, 6,
 					 VirusStrain.OMICRON_BA5, 6,
+					 VirusStrain.BQ_1_1, 6,
+					 VirusStrain.XBB_1_5, 6,
 					 VirusStrain.STRAIN_A, 6,
 					 VirusStrain.STRAIN_B, 6
 			 ));
@@ -124,6 +128,8 @@
 					 VirusStrain.OMICRON_BA1, 7,
 					 VirusStrain.OMICRON_BA2, 7,
 					 VirusStrain.OMICRON_BA5,7,
+					 VirusStrain.BQ_1_1, 7,
+					 VirusStrain.XBB_1_5, 7,
 					 VirusStrain.STRAIN_A, 7,
 					 VirusStrain.STRAIN_B, 7
 			 ));
@@ -135,6 +141,8 @@
 					 VirusStrain.OMICRON_BA1, 10, // TODO: Where does this number come from?
 					 VirusStrain.OMICRON_BA2, 10,
 					 VirusStrain.OMICRON_BA5,10,
+					 VirusStrain.BQ_1_1, 10,
+					 VirusStrain.XBB_1_5, 10,
 					 VirusStrain.STRAIN_A, 10,
 					 VirusStrain.STRAIN_B, 10
 			 ));
@@ -147,6 +155,8 @@
 					 VirusStrain.OMICRON_BA1, 60,
 					 VirusStrain.OMICRON_BA2, 60,
 					 VirusStrain.OMICRON_BA5,60,
+					 VirusStrain.BQ_1_1, 60,
+					 VirusStrain.XBB_1_5, 60,
 					 VirusStrain.STRAIN_A, 60,
 					 VirusStrain.STRAIN_B, 60
 			 ));
@@ -168,7 +178,12 @@
 	 private static final double factorOmicron = 0.45  * factorDelta; //  reportedShareOmicron / reportedShareDelta
 //	 private static final double factorOmicron = 0.6  * factorDelta;//  reportedShareOmicron / reportedShareDelta
 
-	 private static final double factorBA5 = 1.0 * factorOmicron; // old: 1.5
+	 private static final double factorBA5 = factorOmicron; // old: 1.5
+
+//	 private static final double factorBQ = factorOmicron;
+
+//	 private static final double factorXBB = factorOmicron;
+
 
 	 private static final double factorScen2 = factorBA5; //  reportedShareOmicron / reportedShareDelta
 	 private static final double factorScen3 = factorBA5 * 3;//  reportedShareOmicron / reportedShareDelta
@@ -182,7 +197,7 @@
 	 private static final double factorWildAndAlphaICU = 1.; // TODO : Check literature for reasonable values
 	 private static final double factorDeltaICU = 1.;
 	 private static final double factorOmicronICU = 1.;
-	 private static final double factorBA5ICU = 1.;
+//	 private static final double factorBA5ICU = 1.;
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -708,7 +723,14 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(factorOmicronICU);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorBA5);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorBA5ICU);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorOmicronICU);
+
+		 strainConfig.getOrAddParams(VirusStrain.BQ_1_1).setFactorSeriouslySick(factorBA5);
+		 strainConfig.getOrAddParams(VirusStrain.BQ_1_1).setFactorCritical(factorOmicronICU);
+
+		 strainConfig.getOrAddParams(VirusStrain.XBB_1_5).setFactorSeriouslySick(factorBA5);
+		 strainConfig.getOrAddParams(VirusStrain.XBB_1_5).setFactorCritical(factorOmicronICU);
+
 
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
