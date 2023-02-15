@@ -30,7 +30,7 @@ import java.util.*;
  */
 public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 
 	String START_DATE = "2022-04-01";
 	int runCount = 0;
