@@ -521,7 +521,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	public enum ChristmasModel {no, restrictive, permissive}
 
-	public enum WeatherModel {no, midpoints_175_175, midpoints_185_250, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
+	public enum WeatherModel {no, midpoints_175_175, midpoints_185_250, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200, midpoints_500_500}
 
 	public enum AdjustRestrictions {yes, no}
 

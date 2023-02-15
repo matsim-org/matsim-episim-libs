@@ -18,6 +18,7 @@ import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaig
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
@@ -392,6 +393,7 @@ public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params>
 				.setLeisureCorrection(1.3) //params == null ? 0.0 : params.actCorrection)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
+				.setWeatherModel(params != null && params.outdoorLeisure.equals("false") ? SnzProductionScenario.WeatherModel.midpoints_500_500 : SnzProductionScenario.WeatherModel.midpoints_185_250 )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
@@ -438,15 +440,15 @@ public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params>
 
 
 		// start from immunization history
-		episimConfig.setStartDate(LocalDate.parse(START_DATE));
+//		episimConfig.setStartDate(LocalDate.parse(START_DATE));
 
-		if (params.startFromImm.equals("sepSeeds")) {
-			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/imm-cologne-2022-11-24/" + params.seed + "-events_reduced.tar");
-		} else if (params.startFromImm.equals("4711")) {
-			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/imm-cologne-2022-11-24/4711-events_reduced.tar");
-		} else {
-			throw new RuntimeException("invalid param");
-		}
+//		if (params.startFromImm.equals("sepSeeds")) {
+//			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/imm-cologne-2022-11-24/" + params.seed + "-events_reduced.tar");
+//		} else if (params.startFromImm.equals("4711")) {
+//			episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/imm-cologne-2022-11-24/4711-events_reduced.tar");
+//		} else {
+//			throw new RuntimeException("invalid param");
+//		}
 
 		//---------------------------------------
 		//		S T R A I N S
@@ -688,35 +690,38 @@ public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params>
 		@GenerateSeeds(5) // 5
 		public long seed;
 
-		@Parameter({1.8, 3.0, 4.0}) // 3
+		@StringParameter({"true", "false"})
+		public String outdoorLeisure;
+
+		@Parameter({3.0}) // 3
 		public double escBq;
 
-		@Parameter({1.8 * 5, 3.5 * 5, 4.5 * 5}) // 3
+		@Parameter({3.5 * 5}) // 3
 		public double escXbb;
 
-		@StringParameter({"2022-09-11", "2022-09-15", "2022-09-19"}) // 3
+		@StringParameter({"2022-09-15"}) // 3
 		public String bqXbbStartDate;
 
 //		@Parameter({0.0,0.2,0.4,0.6,0.8,1.0})
 //		public double eduRfVacation;
 
-//		@Parameter({0.0, 0.3, 0.6})
+		//		@Parameter({0.0, 0.3, 0.6})
 		@Parameter({0.3})
 		public double immuneSigma;
 
-//		@Parameter({4.2, 4.6, 5.0})
+		//		@Parameter({4.2, 4.6, 5.0})
 		@Parameter({4.6})
 		public double escBa5;
 
-//		@StringParameter({"2022-04-10", "2022-04-13", "2022-04-16", "2022-04-19"})
+		//		@StringParameter({"2022-04-10", "2022-04-13", "2022-04-16", "2022-04-19"})
 		@StringParameter({"2022-04-13"})
 		public String ba5Date;
 
-//		@Parameter({0.35, 0.5, 0.65})
+		//		@Parameter({0.35, 0.5, 0.65})
 		@Parameter({0.5})
 		public double pHouseholds;
 
-//		@Parameter({1.0, 1.1, 1.2})
+		//		@Parameter({1.0, 1.1, 1.2})
 		@Parameter({1.2})
 		public double theta;
 
@@ -769,7 +774,7 @@ public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params>
 				RunParallel.OPTION_SETUP, CologneBMBF202302XX.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(150),
 				RunParallel.OPTION_METADATA
 		};
 
