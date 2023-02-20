@@ -30,7 +30,7 @@ import java.util.*;
  */
 public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 
 	String START_DATE = "2022-04-01";
 	int runCount = 0;
@@ -609,6 +609,25 @@ public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params>
 		// vary amount of "school" activity that takes place during vacation
 //		builder.restrict(LocalDate.parse("2022-06-27"), params.eduRfVacation, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
+		switch (params.edu2020) {
+			case "baseLateRes":
+				break;
+			case "earlyRes":
+				builder.restrict(LocalDate.parse("2020-12-16"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+				break;
+			case "noRes":
+				builder.restrict(LocalDate.parse("2021-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+				break;
+			case "noResNoXmas":
+				builder.restrict(LocalDate.parse("2020-12-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+				builder.restrict(LocalDate.parse("2021-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+				break;
+			default:
+				throw new RuntimeException();
+
+		}
+
+
 		episimConfig.setPolicy(builder.build());
 
 
@@ -690,8 +709,12 @@ public class CologneBMBF202302XX implements BatchRun<CologneBMBF202302XX.Params>
 		@GenerateSeeds(5) // 5
 		public long seed;
 
-		@StringParameter({"true", "false"})
+//		@StringParameter({"true", "false"})
+		@StringParameter({"false"})
 		public String outdoorLeisure;
+
+		@StringParameter({"baseLateRes", "noRes","noResNoXmas", "earlyRes"})
+		public String edu2020;
 
 		@Parameter({3.0}) // 3
 		public double escBq;
