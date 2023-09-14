@@ -27,7 +27,7 @@ else
 fi
 
 
-classpath="matsim-episim-*-SNAPSHOT.jar"
+classpath="matsim-episim-*.jar"
 # main
 main="analysis extractInfectionsByAge --population=$EPISIM_INPUT/<REPLACE> --district Berlin"
 
