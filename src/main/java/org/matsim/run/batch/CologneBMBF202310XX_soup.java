@@ -32,7 +32,7 @@ import java.util.Map.Entry;
  */
 public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_soup.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
 	LocalDate restrictionDatePhase1 = LocalDate.parse("2022-12-01");
@@ -369,7 +369,6 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 					}
 
-
 				}
 
 
@@ -414,15 +413,16 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
-				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
-				.setSebastianUpdate(true)
-				.setLeisureCorrection(1.3) //params == null ? 0.0 : params.actCorrection)
-				.setScaleForActivityLevels(1.3)
-				.setSuscHouseholds_pct(pHousehold)
-				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
+			.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
+			.setFutureVacations(params != null ? params.futureVacations : SnzCologneProductionScenario.FutureVacations.no)
+			.setSebastianUpdate(true)
+			.setLeisureCorrection(1.3) //params == null ? 0.0 : params.actCorrection)
+			.setScaleForActivityLevels(1.3)
+			.setSuscHouseholds_pct(pHousehold)
+			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
-				.setInfectionModel(InfectionModelWithAntibodies.class)
-				.build();
+			.setInfectionModel(InfectionModelWithAntibodies.class)
+			.build();
 	}
 
 	@Override
@@ -463,9 +463,14 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
-		//snapshot
-//		episimConfig.setSnapshotInterval(30);
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+		//---------------------------------------
+		//		S N A P S H O T
+		//---------------------------------------
+
+		// create snapshot
+		episimConfig.setSnapshotInterval(900);
+		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+		// start from snapshot
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		//---------------------------------------
@@ -615,6 +620,10 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@GenerateSeeds(5)
 		public long seed;
 
+		// future vacations
+		@EnumParameter(SnzCologneProductionScenario.FutureVacations.class)
+		public SnzCologneProductionScenario.FutureVacations futureVacations;
+
 		// Vaccination Campaign
 		@StringParameter({"base"})
 		String vacCamp;
@@ -626,7 +635,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@StringParameter({"2022-09-12"})
 		public String strainADate;
 
-		@Parameter({6., 12., 24.})
+		@Parameter({6., 12., 18., 24.})
 		public double esc;
 
 		@Parameter({1., 6.})
