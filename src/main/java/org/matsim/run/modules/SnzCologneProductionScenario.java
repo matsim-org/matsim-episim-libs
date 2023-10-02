@@ -31,7 +31,8 @@
  import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
  import org.matsim.episim.model.listener.HouseholdSusceptibility;
  import org.matsim.episim.model.listener.WriteAntibodies;
- import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.listener.WriteContactsPerDay;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
  import org.matsim.episim.model.testing.TestType;
  import org.matsim.episim.model.testing.TestingModel;
@@ -262,10 +263,11 @@
 		 Multibinder<SimulationListener> listener = Multibinder.newSetBinder(binder(), SimulationListener.class);
 
 		 listener.addBinding().to(HouseholdSusceptibility.class);
+//		 listener.addBinding().to(WriteContactsPerDay.class);
 
 		 // Write antibodies, iteration is hard-coded
 
-		 // listener.addBinding().to(WriteAntibodies.class);
+//		  listener.addBinding().to(WriteAntibodies.class);
 
 	 }
 

@@ -531,6 +531,9 @@ public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_so
 		// vary amount of "school" activity that takes place during vacation
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.8, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
+		builder.restrict(LocalDate.parse("2023-01-01"), Restriction.ofCiCorrection(params.ciCorr), "leisPublic", "leisPrivate", "educ_higher");
+		builder.restrict(LocalDate.parse("2023-01-01"), Restriction.ofCiCorrection(params.ciCorr * 0.75), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
 		episimConfig.setPolicy(builder.build());
 
 
@@ -617,32 +620,41 @@ public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_so
 		@StringParameter({"base"})
 		String vacCamp;
 
-		@StringParameter({"1.7"})
+		@StringParameter({"1.5"})
 		public String StrainA;
 
 //		@StringParameter({"2022-08-15", "2022-08-22", "2022-08-29", "2022-09-05", "2022-09-12", "2022-09-19", "2022-09-26"})
 		@StringParameter({"2022-09-12"})
 		public String strainADate;
 		
-		@Parameter({6., 12., 24.})
+		@Parameter({1.})
 		public double esc;
 		
-		@Parameter({1., 6.})
+		@Parameter({12.})
 		public double escL;
 		
+//		@Parameter({1., 0.5, 0.25})
+		@Parameter({1.})
+		public double ciCorr;
+		
+//		@IntParameter({30, 120})
 		@IntParameter({30})
 		public int days;
 		
+//		@StringParameter({"no", "4711"})
 		@StringParameter({"no"})
 		public String strainRnd;
 		
-		@StringParameter({"true", "false"})
+//		@StringParameter({"true", "false"})
+		@StringParameter({"false"})
 		public String lineB;
 		
-		@StringParameter({"true", "false"})
+//		@StringParameter({"true", "false"})
+		@StringParameter({"true"})
 		public String iga;
 		
-		@StringParameter({"true", "false"})
+//		@StringParameter({"true", "false"})
+		@StringParameter({"true"})
 		public String seasonal;
 
 	}
@@ -714,7 +726,7 @@ public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_so
 		ArrayList<LocalDate> dates = new ArrayList<LocalDate>();
 		
 		if (seed.equals("no")) {
-			for (LocalDate date = start; ; date = date.plusDays(1)) {
+			for (LocalDate date = start.plusDays(1); ; date = date.plusDays(1)) {
 				long daysBetween = ChronoUnit.DAYS.between(start, date);
 				if (daysBetween % days == 0) 
 					dates.add(date);
