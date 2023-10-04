@@ -393,7 +393,7 @@
 
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221205.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221231.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -469,9 +469,9 @@
 
 		 if (futureVacations.equals(FutureVacations.yes)){
 
-			 //TODO: add university closures
-//			 Hier die Ferienzeiten für NRW für die Simulationen :) :
-			 // 2022
+//			#################################
+//			2022
+//			#################################
 //			 Ostern 11.04.-23.04.
 //				 Sommer 27.06.-09.08.
 //				 Herbst 4.10.-15.10.
@@ -482,6 +482,7 @@
 			 // Sommer
 			 builder.restrict(LocalDate.parse("2022-06-27"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			 builder.restrict(LocalDate.parse("2022-08-09"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
 			 // Herbst
 			 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -489,7 +490,27 @@
 			 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-//			 2023
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2022-02-05"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-04-04"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+			 builder.restrict(LocalDate.parse("2022-06-07"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-06-11"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2022-07-16"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-10-10"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+			 builder.restrict(LocalDate.parse("2022-12-23"), 0.2,  "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-01-07"), 1.0, "educ_higher");
+
+
+//			#################################
+//			2023
+//			#################################
 //			 Ostern 03.04.-15.04.
 //				 Sommer 22.06.-04.08.
 //				 Herbst 2.10.-14.10.
@@ -507,7 +528,28 @@
 			 builder.restrict(LocalDate.parse("2023-12-21"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			 builder.restrict(LocalDate.parse("2024-01-05"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-			 //			 2024
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2023-02-04"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-04-03"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+			 builder.restrict(LocalDate.parse("2023-05-30"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-06-03"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2023-07-15"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-10-09"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+			 builder.restrict(LocalDate.parse("2023-12-21"), 0.2,  "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-01-06"), 1.0, "educ_higher");
+
+
+
+//			#################################
+//			2024
+//			#################################
 //			 Ostern 25.03.-06.04.
 //				 Sommer 08.07.-20.08.
 //				 Herbst 14.10.-26.10.
@@ -527,7 +569,27 @@
 			 builder.restrict(LocalDate.parse("2025-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 
-		 //			 2025
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2024-02-03"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-04-07"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+			 builder.restrict(LocalDate.parse("2024-05-20"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-05-25"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2024-07-20"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-10-07"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+			 builder.restrict(LocalDate.parse("2024-12-23"), 0.2,  "educ_higher");
+			 builder.restrict(LocalDate.parse("2025-01-07"), 1.0, "educ_higher");
+
+
+
+//			#################################
+//			2025
+//			#################################
 //			 Ostern 14.04.-26.04.
 //				 Sommer 14.07.-26.08.
 //				 Herbst 13.10.-25.10.
@@ -544,6 +606,23 @@
 			 //Weihnachten
 			 builder.restrict(LocalDate.parse("2025-12-22"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			 builder.restrict(LocalDate.parse("2026-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2025-02-01"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2025-04-07"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+//			 builder.restrict(LocalDate.parse("2023-05-30"), 0.2, "educ_higher");
+//			 builder.restrict(LocalDate.parse("2023-06-03"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2025-07-19"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2025-10-06"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+//			 builder.restrict(LocalDate.parse("2023-12-21"), 0.2,  "educ_higher");
+//			 builder.restrict(LocalDate.parse("2024-01-06"), 1.0, "educ_higher");
 
 
 		 }

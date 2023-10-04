@@ -17,6 +17,7 @@ import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
@@ -538,6 +539,19 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		// vary amount of "school" activity that takes place during vacation
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.8, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
+		// increase work, leisure Rf after SNZ Data runs out
+		if (params.rf2023.equals("base")) {
+			builder.restrict(LocalDate.parse("2023-01-01"), 0.73, "work", "leisure", "leisPublic", "leisPrivate");
+		} else if (params.rf2023.equals("leis")) {
+			builder.restrict(LocalDate.parse("2023-01-01"), 0.73, "work");
+			builder.interpolate(LocalDate.parse("2023-01-01"), LocalDate.parse("2023-03-31"), Restriction.of(0.73), Restriction.of(1.0), "leisure", "leisPublic", "leisPrivate");
+		} else if (params.rf2023.equals("work_leis")) {
+			builder.interpolate(LocalDate.parse("2023-01-01"), LocalDate.parse("2023-03-31"), Restriction.of(0.73), Restriction.of(1.0), "work", "leisure", "leisPublic", "leisPrivate");
+		} else {
+			throw new RuntimeException();
+		}
+
+
 		episimConfig.setPolicy(builder.build());
 
 
@@ -638,16 +652,16 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@Parameter({6., 12., 18., 24.})
 		public double esc;
 
-		@Parameter({1., 6.})
+		@Parameter({1.})//, 6.})
 		public double escL;
 
-		@IntParameter({30})
+		@IntParameter({30, 90})
 		public int days;
 
 		@StringParameter({"no"})
 		public String strainRnd;
 
-		@StringParameter({"true", "false"})
+		@StringParameter({"false"})
 		public String lineB;
 
 		@StringParameter({"true", "false"})
@@ -655,6 +669,10 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 		@StringParameter({"true", "false"})
 		public String seasonal;
+
+
+		@StringParameter({"base", "leis", "work_leis"})
+		public String rf2023;
 
 	}
 
