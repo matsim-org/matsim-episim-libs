@@ -248,6 +248,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.ALPHA, 0.01);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscXBB_15);
 
 				//DELTA
 				double mRNADelta = mRNAAlpha / mutEscDelta;
@@ -287,6 +288,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / mutEscXBB_19 / mutEscEG);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha / mutEscBa5);
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.OMICRON_BA1, mRNAAlpha / mutEscXBB_15);
 
 				//BA.2
 				double mRNABA2 = mRNABA1;
@@ -306,7 +308,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / mutEscXBB_19 / mutEscEG);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha / mutEscBa5);
-
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.OMICRON_BA2, mRNAAlpha / mutEscXBB_15);
 
 				//BA.5
 				double mRNABa5 = mRNABA2 / mutEscBa5;
@@ -345,22 +347,87 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 //				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscStrainA);
 //				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.STRAIN_A, ... )
 
-				//StrainB
-				double mRNAStrainB = mRNABA2 / mutEscStrainB;
-				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.STRAIN_B, mRNAStrainB);
-				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.STRAIN_B, mRNAStrainB * 4./20.);
-				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.STRAIN_B, mRNAStrainB * 6./20.);
-				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.STRAIN_B, mRNAStrainB * 6./20.);
-				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.STRAIN_B,  mRNAStrainB * 8./20.);
-				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.STRAIN_B,  64.0 / 300. / mutEscStrainB);
-				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.STRAIN_B, 64.0 / 300./ mutEscStrainB);
-				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.STRAIN_B, 64.0 / 300. / mutEscStrainB / mutEscBa5);
-				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.STRAIN_B, 64.0 / 300./ mutEscStrainA / mutEscStrainB / mutEscBa5);
-				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.STRAIN_B,  64.0 / 300.);
-				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.STRAIN_B, mRNAAlpha / mutEscStrainB);
-				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.STRAIN_B, mRNAAlpha / mutEscStrainB / mutEscBa5);
+				//XBB_15
+				double mRNAXBB_15 = mRNABA2 / mutEscXBB_15;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.XBB_15, mRNAXBB_15);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.XBB_15, mRNAXBB_15 * 4./20.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.XBB_15, mRNAXBB_15 * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.XBB_15, mRNAXBB_15 * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.XBB_15,  mRNAXBB_15 * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.XBB_15,  64.0 / 300. / mutEscXBB_15);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.XBB_15, 64.0 / 300./ mutEscXBB_15);
+				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.XBB_15, 64.0 / 300. / mutEscXBB_15 / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.XBB_15, 64.0 / 300./ mutEscStrainA / mutEscStrainB / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.XBB_15,  64.0 / 300.);
+				initialAntibodies.get(VirusStrain.BQ).put(VirusStrain.XBB_15,  64.0 / 300. / mutEscXBB_15 / mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VirusStrain.XBB_15).put(VirusStrain.XBB_15,  64.0 / 300. );
+				initialAntibodies.get(VirusStrain.XBB_19).put(VirusStrain.XBB_15,  64.0 / 300. / mutEscXBB_19 / mutEscXBB_15);
+				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.XBB_15,  64.0 / 300. / mutEscEG / mutEscXBB_19 / mutEscXBB_15);
+				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.XBB_15, mRNAAlpha / mutEscXBB_15);
+				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.XBB_15, mRNAAlpha / mutEscXBB_15 / mutEscBa5);
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.XBB_15, mRNAAlpha);
 
+				//XBB_19
+				double mRNAXBB_19 = mRNABA2 / mutEscXBB_19;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.XBB_19, mRNAXBB_19);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.XBB_19, mRNAXBB_19 * 4./20.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.XBB_19, mRNAXBB_19 * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.XBB_19, mRNAXBB_19 * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.XBB_19,  mRNAXBB_19 * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.XBB_19,  64.0 / 300. / mutEscXBB_19);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.XBB_19, 64.0 / 300./ mutEscXBB_19);
+				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.XBB_19, 64.0 / 300. / mutEscXBB_19 / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.XBB_19, 64.0 / 300./ mutEscStrainA / mutEscStrainB / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.XBB_19,  64.0 / 300.);
+				initialAntibodies.get(VirusStrain.BQ).put(VirusStrain.XBB_19,  64.0 / 300. / mutEscBQ / mutEscBa5 / mutEscXBB_19);
+				initialAntibodies.get(VirusStrain.XBB_15).put(VirusStrain.XBB_19,  64.0 / 300. / mutEscXBB_15 / mutEscXBB_19);
+				initialAntibodies.get(VirusStrain.XBB_19).put(VirusStrain.XBB_19,  64.0 / 300. );
+				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.XBB_19, 64.0 / 300. / mutEscEG);
+				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.XBB_19, mRNAAlpha / mutEscXBB_19);
+				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.XBB_19, mRNAAlpha / mutEscXBB_19 / mutEscBa5);
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.XBB_19, mRNAAlpha / mutEscXBB_15 / mutEscXBB_19);
 
+				//BQ
+				double mRNABQ = mRNABa5 / mutEscBQ;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.BQ, mRNABQ);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.BQ, mRNABQ * 4./20.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.BQ, mRNABQ * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.BQ, mRNABQ * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.BQ,  mRNABQ * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.BQ,  64.0 / 300. / mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.BQ, 64.0 / 300./  mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.BQ, 64.0 / 300. / mutEscBQ);
+//				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.BQ, 64.0 / 300./ mutEscStrainA / mutEscStrainB / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.BQ,  64.0 / 300.);
+				initialAntibodies.get(VirusStrain.BQ).put(VirusStrain.BQ,  64.0 / 300. );
+				initialAntibodies.get(VirusStrain.XBB_15).put(VirusStrain.BQ, 64.0 / 300. / mutEscXBB_15 / mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VirusStrain.XBB_19).put(VirusStrain.BQ,  64.0 / 300. / mutEscXBB_19 /mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.BQ, 64.0 / 300. / mutEscEG / mutEscXBB_19 / mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.BQ, mRNAAlpha / mutEscBa5 / mutEscBQ);
+				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.BQ, mRNAAlpha / mutEscBQ);
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.BQ, mRNAAlpha / mutEscXBB_15 / mutEscBa5 / mutEscBQ);
+
+				//EG
+				double mRNAEG = mRNAXBB_19 / mutEscEG;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.EG, mRNAEG);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.EG, mRNAEG * 4./20.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.EG, mRNAEG * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.EG, mRNAEG * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.EG,  mRNAEG * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.EG,  64.0 / 300. / mutEscXBB_19 / mutEscEG);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.EG, 64.0 / 300./ mutEscXBB_19 / mutEscEG);
+				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.EG, 64.0 / 300. / mutEscXBB_19 / mutEscEG / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.EG, 64.0 / 300./ mutEscStrainA / mutEscStrainB / mutEscBa5);
+//				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.EG,  64.0 / 300.);
+				initialAntibodies.get(VirusStrain.BQ).put(VirusStrain.EG,  64.0 / 300. / mutEscBQ / mutEscBa5 / mutEscXBB_19 / mutEscEG);
+				initialAntibodies.get(VirusStrain.XBB_15).put(VirusStrain.EG,  64.0 / 300. / mutEscXBB_15 / mutEscXBB_19 / mutEscEG);
+				initialAntibodies.get(VirusStrain.XBB_19).put(VirusStrain.EG,  64.0 / 300. / mutEscEG);
+				initialAntibodies.get(VirusStrain.EG).put(VirusStrain.EG,  64.0 / 300. );
+				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.EG, mRNAAlpha / mutEscXBB_19 / mutEscEG);
+				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.EG, mRNAAlpha / mutEscXBB_19 / mutEscEG / mutEscBa5);
+				initialAntibodies.get(VaccinationType.xbbUpdate).put(VirusStrain.EG, mRNAAlpha / mutEscXBB_15 / mutEscXBB_19 / mutEscEG);
+
+				// strains A_1, A_2, ...
 				{
 
 					ArrayList<VirusStrain> strains = getNewStrains(Boolean.valueOf(lineB));

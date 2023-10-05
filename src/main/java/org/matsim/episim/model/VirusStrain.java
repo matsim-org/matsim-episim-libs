@@ -37,7 +37,15 @@ public enum VirusStrain implements ImmunityEvent {
 	OMICRON_BA2,
 
 	OMICRON_BA5,
-	
+
+	XBB_15,
+
+	XBB_19,
+
+	BQ,
+
+	EG,
+
 	STRAIN_A,
 
 	STRAIN_B,
