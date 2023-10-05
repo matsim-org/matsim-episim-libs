@@ -13,6 +13,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?
 
+	// optimistic: 46
+	//
+
 	private final AntibodyModel.Config antibodyConfig;
 	private final SplittableRandom localRnd;
 
