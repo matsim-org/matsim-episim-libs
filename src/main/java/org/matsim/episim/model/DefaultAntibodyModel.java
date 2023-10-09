@@ -97,10 +97,20 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 		}
 
+		double halflifeDays = HALF_LIFE_DAYS;
+
+		if (person.getNumInfections() > 0) {
+			halflifeDays *= antibodyConfig.hlMultiForInfected; // 1, 2, 5
+		}
+
+//		if (person.hadVaccinationType(VaccinationType.xbbUpdate)) {
+//			halflifedays
+//		}
+
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS));
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halflifeDays));
 		}
 
 	}

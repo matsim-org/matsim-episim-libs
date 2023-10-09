@@ -63,6 +63,8 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				compliance.put(12, 0.0); // 12 - 18
 				compliance.put(0, 0.0); // 0 - 12
 
+				int minDaysAfterInfectionOrVaccination = 365;
+
 				if (params != null) {
 					switch (params.vacCamp) {
 						case "base":
@@ -85,6 +87,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 							compliance.put(12, 0.);
 							compliance.put(0, 0.);
 							vaccinationPool = VaccinationStrategyBMBF202310XX.Config.VaccinationPool.unvaccinated;
+							minDaysAfterInfectionOrVaccination = 182;
 							break;
 						default:
 							throw new RuntimeException("Not a valid option for vaccinationCampaignType");
@@ -92,7 +95,8 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				}
 
 
-				bind(VaccinationStrategyBMBF202310XX.Config.class).toInstance(new VaccinationStrategyBMBF202310XX.Config(start, 90, vaccinationType, compliance, vaccinationPool, 365, 365));
+
+				bind(VaccinationStrategyBMBF202310XX.Config.class).toInstance(new VaccinationStrategyBMBF202310XX.Config(start, 90, vaccinationType, compliance, vaccinationPool, minDaysAfterInfectionOrVaccination, minDaysAfterInfectionOrVaccination));
 
 
 				// ANTIBODY MODEL
@@ -115,6 +119,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				LocalDate soupStartDate = LocalDate.parse("2020-01-01");
 				boolean lineB = false;
 				double escapeBetweenLines = 1.0;
+				double hlMultiForInfected = 1.0;
 
 				if (params != null) {
 //					mutEscBa1 = params.ba1Esc;
@@ -134,6 +139,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 					days = params.days;
 					strainSeed = params.strainRnd;
 					soupStartDate = LocalDate.parse(params.soupStartDate);
+					hlMultiForInfected = params.hlMultiForInfected;
 
 				}
 
@@ -142,7 +148,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscDelta, mutEscBa1, mutEscBa5, mutEscBQ, mutEscXBB_15, mutEscXBB_19, mutEscEG, escape, days, strainSeed, soupStartDate, lineB, escapeBetweenLines);
 
-				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
+				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors, hlMultiForInfected);
 
 				double immuneSigma = 3.0;
 				if (params != null) {
@@ -704,6 +710,8 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setUseIgA(Boolean.valueOf(params.iga));
 
+		vaccinationConfig.getOrAddParams(VaccinationType.xbbUpdate);
+
 		if (!Boolean.valueOf(params.seasonal)) {
 
 			Map<LocalDate, Double> fractionsOld = episimConfig.getLeisureOutdoorFraction();
@@ -824,20 +832,20 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		public SnzCologneProductionScenario.FutureVacations futureVacations;
 
 		// Vaccination Campaign
-		@StringParameter({"base","pessimistic", "optimistic", "upperBound"})
+		@StringParameter({"base", "pessimistic", "optimistic", "upperBound"})
 		String vacCamp;
 
 //		@StringParameter({"1.7"})
 //		public String StrainA;
 
-//		@StringParameter({"2022-08-15", "2022-08-22", "2022-08-29", "2022-09-05", "2022-09-12", "2022-09-19", "2022-09-26"})
+		//		@StringParameter({"2022-08-15", "2022-08-22", "2022-08-29", "2022-09-05", "2022-09-12", "2022-09-19", "2022-09-26"})
 		@StringParameter({"2023-09-01"})
 		public String soupStartDate;
 
-		@Parameter({6., 18.})
+		@Parameter({6., 24.})
 		public double esc;
 
-		@IntParameter({30, 90})
+		@IntParameter({30})
 		public int days;
 
 		@StringParameter({"no"})
@@ -852,9 +860,11 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@StringParameter({"true"})
 		public String seasonal;
 
-		@StringParameter({"base", "leis", "work_leis"})
+		@StringParameter({"base", "work_leis"})
 		public String rf2023;
 
+		@Parameter({1., 2., 5.})
+		public double hlMultiForInfected;
 	}
 
 
@@ -946,7 +956,5 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		}
 
 	}
-
-
 }
 

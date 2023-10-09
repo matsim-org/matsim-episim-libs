@@ -108,14 +108,18 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 //				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
 				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 
-			}  
-			
+			}
+
 			ArrayList<VirusStrain> strainsLineA = new ArrayList<VirusStrain>();
 			strainsLineA.add(VirusStrain.OMICRON_BA1);
 			strainsLineA.add(VirusStrain.OMICRON_BA2);
 			strainsLineA.add(VirusStrain.OMICRON_BA5);
 			strainsLineA.add(VirusStrain.STRAIN_A);
 			strainsLineA.add(VirusStrain.STRAIN_B);
+			strainsLineA.add(VirusStrain.BQ);
+			strainsLineA.add(VirusStrain.XBB_15);
+			strainsLineA.add(VirusStrain.XBB_19);
+			strainsLineA.add(VirusStrain.EG);
 
 			ArrayList<VirusStrain> strainsLineB = new ArrayList<VirusStrain>();
 			strainsLineB.add(VirusStrain.OMICRON_BA1);
@@ -123,9 +127,13 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			strainsLineB.add(VirusStrain.OMICRON_BA5);
 			strainsLineB.add(VirusStrain.STRAIN_A);
 			strainsLineB.add(VirusStrain.STRAIN_B);
-			
+			strainsLineB.add(VirusStrain.BQ);
+			strainsLineB.add(VirusStrain.XBB_15);
+			strainsLineB.add(VirusStrain.XBB_19);
+			strainsLineB.add(VirusStrain.EG);
+
 			if (vaccinationConfig.getUseIgA()) {
-				
+
 				for (VirusStrain str : VirusStrain.values()) {
 					if (str.toString().startsWith("A_"))
 						strainsLineA.add(str);
@@ -135,7 +143,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 						strainsLineB.add(str);
 				}
 			}
-			
+
 //			if (vaccinationConfig.getUseIgA()) {
 
 				if(strainsLineA.contains(infector.getVirusStrain())){
@@ -154,7 +162,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 						igaFactor = Math.max(fac, igaFactor);
 					}
 				}
-				
+
 				if(strainsLineB.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;
 					boolean targetHadStrain = false;
@@ -171,7 +179,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 						igaFactor = Math.max(fac, igaFactor);
 					}
 				}
-				
+
 //				if(strainsLineA.contains(infector.getVirusStrain()) || strainsLineB.contains(infector.getVirusStrain())){
 //					int lastInfectionWithStrain = 0;
 //					boolean targetHadStrain = false;
@@ -188,9 +196,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 //						igaFactor = Math.max(fac, igaFactor);
 //					}
 //				}
-				
+
 				susceptibility = susceptibility * (1.0 - igaFactor);
-//			}	
+//			}
 		}
 
 
