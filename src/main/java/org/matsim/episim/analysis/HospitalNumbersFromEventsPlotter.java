@@ -38,7 +38,7 @@ public class HospitalNumbersFromEventsPlotter {
 
 
 
-	static void aggregateAndProducePlots(Path output, List<Path> pathList, String outputAppendix, LocalDate startDate, String strainToPlot) throws IOException {
+	static void aggregateAndProducePlots(Path output, List<Path> pathList, String outputAppendix, LocalDate startDate, String scenarioToPlot) throws IOException {
 
 
 		// read hospitalization tsv for all seeds and aggregate them!
@@ -69,7 +69,7 @@ public class HospitalNumbersFromEventsPlotter {
 
 				for (CSVRecord record : parser) {
 
-					if (!record.get("severity").equals(strainToPlot)) {
+					if (!record.get("scenario").equals(scenarioToPlot)) {
 						continue;
 					}
 
