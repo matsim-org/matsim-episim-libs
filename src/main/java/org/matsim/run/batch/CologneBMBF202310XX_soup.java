@@ -107,7 +107,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 //				double mutEscStrainA = 1.0;
 //				double mutEscStrainB = 1.0;
-				double mutEscBQ = 5.0; // w/ respect to BA5
+				double mutEscBqq = 5.0; // w/ respect to BA5
 				double mutEscXBB_19 = 5.0; // wrt BA2
 				double mutEscEG = 4.0; // wrt XBB_19
 				double mutEscXBB_15 = 8.0; // wrt BA2
@@ -126,7 +126,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 //					mutEscBa5 = params.ba5Esc;
 
 //					String StrainA = "6.0";
-					String StrainB = "off";
+//					String StrainB = "off";
 
 
 //					if (!params.StrainA.equals("off")) {
@@ -140,13 +140,14 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 					strainSeed = params.strainRnd;
 					soupStartDate = LocalDate.parse(params.soupStartDate);
 					hlMultiForInfected = params.hlMultiForInfected;
+					mutEscBqq = params.escBqq;
 
 				}
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
-				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscDelta, mutEscBa1, mutEscBa5, mutEscBQ, mutEscXBB_15, mutEscXBB_19, mutEscEG, escape, days, strainSeed, soupStartDate, lineB, escapeBetweenLines);
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscDelta, mutEscBa1, mutEscBa5, mutEscBqq, mutEscXBB_15, mutEscXBB_19, mutEscEG, escape, days, strainSeed, soupStartDate, lineB, escapeBetweenLines);
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors, hlMultiForInfected);
 
@@ -832,17 +833,13 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		public SnzCologneProductionScenario.FutureVacations futureVacations;
 
 		// Vaccination Campaign
-		@StringParameter({"base", "pessimistic", "optimistic", "upperBound"})
+		@StringParameter({"base", "upperBound"})
 		String vacCamp;
 
-//		@StringParameter({"1.7"})
-//		public String StrainA;
-
-		//		@StringParameter({"2022-08-15", "2022-08-22", "2022-08-29", "2022-09-05", "2022-09-12", "2022-09-19", "2022-09-26"})
 		@StringParameter({"2023-09-01"})
 		public String soupStartDate;
 
-		@Parameter({6., 24.})
+		@Parameter({12., 24.})
 		public double esc;
 
 		@IntParameter({30})
@@ -865,6 +862,9 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 		@Parameter({1., 2., 5.})
 		public double hlMultiForInfected;
+
+		@Parameter({2., 3., 4., 5.})
+		public double escBqq;
 	}
 
 

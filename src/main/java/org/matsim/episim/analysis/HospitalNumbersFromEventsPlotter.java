@@ -112,6 +112,7 @@ public class HospitalNumbersFromEventsPlotter {
 		// read rki data and add to tsv
 		Int2DoubleMap rkiHospIncidence = new Int2DoubleAVLTreeMap();
 		Int2DoubleMap rkiHospIncidenceAdj = new Int2DoubleAVLTreeMap();
+		// 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/COVID-Hospitalization/Aktuell_Deutschland_adjustierte-COVID-19-Hospitalisierungen.csv")),
 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/src/assets/rki-deutschland-hospitalization.csv")),
 				CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 

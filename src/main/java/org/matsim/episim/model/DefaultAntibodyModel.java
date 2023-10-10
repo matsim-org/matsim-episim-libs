@@ -99,13 +99,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 		double halflifeDays = HALF_LIFE_DAYS;
 
-		if (person.getNumInfections() > 0) {
+		if ((person.getNumInfections() > 0 && person.getNumVaccinations() > 0)
+			|| person.getNumInfections() > 4
+			|| person.getNumVaccinations() > 3) {
+
 			halflifeDays *= antibodyConfig.hlMultiForInfected; // 1, 2, 5
 		}
-
-//		if (person.hadVaccinationType(VaccinationType.xbbUpdate)) {
-//			halflifedays
-//		}
 
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
