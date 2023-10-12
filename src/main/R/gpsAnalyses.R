@@ -18,7 +18,6 @@ osm_multipolygons <- oe_read("/Users/sebastianmuller/git/koeln-regbez-latest.osm
   select(osm_way_id, shop, leisure, amenity, building, landuse) %>%
   filter(!is.na(osm_way_id)) %>%
   mutate(osm_way_id = as.numeric(osm_way_id))
-# osm_multipolygons <- oe_read("/Users/sebastianmuller/git/nordrhein-westfalen-latest.osm.pbf", layer = "multipolygons")
 
 # filter shop, amenity, leisure points
 osm_points_shop <- osm_points %>%
@@ -114,7 +113,7 @@ snz <- read.delim("/Users/sebastianmuller/git/shared-svn/projects/episim/matsim-
 
 
 #read all netcheck csv files
-netcheck <- ldply( .data = list.files(path ="/Users/sebastianmuller/git/shared-svn/projects/episim/data/netcheck/data2", pattern="*.csv"),
+netcheck <- ldply( .data = list.files(path ="/Users/sebastianmuller/git/shared-svn/projects/episim/data/netcheck/data2", pattern="*_v2.csv"),
                    .fun = read.csv,
                    header = TRUE)
 
@@ -136,6 +135,7 @@ netcheck <- netcheck %>%
   mutate(holiday = ifelse(is.na(holiday), "no", holiday )) %>%
   mutate(nTimeStamps = 1 + str_count(timestamps, ","))
 
+# calcualte duration
 netcheck <- netcheck %>%
   mutate(maxTime =  strptime(substr(timestamps, nchar(timestamps) - 7, nchar(timestamps)), format="%H:%M:%S")) %>%
   mutate(minTime =  strptime(substr(timestamps, 1, 8), format="%H:%M:%S")) %>%
@@ -204,12 +204,12 @@ notAtHome$normTimeStamps <- notAtHome$sumTimeStamps.x / notAtHome$sumTimeStamps.
 notAtHome$normDurations <- notAtHome$sumDurations.x / notAtHome$sumDurations.y
 
 baseline <- notAtHome %>%
-  # filter(date >= as.Date("2020-02-22") & date <= as.Date("2020-02-28")) %>%
-  filter(date >= as.Date("2020-03-01")) %>%
+  filter(date >= as.Date("2020-09-01") & date <= as.Date("2020-09-30")) %>%
+  # filter(date >= as.Date("2020-03-01")) %>%
   filter(holiday == "no") %>%
   group_by(weekday) %>%
-  # summarise(baseTimeStamps = median(normTimeStamps), baseDurations = median(normDurations))
-  summarise(baseTimeStamps = quantile(normTimeStamps, 0.9), baseDurations = quantile(normDurations, 0.9)) %>%
+  summarise(baseTimeStamps = median(normTimeStamps), baseDurations = median(normDurations)) %>%
+  # summarise(baseTimeStamps = quantile(normTimeStamps, 0.9), baseDurations = quantile(normDurations, 0.9)) %>%
   ungroup()
 
 scaleMonFriTimeStamps <- baseline$baseTimeStamps[1]
@@ -302,12 +302,12 @@ filteredForPlot$normTimeStamps <- filteredForPlot$sumTimeStamps.x / filteredForP
 filteredForPlot$normDurations <- filteredForPlot$sumDurations.x / filteredForPlot$sumDurations.y
 
 baseline <- filteredForPlot %>%
-  # filter(date >= as.Date("2020-02-22") & date <= as.Date("2020-02-28")) %>%
-  filter(date >= as.Date("2020-03-01")) %>%
+  filter(date >= as.Date("2020-09-01") & date <= as.Date("2020-09-30")) %>%
+  # filter(date >= as.Date("2020-03-01")) %>%
   filter(holiday == "no") %>%
   group_by(weekday) %>%
-  # summarise(baseTimeStamps = median(normTimeStamps), baseDurations = median(normDurations))
-  summarise(baseTimeStamps = quantile(normTimeStamps, 0.9), baseDurations = quantile(normDurations, 0.9)) %>%
+  summarise(baseTimeStamps = median(normTimeStamps), baseDurations = median(normDurations)) %>%
+  # summarise(baseTimeStamps = quantile(normTimeStamps, 0.9), baseDurations = quantile(normDurations, 0.9)) %>%
   ungroup()
 
 scaleMonFriTimeStamps <- baseline$baseTimeStamps[1]
@@ -354,7 +354,7 @@ ggplot () +
   scale_y_continuous(labels = scales::percent, limit=c(-1.0, 0.3))
 # scale_y_continuous(labels = scales::percent)
 
-ggsave("ts.png", width = 4, height = 3.2)
+ggsave("ts22.png", width = 4, height = 3.2)
 
 
 ggplot () +
@@ -371,7 +371,7 @@ ggplot () +
   scale_y_continuous(labels = scales::percent, limit=c(-1.0, 0.3))
 # scale_y_continuous(labels = scales::percent)
 
-ggsave("dur.png", width = 4, height = 3.2)
+ggsave("dur22.png", width = 4, height = 3.2)
 
 
 ggplot () +
