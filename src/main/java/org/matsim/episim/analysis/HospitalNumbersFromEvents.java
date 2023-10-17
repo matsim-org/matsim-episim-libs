@@ -272,7 +272,7 @@
 	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath) throws IOException {
 		 // open new buffered writer for hospitalization output and write the header row.
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
-		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "scenario", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
+		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
 
 		 ConfigHolder holderBase = configure(seriouslySickFactorModifier_BASE);

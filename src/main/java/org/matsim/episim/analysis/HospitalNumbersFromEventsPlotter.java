@@ -69,7 +69,7 @@ public class HospitalNumbersFromEventsPlotter {
 
 				for (CSVRecord record : parser) {
 
-					if (!record.get("scenario").equals(scenarioToPlot)) {
+					if (!record.get("severity").equals(scenarioToPlot)) {
 						continue;
 					}
 
