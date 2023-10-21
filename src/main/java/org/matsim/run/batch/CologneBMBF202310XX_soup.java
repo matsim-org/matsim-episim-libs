@@ -107,7 +107,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 //				double mutEscStrainA = 1.0;
 //				double mutEscStrainB = 1.0;
-				double mutEscBq = 5.0; // w/ respect to BA5
+				double mutEscBqq = 5.0; // w/ respect to BA5
 				double mutEscXBB_19 = 5.0; // wrt BA2
 				double mutEscEG = 4.0; // wrt XBB_19
 				double mutEscXBB_15 = 8.0; // wrt BA2
@@ -140,14 +140,14 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 					strainSeed = params.strainRnd;
 					soupStartDate = LocalDate.parse(params.soupStartDate);
 					hlMultiForInfected = params.hlMultiForInfected;
-					mutEscBq = params.escBq;
+					mutEscBqq = params.escBqq;
 
 				}
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
-				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscDelta, mutEscBa1, mutEscBa5, mutEscBq, mutEscXBB_15, mutEscXBB_19, mutEscEG, escape, days, strainSeed, soupStartDate, lineB, escapeBetweenLines);
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscDelta, mutEscBa1, mutEscBa5, mutEscBqq, mutEscXBB_15, mutEscXBB_19, mutEscEG, escape, days, strainSeed, soupStartDate, lineB, escapeBetweenLines);
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors, hlMultiForInfected);
 
@@ -557,10 +557,10 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/"),
+//				new VaccinationEffectiveness().withArgs(),
+//				new RValuesFromEvents().withArgs(),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+//				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
@@ -864,7 +864,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		public double hlMultiForInfected;
 
 		@Parameter({2., 3., 4., 5.})
-		public double escBq;
+		public double escBqq;
 	}
 
 
