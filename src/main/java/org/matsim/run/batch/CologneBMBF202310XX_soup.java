@@ -9,10 +9,7 @@ import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
@@ -22,8 +19,11 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -538,7 +538,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
 			.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
-			.setFutureVacations(params != null ? params.futureVacations : SnzCologneProductionScenario.FutureVacations.no)
+			.setFutureVacations(SnzCologneProductionScenario.FutureVacations.no)//params != null ? params.futureVacations : SnzCologneProductionScenario.FutureVacations.no)
 			.setSebastianUpdate(true)
 			.setLeisureCorrection(1.3) //params == null ? 0.0 : params.actCorrection)
 			.setScaleForActivityLevels(1.3)
@@ -708,6 +708,38 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		//		M I S C
 		//---------------------------------------
 
+
+		// weather
+		double maxOutdoorFraction = 0.8;
+		double midpoint1 = 18.5;
+		double midpoint2 = 25.0;
+		double TmidFall2022 = 18.5;
+
+		if (params != null) {
+			TmidFall2022 = params.TmidFall2022;
+		}
+
+		try {
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2Fall2022Override(
+				SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+				SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(),
+				0.5,
+				midpoint1,
+				midpoint2,
+				midpoint1,
+				midpoint1,
+				TmidFall2022,
+				5.,
+				1.0,
+				maxOutdoorFraction);
+
+			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+		// add vaccination
+
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setUseIgA(Boolean.valueOf(params.iga));
 
@@ -828,18 +860,21 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@GenerateSeeds(5)
 		public long seed;
 
+		@Parameter({18.5, 22.0, 25.0})
+		public double TmidFall2022;
+
 		// future vacations
-		@EnumParameter(SnzCologneProductionScenario.FutureVacations.class)
-		public SnzCologneProductionScenario.FutureVacations futureVacations;
+//		@EnumParameter(SnzCologneProductionScenario.FutureVacations.class)
+//		public SnzCologneProductionScenario.FutureVacations futureVacations;
 
 		// Vaccination Campaign
-		@StringParameter({"base", "upperBound"})
+		@StringParameter({"base"})
 		String vacCamp;
 
 		@StringParameter({"2023-09-01"})
 		public String soupStartDate;
 
-		@Parameter({12., 24.})
+		@Parameter({12.})
 		public double esc;
 
 		@IntParameter({30})
@@ -857,10 +892,10 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@StringParameter({"true"})
 		public String seasonal;
 
-		@StringParameter({"base", "work_leis"})
+		@StringParameter({"base"})
 		public String rf2023;
 
-		@Parameter({1., 2., 5.})
+		@Parameter({5.})
 		public double hlMultiForInfected;
 
 		@Parameter({2., 3., 4., 5.})
