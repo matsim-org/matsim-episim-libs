@@ -159,7 +159,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
 
-				UtilsJR.printInitialAntibodiesToConsole(initialAntibodies, true);
+//				UtilsJR.printInitialAntibodiesToConsole(initialAntibodies, true);
 
 
 				if (params == null) return;
@@ -560,7 +560,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 //				new VaccinationEffectiveness().withArgs(),
 //				new RValuesFromEvents().withArgs(),
 //				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-//				new FilterEvents().withArgs("--output","./output/"),
+				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);

@@ -60,7 +60,8 @@
 
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-06/1/output/")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-26/2023-10-25/1-bmbf/output")
+//	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-06/1/output/")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/A_originalImmHist")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/B_startedFromImmHist")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-10-18/3-meas/analysis/")
