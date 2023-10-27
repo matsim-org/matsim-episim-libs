@@ -16,13 +16,18 @@ import tech.tablesaw.plotly.traces.ScatterTrace;
 import tech.tablesaw.table.TableSliceGroup;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 
 public class HospitalNumbersFromEventsPlotter {
 	private static final String DATE = "date";
@@ -109,6 +114,41 @@ public class HospitalNumbersFromEventsPlotter {
 			}
 		}
 
+		// read rki COVID-SARI data (new) and add to tsv
+
+		Int2DoubleMap covidSariHospIncidence = new Int2DoubleAVLTreeMap();
+		URL url = new URL("https://raw.githubusercontent.com/robert-koch-institut/COVID-SARI-Hospitalisierungsinzidenz/main/COVID-SARI-Hospitalisierungsinzidenz.tsv");
+		try (CSVParser parser = new CSVParser(new BufferedReader(new InputStreamReader(url.openStream())),
+			CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader())) {
+
+			for (CSVRecord record : parser) {
+				if (!record.get("agegroup").equals("00+")) {
+					continue;
+				}
+
+				DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+					.appendPattern("YYYY-'W'ww")
+					.parseDefaulting(ChronoField.DAY_OF_WEEK, DayOfWeek.THURSDAY.getValue())
+					.toFormatter(Locale.GERMAN);
+				LocalDate date = LocalDate.parse(record.get("date"), formatter);
+				System.out.println(date);
+
+
+				int day = (int) startDate.until(date, ChronoUnit.DAYS);
+				System.out.println(day);
+
+				double incidence;
+				try {
+					incidence = Double.parseDouble(record.get("sari_covid19_incidence"));
+				} catch (NumberFormatException e) {
+					incidence = Double.NaN;
+				}
+
+				covidSariHospIncidence.put(day, incidence);
+			}
+		}
+
+
 		// read rki data and add to tsv
 		Int2DoubleMap rkiHospIncidence = new Int2DoubleAVLTreeMap();
 		Int2DoubleMap rkiHospIncidenceAdj = new Int2DoubleAVLTreeMap();
@@ -141,24 +181,6 @@ public class HospitalNumbersFromEventsPlotter {
 					incidenceAdj = incidence / 3;
 				}
 
-
-//				if (date.isBefore(LocalDate.of(2020, 12, 10))) {
-//					incidenceAdj = incidence;
-//				} else if (date.isBefore(LocalDate.of(2021, 1, 11))) {
-//					incidenceAdj = 23. / 16. * incidence;
-//				} else if (date.isBefore(LocalDate.of(2021, 3, 22))) {
-//					incidenceAdj = 8. / 6. * incidence;
-//				} else if (date.isBefore(LocalDate.of(2021, 5, 3))) {
-//					incidenceAdj = 15./11. * incidence;
-//				} else if (date.isBefore(LocalDate.of(2021, 11, 8))) {
-//					incidenceAdj = incidence;
-//				} else if (date.isBefore(LocalDate.of(2021, 12, 6))) {
-//					incidenceAdj = 16. / 13. * incidence;
-//				} else if (date.isBefore(LocalDate.of(2022, 1, 24))) {
-//					incidenceAdj = incidence;
-//				} else {
-//					incidenceAdj = 11./14 * incidence;
-//				}
 				rkiHospIncidenceAdj.put(day, incidenceAdj);
 			}
 		}
@@ -361,6 +383,7 @@ public class HospitalNumbersFromEventsPlotter {
 						date,
 						intakeHosp.get(day),
 						intakeIcu.get(day),
+						covidSariHospIncidence.get(day),
 						occupancyHosp.get(day),
 						occupancyIcu.get(day),
 						rkiHospIncidence.get(day),
@@ -392,67 +415,75 @@ public class HospitalNumbersFromEventsPlotter {
 				groupings.append("model: intakeHosp");
 			}
 
+			for (Int2DoubleMap.Entry entry : covidSariHospIncidence.int2DoubleEntrySet()) {
+				int day = entry.getIntKey();
+				records.append(day);
+				recordsDate.append(startDate.plusDays(day));
+				values.append(covidSariHospIncidence.getOrDefault(day, Double.NaN));
+				groupings.append("obs: covid-sari");
+			}
+
 			// model: intakeIcu
-			for (Int2DoubleMap.Entry entry : intakeIcu.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-				values.append(intakeIcu.getOrDefault(day, Double.NaN));
-				groupings.append("model: intakeICU");
-			}
+//			for (Int2DoubleMap.Entry entry : intakeIcu.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//				values.append(intakeIcu.getOrDefault(day, Double.NaN));
+//				groupings.append("model: intakeICU");
+//			}
 
-
-			for (Int2DoubleMap.Entry entry : rkiHospIncidence.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-				final double value = rkiHospIncidence.getOrDefault(day, Double.NaN);
-				if (Double.isNaN(value)) {
-					values.appendMissing();
-				} else {
-					values.append(value);
-				}
-				groupings.append("reported: intakeHosp (rki, nrw adjusted) WITH Covid");
-			}
-
-			for (Int2DoubleMap.Entry entry : rkiHospIncidenceAdj.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-				final double value = rkiHospIncidenceAdj.getOrDefault(day, Double.NaN);
-				if (Double.isNaN(value)) {
-					values.appendMissing();
-				} else {
-					values.append(value);
-				}
-				groupings.append("reported: intakeHosp (rki, nrw adjusted) FROM Covid");
-			}
-
-			for (Int2DoubleMap.Entry entry : hospIncidenceKoeln.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-				final double value = hospIncidenceKoeln.getOrDefault(day, Double.NaN);
-				if (Double.isNaN(value)) {
-					values.appendMissing();
-				} else {
-					values.append(value);
-				}
-				groupings.append("reported: intakeHosp (köln)");
-			}
-
-			for (Int2DoubleMap.Entry entry : reportedIcuIncidence.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-				final double value = reportedIcuIncidence.getOrDefault(day, Double.NaN);
-				if (Double.isNaN(value)) {
-					values.appendMissing();
-				} else {
-					values.append(value);
-				}
-				groupings.append("reported: intakeIcu (divi, nrw)");
-			}
+//
+//			for (Int2DoubleMap.Entry entry : rkiHospIncidence.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//				final double value = rkiHospIncidence.getOrDefault(day, Double.NaN);
+//				if (Double.isNaN(value)) {
+//					values.appendMissing();
+//				} else {
+//					values.append(value);
+//				}
+//				groupings.append("reported: intakeHosp (rki, nrw adjusted) WITH Covid");
+//			}
+//
+//			for (Int2DoubleMap.Entry entry : rkiHospIncidenceAdj.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//				final double value = rkiHospIncidenceAdj.getOrDefault(day, Double.NaN);
+//				if (Double.isNaN(value)) {
+//					values.appendMissing();
+//				} else {
+//					values.append(value);
+//				}
+//				groupings.append("reported: intakeHosp (rki, nrw adjusted) FROM Covid");
+//			}
+//
+//			for (Int2DoubleMap.Entry entry : hospIncidenceKoeln.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//				final double value = hospIncidenceKoeln.getOrDefault(day, Double.NaN);
+//				if (Double.isNaN(value)) {
+//					values.appendMissing();
+//				} else {
+//					values.append(value);
+//				}
+//				groupings.append("reported: intakeHosp (köln)");
+//			}
+//
+//			for (Int2DoubleMap.Entry entry : reportedIcuIncidence.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//				final double value = reportedIcuIncidence.getOrDefault(day, Double.NaN);
+//				if (Double.isNaN(value)) {
+//					values.appendMissing();
+//				} else {
+//					values.append(value);
+//				}
+//				groupings.append("reported: intakeIcu (divi, nrw)");
+//			}
 
 
 			producePlot(recordsDate, values, groupings, "", "7-Tage Hospitalisierungsinzidenz", "HospIncidence" + outputAppendix + ".html", output);
@@ -460,109 +491,109 @@ public class HospitalNumbersFromEventsPlotter {
 
 
 		// PLOT 2: People taking up beds in hospital (regular and ICU)
-		{
-			IntColumn records = IntColumn.create("day");
-			DateColumn recordsDate = DateColumn.create("date");
-			DoubleColumn values = DoubleColumn.create("hospitalizations");
-			StringColumn groupings = StringColumn.create("scenario");
-
-
-			for (Int2DoubleMap.Entry entry : occupancyHosp.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(occupancyHosp.get(day));
-				groupings.append("generalBeds");
-			}
-
-			for (Int2DoubleMap.Entry entry : occupancyIcu.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(occupancyIcu.get(day));
-				groupings.append("ICUBeds");
-			}
-
-
-			for (Int2DoubleMap.Entry entry : reportedBeds.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: General Beds");
-
-			}
-
-			for (Int2DoubleMap.Entry entry : reportedBedsAdj.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: General Beds (SARI)");
-			}
-
-
-			for (Int2DoubleMap.Entry entry : reportedBedsICU.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: ICU Beds");
-
-			}
-
-
-//			for (Int2DoubleMap.Entry entry : reportedBedsNrw.int2DoubleEntrySet()) {
+//		{
+//			IntColumn records = IntColumn.create("day");
+//			DateColumn recordsDate = DateColumn.create("date");
+//			DoubleColumn values = DoubleColumn.create("hospitalizations");
+//			StringColumn groupings = StringColumn.create("scenario");
+//
+//
+//			for (Int2DoubleMap.Entry entry : occupancyHosp.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(occupancyHosp.get(day));
+//				groupings.append("generalBeds");
+//			}
+//
+//			for (Int2DoubleMap.Entry entry : occupancyIcu.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(occupancyIcu.get(day));
+//				groupings.append("ICUBeds");
+//			}
+//
+//
+//			for (Int2DoubleMap.Entry entry : reportedBeds.int2DoubleEntrySet()) {
 //				int day = entry.getIntKey();
 //				records.append(day);
 //				recordsDate.append(startDate.plusDays(day));
 //
 //				values.append(entry.getDoubleValue());
-//				groupings.append("Reported: General Beds (NRW)");
+//				groupings.append("Reported: General Beds");
 //
 //			}
-
-
-//			for (Int2DoubleMap.Entry entry : reportedBedsIcuNrw.int2DoubleEntrySet()) {
+//
+//			for (Int2DoubleMap.Entry entry : reportedBedsAdj.int2DoubleEntrySet()) {
 //				int day = entry.getIntKey();
 //				records.append(day);
 //				recordsDate.append(startDate.plusDays(day));
 //
 //				values.append(entry.getDoubleValue());
-//				groupings.append("Reported: ICU Beds (NRW)");
+//				groupings.append("Reported: General Beds (SARI)");
+//			}
+//
+//
+//			for (Int2DoubleMap.Entry entry : reportedBedsICU.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(entry.getDoubleValue());
+//				groupings.append("Reported: ICU Beds");
 //
 //			}
-
-			for (Int2DoubleMap.Entry entry : reportedBedsNrw2.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: General Beds (NRW2)");
-
-			}
-
-			for (Int2DoubleMap.Entry entry : reportedBedsIcuNrw2.int2DoubleEntrySet()) {
-				int day = entry.getIntKey();
-				records.append(day);
-				recordsDate.append(startDate.plusDays(day));
-
-				values.append(entry.getDoubleValue());
-				groupings.append("Reported: ICU Beds (NRW2)");
-
-			}
-
-
-
-			// Make plot
-			producePlot(recordsDate, values, groupings, "Filled Beds", "Beds Filled / 100k Population", "FilledBeds" + outputAppendix + ".html", output);
-		}
+//
+//
+////			for (Int2DoubleMap.Entry entry : reportedBedsNrw.int2DoubleEntrySet()) {
+////				int day = entry.getIntKey();
+////				records.append(day);
+////				recordsDate.append(startDate.plusDays(day));
+////
+////				values.append(entry.getDoubleValue());
+////				groupings.append("Reported: General Beds (NRW)");
+////
+////			}
+//
+//
+////			for (Int2DoubleMap.Entry entry : reportedBedsIcuNrw.int2DoubleEntrySet()) {
+////				int day = entry.getIntKey();
+////				records.append(day);
+////				recordsDate.append(startDate.plusDays(day));
+////
+////				values.append(entry.getDoubleValue());
+////				groupings.append("Reported: ICU Beds (NRW)");
+////
+////			}
+//
+//			for (Int2DoubleMap.Entry entry : reportedBedsNrw2.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(entry.getDoubleValue());
+//				groupings.append("Reported: General Beds (NRW2)");
+//
+//			}
+//
+//			for (Int2DoubleMap.Entry entry : reportedBedsIcuNrw2.int2DoubleEntrySet()) {
+//				int day = entry.getIntKey();
+//				records.append(day);
+//				recordsDate.append(startDate.plusDays(day));
+//
+//				values.append(entry.getDoubleValue());
+//				groupings.append("Reported: ICU Beds (NRW2)");
+//
+//			}
+//
+//
+//
+//			// Make plot
+//			producePlot(recordsDate, values, groupings, "Filled Beds", "Beds Filled / 100k Population", "FilledBeds" + outputAppendix + ".html", output);
+//		}
 
 
 	}

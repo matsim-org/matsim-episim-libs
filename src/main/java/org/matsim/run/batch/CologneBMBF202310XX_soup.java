@@ -598,8 +598,8 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
-		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2023-10-25-imm-hist/seed_" + params.seed + "-futureVacations_no-vacCamp_base-soupStartDate_2023-09-01-esc_12.0-days_30-strainRnd_no-lineB_false-iga_true-seasonal_true-rf2023_base-hlMultiForInfected_5.0-escBqq_2.0-events_reduced.tar");
-		episimConfig.setStartDate(LocalDate.parse("2022-08-01"));
+//		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2023-10-25-imm-hist/seed_" + params.seed + "-futureVacations_no-vacCamp_base-soupStartDate_2023-09-01-esc_12.0-days_30-strainRnd_no-lineB_false-iga_true-seasonal_true-rf2023_base-hlMultiForInfected_5.0-escBqq_2.0-events_reduced.tar");
+//		episimConfig.setStartDate(LocalDate.parse("2022-08-01"));
 
 		//---------------------------------------
 		//		S T R A I N S
@@ -872,7 +872,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 //		public SnzCologneProductionScenario.FutureVacations futureVacations;
 
 		// Vaccination Campaign
-		@StringParameter({"base"})
+		@StringParameter({"base", "upperBound"})
 		String vacCamp;
 
 		@StringParameter({"2023-09-01"})

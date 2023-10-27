@@ -60,7 +60,7 @@
 
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-26/2023-10-25/1-bmbf/output")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-27/events_hosp")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-06/1/output/")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/A_originalImmHist")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/B_startedFromImmHist")
@@ -173,19 +173,21 @@
 
 	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_BASE = Map.of(
 		 VirusStrain.DELTA, 1.2,
-		 VirusStrain.OMICRON_BA1, 0.45
+		 VirusStrain.OMICRON_BA1, 0.45,
+		 VirusStrain.OMICRON_BA5, 1.2
 		 );
 
-	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_MILD = Map.of(
-		 VirusStrain.DELTA, 1.2,
-		 VirusStrain.OMICRON_BA1, 0.45,
-		 VirusStrain.A_1, 0.5
-	 );
+//	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_MILD = Map.of(
+//		 VirusStrain.DELTA, 1.2,
+//		 VirusStrain.OMICRON_BA1, 0.45,
+//		 VirusStrain.OMICRON_BA5, 1.2
+//	 );
 
 
 	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_SEVERE = Map.of(
 		 VirusStrain.DELTA, 1.2,
 		 VirusStrain.OMICRON_BA1, 0.45,
+		 VirusStrain.OMICRON_BA5, 1.2,
 		 VirusStrain.A_1, 1.5
 	 );
 
@@ -234,7 +236,7 @@
 
 		 //TODO: move to other class
 		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Base", startDate, "Base");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Mild", startDate, "Mild");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Mild", startDate, "Mild");
 		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Severe", startDate, "Severe");
 
 
@@ -277,12 +279,12 @@
 
 
 		 ConfigHolder holderBase = configure(seriouslySickFactorModifier_BASE);
-		 ConfigHolder holderMild = configure(seriouslySickFactorModifier_MILD);
+//		 ConfigHolder holderMild = configure(seriouslySickFactorModifier_MILD);
 		 ConfigHolder holderSevere = configure(seriouslySickFactorModifier_SEVERE);
 
 		 List<Handler> handlers = List.of(
 			 new Handler("Base", population, holderBase),
-			 new Handler("Mild", population, holderMild),
+//			 new Handler("Mild", population, holderMild),
 			 new Handler("Severe", population, holderSevere)
 		 );
 
