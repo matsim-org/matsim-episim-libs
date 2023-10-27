@@ -872,7 +872,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 //		public SnzCologneProductionScenario.FutureVacations futureVacations;
 
 		// Vaccination Campaign
-		@StringParameter({"base"})
+		@StringParameter({"base", "upperBound"})
 		String vacCamp;
 
 		@StringParameter({"2023-09-01"})
