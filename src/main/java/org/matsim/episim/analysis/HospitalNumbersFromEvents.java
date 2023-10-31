@@ -235,9 +235,10 @@
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
 		 //TODO: move to other class
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Base", startDate, "Base");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Base", startDate, "Base");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Waning", startDate, "Waning");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Mild", startDate, "Mild");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Severe", startDate, "Severe");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Severe", startDate, "Severe");
 
 
 //		 }

@@ -538,7 +538,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
 			.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
-			.setFutureVacations(SnzCologneProductionScenario.FutureVacations.no)//params != null ? params.futureVacations : SnzCologneProductionScenario.FutureVacations.no)
+			.setFutureVacations(SnzCologneProductionScenario.FutureVacations.yes)//params != null ? params.futureVacations : SnzCologneProductionScenario.FutureVacations.no)
 			.setSebastianUpdate(true)
 			.setLeisureCorrection(1.3) //params == null ? 0.0 : params.actCorrection)
 			.setScaleForActivityLevels(1.3)
@@ -878,7 +878,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@StringParameter({"2023-09-01"})
 		public String soupStartDate;
 
-		@Parameter({12.})
+		@Parameter({12., 24.})
 		public double esc;
 
 		@IntParameter({30})
@@ -896,10 +896,10 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@StringParameter({"true"})
 		public String seasonal;
 
-		@StringParameter({"base"})
+		@StringParameter({"base", "work_leis"})
 		public String rf2023;
 
-		@Parameter({5.})
+		@Parameter({1., 1.5, 2.})
 		public double hlMultiForInfected;
 
 		@Parameter({2., 3., 4., 5.})

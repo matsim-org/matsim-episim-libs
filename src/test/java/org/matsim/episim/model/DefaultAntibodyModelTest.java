@@ -190,7 +190,7 @@ public class DefaultAntibodyModelTest {
 //		IntList immunityEventDays = IntList.of(1);
 
 		EpisimPerson person = EpisimTestUtils.createPerson();
-		person.setImmuneResponseMultiplier(0.1);
+//		person.setImmuneResponseMultiplier(0.1);
 
 		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 1000, person);
 

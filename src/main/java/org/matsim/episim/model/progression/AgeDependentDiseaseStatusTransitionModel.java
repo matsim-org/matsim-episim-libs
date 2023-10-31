@@ -74,12 +74,14 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 
 	@Override
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
+		// https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=802030488
+
 
 		double proba;
 
 		int age = person.getAge();
 
-		// source 3
+		// source 3: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8353925/
 		if (age < 5) {
 			proba = 4.0 / 100;
 		} else if (age < 15) {
