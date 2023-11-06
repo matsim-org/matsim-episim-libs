@@ -141,6 +141,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 					soupStartDate = LocalDate.parse(params.soupStartDate);
 					hlMultiForInfected = params.hlMultiForInfected;
 					mutEscBqq = params.escBqq;
+					mutEscEG = params.escEg;
 
 				}
 
@@ -689,8 +690,11 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
-		// vary amount of "school" activity that takes place during vacation
+		// vary amount of "school" activity that takes place during summer vacation 2022
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.8, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+		// vary amount of "school" activity that takes place during summer vacation 2023
+		builder.restrict(LocalDate.parse("2023-06-22"), params == null ? 0.2 : params.schoolVac, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 		// increase work, leisure Rf after SNZ Data runs out
 		if (params.rf2023.equals("base")) {
@@ -826,6 +830,11 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 
 		LocalDate egDate = LocalDate.parse("2023-06-01");
 		infPerDayEg.put(LocalDate.parse("2020-01-01"), 0);
+
+		if (params != null) {
+			egDate = LocalDate.parse(params.startDateEg);
+		}
+
 		for (int j = 0; j < 7; j++) {
 			infPerDayEg.put(egDate.plusDays(j), 4);
 		}
@@ -864,7 +873,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({18.5, 22.0, 25.0})
+		@Parameter({18.5, 22.0})
 		public double TmidFall2022;
 
 		// future vacations
@@ -896,14 +905,23 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		@StringParameter({"true"})
 		public String seasonal;
 
-		@StringParameter({"base", "work_leis"})
+		@StringParameter({"base"})
 		public String rf2023;
 
 		@Parameter({1., 1.5, 2.})
 		public double hlMultiForInfected;
 
-		@Parameter({2., 3., 4., 5.})
+		@Parameter({2.})
 		public double escBqq;
+
+		@Parameter({0.2, 0.8})
+		public double schoolVac;
+
+		@Parameter({4.0, 6.0, 8.0}) // 3
+		public double escEg;
+
+		@StringParameter({"2023-06-01", "2023-05-15", "2023-05-01"}) // 3
+		public String startDateEg;
 	}
 
 
