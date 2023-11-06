@@ -597,7 +597,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		//---------------------------------------
 
 		// start from immunization history
-		String directoryForImmHist = "/Users/jakob/git/matsim-episim/2023-10-26/2023-10-25/1-bmbf/output/seed_4711-futureVacations_no-vacCamp_base-soupStartDate_2023-09-01-esc_12.0-days_30-strainRnd_no-lineB_false-iga_true-seasonal_true-rf2023_base-hlMultiForInfected_1.0-escBqq_2.0/";
+		String directoryForImmHist = "/scratch/projects/bzz0020/runs/jakob/2023-10-31/1-bmbf/output/seed_" + params.seed + "-TmidFall2022_" + params.TmidFall2022 + "-vacCamp_base-soupStartDate_2023-09-01-esc_12.0-days_30-strainRnd_no-lineB_false-iga_true-seasonal_true-rf2023_base-hlMultiForInfected_" + params.hlMultiForInfected + "-escBqq_2.0/";
 		episimConfig.setStartFromImmunization(directoryForImmHist);
 		episimConfig.setStartDate(LocalDate.parse("2023-04-01"));
 
