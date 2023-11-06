@@ -24,10 +24,14 @@ import org.matsim.run.modules.SnzProductionScenario;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -559,7 +563,7 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
 //				new VaccinationEffectiveness().withArgs(),
-//				new RValuesFromEvents().withArgs(),
+				new RValuesFromEvents().withArgs(),
 //				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
 				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
@@ -592,15 +596,10 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 		//		S N A P S H O T
 		//---------------------------------------
 
-		// create snapshot
-//		episimConfig.setSnapshotInterval(900);
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-		// start from snapshot
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
-
-//		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/runs/jakob/2023-10-25-imm-hist/seed_" + params.seed + "-futureVacations_no-vacCamp_base-soupStartDate_2023-09-01-esc_12.0-days_30-strainRnd_no-lineB_false-iga_true-seasonal_true-rf2023_base-hlMultiForInfected_5.0-escBqq_2.0-events_reduced.tar");
-//		episimConfig.setStartDate(LocalDate.parse("2022-08-01"));
+		// start from immunization history
+		String directoryForImmHist = "/Users/jakob/git/matsim-episim/2023-10-26/2023-10-25/1-bmbf/output/seed_4711-futureVacations_no-vacCamp_base-soupStartDate_2023-09-01-esc_12.0-days_30-strainRnd_no-lineB_false-iga_true-seasonal_true-rf2023_base-hlMultiForInfected_1.0-escBqq_2.0/";
+		episimConfig.setStartFromImmunization(directoryForImmHist);
+		episimConfig.setStartDate(LocalDate.parse("2023-04-01"));
 
 		//---------------------------------------
 		//		S T R A I N S
