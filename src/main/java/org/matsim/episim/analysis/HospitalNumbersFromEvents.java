@@ -173,6 +173,11 @@
 
 	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_BASE = Map.of(
 		 VirusStrain.DELTA, 1.2,
+		 VirusStrain.OMICRON_BA1, 0.45
+		 );
+
+	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_MILD = Map.of(
+		 VirusStrain.DELTA, 1.2,
 		 VirusStrain.OMICRON_BA1, 0.45,
 		 VirusStrain.OMICRON_BA5, 1.2
 		 );
