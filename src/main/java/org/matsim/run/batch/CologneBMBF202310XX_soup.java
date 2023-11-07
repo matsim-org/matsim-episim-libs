@@ -563,9 +563,9 @@ public class CologneBMBF202310XX_soup implements BatchRun<CologneBMBF202310XX_so
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
 //				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
+//				new RValuesFromEvents().withArgs(),
 //				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/"),
+//				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);

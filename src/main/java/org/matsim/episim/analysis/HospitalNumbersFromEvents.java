@@ -48,6 +48,7 @@
  import java.nio.file.Path;
  import java.time.LocalDate;
  import java.util.*;
+ import java.util.stream.Collectors;
 
 
  /**
@@ -304,8 +305,21 @@
 			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
 			 // this is used to normalize the hospitalization values
 			 double popSize = (int) population.getPersons().values().stream()
-					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
+				 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
 
+
+			 // calcualtes population in each age bin.
+			 Int2LongAVLTreeMap popSizeByAge = new Int2LongAVLTreeMap(Collections.reverseOrder());
+			 long popAboveUpperBound = 0;
+			 for (int lowerBound : handler.postProcessHospitalAdmissionsByAge.keySet()) {
+				 long popAboveLowerBound = (long) population.getPersons().values().stream()
+					 .filter(x -> x.getAttributes().getAttribute("district").equals(district))
+					 .filter(x -> (int) x.getAttributes().getAttribute("microm:modeled:age") >= lowerBound).count();
+
+				 long popInBin = popAboveLowerBound - popAboveUpperBound;
+				 popAboveUpperBound = popAboveLowerBound;
+				 popSizeByAge.put(lowerBound, popInBin);
+			 }
 
 			 for (int day = 0; day < eventFiles.size(); day++) {
 				 LocalDate date = startDate.plusDays(day);
@@ -320,7 +334,19 @@
 				 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
 
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP, handler.name , intakesHosp));
+				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP, handler.name, intakesHosp));
+
+				 List<Integer> ages = handler.postProcessHospitalAdmissionsByAge.keySet().stream().sorted().collect(Collectors.toList());
+
+				 for (int i = 0; i < ages.size(); i++) {
+					 int lowerBound = ages.get(i);
+					 String lab = String.valueOf(lowerBound) + (i < ages.size() -1 ? "to" + (ages.get(i + 1) - 1) : "+");
+					 double incidenceForAgeBin = getWeeklyHospitalizations(handler.postProcessHospitalAdmissionsByAge.get(lowerBound), day) * 100_000. / popSizeByAge.get(lowerBound);
+
+					 bw.newLine();
+					 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP + "_" + lab, handler.name, incidenceForAgeBin));
+				 }
+
 				 bw.newLine();
 				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_ICU, handler.name, intakesIcu));
 				 bw.newLine();
@@ -361,6 +387,8 @@
 		 final Int2IntSortedMap postProcessHospitalFilledBedsICU;
 
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
+		 private final Int2ObjectAVLTreeMap<Int2IntAVLTreeMap> postProcessHospitalAdmissionsByAge;
+
 
 		 Handler(String name, Population population, ConfigHolder holder) {
 
@@ -373,6 +401,15 @@
 
 			 // key : iteration, value : admissions/filled beds
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
+			 this.postProcessHospitalAdmissionsByAge = new Int2ObjectAVLTreeMap<>(Collections.reverseOrder());
+
+			 Integer[] ageBins = {0, 18, 60, 80};
+
+			 for (int ageLowerBound : ageBins) {
+				 this.postProcessHospitalAdmissionsByAge.put(ageLowerBound, new Int2IntAVLTreeMap());
+			 }
+
+
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
@@ -490,6 +527,14 @@
 				 // newly admitted to hospital
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
+
+
+				 for (int lowerBound : postProcessHospitalAdmissionsByAge.keySet()) {
+					 if (person.age >= lowerBound) {
+						 postProcessHospitalAdmissionsByAge.get(lowerBound).merge(inHospital, 1, Integer::sum);
+						 break;
+					 }
+				 }
 
 				 if (goToICU(person, inHospital)) {
 
