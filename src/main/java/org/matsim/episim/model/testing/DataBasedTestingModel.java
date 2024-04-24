@@ -39,7 +39,7 @@ public final class DataBasedTestingModel extends DefaultTestingModel {
 
 	@Inject
 	DataBasedTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, EpisimConfigGroup episimConfig) {
-		super(rnd, config, testingConfig, episimConfig);
+		super(rnd, config, testingConfig, null, episimConfig);
 
 		capacities = readActivities();
 	}
@@ -78,7 +78,7 @@ public final class DataBasedTestingModel extends DefaultTestingModel {
 	public void setIteration(int day) {
 		super.setIteration(day);
 
-		testingCapacity = Integer.MAX_VALUE;
+		testingCapacity.put(TestType.RAPID_TEST, Integer.MAX_VALUE);
 
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
@@ -102,8 +102,10 @@ public final class DataBasedTestingModel extends DefaultTestingModel {
 		if (forDay == null)
 			return;
 
+		TestingConfigGroup.TestingParams params = testingConfig.getParams(TestType.RAPID_TEST);
+
 		// check if testing is disabled
-		if (testingConfig.getTestingRate() == 0d || testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
+		if (params.getTestingRate() == 0d || testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
 			return;
 
 		// person with recent test is not tested again
@@ -123,7 +125,7 @@ public final class DataBasedTestingModel extends DefaultTestingModel {
 
 			// testing rate can be reduced to introduce more randomness
 			// otherwise always the same persons are tested
-			boolean tested = testAndQuarantine(person, day, testingConfig.getTestingRate());
+			boolean tested = testAndQuarantine(person, day, params, params.getTestingRate());
 
 			if (tested)
 				forDay.mergeInt(act, -1, Integer::sum);

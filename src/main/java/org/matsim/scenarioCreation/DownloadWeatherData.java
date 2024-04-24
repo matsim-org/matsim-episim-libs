@@ -54,7 +54,7 @@ public class DownloadWeatherData implements Callable<Integer> {
 
 	private static Logger log = LogManager.getLogger(DownloadWeatherData.class);
 
-	@Parameters(paramLabel = "STATION", arity = "1", description = "Meteostat station id.", defaultValue = "10384")
+	@Parameters(paramLabel = "STATION", arity = "1", description = "Meteostat station id.", defaultValue = "D2968")
 	private String station;
 
 	@Option(names = "--from", description = "From date (inclusive).", defaultValue = "2020-02-01", required = true)
@@ -63,7 +63,7 @@ public class DownloadWeatherData implements Callable<Integer> {
 	@Option(names = "--to", description = "End data (optional). If not given will use all data", required = false)
 	private LocalDate toDate;
 
-	@Option(names = "--output", description = "Output file", defaultValue = "berlinWeather.csv")
+	@Option(names = "--output", description = "Output file", defaultValue = "cologneWeather.csv")
 	private Path output;
 
 
@@ -79,7 +79,8 @@ public class DownloadWeatherData implements Callable<Integer> {
 		BufferedWriter writer = Files.newBufferedWriter(output, StandardOpenOption.CREATE);
 		CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT.withCommentMarker('#').withHeaderComments(
 				"Source: Meteostat (https://meteostat.net/).",
-				"Raw data provided by NOAA (https://www.noaa.gov/), DWD (https://www.dwd.de/) and others (https://dev.meteostat.net/docs/sources.html)."
+				"Raw data provided by NOAA (https://www.noaa.gov/), DWD (https://www.dwd.de/) and others (https://dev.meteostat.net/docs/sources.html).",
+				"Station: " + station
 		).withHeader(
 				"date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
 		);

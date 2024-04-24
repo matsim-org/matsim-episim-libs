@@ -35,7 +35,7 @@ import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
 
 /**
- * Class searches all different activity patter iin the events and writes an
+ * Class searches all different activity patter in the events and writes an
  * output file with the number of persons having each patter
  * 
  * @author rewert

@@ -51,10 +51,11 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
-				: getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
+		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+				* getInfectivity(infector, strain, vaccinationConfig, iteration)
+				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
@@ -66,31 +67,82 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 * Calculate the current effectiveness of vaccination.
 	 */
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
-		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+
+		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return 1;
+
+		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());
+		VirusStrain strain = virusStrain.getStrain();
 
 		double vaccineEffectiveness;
 
-		// minimum effectiveness, independent of time
-		double min;
-		// use re vaccine effectiveness if person received the new vaccine
-		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			vaccineEffectiveness = virusStrain.getReVaccineEffectiveness();
-			// effectiveness of second vaccine is never below first
-			min = virusStrain.getVaccineEffectiveness();
+		// person with infection also have the boost effectiveness
+		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || target.getNumInfections() >= 1) {
+			vaccineEffectiveness = params.getBoostEffectiveness(strain, Math.min(daysVaccinated, target.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));
 		} else {
-			vaccineEffectiveness = virusStrain.getVaccineEffectiveness();
-			min = 0;
+			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);
 		}
 
-		// full effect
-		if (daysVaccinated >= config.getDaysBeforeFullEffect())
-			return 1 - config.getEffectiveness() * Math.max(min, vaccineEffectiveness);
+		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
-		// slightly reduced but nearly full effect after 3 days
-		else if (daysVaccinated >= 3) {
-			return 1 - config.getEffectiveness() * Math.max(min, 0.94 * vaccineEffectiveness);
+		return 1 - vaccineEffectiveness;
+	}
+
+	/**
+	 * Calculate the infectivity of an infector based on vaccine or previous infections.
+	 */
+	static double getInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
+
+		double naturalInfectivity = 1;
+
+		if (config.hasParams(VaccinationType.natural) && infector.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)) {
+			VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);
+			naturalInfectivity = params.getInfectivity(strain.getStrain(), infector.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration));
 		}
 
-		return 1 - min * config.getEffectiveness();
+		return Math.min(getVaccinationInfectivity(infector, strain, config, iteration), naturalInfectivity);
+	}
+
+	/**
+	 * Reduced infectivity of a vaccinated persson.
+	 */
+	static double getVaccinationInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
+
+		if (infector.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return 1;
+
+		int daysVaccinated = infector.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());
+
+		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || infector.getNumInfections() >= 1) {
+			return params.getBoostInfectivity(strain.getStrain(), Math.min(daysVaccinated, infector.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));
+		} else
+			return params.getInfectivity(strain.getStrain(), daysVaccinated);
+	}
+
+	/**
+	 * Calculate factor for natural immunity after infection.
+	 */
+	static double getImmunityEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
+		if (target.getNumInfections() < 1 || !target.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))
+			return 1;
+
+		if (!config.hasParams(VaccinationType.natural))
+			return 1;
+
+		int daysSince = target.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration);
+
+		// persons can not get infected for 180 days when
+		// they had 2 infections or 1 infection and vaccinations
+		// TODO: only here a quick fix and needs to be remodelled
+		if (daysSince < 180 && (target.getNumInfections() >= 2 || (target.getNumInfections() >= 1 && target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)))
+			return 0;
+
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);
+
+		return 1 - params.getEffectiveness(virusStrain.getStrain(), daysSince);
 	}
 }

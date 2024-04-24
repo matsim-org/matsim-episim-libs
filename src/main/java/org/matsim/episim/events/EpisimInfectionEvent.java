@@ -12,17 +12,21 @@ import java.util.Map;
 /**
  * Notifies when a person got infected by another person.
  */
-public final class EpisimInfectionEvent extends Event implements HasPersonId {
+public class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
 
 	// TODO: hasLink or hasCoord?
 
-	static final String EVENT_TYPE = "episimInfection";
+	public static final String EVENT_TYPE = "episimInfection";
+
 	static final String INFECTOR = "infector";
 	static final String CONTAINER = "container";
 	static final String INFECTION_TYPE = "infectionType";
 	static final String VIRUS_STRAIN = "virusStrain";
 	static final String PROBABILITY = "probability";
 	static final String GROUP_SIZE = "groupSize";
+	static final String ANTIBODIES = "antibodies";
+	static final String MAX_ANTIBODIES = "maxAntibodies";
+	static final String NUM_VACCINATIONS = "numVaccinations";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
@@ -31,13 +35,17 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 	private final int groupSize;
 	private final VirusStrain virusStrain;
 	private final double probability;
+	private final double antibodies;
+	private final double maxAntibodies;
+
+	private final int numVaccinations;
 
 
 	/**
 	 * Constructor.
 	 */
 	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-								int groupSize, VirusStrain strain, double probability) {
+								int groupSize, VirusStrain strain, double probability, double antibodies, double maxAntibodies, int numVaccinations) {
 		super(time);
 
 		this.personId = personId;
@@ -47,6 +55,9 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 		this.groupSize = groupSize;
 		this.virusStrain = strain;
 		this.probability = probability;
+		this.antibodies = antibodies;
+		this.maxAntibodies = maxAntibodies;
+		this.numVaccinations = numVaccinations;
 	}
 
 	@Override
@@ -77,6 +88,42 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 		return infectionType;
 	}
 
+	/**
+	 * Variant which the person was infected with.
+	 */
+	public VirusStrain getVirusStrain() {
+		return virusStrain;
+	}
+
+	public int getGroupSize() {
+		return groupSize;
+	}
+
+	public double getProbability() {
+		return probability;
+	}
+
+	/**
+	 * Antibodies against the infecting strain.
+	 */
+	public double getAntibodies() {
+		return antibodies;
+	}
+
+	/**
+	 * Maximum antibodies ever reached by agent with respect to infecting strain
+	 */
+	public double getMaxAntibodies() {
+		return maxAntibodies;
+	}
+
+	/**
+	 * Number of vaccinations agent has received at time of infection
+	 */
+	public int getNumVaccinations(){
+		return numVaccinations;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
@@ -87,7 +134,35 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 		attr.put(GROUP_SIZE, Integer.toString(groupSize));
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
+		attr.put(ANTIBODIES, Double.toString(antibodies));
+		attr.put(MAX_ANTIBODIES, Double.toString(maxAntibodies));
+		attr.put(NUM_VACCINATIONS, Integer.toString(numVaccinations));
 
 		return attr;
+	}
+
+	@Override
+	public int compareTo(Event obj) {
+		// Defines a stable ordering for events
+
+		if (getTime() != obj.getTime())
+			return Double.compare(getTime(), obj.getTime());
+
+		EpisimInfectionEvent o;
+		if (obj instanceof EpisimInfectionEvent)
+			o = (EpisimInfectionEvent) obj;
+		else
+			return 1;
+
+		if (infectorId != o.infectorId)
+			return infectorId.compareTo(o.infectorId);
+
+		if (containerId != o.containerId)
+			return containerId.toString().compareTo(o.containerId.toString());
+
+		if (probability != o.probability)
+			return Double.compare(probability, o.probability);
+
+		return 0;
 	}
 }

@@ -23,6 +23,8 @@ package org.matsim.run.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import it.unimi.dsi.fastutil.objects.Object2IntAVLTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -41,6 +43,8 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.ReplayHandler;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.run.batch.SyntheticBatch;
@@ -83,7 +87,7 @@ public class SyntheticScenario extends AbstractModule {
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(params.contactModel).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 	}
 
@@ -214,9 +218,12 @@ public class SyntheticScenario extends AbstractModule {
 		}
 
 		@Override
-		public int handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
+		public Object2IntMap<VirusStrain> handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
 
-			if (iteration != 1) return 0;
+			if (iteration != 1) return new Object2IntAVLTreeMap<>();
+
+			Object2IntMap<VirusStrain> infectedByStrain = new Object2IntAVLTreeMap<>();
+			infectedByStrain.put(VirusStrain.SARS_CoV_2, 0);
 
 			for (Map.Entry<Id<ActivityFacility>, Set<Id<Person>>> e : facilities.entrySet()) {
 				Iterator<Id<Person>> it = e.getValue().iterator();
@@ -224,12 +231,13 @@ public class SyntheticScenario extends AbstractModule {
 				for (int i = 0; i < this.n; i++) {
 					Id<Person> p = it.next();
 					EpisimPerson person = persons.get(p);
-					person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+					person.setInitialInfection(0, VirusStrain.SARS_CoV_2);
+					infectedByStrain.merge(VirusStrain.SARS_CoV_2, 1, Integer::sum);
 				}
 			}
 
 			log.info("Infected {} persons for each facility.", facilities.size());
-			return facilities.size();
+			return infectedByStrain;
 		}
 	}
 

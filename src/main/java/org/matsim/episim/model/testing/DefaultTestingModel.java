@@ -6,13 +6,11 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
+import org.matsim.episim.model.VirusStrain;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.SplittableRandom;
+import java.util.*;
 
 /**
  * Testing model that provides some default testing capabilities and helper functions.
@@ -20,6 +18,7 @@ import java.util.SplittableRandom;
 public class DefaultTestingModel implements TestingModel {
 
 	protected final SplittableRandom rnd;
+	protected final VaccinationConfigGroup vaccinationConfig;
 	protected final EpisimConfigGroup episimConfig;
 	protected final TestingConfigGroup testingConfig;
 	protected final Config config;
@@ -27,36 +26,62 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing capacity left for the day.
 	 */
-	protected int testingCapacity = Integer.MAX_VALUE;
+	protected Map<TestType, Integer> testingCapacity = new EnumMap<>(TestType.class);
 
 	/**
 	 * Testing rates for configured activities for current day.
 	 */
-	private Object2DoubleMap<String> testingRateForActivities;
+	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
+
+	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
+
+	/**
+	 * Current date
+	 */
+	protected LocalDate date;
 
 	/**
 	 * Ids of households that are not compliant.
 	 */
 	private final Set<String> nonCompliantHouseholds = new HashSet<>();
 
+	/**
+	 * Whether to test all persons on this day.
+	 */
+	private boolean testAllPersons;
+
+	/**
+	 * Don't test person with booster.
+	 */
+	private boolean withOutBooster;
+
 	@Inject
-	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, EpisimConfigGroup episimConfig) {
+	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.config = config;
 		this.testingConfig = testingConfig;
+		this.vaccinationConfig = vaccinationConfig;
 		this.episimConfig = episimConfig;
 	}
 
 	@Override
 	public void setIteration(int day) {
 
-		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+		date = episimConfig.getStartDate().plusDays(day - 1);
 
-		testingCapacity = EpisimUtils.findValidEntry(testingConfig.getTestingCapacity(), 0, date);
-		if (testingCapacity != Integer.MAX_VALUE)
-			testingCapacity *= episimConfig.getSampleSize();
+		testAllPersons = testingConfig.getTestAllPersonsAfter() != null && date.isAfter(testingConfig.getTestAllPersonsAfter());
+		withOutBooster = testingConfig.getStopTestBoosterAfter() != null && date.isAfter(testingConfig.getStopTestBoosterAfter());
 
-		testingRateForActivities = testingConfig.getDailyTestingRateForActivities(date);
+		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
+
+			int testingCapacity = EpisimUtils.findValidEntry(params.getTestingCapacity(), 0, date);
+			if (testingCapacity != Integer.MAX_VALUE)
+				testingCapacity *= episimConfig.getSampleSize();
+
+			this.testingCapacity.put(params.getType(), testingCapacity);
+			this.testingRateForActivities.put(params.getType(), params.getDailyTestingRateForActivities(date));
+			this.testingRateForActivitiesVaccinated.put(params.getType(), params.getDailyTestingRateForActivitiesVaccinated(date));
+		}
 	}
 
 	@Override
@@ -98,35 +123,59 @@ public class DefaultTestingModel implements TestingModel {
 	 */
 	public void performTesting(EpisimPerson person, int day) {
 
-		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
-			return;
-
-		if (testingCapacity <= 0)
-			return;
-
 		// person with positive test is not tested twice
 		// test status will be set when released from quarantine
 		if (person.getTestStatus() == EpisimPerson.TestStatus.positive)
 			return;
 
-		// update is run at end of day, the test needs to be for the next day
-		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
-
-		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && testingConfig.getTestDays().contains(dow)) {
-				testAndQuarantine(person, day, testingConfig.getTestingRate());
-		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
-
-			double rate = person.matchActivities(dow, testingConfig.getActivities(),
-					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
-
-			testAndQuarantine(person, day, rate);
-		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && testingConfig.getTestDays().contains(dow)) {
-
-			double rate = person.matchActivities(dow, testingConfig.getActivities(),
-					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
-
-			testAndQuarantine(person, day, rate);
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.testing) {
+			testAndQuarantine(person, day, testingConfig.getParams(TestType.RAPID_TEST), 1.0);
+			return;
 		}
+
+		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
+			return;
+
+		// vaccinated and recovered persons are not tested
+		boolean fullyVaccinated = vaccinationConfig.hasValidVaccination(person, day, date);
+
+		if (!testAllPersons && (vaccinationConfig.hasGreenPass(person, day, date)))
+			return;
+
+		if (withOutBooster && person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)
+			return;
+
+		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
+
+			TestType type = params.getType();
+
+			if (testingCapacity.get(type) <= 0)
+				continue;
+
+			// update is run at end of day, the test needs to be for the next day
+			DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
+
+			// Choose testing rate depending on vaccination status
+			Object2DoubleMap<String> useRate = fullyVaccinated ? testingRateForActivitiesVaccinated.get(type) : testingRateForActivities.get(type);
+
+			if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && params.getTestDays().contains(dow)) {
+				testAndQuarantine(person, day, params, params.getTestingRate());
+			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
+
+				double rate = person.matchActivities(dow, testingConfig.getActivities(),
+						(act, v) -> Math.max(v, useRate.getOrDefault(act, params.getTestingRate())), 0d);
+
+				testAndQuarantine(person, day, params, rate);
+			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && params.getTestDays().contains(dow)) {
+
+				double rate = person.matchActivities(dow, testingConfig.getActivities(),
+						(act, v) -> Math.max(v, useRate.getOrDefault(act, params.getTestingRate())), 0d);
+
+				testAndQuarantine(person, day, params, rate);
+			}
+
+		}
+
 	}
 
 	/**
@@ -134,7 +183,7 @@ public class DefaultTestingModel implements TestingModel {
 	 *
 	 * @return true if the person was tested (test result does not matter)
 	 */
-	protected boolean testAndQuarantine(EpisimPerson person, int day, double testingRate) {
+	protected boolean testAndQuarantine(EpisimPerson person, int day, TestingConfigGroup.TestingParams params, double testingRate) {
 
 		if (testingRate == 0)
 			return false;
@@ -145,15 +194,26 @@ public class DefaultTestingModel implements TestingModel {
 		if (testingRate != 1d && rnd.nextDouble() >= testingRate)
 			return false;
 
-		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
-		if (status == EpisimPerson.DiseaseStatus.infectedButNotContagious || status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered) {
-			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= testingConfig.getFalsePositiveRate() ? EpisimPerson.TestStatus.negative : EpisimPerson.TestStatus.positive;
+		if (params.getType().shouldDetectNegative(person, day)) {
+			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= params.getFalsePositiveRate() ? EpisimPerson.TestStatus.negative : EpisimPerson.TestStatus.positive;
 			person.setTestStatus(testStatus, day);
 
-		} else if (status == EpisimPerson.DiseaseStatus.contagious ||
-				status == EpisimPerson.DiseaseStatus.showingSymptoms) {
+		} else if (params.getType().canDetectPositive(person, day)) {
 
-			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= testingConfig.getFalseNegativeRate() ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
+			double rate = params.getFalseNegativeRate();
+
+			// TODO: configurable
+			if (params.getType().equals(TestType.RAPID_TEST) && (person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||
+					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||
+					person.getVirusStrain() == VirusStrain.OMICRON_BA5 ||
+					person.getVirusStrain() == VirusStrain.STRAIN_A ||
+					person.getVirusStrain() == VirusStrain.STRAIN_B ||
+					person.getVirusStrain().toString().startsWith("A_") ||
+					person.getVirusStrain().toString().startsWith("B_"))) {
+				rate = 0.5;
+			}
+
+			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= rate ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
 			person.setTestStatus(testStatus, day);
 		}
 
@@ -162,13 +222,14 @@ public class DefaultTestingModel implements TestingModel {
 			quarantinePerson(person, day);
 		}
 
-		testingCapacity--;
+		testingCapacity.merge(params.getType(), -1, Integer::sum);
 		return true;
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
+		// recovered state will be reset quickly
+		if (p.getQuarantineStatus() != EpisimPerson.QuarantineStatus.full && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 		}
 	}

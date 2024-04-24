@@ -15,6 +15,7 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.*;
 import org.matsim.episim.model.ConfigurableProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.testcases.MatsimTestUtils;
@@ -66,7 +67,7 @@ public class RunEpisimIntegrationTest {
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils)));
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils, it)));
 
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
@@ -93,6 +94,7 @@ public class RunEpisimIntegrationTest {
 
 		tracingConfig.setTracingDelay_days(1 );
 		tracingConfig.setTracingProbability(0.75);
+		tracingConfig.setTracingCapacity_pers_per_day(50_000);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(tDay);
 
 		runner.run(it);
@@ -177,18 +179,25 @@ public class RunEpisimIntegrationTest {
 
 		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 		testingConfig.setActivities(List.of("edu", "leisure"));
-		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
-		testingConfig.setTestingRate(0.8);
+		testingConfig.getParams(TestType.RAPID_TEST).setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+		testingConfig.getParams(TestType.RAPID_TEST).setTestingRate(0.8);
 
 		runner.run(it);
 	}
 
-	static class TestScenario extends AbstractModule {
+	public static class TestScenario extends AbstractModule {
 
 		private final MatsimTestUtils utils;
+		private final int it;
 
 		TestScenario(MatsimTestUtils utils) {
+			this(utils, 1);
+		}
+
+
+		public TestScenario(MatsimTestUtils utils, int it) {
 			this.utils = utils;
+			this.it = it;
 		}
 
 		@Override
@@ -208,7 +217,9 @@ public class RunEpisimIntegrationTest {
 
 			episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.bln);
 			episimConfig.setSampleSize(0.01);
-			episimConfig.setCalibrationParameter(2);
+			episimConfig.setCalibrationParameter(0.01 / it);
+			episimConfig.setThreads(2);
+			episimConfig.setEndEarly(true);
 
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
 

@@ -13,7 +13,10 @@ import java.util.Map;
 /**
  * Extension of the {@link DefaultInfectionModel}, with additional parameter {@link #SUSCEPTIBILITY} and {@link #VIRAL_LOAD},
  *  which are read from each person individually.
+ *
+ * @deprecated not supported anymore, this functionality can also be integrated into the regular model via person attributes.
  */
+@Deprecated
 public final class InfectionModelWithViralLoad implements InfectionModel {
 
 	public static final String SUSCEPTIBILITY = "susceptibility";
@@ -46,6 +49,7 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 		double infectability = (double) infector.getAttributes().getAttribute(VIRAL_LOAD);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer * ciCorrection
+				* target.getSusceptibility()
 				* virusStrainConfig.getParams(infector.getVirusStrain()).getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake

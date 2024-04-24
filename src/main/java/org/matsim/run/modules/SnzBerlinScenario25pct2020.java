@@ -28,14 +28,18 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
-import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.RestrictionInput;
+import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -57,14 +61,17 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	private static FixedPolicy.ConfigBuilder basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
-			 											long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
-														boolean restrictUniversities) throws IOException {
+	private static ShutdownPolicy.ConfigBuilder<?> basePolicy(RestrictionInput activityParticipation, Map<String, Double> ciCorrections,
+														   long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+														   boolean restrictUniversities) throws IOException {
 		// note that there is already a builder around this
 		ConfigBuilder restrictions;
 
-		if (activityParticipation == null) restrictions = FixedPolicy.config();
-		else restrictions = activityParticipation.createPolicy();
+		// adjusted restrictions must be created after policy was set, currently there is no nicer way to do this
+		if (activityParticipation == null || activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
+			restrictions = FixedPolicy.config();
+		} else
+			restrictions = (ConfigBuilder) activityParticipation.createPolicy();
 
 		if (restrictSchoolsAndDayCare) {
 			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
@@ -95,26 +102,43 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 //			.restrict("2021-02-22", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other",  "educ_kiga")
 			.restrict("2021-02-22", .5, "educ_primary")
 			.restrict("2021-02-22", .5, "educ_secondary", "educ_tertiary", "educ_other")
-			
+
 			//Osterferien
 			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			.restrict("2021-04-11", 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			//Sommerferien
 			.restrict("2021-06-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			.restrict("2021-08-09", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-08-09", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga")
 			//Herbstferien
 			.restrict("2021-10-11", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			.restrict("2021-10-25", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			//Weihnachtsferien
 			.restrict("2021-12-21", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			.restrict("2022-01-04", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			// ** 2022 **
+			//Winterferien
+			.restrict("2022-01-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-02-05", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Osterferien
+			.restrict("2022-04-11", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-04-23", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Sommerferien
+			.restrict("2022-07-07", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-08-19", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Herbstferien
+			.restrict("2022-10-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-11-05", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Weihnachtsferien
+			.restrict("2022-12-22", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2023-01-02", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
 			;
 		}
 
 		if (restrictUniversities ) {
 			restrictions.restrict("2020-03-14", 0., "educ_higher")
-			.restrict("2020-05-11", 0.2, "educ_higher")
-			;
+			.restrict("2020-05-11", 0.2, "educ_higher");
+			//TODO: what happened to higher education in 2021/2022
 		}
 
 		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
@@ -130,23 +154,94 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		if (maskCompliance == 0) return restrictions;
 
 		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
-		double clothFraction = maskCompliance * 0.9;
-		double surgicalFraction = maskCompliance * 0.1;
+		double clothFraction = maskCompliance * 1./3.;
+		double surgicalFraction = maskCompliance * 1./3.;
+		double ffpFraction = maskCompliance * 1./3.;
 		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
 		// in MUC and elsewhere!
 
 		for (int ii = 0; ii <= introductionPeriod; ii++) {
 			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
-			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
-					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other", "errands");
+			restrictions.restrict(date, Restriction.ofMask(Map.of(
+					FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+					FaceMask.N95, ffpFraction * ii / introductionPeriod,
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)),
+					"pt", "shop_daily", "shop_other", "errands");
 		}
 
 		// mask compliance according to bvg
-		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
-		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
-		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict(LocalDate.parse("2020-06-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.8 * 1./3.,
+				FaceMask.N95, 0.8 * 1./3.,
+				FaceMask.SURGICAL, 0.8 * 1./3.)),
+				"pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict(LocalDate.parse("2020-07-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.85 * 1./3.,
+				FaceMask.N95, 0.85 * 1./3.,
+				FaceMask.SURGICAL, 0.85 * 1./3.)),
+				"pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict(LocalDate.parse("2020-08-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.9 * 1./3.,
+				FaceMask.N95, 0.9 * 1./3.,
+				FaceMask.SURGICAL, 0.9 * 1./3.)),
+				"pt", "shop_daily", "shop_other", "errands");
 
-		restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
+		//Pflicht für medizinische Masken: https://www.rbb24.de/politik/thema/corona/beitraege/2021/01/verschaerfte-maskenpflicht-berlin-ffp2-oepnv-.html
+		restrictions.restrict(LocalDate.parse("2021-01-24"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9 * 1./2.,
+				FaceMask.SURGICAL, 0.9 * 1./2.)),
+				"pt", "shop_daily", "shop_other", "errands");
+
+		//FFP2-Maskenpflicht 2021: https://www.berlin.de/aktuelles/berlin/6489489-958092-ab-mittwoch-an-vielen-orten-ffp2masken-p.html
+		restrictions.restrict(LocalDate.parse("2021-03-31"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9)),
+				"pt", "shop_daily", "shop_other", "errands");
+
+		//Maskenpflicht Lockerung: medizinische Masken im Einzelhandel: https://www.berlin.de/rbmskzl/aktuelles/pressemitteilungen/2021/pressemitteilung.1103648.php
+		restrictions.restrict(LocalDate.parse("2021-07-10"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9 * 1./2.,
+				FaceMask.SURGICAL, 0.9 * 1./2.)),
+				"shop_daily", "shop_other", "errands");
+
+		//FFP2-Pflicht Lockerung im ÖPNV mit der Einführung der 3G Regelung: https://gesetze.berlin.de/bsbe/document/jlr-CoronaV4VBEV4P2
+		restrictions.restrict(LocalDate.parse("2021-12-18"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9 * 1./2.,
+				FaceMask.SURGICAL, 0.9 * 1./2.)),
+				"pt");
+
+		//FFP2-Maskenpflicht in public transit (2022): https://www.berlin.de/aktuelles/7240429-958090-senat-beschliesst-ffp2maskenpflicht-im-o.html
+		restrictions.restrict(LocalDate.parse("2022-01-15"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9)),
+				"pt");
+
+		//FFP2-Maskenpflicht in pt and businesses (2022) TODO: coming soon:https://www.berlin.de/aktuelles/7299635-958090-ffp2maskenpflicht-statt-2gregel-im-einze.html
+//		restrictions.restrict(LocalDate.parse("2021-03-31"), Restriction.ofMask(Map.of(
+//				FaceMask.N95, 0.9)),
+//				"pt", "shop_daily", "shop_other", "errands");
+
+		restrictions.restrict(LocalDate.parse("2020-10-25"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.9 * 1./3.,
+				FaceMask.N95, 0.9 * 1./3.,
+				FaceMask.SURGICAL, 0.9 * 1./3.)),
+				"educ_higher", "educ_tertiary", "educ_other");
+
+		if (activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
+			CreateAdjustedRestrictionsFromCSV adjusted = (CreateAdjustedRestrictionsFromCSV) activityParticipation;
+
+			LocalDate[] period = new LocalDate[] {LocalDate.MIN, LocalDate.MAX};
+			adjusted.setPolicy(restrictions);
+			LocalDate[] restaurantPeriod = new LocalDate[] {LocalDate.parse("2020-03-22"), LocalDate.parse("2020-05-14"), LocalDate.parse("2020-11-02"), LocalDate.MAX};
+			adjusted.setAdministrativePeriods(Map.of(
+					"educ_primary", period,
+					"educ_secondary", period,
+					"educ_tertiary", period,
+					"educ_other", period,
+					"educ_kiga" , period,
+					"restaurant", restaurantPeriod
+			));
+
+			return activityParticipation.createPolicy();
+		}
 
 		return restrictions;
 	}
@@ -191,7 +286,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 
-		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.buildFixed().build());
 
 		config.controler().setOutputDirectory("./output-berlin-25pct-input-" + basePolicyBuilder.getActivityParticipation() + "-ciCorrections-" + basePolicyBuilder.getCiCorrections() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-" + episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
 
@@ -213,12 +308,12 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private double maskCompliance = 0.95;
 		private boolean restrictSchoolsAndDayCare = true;
 		private boolean restrictUniversities = true;
-		private ActivityParticipation activityParticipation;
+		private RestrictionInput activityParticipation;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210606.csv"));
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 		}
 
 		public void setIntroductionPeriod(long introductionPeriod) {
@@ -229,11 +324,11 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.maskCompliance = maskCompliance;
 		}
 
-		public void setActivityParticipation(ActivityParticipation activityParticipation) {
+		public void setActivityParticipation(RestrictionInput activityParticipation) {
 			this.activityParticipation = activityParticipation;
 		}
 
-		public ActivityParticipation getActivityParticipation() {
+		public RestrictionInput getActivityParticipation() {
 			return activityParticipation;
 		}
 
@@ -260,16 +355,33 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.restrictUniversities = restrictUniversities;
 		}
 
-		public ConfigBuilder build() {
-			ConfigBuilder configBuilder = null;
+		/**
+		 * Build a {@link FixedPolicy}.
+		 * @deprecated use {@link #build()}
+		 * @throws ClassCastException if the {@link RestrictionInput} is not creating a {@link FixedPolicy}.
+		 */
+		public ConfigBuilder buildFixed() {
+			ConfigBuilder configBuilder;
+			try {
+				configBuilder = (ConfigBuilder) basePolicy(activityParticipation, ciCorrections,introductionPeriod,
+						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
+			return configBuilder;
+		}
+
+		public ShutdownPolicy.ConfigBuilder<?> build() {
+			ShutdownPolicy.ConfigBuilder<?> configBuilder;
 			try {
 				configBuilder = basePolicy(activityParticipation, ciCorrections,introductionPeriod,
 						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
 			} catch (IOException e) {
-				throw new RuntimeException(e);
+				throw new UncheckedIOException(e);
 			}
 			return configBuilder;
 		}
+
 	}
 
 }

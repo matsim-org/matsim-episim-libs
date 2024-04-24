@@ -23,14 +23,14 @@ package org.matsim.scenarioCreation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.geotools.data.FeatureReader;
-import org.geotools.data.FileDataStoreFinder;
+import org.geotools.data.FileDataStoreFactorySpi;
 import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
@@ -43,10 +43,15 @@ import picocli.CommandLine;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Preprocessing step that takes the home ids of each person in a population and looks up their district from a shape file.
@@ -61,13 +66,13 @@ public class DistrictLookup implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(DistrictLookup.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path input;
 
 	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
+	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
 	private Path output;
 
 	@CommandLine.Option(names = "--attr", description = "Attribute name in the shapefile, which contains the district name", defaultValue = "name_2")
@@ -96,9 +101,9 @@ public class DistrictLookup implements Callable<Integer> {
 		Index index = new Index(shapeFile.toFile(), ct, attr);
 
 		// Count errors
-		int unknown = 0;
-		for (Person p : population.getPersons().values()) {
+		AtomicInteger unknown = new AtomicInteger(0);
 
+		population.getPersons().values().parallelStream().forEach(p -> {
 			try {
 				double x = (double) p.getAttributes().getAttribute("homeX");
 				double y = (double) p.getAttributes().getAttribute("homeY");
@@ -107,12 +112,12 @@ public class DistrictLookup implements Callable<Integer> {
 
 				p.getAttributes().putAttribute("district", district);
 			} catch (RuntimeException e) {
-				unknown++;
+				unknown.incrementAndGet();
 			}
-		}
+		});
 
 		// Simple check if the lookup might be wrong
-		if (unknown >= population.getPersons().size() * 0.5) {
+		if (unknown.get() >= population.getPersons().size() * 0.5) {
 			log.error("District lookup failed for {} out of {} persons.", unknown, population.getPersons().size());
 			return 1;
 		}
@@ -141,7 +146,7 @@ public class DistrictLookup implements Callable<Integer> {
 		 */
 		public Index(File shapeFile, CoordinateTransformation ct, String attr)
 				throws IOException {
-			ShapefileDataStore ds = (ShapefileDataStore) FileDataStoreFinder.getDataStore(shapeFile);
+			ShapefileDataStore ds = openDataStore(shapeFile.toPath());
 			ds.setCharset(StandardCharsets.UTF_8);
 
 			FeatureReader<SimpleFeatureType, SimpleFeature> it = ds.getFeatureReader();
@@ -184,4 +189,35 @@ public class DistrictLookup implements Callable<Integer> {
 			throw new NoSuchElementException(String.format("No matching entry found for x:%f y:%f %s", x, y, p));
 		}
 	}
+
+	/**
+	 * Opens datastore to a shape-file.
+	 */
+	private static ShapefileDataStore openDataStore(Path shp) throws IOException {
+
+		FileDataStoreFactorySpi factory = new ShapefileDataStoreFactory();
+
+		ShapefileDataStore ds;
+		if (shp.toString().endsWith(".shp"))
+			ds = (ShapefileDataStore) factory.createDataStore(shp.toUri().toURL());
+		else if (shp.toString().endsWith(".zip")) {
+
+			FileSystem fs = FileSystems.newFileSystem(shp, ClassLoader.getSystemClassLoader());
+			Optional<Path> match = Files.walk(fs.getPath("/"))
+					.filter(p -> p.toString().endsWith(".shp"))
+					.findFirst();
+
+			if (match.isEmpty())
+				throw new IllegalArgumentException("No .shp file found in the zip.");
+
+			log.info("Using {} from {}", match.get(), shp);
+			ds = (ShapefileDataStore) factory.createDataStore(match.get().toUri().toURL());
+		} else {
+			throw new IllegalArgumentException("Shape file must either be .zip or .shp, but was: " + shp);
+		}
+
+		return ds;
+	}
+
+
 }

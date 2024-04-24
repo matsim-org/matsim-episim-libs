@@ -28,8 +28,8 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.model.AgeDependentProgressionModel;
-import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
@@ -62,7 +62,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 			protected void configure() {
 				if (params != null) {
 					bindConstant().annotatedWith(Names.named("symptomatic")).to(params.symptomatic);
-					bind(ProgressionModel.class).to(CustomProgressionModel.class);
+					bind(DiseaseStatusTransitionModel.class).to(CustomProgressionModel.class);
 				}
 			}
 		});
@@ -122,16 +122,15 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 
 	}
 
-	private static final class CustomProgressionModel extends AgeDependentProgressionModel {
+	private static final class CustomProgressionModel extends AgeDependentDiseaseStatusTransitionModel {
 
 		private final double symptomatic;
 
 		@Inject
 		public CustomProgressionModel(
-				@Named("symptomatic") double symptomatic,
-				SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, VirusStrainConfigGroup strainConfig,
-				VaccinationConfigGroup vaccinationConfig) {
-			super(rnd, episimConfig, tracingConfig, strainConfig, vaccinationConfig);
+				@Named("symptomatic") double symptomatic, EpisimConfigGroup episimConfig,
+				SplittableRandom rnd, VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
+			super(rnd, episimConfig, vaccinationConfig, strainConfig);
 			this.symptomatic = symptomatic;
 		}
 

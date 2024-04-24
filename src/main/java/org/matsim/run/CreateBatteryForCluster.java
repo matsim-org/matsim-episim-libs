@@ -84,10 +84,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms82G -Xmx82G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.BMBF210618Mutations")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.CologneBMBF2023")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.BMBF210618Mutations$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.CologneBMBF2023$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -109,7 +109,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Path dir = output.resolve(runVersion).resolve(meta.name).resolve(meta.region);
 		Path input = dir.resolve("input");
 
-		Files.createDirectories(input);
+		Files.createDirectories(dir);
 
 		// Copy all resources
 		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "postProcess.sh", "jvm.options")) {
@@ -127,6 +127,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
 			if (noBindings) {
+
+				Files.createDirectories(input);
+
 				run.config.controler().setOutputDirectory(outputPath);
 				run.config.controler().setRunId(runName + run.id);
 
@@ -219,9 +222,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	/**
 	 * Writes one line into the info.txt for one run.
+	 *
 	 * @return config file name
 	 */
-	static String  writeRunToInfo(BufferedWriter infoWriter, Path batchOutput, PreparedRun prepare, PreparedRun.Run run, String runName) throws IOException {
+	static String writeRunToInfo(BufferedWriter infoWriter, Path batchOutput, PreparedRun prepare, PreparedRun.Run run, String runName) throws IOException {
 		String runId = runName + run.id;
 		String configFileName = "config_" + runName + run.id + ".xml";
 
@@ -258,6 +262,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		metadata.put("info", "_info.txt");
 		metadata.put("zipFolder", "summaries");
 		metadata.put("timestamp", LocalDate.now());
+		metadata.put("viewerVersion", 2);
 
 		metadata.putAll(run.getMetadata());
 		mapper.writeValue(yamlWriter, metadata);

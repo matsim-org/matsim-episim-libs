@@ -13,7 +13,7 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.*;
+import org.matsim.run.modules.SnzProductionScenario.*;
 
 import javax.annotation.Nullable;
 
@@ -30,15 +30,15 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(
+				SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "secondLockdown");
 	}
-	
+
 	@Override
 	public int getOffset() {
 		return 400;
@@ -47,8 +47,8 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
-				Masks.yes ).setTracing( Tracing.yes ).setSnapshot( Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel(
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
+				Masks.yes ).setTracing( Tracing.yes ).setInfectionModel(
 				AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 
 		Config config = module.config();
@@ -61,7 +61,7 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		
+
 		if (params.lockdown.equals("outOfHomeExceptEdu59")) {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
@@ -105,16 +105,16 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 //			builder.restrict("2020-12-07", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 //			builder.restrict("2021-01-03", 0.2, "educ_higher");
 //		}
-//		
+//
 //		if (params.schools.contains("noHolidays")) {
 //			builder.clearAfter("2020-12-08", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 //		}
 
-		
+
 		if (params.work.contains("N95masks")) {
 			builder.restrict(params.interventionDate, Restriction.ofMask(FaceMask.N95, 0.9), "work");
 		}
-		
+
 		if (params.curfew.equals("18-6")) builder.restrict(params.interventionDate, Restriction.ofClosingHours(18, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		if (params.curfew.equals("20-6")) builder.restrict(params.interventionDate, Restriction.ofClosingHours(20, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		if (params.curfew.equals("22-6")) builder.restrict(params.interventionDate, Restriction.ofClosingHours(22, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
@@ -129,7 +129,7 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 //				builder.restrict("2020-12-31", 1.0, act);
 //				builder.restrict("2021-01-02", fraction, act);
 			}
-			
+
 			if (!params.curfew.equals("no") && params.interventionDate.equals("2020-12-21")) {
 				builder.restrict("2020-12-24", Restriction.ofClosingHours(0, 0), "leisure", "shop_daily", "shop_other", "visit", "errands");
 				if (params.curfew.equals("18-6")) builder.restrict("2020-12-27", Restriction.ofClosingHours(18, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
@@ -137,23 +137,23 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 				if (params.curfew.equals("22-6")) builder.restrict("2020-12-27", Restriction.ofClosingHours(22, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 			}
 			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
-			
+
 			christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
-			
+
 			christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
 			christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
-			
-			episimConfig.setInputDays(christmasInputDays);			
-		
-		
+
+			episimConfig.setInputDays(christmasInputDays);
+
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 
@@ -177,20 +177,20 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 		@StringParameter({"no", "N95masks"})
 		public String work;
-		
+
 		@StringParameter({"no", "18-6", "20-6", "22-6"})
 		public String curfew;
-		
+
 		@StringParameter({"2020-12-21", "2020-12-27"})
 		public String interventionDate;
-		
+
 //		@StringParameter({"no", "yes"})
 //		public String reducedGroupsize;
-		
+
 //		@StringParameter({"no", "restrictive", "permissive", "restrictiveNoCurfew", "permissiveNoCurfew"})
 //		public String christmasModel;
-		
-		
+
+
 
 
 	}

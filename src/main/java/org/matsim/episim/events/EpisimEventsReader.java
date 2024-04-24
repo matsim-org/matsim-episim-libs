@@ -29,11 +29,13 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.episim.EpisimContainer;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Stack;
 
@@ -48,8 +50,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		delegate = new EventsReaderXMLv1(events);
 		this.setValidating(false);
 		delegate.addCustomEventMapper(EpisimInfectionEvent.EVENT_TYPE, getEpisimInfectionEventMapper());
+		delegate.addCustomEventMapper(EpisimPotentialInfectionEvent.EVENT_TYPE, getEpisimPotentialInfectionEventMapper());
+		delegate.addCustomEventMapper(EpisimInitialInfectionEvent.EVENT_TYPE, getEpisimInitialInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());
 		delegate.addCustomEventMapper(EpisimContactEvent.EVENT_TYPE, getEpisimContactEventMapper());
+		delegate.addCustomEventMapper(EpisimVaccinationEvent.EVENT_TYPE, getEpisimVaccinationEventMapper());
+		delegate.addCustomEventMapper(EpisimStartEvent.EVENT_TYPE, getEpisimStartEventMapper());
 	}
 
 	public void characters(char[] ch, int start, int length) throws SAXException {
@@ -83,7 +89,77 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			if (attr != null)
 				virusStrain = VirusStrain.valueOf(attr);
 
-			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability);
+			double antibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
+				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
+			}
+
+			double maxAntibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {
+				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));
+			}
+
+			int vaccinationCnt = -1;
+			attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);
+			if (attr != null)
+				vaccinationCnt = Integer.parseInt(attr);
+
+			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies, maxAntibodies, vaccinationCnt);
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimPotentialInfectionEventMapper() {
+		return event -> {
+
+			Map<String, String> attributes = event.getAttributes();
+
+			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
+			Id<Person> infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));
+			Id<?> container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);
+			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);
+
+			double probability = Double.parseDouble(attributes.get(EpisimInfectionEvent.PROBABILITY));
+			double unVacProb = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.UNVAC_PROBABILITY));
+
+			int groupSize = Integer.parseInt(attributes.get(EpisimInfectionEvent.GROUP_SIZE));
+			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));
+
+			double antibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
+				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
+			}
+
+			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, antibodies, rnd);
+
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimInitialInfectionEventMapper() {
+		return event -> {
+
+			Map<String, String> attributes = event.getAttributes();
+
+			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
+			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+			double antibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
+				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
+			}
+
+			double maxAntibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {
+				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));
+			}
+
+			int vaccinationCnt = -1;
+			String attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);
+			if (attr != null)
+				vaccinationCnt = Integer.parseInt(attr);
+
+			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies, vaccinationCnt);
 		};
 	}
 
@@ -112,6 +188,30 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 			return new EpisimContactEvent(time, person, contactPerson, container, attributes.get(ActivityEndEvent.ATTRIBUTE_ACTTYPE).intern(),
 					Double.parseDouble(attributes.get(EpisimContactEvent.DURATION)), Integer.parseInt(attributes.get(EpisimContactEvent.GROUP_SIZE)));
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimVaccinationEventMapper() {
+		return event -> {
+
+			Map<String, String> attr = event.getAttributes();
+			return new EpisimVaccinationEvent(
+					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),
+					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),
+					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),
+					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))
+			);
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimStartEventMapper() {
+		return event -> {
+
+			Map<String, String> attr = event.getAttributes();
+			return new EpisimStartEvent(
+					LocalDate.parse(attr.get(EpisimStartEvent.START_DATE)),
+					attr.get(EpisimStartEvent.IMMUNIZATION)
+			);
 		};
 	}
 

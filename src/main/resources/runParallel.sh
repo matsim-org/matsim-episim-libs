@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-socket=20
 #SBATCH -A bzz0020
 
 date
@@ -18,7 +17,7 @@ echo "***"
 # main
 main="org.matsim.run.RunParallel"
 
-module load java/11.0.7
+module load java/11
 java -version
 #
 # Start & pin multiple processes on different physical cores of a node
@@ -45,7 +44,7 @@ for sId in $(seq 0 $numaIndex); do
 
   # Needs to be unique among all processes
   let workerId=offset+sId
-  arguments="--threads $SLURM_NTASKS_PER_SOCKET --total-worker $totalWorker --worker-index $workerId"
+  arguments="--tasks $SLURM_NTASKS_PER_SOCKET --total-worker $totalWorker --worker-index $workerId"
   command="java -cp $classpath $JAVA_OPTS @jvm.options -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector $main $arguments"
   echo ""
   echo "command on socket $sId is $command"

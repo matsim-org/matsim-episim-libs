@@ -46,6 +46,9 @@ aggregate_run() {
     copy_output *.diseaseImport.tsv $tmp/$run
     copy_output *.outdoorFraction.tsv $tmp/$run
     copy_output *.strains.tsv $tmp/$run
+    copy_output *.vaccinations.tsv $tmp/$run
+    copy_output *.vaccinationsDetailed.tsv $tmp/$run
+    copy_output *.secondaryAttackRate.txt $tmp/$run
     copy_output *.config.xml $tmp/$run
 
     for OUTPUT in *.post.*.*; do
@@ -78,3 +81,14 @@ zip "$cwd/summaries.zip" -r ./*
 cd "$cwd" || exit
 
 rm -r tmp
+
+if grep -q seed metadata.yaml; then
+
+    echo "Aggregating seeds..."
+
+    module load anaconda3/2019.10
+    source "$EPISIM_INPUT/../env/bin/activate"
+
+    python "$EPISIM_INPUT/../env/utils.py" "$cwd/summaries.zip"
+
+fi

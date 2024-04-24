@@ -38,6 +38,11 @@ import java.util.Map;
  */
 public abstract class ShutdownPolicy {
 
+	/**
+	 * Magic number to indicate this entry should be replaced based on hospital numbers.
+	 */
+	public static final Double REG_HOSPITAL = -200d;
+
 	private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);
 
 	protected final Config config;
@@ -47,7 +52,7 @@ public abstract class ShutdownPolicy {
 	 */
 	protected ShutdownPolicy(Config config) {
 		this.config = config;
-		log.info("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
+		//log.info("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
 	}
 
 
@@ -78,12 +83,18 @@ public abstract class ShutdownPolicy {
 	/**
 	 * Helper base class for config builders.
 	 */
-	static class ConfigBuilder<T> {
+	public static class ConfigBuilder<T> {
 
 		/**
 		 * Maps activities to config objects.
 		 */
 		protected Map<String, T> params = new HashMap<>();
+
+		/**
+		 * Public inheritance is forbidden.
+		 */
+		ConfigBuilder() {
+		}
 
 		public Config build() {
 			return ConfigFactory.parseMap(params);

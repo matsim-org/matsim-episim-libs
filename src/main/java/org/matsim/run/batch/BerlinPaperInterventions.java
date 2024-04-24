@@ -10,7 +10,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.*;
+import org.matsim.run.modules.SnzProductionScenario.*;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

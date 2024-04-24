@@ -42,6 +42,15 @@ def read_data(f, district, hospital, rki, window=5):
 
     return df, hospital, rki
 
+def read_incidence(f, district, incidence):
+    """  Read incidence data for simulation and reference data. """
+    df = pd.read_csv(f, sep="\t", parse_dates=[2])
+    df = df[df.district == district]
+    df.set_index('date', drop=False, inplace=True)
+
+    cmp = pd.read_csv(incidence, parse_dates=[0])
+
+    return df, cmp
 
 def percentage_error(actual, predicted):
     """ https://stackoverflow.com/questions/47648133/mape-calculation-in-python """
@@ -147,6 +156,46 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
 
     return error_cases, error_sick, error_critical, peak, dz
 
+def calc_incidence_error(f, district, start, end, population=919944, cases="InzidenzDunkelzifferCologne.csv", weights_sim=None, weights_real=None):
+    """ Compares weekly incidence """
+
+    df, cases = read_incidence(f, district, cases)
+
+    df["cases"] = df.nInfectedCumulative.diff(1)
+    df.cases.loc[0] = df.nInfectedCumulative[0]
+
+    s = df.groupby(pd.Grouper(key='date', freq='W-SUN')).agg(cases=("cases", "sum"))
+
+    s.cases = 100000* s.cases / population
+
+    s = s[(s.index >= start) & (s.index <= end)]
+    cases = cases[(cases.Datum >= start) & (cases.Datum <= end)]
+
+    if weights_sim is not None and weights_real is not None:
+        return msle(s.cases * weights_sim, cases.DunkelzifferInzidenz * weights_real)
+    else:
+        return msle(s.cases, cases.DunkelzifferInzidenz)
+
+def calc_strain_error(f, start, end, strain="ALPHA", shares="AlphaAnteileNRW.csv"):
+
+    df = pd.read_csv(f, sep="\t", parse_dates=[1])
+
+    total = np.sum(df.to_numpy()[:,2:], axis=1)
+    total[total==0]= np.nan
+
+    # replace 0 for the division to change it back later
+
+    df["total"] = total
+    df["share"] = (df[strain] / df.total).fillna(0)
+
+    s = df.groupby(pd.Grouper(key='date', freq='W-SUN')).agg(share=("share", "mean"))
+    s = s[(s.index >= start) & (s.index <= end)]
+
+    shares = pd.read_csv(shares, parse_dates=[0])
+
+    merged = s.merge(shares, left_on="date", right_on="Date")
+
+    return msle(merged.share, merged.Share), merged.share.to_numpy(), merged.Share.to_numpy()
 
 def objective_reinfection(trial):
     """ Objective for reinfection number R """
@@ -228,7 +277,7 @@ def objective_hospital(trial):
     jvm = trial.study.user_attrs["jvm_opts"]
 
     # Run trials for all seeds in parallel
-    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --number %d --runs %d --calibParameter %.12f --days 195" \
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 8 --number %d --runs %d --calibParameter %.12f --days 270" \
           % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
@@ -240,7 +289,7 @@ def objective_hospital(trial):
 
     results = []
     for i in range(1, trial.study.user_attrs["runs"] + 1):
-        res = calc_multi_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2020-09-01")
+        res = calc_multi_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2020-11-01")
         results.append(res)
 
     df = pd.DataFrame(results, columns=["error_cases", "error_sick", "error_critical", "peak", "dz"])
@@ -252,6 +301,69 @@ def objective_hospital(trial):
     trial.set_user_attr("df", df.to_json())
 
     return df.error_sick.mean()
+
+def objective_incidence(trial):
+    """ Objective for (corrected) incidence """
+    n = trial.number
+    c = trial.suggest_uniform("calibrationParameter", 0.8e-5, 1.7e-5)
+
+    scenario = trial.study.user_attrs["scenario"]
+    district = trial.study.user_attrs.get("district", "unknown")
+    jvm = trial.study.user_attrs["jvm_opts"]
+
+    # Run trials for all seeds in parallel
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 12 --number %d --runs %d --calibParameter %.12f  --param leisureCorrection=1.0 --days 330" \
+          % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
+
+    print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
+
+    if os.name != 'nt':
+        cmd = cmd.split(" ")
+
+    subprocess.run(cmd, shell=os.name == 'nt')
+
+    results = []
+    for i in range(1, trial.study.user_attrs["runs"] + 1):
+        res = calc_incidence_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2021-01-03")
+        results.append(res)
+
+    return np.mean(results)
+
+def objective_strain(trial):
+    n = trial.number
+
+    c = 1.1293063756440906e-05
+    l = 1.8993316907481814
+    offset = 0
+    inf = trial.suggest_float("infectiousness", 1.1, 2.5)
+
+    start = trial.study.user_attrs["start"]
+    end = trial.study.user_attrs["end"]
+    scenario = trial.study.user_attrs["scenario"]
+    district = trial.study.user_attrs.get("district", "unknown")
+    jvm = trial.study.user_attrs["jvm_opts"]
+
+    # Run trials for all seeds in parallel
+    cmd = "java -jar %s ../matsim-episim.jar scenarioCreation" \
+          " trial %s --max-tasks 12 --number %d --runs %d --snapshot snapshots/strain_base_.zip --name %s --calibParameter %.12f --param leisureCorrection=%.5f;alphaOffsetDays=%d --infectiousness ALPHA=%.5f --days 500" \
+          % (jvm, scenario, n, trial.study.user_attrs["runs"], end, c, l, offset, inf)
+
+    print("Running calibration for %s (end: %s) : %s" % (scenario, end, cmd))
+
+    if os.name != 'nt':
+        cmd = cmd.split(" ")
+
+    subprocess.run(cmd, shell=os.name == 'nt')
+
+    results = []
+    for i in range(1, trial.study.user_attrs["runs"] + 1):
+        err_strain, share_sim, share_real = calc_strain_error("output-%s/%d/run_%d/run%d.strains.tsv" % (end, n, i, i), start=start, end=end)
+        err_inc = calc_incidence_error("output-%s/%d/run_%d/run%d.infections.txt" % (end, n, i, i), district, start=start, end=end,
+                                       weights_sim=share_sim, weights_real=share_real)
+
+        results.append(err_strain + err_inc)
+
+    return np.mean(results)
 
 
 def objective_ci_correction(trial):
@@ -343,16 +455,17 @@ if __name__ == "__main__":
     # Needs to be run from top-level episim directory!
 
     parser = argparse.ArgumentParser(description="Run calibrations with optuna.")
-    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
-    parser.add_argument("--district", type=str, default="Berlin",
+    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=30)
+    parser.add_argument("--district", type=str, default="Köln",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionScenario")
-    parser.add_argument("--runs", type=int, default=8, help="Number of runs per objective")
-    parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="CologneStrainScenario")
+    parser.add_argument("--runs", type=int, default=12, help="Number of runs per objective")
+    parser.add_argument("--start", type=str, default="2021-01-31", help="Start date for error metric.")
+    parser.add_argument("--end", type=str, default="", help="End date for calibration")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
-    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="hospital")
-    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -XX:+UseParallelGC -Xms20G -Xmx20G")
+    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "incidence", "strain", "ci_correction", "multi"], default="incidence")
+    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -XX:+UseParallelGC -Xms80G -Xmx80G")
 
     args = parser.parse_args()
 
@@ -367,7 +480,7 @@ if __name__ == "__main__":
 
     else:
         study = optuna.create_study(
-            study_name=args.objective + ("_" if args.start else "") + args.start, storage="sqlite:///calibration.db", load_if_exists=True,
+            study_name=args.objective, storage="sqlite:///calibration%s.db" % args.end, load_if_exists=True,
             direction="minimize"
         )
 
@@ -379,7 +492,9 @@ if __name__ == "__main__":
         "multi": objective_multi,
         "unconstrained": objective_unconstrained,
         "ci_correction": objective_ci_correction,
-        "hospital": objective_hospital
+        "hospital": objective_hospital,
+        "incidence": objective_incidence,
+        "strain": objective_strain
     }
 
     objective = objectives[args.objective]

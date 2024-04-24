@@ -18,6 +18,7 @@ import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -172,5 +173,67 @@ public class FixedPolicyTest {
 			EpisimReporting.InfectionReport report = EpisimTestUtils.createReport(start.plusDays(i).toString(), i);
 			p.updateRestrictions(report, r);
 		}
+	}
+
+	@Test
+	public void locationBasedRestrictions() {
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+
+		FixedPolicy.ConfigBuilder config1 = FixedPolicy.config()
+				.restrict(2, Restriction.of(0.9), "work")
+				.restrict(2, Restriction.ofLocationBasedRf(nycBoroughs), "work");
+
+		config1.build();
+
+		FixedPolicy.ConfigBuilder config2 = FixedPolicy.config()
+				.restrictWithDistrict(2, nycBoroughs, 0.9, "work");
+
+
+		assertThat(config1.build()).isEqualTo(config2.build());
+
+		config1.restrict(1, 0.4, "work");
+		FixedPolicy policy = new FixedPolicy(config1.build());
+		policy.updateRestrictions(EpisimTestUtils.createReport("--", 1), r);
+		assertThat(r.get("work").getLocationBasedRf().size()).isEqualTo(0);
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.4);
+		policy.updateRestrictions(EpisimTestUtils.createReport("--", 2), r);
+		assertThat(r.get("work").getLocationBasedRf().size()).isEqualTo(2);
+		assertThat(r.get("work").getLocationBasedRf().get("Bronx")).isEqualTo(0.7);
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
+		assertThat(r.get("home").getLocationBasedRf().size()).isEqualTo(0);
+
+	}
+
+
+	@Test
+	public void hospitalReg() {
+
+		FixedPolicy.ConfigBuilder config = FixedPolicy.config()
+				.restrict(1, Restriction.of(0.95), "work")
+				.restrict(2, Restriction.of(ShutdownPolicy.REG_HOSPITAL), "work")
+				.restrict(3, Restriction.of(ShutdownPolicy.REG_HOSPITAL), "work");
+
+
+		FixedPolicy policy = new FixedPolicy(config.build());
+		LocalDate now = LocalDate.now();
+		policy.init(now, r);
+
+
+		double frac = 1;
+		for (int i = 1; i < 10; i++) {
+
+			EpisimReporting.InfectionReport report = EpisimTestUtils.createReportHospital(now.plusDays(i), i, (i-1) * 300);
+			policy.updateRestrictions(report, r);
+
+			assertThat(r.get("work").getRemainingFraction())
+					.isLessThan(frac);
+
+			frac = r.get("work").getRemainingFraction();
+		}
+
+		assertThat(frac).isLessThan(0.6);
+
 	}
 }

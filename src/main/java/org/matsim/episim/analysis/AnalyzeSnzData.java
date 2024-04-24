@@ -25,21 +25,26 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.model.input.CreateRestrictionsFromSnz;
+
+import com.google.common.io.Resources;
+
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
- * @author: rewert This class reads the SENOZON data for every day. The data is
- *          filtered by the zip codes of every area. The base line is always the
- *          first day. The results for every day are the percentile of the
- *          changes compared to the base.
+ * @author: Ricardo Ewert This class reads the SENOZON mobility data for every
+ *          day. The data is filtered by the zip codes of every area.
  */
 @CommandLine.Command(name = "analyzeSnzData", description = "Aggregate snz mobility data.")
 class AnalyzeSnzData implements Callable<Integer> {
@@ -47,8 +52,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseAreas {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test,
-		Bundeslaender, Tuebingen, Landkreise, AnyArea
+		Germany, Berlin, BerlinDistrcits, Test, Bundeslaender, Landkreise, AnyArea, UpdateMobilityDashboardData, Koeln
 	};
 
 	private enum AnalyseOptions {
@@ -72,15 +76,25 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.Berlin;
+		AnalyseAreas selectedArea = AnalyseAreas.Koeln;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
-		AnalyseOptions selectedOutputOptions = AnalyseOptions.onlyWeekends;
-		String anyArea = "Berlin";
-		
-		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts 
-		boolean getPercentageResults = false;
+		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise
+		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD, only for Bundeslaender and Landkreise
+		String anyArea = "Köln"; // you can select a certain Landkreis and the zip codes are collected automatically
 
-		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions);
+		boolean getPercentageResults = true; // false: duration output, true: results compared to base days
+		boolean ignoreDates = true; // true for mobilityDashboard, false for simulation input
+
+		Set<String> datesToIgnore = Resources
+				.readLines(Resources.getResource("mobilityDatesToIgnore.txt"), StandardCharsets.UTF_8).stream()
+				.map(String::toString).collect(Collectors.toSet());
+		if (ignoreDates == false)
+			datesToIgnore.clear();
+
+		Files.createDirectories(outputFolder);
+
+		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOption,
+				startDateStillUsingBaseDays, datesToIgnore);
 
 		log.info("Done!");
 
@@ -88,12 +102,14 @@ class AnalyzeSnzData implements Callable<Integer> {
 	}
 
 	private void writeData(AnalyseAreas selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase,
-			String anyArea, AnalyseOptions selectedOutputOptions) throws IOException {
+			String anyArea, AnalyseOptions selectedOutputOption, String startDateStillUsingBaseDays,
+			Set<String> datesToIgnore) throws IOException {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
 		List<String> baseDays = Arrays.asList();
 		String outputOption = null;
-		
+
+		// sets the selected base days
 		switch (selectedBase) {
 		case March2020:
 			break;
@@ -116,20 +132,13 @@ class AnalyzeSnzData implements Callable<Integer> {
 			HashMap<String, IntSet> zipCodesAnyArea = snz.findZipCodesForAnyArea(anyArea);
 			snz.writeDataForCertainArea(
 					outputFolder.resolve(zipCodesAnyArea.keySet().iterator().next() + "SnzData_daily_until.csv"),
-					zipCodesAnyArea.values().iterator().next(), getPercentageResults, baseDays);
-			break;
-		case Berchtesgaden:
-			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
-					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
-			snz.writeDataForCertainArea(outputFolder.resolve("BerchtesgadenSnzData_daily_until.csv"),
-					zipCodesBerchtesgaden, getPercentageResults, baseDays);
+					zipCodesAnyArea.values().iterator().next(), getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case Berlin:
-			IntSet zipCodesBerlin = new IntOpenHashSet();
-			for (int i = 10115; i <= 14199; i++)
-				zipCodesBerlin.add(i);
-			snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin,
-					getPercentageResults, baseDays);
+			HashMap<String, IntSet> zipCodesBerlin = snz.findZipCodesForAnyArea("Berlin");
+			snz.writeDataForCertainArea(
+					outputFolder.resolve(zipCodesBerlin.keySet().iterator().next() + "SnzData_daily_until.csv"),
+					zipCodesBerlin.values().iterator().next(), getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case BerlinDistrcits:
 			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();
@@ -161,67 +170,27 @@ class AnalyzeSnzData implements Callable<Integer> {
 					13439, 13465, 13467, 13469, 13503, 13505, 13507, 13509, 13629)));
 			for (Entry<String, IntSet> district : berlinDistricts.entrySet())
 				snz.writeDataForCertainArea(outputFolder.resolve(district.getKey() + "SnzData_daily_until.csv"),
-						district.getValue(), getPercentageResults, baseDays);
-			break;
-		case Bonn:
-			IntSet zipCodesBonn = new IntOpenHashSet();
-			for (int i = 53100; i <= 53299; i++)
-				zipCodesBonn.add(i);
-			snz.writeDataForCertainArea(outputFolder.resolve("BonnSnzData_daily_until.csv"), zipCodesBonn,
-					getPercentageResults, baseDays);
+						district.getValue(), getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case Germany:
 			IntSet zipCodesGER = new IntOpenHashSet();
 			for (int i = 0; i <= 99999; i++)
 				zipCodesGER.add(i);
 			snz.writeDataForCertainArea(outputFolder.resolve("GermanySnzData_daily_until.csv"), zipCodesGER,
-					getPercentageResults, baseDays);
-			break;
-		case Hamburg:
-			IntSet zipCodesHamburg = new IntOpenHashSet();
-			for (int i = 22000; i <= 22999; i++)
-				zipCodesHamburg.add(i);
-			snz.writeDataForCertainArea(outputFolder.resolve("HamburgSnzData_daily_until.csv"), zipCodesHamburg,
-					getPercentageResults, baseDays);
-			break;
-		case Heinsberg:
-			IntSet zipCodesHeinsberg = new IntOpenHashSet(
-					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
-			snz.writeDataForCertainArea(outputFolder.resolve("HeinsbergSnzData_daily_until.csv"), zipCodesHeinsberg,
-					getPercentageResults, baseDays);
-
-			break;
-		case Mannheim:
-			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
-					68229, 68239, 68259, 68305, 68307, 68309));
-			snz.writeDataForCertainArea(outputFolder.resolve("MannheimSnzData_daily_until.csv"), zipCodesMannheim,
-					getPercentageResults, baseDays);
-			break;
-		case Munich:
-			IntSet zipCodesMunich = new IntOpenHashSet();
-			for (int i = 80331; i <= 81929; i++)
-				zipCodesMunich.add(i);
-			snz.writeDataForCertainArea(outputFolder.resolve("MunichSnzData_daily_until.csv"), zipCodesMunich,
-					getPercentageResults, baseDays);
+					getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case Test:
 			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
 			snz.writeDataForCertainArea(outputFolder.resolve("TestSnzData_daily_until.csv"), zipCodesTest,
-					getPercentageResults, baseDays);
+					getPercentageResults, baseDays, datesToIgnore);
 			break;
-		case Tuebingen:
-			IntSet zipCodesTuebingen = new IntOpenHashSet(List.of(72070, 72072, 72074, 72076));
-			snz.writeDataForCertainArea(outputFolder.resolve("TuebingenSnzData_daily_until.csv"), zipCodesTuebingen,
-					getPercentageResults, baseDays);
-			break;
-		case Wolfsburg:
-			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
-			snz.writeDataForCertainArea(outputFolder.resolve("WolfsburgSnzData_daily_until.csv"), zipCodesWolfsburg,
-					getPercentageResults, baseDays);
+		case Koeln:
+			HashMap<String, IntSet> zipCodesAnyCologne = snz.findZipCodesForAnyArea("Köln");
+			snz.writeDataForCertainArea(outputFolder.resolve("CologneSnzData_daily_until.csv"),
+					zipCodesAnyCologne.values().iterator().next(), getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case Bundeslaender:
-			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
-			switch (selectedOutputOptions) {
+			switch (selectedOutputOption) {
 			case weeklyResultsOfAllDays:
 				outputOption = "weekly";
 				break;
@@ -237,12 +206,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 			default:
 				break;
 			}
-			snz.writeBundeslandDataForPublic(outputFolder, outputOption);
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Landkreise:
-			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
-			
-			switch (selectedOutputOptions) {
+			switch (selectedOutputOption) {
 			case weeklyResultsOfAllDays:
 				outputOption = "weekly";
 				break;
@@ -258,7 +225,24 @@ class AnalyzeSnzData implements Callable<Integer> {
 			default:
 				break;
 			}
-			snz.writeLandkreisDataForPublic(outputFolder, outputOption);
+			snz.writeLandkreisDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
+			break;
+		case UpdateMobilityDashboardData:
+			datesToIgnore.clear();
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
+			outputOption = "weekly";
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
+			outputOption = "weekdays";
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
+			outputOption = "weekends";
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
+			outputOption = "weekly";
+			snz.writeLandkreisDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
+			outputOption = "weekdays";
+			snz.writeLandkreisDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
+			outputOption = "weekends";
+			snz.writeLandkreisDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		default:
 			break;

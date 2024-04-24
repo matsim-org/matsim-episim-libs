@@ -23,6 +23,7 @@ package org.matsim.episim.model;
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
 
@@ -55,9 +56,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 	@Inject
 		/* package */
 	SymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-						  EpisimReporting reporting, InfectionModel infectionModel) {
+						  EpisimReporting reporting, InfectionModel infectionModel, Scenario scenario) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
-		super(rnd, config, infectionModel, reporting);
+		super(rnd, config, infectionModel, reporting, scenario);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();
 	}
@@ -68,7 +69,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 	}
 
 	@Override
-	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
+	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now) {
 		infectionDynamicsGeneralized(personLeavingFacility, facility, now);
 	}
 
@@ -79,14 +80,12 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, container, getRestrictions(), rnd)) {
 			return;
 		}
 
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
-
-		EpisimConfigGroup.InfectionParams leavingParams = null;
 
 		for (EpisimPerson contactPerson : container.getPersons()) {
 
@@ -115,7 +114,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			}
 
 			/*
-			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
+			if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
 				continue;
 			}
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
@@ -128,9 +127,12 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				continue;
 			}
 
-			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
+			if (!personRelevantForTrackingOrInfectionDynamics(now, contactPerson, container, getRestrictions(), rnd)) {
 				continue;
 			}
+
+			// counted as contact
+			numContacts++;
 
 			// we have thrown the random numbers, so we can bail out in some cases if we are not tracking:
 			if (!trackingEnabled) {
@@ -147,14 +149,18 @@ public final class SymmetricContactModel extends AbstractContactModel {
 					&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
 				continue;
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+			// activity params of the contact person and leaving person
+			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer,  container.getPerformedActivity(personLeavingContainer.getPersonId()));
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson,  container.getPerformedActivity(contactPerson.getPersonId()));
+
+			String leavingPersonsActivity = leavingParams == qhParams ? "home" : leavingParams.getContainerName();
+			String otherPersonsActivity = contactParams == qhParams ? "home" : contactParams.getContainerName();
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
 			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
 			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
-			double jointTimeInContainer = calculateJointTimeInContainer(now, personLeavingContainer, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+			double jointTimeInContainer = calculateJointTimeInContainer(now, leavingParams, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
@@ -204,13 +210,6 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 			}
 
-			// Parameter will only be retrieved one time
-			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
-
-			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
-
 			// (same computation as above; could just memorize)
 			// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
 			double contactIntensity = Math.min(
@@ -223,14 +222,27 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-				if (rnd.nextDouble() < prob)
+
+				double probUnVac = infectionModel.getLastUnVacInfectionProbability();
+
+				double dbl = rnd.nextDouble();
+
+				potentialInfection(personLeavingContainer, contactPerson, now, infectionType, prob, container, probUnVac, dbl);
+
+				if (dbl < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
 						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
-				if (rnd.nextDouble() < prob)
+				double probUnVac = infectionModel.getLastUnVacInfectionProbability();
+
+				double dbl = rnd.nextDouble();
+
+				potentialInfection(contactPerson, personLeavingContainer, now, infectionType, prob, container, probUnVac, dbl);
+
+				if (dbl < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}
