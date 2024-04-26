@@ -4,6 +4,7 @@ package org.matsim.episim.model;
  * Definition of virus strains with different characteristics.
  */
 public enum VirusStrain implements ImmunityEvent {
+
 	/**
 	 * This describes the base virus strain.
 	 */
