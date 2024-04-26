@@ -46,11 +46,13 @@ public interface AntibodyModel {
 	/**
 	 * Class for antibody model configurations.
 	 */
-	public static class Config {
+	class Config {
 
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies;
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors;
 		private double immuneReponseSigma = 0.;
+
+		double hlMultiForInfected = 1.0;
 
 		public Config() {
 
@@ -200,6 +202,13 @@ public interface AntibodyModel {
 		public Config(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies, Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors) {
 			this.initialAntibodies = initialAntibodies;
 			this.antibodyRefreshFactors = antibodyRefreshFactors;
+
+		}
+
+		public Config(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies, Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors, double hlMultiForInfected) {
+			this.initialAntibodies = initialAntibodies;
+			this.antibodyRefreshFactors = antibodyRefreshFactors;
+			this.hlMultiForInfected = hlMultiForInfected;
 
 		}
 

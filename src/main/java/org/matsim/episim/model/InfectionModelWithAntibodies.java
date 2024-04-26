@@ -114,19 +114,23 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			strainsLineA.add(VirusStrain.OMICRON_BA1);
 			strainsLineA.add(VirusStrain.OMICRON_BA2);
 			strainsLineA.add(VirusStrain.OMICRON_BA5);
-			strainsLineA.add(VirusStrain.BQ_1_1);
-			strainsLineA.add(VirusStrain.XBB_1_5);
 			strainsLineA.add(VirusStrain.STRAIN_A);
 			strainsLineA.add(VirusStrain.STRAIN_B);
+			strainsLineA.add(VirusStrain.BQ);
+			strainsLineA.add(VirusStrain.XBB_15);
+			strainsLineA.add(VirusStrain.XBB_19);
+			strainsLineA.add(VirusStrain.EG);
 
 			ArrayList<VirusStrain> strainsLineB = new ArrayList<VirusStrain>();
 			strainsLineB.add(VirusStrain.OMICRON_BA1);
 			strainsLineB.add(VirusStrain.OMICRON_BA2);
 			strainsLineB.add(VirusStrain.OMICRON_BA5);
-			strainsLineB.add(VirusStrain.BQ_1_1);
-			strainsLineB.add(VirusStrain.XBB_1_5);
 			strainsLineB.add(VirusStrain.STRAIN_A);
 			strainsLineB.add(VirusStrain.STRAIN_B);
+			strainsLineB.add(VirusStrain.BQ);
+			strainsLineB.add(VirusStrain.XBB_15);
+			strainsLineB.add(VirusStrain.XBB_19);
+			strainsLineB.add(VirusStrain.EG);
 
 			if (vaccinationConfig.getUseIgA()) {
 

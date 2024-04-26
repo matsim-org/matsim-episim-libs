@@ -10,6 +10,7 @@ public enum VaccinationType implements ImmunityEvent {
 	vector,
 	ba1Update,
 	ba5Update,
+	xbbUpdate,
 
 	/**
 	 * Not a real vaccination, but used to describe the profile for persons that have been infected and gained a natural immunity.

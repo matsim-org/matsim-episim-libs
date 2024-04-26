@@ -128,10 +128,17 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 			abNoWaning *= 4;
 		}
 		// b) if strain is omicron, an additional factor of 3.7 is applied
-		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) || strain.equals(VirusStrain.OMICRON_BA5)
-				|| strain.equals(VirusStrain.BQ_1_1) || strain.equals(VirusStrain.XBB_1_5)
-				|| strain.equals(VirusStrain.STRAIN_A) || strain.equals(VirusStrain.STRAIN_B)
-				|| strain.toString().startsWith("A_") || strain.toString().startsWith("B_")) {
+		if (strain.equals(VirusStrain.OMICRON_BA1) ||
+			strain.equals(VirusStrain.OMICRON_BA2) ||
+			strain.equals(VirusStrain.OMICRON_BA5) ||
+			strain.equals(VirusStrain.BQ) ||
+			strain.equals(VirusStrain.EG) ||
+			strain.equals(VirusStrain.XBB_15) ||
+			strain.equals(VirusStrain.XBB_19) ||
+			strain.equals(VirusStrain.STRAIN_A) ||
+			strain.equals(VirusStrain.STRAIN_B) ||
+			strain.toString().startsWith("A_") ||
+			strain.toString().startsWith("B_")) {
 			abNoWaning *= 3.7;
 		}
 

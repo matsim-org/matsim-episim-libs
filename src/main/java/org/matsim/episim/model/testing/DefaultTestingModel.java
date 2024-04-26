@@ -207,8 +207,8 @@ public class DefaultTestingModel implements TestingModel {
 					person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||
 					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||
 					person.getVirusStrain() == VirusStrain.OMICRON_BA5 ||
-					person.getVirusStrain() == VirusStrain.BQ_1_1 ||
-					person.getVirusStrain() == VirusStrain.XBB_1_5 ||
+					person.getVirusStrain() == VirusStrain.BQ ||
+					person.getVirusStrain() == VirusStrain.XBB_15 ||
 					person.getVirusStrain() == VirusStrain.STRAIN_A ||
 					person.getVirusStrain() == VirusStrain.STRAIN_B ||
 					person.getVirusStrain().toString().startsWith("A_") ||

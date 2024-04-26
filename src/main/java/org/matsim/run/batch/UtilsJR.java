@@ -29,7 +29,7 @@ public class UtilsJR {
 	static void produceDiseaseImportPlot(Map<VirusStrain, NavigableMap<LocalDate, Integer>> infections_pers_per_day) {
 
 		LocalDate startDate = LocalDate.of(2020, 2, 1);
-		LocalDate endDate = LocalDate.of(2023, 2, 25);
+		LocalDate endDate = LocalDate.of(2024, 6, 25);
 
 		DateColumn recordsDate = DateColumn.create("date");
 		DoubleColumn values = DoubleColumn.create("import");
