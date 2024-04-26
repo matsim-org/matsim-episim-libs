@@ -54,7 +54,7 @@
  /**
   * Scenario for Cologne using Senozon events for different weekdays.
   */
- public class SnzCologneProductionScenario extends SnzProductionScenario {
+ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 	 public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario> {
 
