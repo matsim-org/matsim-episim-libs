@@ -116,7 +116,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		String attributesFileForConversion = input.toString();
 		if (personIds != null) {
 			String outputPath = output.toAbsolutePath().toString();
-			attributesFileForConversion = outputPath.substring(0, outputPath.lastIndexOf('\\')) + "/filtered_" + input.getFileName();
+			attributesFileForConversion = outputPath.substring(0, outputPath.lastIndexOf('/')) + "/filtered_" + input.getFileName();
 			new ObjectAttributesXmlWriter(attributes).writeFile(attributesFileForConversion);
 		}
 

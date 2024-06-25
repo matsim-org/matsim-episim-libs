@@ -4,11 +4,11 @@
 WD := ../shared-svn/projects/episim/matsim-files
 
 # All available Scenarios
-ALL := BerlinWeek MunichWeek
+ALL := BerlinBrandenburg
 
 JAR := matsim-episim-*.jar
 # Shortcut to the scenario creation tool
-sc = java -Xmx20G -cp $(JAR) org.matsim.run.ScenarioCreation
+sc = java -Xmx30G -cp $(JAR) org.matsim.run.ScenarioCreation
 
 .PHONY: all clean $(ALL)
 
@@ -24,7 +24,7 @@ clean:
 
 # Includes all the scenarios with local variables
 # https://stackoverflow.com/questions/32904790/can-i-have-local-variables-in-included-makefiles
-SUBDIRS := scenarios/Cologne.mk
+SUBDIRS := scenarios/BerlinBrandenburg.mk
 define INCLUDE_FILE
 path = $S
 include $S
