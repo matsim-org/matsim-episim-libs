@@ -1013,7 +1013,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 
 		if (handler.isContinueProcessingEvents()) {
-			throw new RuntimeException("Immunisation history is not long enough (only contains " + days.size() + "days)");
+			throw new RuntimeException("Immunisation history is not long enough (only contains " + days.size() + " days)");
 		}
 
 	}

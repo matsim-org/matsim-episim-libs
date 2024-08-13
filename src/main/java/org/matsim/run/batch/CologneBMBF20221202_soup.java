@@ -30,7 +30,7 @@ import java.util.Map.Entry;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_soup.Params> {
+public class CologneBMBF20221202_soup implements BatchRun<CologneBMBF20221202_soup.Params> {
 
 	boolean DEBUG_MODE = true;
 	int runCount = 0;
@@ -652,7 +652,7 @@ public class CologneBMBF202212XX_soup implements BatchRun<CologneBMBF202212XX_so
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202212XX_soup.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF20221202_soup.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),

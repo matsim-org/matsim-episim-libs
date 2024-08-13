@@ -48,6 +48,7 @@
  import java.nio.file.Path;
  import java.time.LocalDate;
  import java.util.*;
+ import java.util.stream.Collectors;
 
 
  /**
@@ -60,7 +61,9 @@
 
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/A_originalImmHist")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-27/events_hosp")
+//	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-06/1/output/")
+//	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/A_originalImmHist")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/B_startedFromImmHist")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-10-18/3-meas/analysis/")
 	 private Path output;
@@ -93,97 +96,110 @@
 
 	 // TODO: check age or strain based lags in literature
 	 // source: incidence wave vs. hospitalization wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
-	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 14,
-					 VirusStrain.ALPHA, 14,
-					 VirusStrain.DELTA, 14,
-					 VirusStrain.OMICRON_BA1, 14,
-					 VirusStrain.OMICRON_BA2, 14,
-					 VirusStrain.OMICRON_BA5, 14,
-					 VirusStrain.STRAIN_A, 14,
-					 VirusStrain.STRAIN_B, 14
-			 ));
+	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = setLagBetweenInfectionAndHospitalisation();
 
-	  // source: hospitalization wave vs. ICU wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
-	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 6,
-					 VirusStrain.ALPHA, 6,
-					 VirusStrain.DELTA, 6,
-					 VirusStrain.OMICRON_BA1, 6,
-					 VirusStrain.OMICRON_BA2, 6,
-					 VirusStrain.OMICRON_BA5, 6,
-					 VirusStrain.STRAIN_A, 6,
-					 VirusStrain.STRAIN_B, 6
-			 ));
+	 private static Object2IntAVLTreeMap<VirusStrain> setLagBetweenInfectionAndHospitalisation() {
+		 Object2IntAVLTreeMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>();
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 lagBetweenInfectionAndHospitalisation.put(strain, 14);
+		 }
+
+		 return lagBetweenInfectionAndHospitalisation;
+	 }
+
+	 // source: hospitalization wave vs. ICU wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
+	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = setLagBetweenHospitalizationAndICU();
+
+	 private static Object2IntAVLTreeMap<VirusStrain> setLagBetweenHospitalizationAndICU() {
+		 Object2IntAVLTreeMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>();
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 lagBetweenHospitalizationAndICU.put(strain, 6);
+		 }
+
+		 return lagBetweenHospitalizationAndICU;
+
+	 }
 
 	 // Austria study in https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=0
-	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 12,
-					 VirusStrain.ALPHA, 12,
-					 VirusStrain.DELTA, 12,
-					 VirusStrain.OMICRON_BA1, 7,
-					 VirusStrain.OMICRON_BA2, 7,
-					 VirusStrain.OMICRON_BA5,7,
-					 VirusStrain.STRAIN_A, 7,
-					 VirusStrain.STRAIN_B, 7
-			 ));
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = setDaysInHospitalGivenNoICU();
 
-	 private static final Object2IntMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 15, // Debeka & Ireland studies
-					 VirusStrain.ALPHA, 15, // Debeka & Ireland studies
-					 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
-					 VirusStrain.OMICRON_BA1, 10, // TODO: Where does this number come from?
-					 VirusStrain.OMICRON_BA2, 10,
-					 VirusStrain.OMICRON_BA5,10,
-					 VirusStrain.STRAIN_A, 10,
-					 VirusStrain.STRAIN_B, 10
-			 ));
+	 private static Object2IntAVLTreeMap<VirusStrain> setDaysInHospitalGivenNoICU() {
+		 Object2IntAVLTreeMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>();
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 daysInHospitalGivenNoICU.put(strain, 7);
+		 }
+
+		 daysInHospitalGivenNoICU.put(VirusStrain.SARS_CoV_2, 12);
+		 daysInHospitalGivenNoICU.put(VirusStrain.ALPHA, 12);
+		 daysInHospitalGivenNoICU.put(VirusStrain.DELTA, 12);
+
+		 return daysInHospitalGivenNoICU;
+	 }
+
+	 private static final Object2IntMap<VirusStrain> daysInICU = setDaysInICU();
+
+	 private static Object2IntAVLTreeMap<VirusStrain> setDaysInICU() {
+		 Object2IntAVLTreeMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>();
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 daysInICU.put(strain, 10);
+		 }
+
+		 daysInICU.put(VirusStrain.SARS_CoV_2, 15);
+		 daysInICU.put(VirusStrain.ALPHA, 15);
+		 daysInICU.put(VirusStrain.DELTA, 15);
+
+		 return daysInICU;
+	 }
 
 	 // ??
-	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 60, // TODO: Where does this number come from?
-					 VirusStrain.ALPHA, 60,
-					 VirusStrain.DELTA, 60,
-					 VirusStrain.OMICRON_BA1, 60,
-					 VirusStrain.OMICRON_BA2, 60,
-					 VirusStrain.OMICRON_BA5,60,
-					 VirusStrain.STRAIN_A, 60,
-					 VirusStrain.STRAIN_B, 60
-			 ));
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = setDaysInHospitalGivenICU();
 
+	 private static Object2IntAVLTreeMap<VirusStrain> setDaysInHospitalGivenICU() {
+		 Object2IntAVLTreeMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>();
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 daysInHospitalGivenICU.put(strain, 60);
+		 }
+
+		 return daysInHospitalGivenICU;
+	 }
 
 
 	 private static final double beta = 1.2;
 
 	 private static final double hospitalFactor = 0.3; // Based on "guess & check", accounts for unreported cases TODO: Potential follow-up
 
-	 private static final double factorWild =  1.0;
+	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_BASE = Map.of(
+		 VirusStrain.DELTA, 1.2,
+		 VirusStrain.OMICRON_BA1, 0.45
+		 );
 
-	 private static final double factorAlpha = 1.0 * factorWild;
+	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_MILD = Map.of(
+		 VirusStrain.DELTA, 1.2,
+		 VirusStrain.OMICRON_BA1, 0.45,
+		 VirusStrain.OMICRON_BA5, 1.2
+		 );
 
-	 // delta: 2.3x more severe than alpha - Hospital admission and emergency care attendance risk for SARS-CoV-2 delta (B.1.617.2) compared with alpha (B.1.1.7) variants of concern: a cohort study
-	 private static final double factorDelta = 1.2 * factorWild; //1.6 * factorWild;
-
-	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
-	 private static final double factorOmicron = 0.45  * factorDelta; //  reportedShareOmicron / reportedShareDelta
-//	 private static final double factorOmicron = 0.6  * factorDelta;//  reportedShareOmicron / reportedShareDelta
-
-	 private static final double factorBA5 = 1.0 * factorOmicron; // old: 1.5
-
-	 private static final double factorScen2 = factorBA5; //  reportedShareOmicron / reportedShareDelta
-	 private static final double factorScen3 = factorBA5 * 3;//  reportedShareOmicron / reportedShareDelta
-
-
-//	 private static final double factorBA5 = 1.0 * factorOmicron;
+//	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_MILD = Map.of(
+//		 VirusStrain.DELTA, 1.2,
+//		 VirusStrain.OMICRON_BA1, 0.45,
+//		 VirusStrain.OMICRON_BA5, 1.2
+//	 );
 
 
+	 private static final Map<VirusStrain, Double> seriouslySickFactorModifier_SEVERE = Map.of(
+		 VirusStrain.DELTA, 1.2,
+		 VirusStrain.OMICRON_BA1, 0.45,
+		 VirusStrain.OMICRON_BA5, 1.2,
+		 VirusStrain.A_1, 1.5
+	 );
 
-	 // ??
-	 private static final double factorWildAndAlphaICU = 1.; // TODO : Check literature for reasonable values
-	 private static final double factorDeltaICU = 1.;
-	 private static final double factorOmicronICU = 1.;
-	 private static final double factorBA5ICU = 1.;
 
+	 // ICU: so far, we assume no difference between strains
+	 private static final double factorICU = 1.; // TODO : Check literature for reasonable values
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
 	 }
@@ -225,8 +241,10 @@
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
 		 //TODO: move to other class
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Base", startDate, "Base");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Waning", startDate, "Waning");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Mild", startDate, "Mild");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Severe", startDate, "Severe");
 
 
 //		 }
@@ -266,12 +284,15 @@
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
 		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
-		 ConfigHolder holderOmicron = configure(factorScen2, 1.0); // scenario 2
-		 ConfigHolder holderDelta = configure(factorScen3, 1.0); //scenario 3
+
+		 ConfigHolder holderBase = configure(seriouslySickFactorModifier_BASE);
+//		 ConfigHolder holderMild = configure(seriouslySickFactorModifier_MILD);
+		 ConfigHolder holderSevere = configure(seriouslySickFactorModifier_SEVERE);
 
 		 List<Handler> handlers = List.of(
-				 new Handler("Omicron", population, holderOmicron),
-				 new Handler("Delta", population, holderDelta)
+			 new Handler("Base", population, holderBase),
+//			 new Handler("Mild", population, holderMild),
+			 new Handler("Severe", population, holderSevere)
 		 );
 
 		 // feed the output events file to the handler, so that the hospitalizations may be calculated
@@ -284,8 +305,21 @@
 			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
 			 // this is used to normalize the hospitalization values
 			 double popSize = (int) population.getPersons().values().stream()
-					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
+				 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
 
+
+			 // calcualtes population in each age bin.
+			 Int2LongAVLTreeMap popSizeByAge = new Int2LongAVLTreeMap(Collections.reverseOrder());
+			 long popAboveUpperBound = 0;
+			 for (int lowerBound : handler.postProcessHospitalAdmissionsByAge.keySet()) {
+				 long popAboveLowerBound = (long) population.getPersons().values().stream()
+					 .filter(x -> x.getAttributes().getAttribute("district").equals(district))
+					 .filter(x -> (int) x.getAttributes().getAttribute("microm:modeled:age") >= lowerBound).count();
+
+				 long popInBin = popAboveLowerBound - popAboveUpperBound;
+				 popAboveUpperBound = popAboveLowerBound;
+				 popSizeByAge.put(lowerBound, popInBin);
+			 }
 
 			 for (int day = 0; day < eventFiles.size(); day++) {
 				 LocalDate date = startDate.plusDays(day);
@@ -300,7 +334,19 @@
 				 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
 
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP, handler.name , intakesHosp));
+				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP, handler.name, intakesHosp));
+
+				 List<Integer> ages = handler.postProcessHospitalAdmissionsByAge.keySet().stream().sorted().collect(Collectors.toList());
+
+				 for (int i = 0; i < ages.size(); i++) {
+					 int lowerBound = ages.get(i);
+					 String lab = String.valueOf(lowerBound) + (i < ages.size() -1 ? "to" + (ages.get(i + 1) - 1) : "+");
+					 double incidenceForAgeBin = getWeeklyHospitalizations(handler.postProcessHospitalAdmissionsByAge.get(lowerBound), day) * 100_000. / popSizeByAge.get(lowerBound);
+
+					 bw.newLine();
+					 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP + "_" + lab, handler.name, incidenceForAgeBin));
+				 }
+
 				 bw.newLine();
 				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_ICU, handler.name, intakesIcu));
 				 bw.newLine();
@@ -341,6 +387,8 @@
 		 final Int2IntSortedMap postProcessHospitalFilledBedsICU;
 
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
+		 private final Int2ObjectAVLTreeMap<Int2IntAVLTreeMap> postProcessHospitalAdmissionsByAge;
+
 
 		 Handler(String name, Population population, ConfigHolder holder) {
 
@@ -353,6 +401,15 @@
 
 			 // key : iteration, value : admissions/filled beds
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
+			 this.postProcessHospitalAdmissionsByAge = new Int2ObjectAVLTreeMap<>(Collections.reverseOrder());
+
+			 Integer[] ageBins = {0, 18, 60, 80};
+
+			 for (int ageLowerBound : ageBins) {
+				 this.postProcessHospitalAdmissionsByAge.put(ageLowerBound, new Int2IntAVLTreeMap());
+			 }
+
+
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
@@ -470,6 +527,14 @@
 				 // newly admitted to hospital
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
+
+
+				 for (int lowerBound : postProcessHospitalAdmissionsByAge.keySet()) {
+					 if (person.age >= lowerBound) {
+						 postProcessHospitalAdmissionsByAge.get(lowerBound).merge(inHospital, 1, Integer::sum);
+						 break;
+					 }
+				 }
 
 				 if (goToICU(person, inHospital)) {
 
@@ -685,7 +750,7 @@
 	  * necessary for post processing.
 	  * @param
 	  */
-	 private static ConfigHolder configure(double facA, double facAICU) {
+	 private static ConfigHolder configure(Map<VirusStrain, Double> seriouslySickFactorModifier) {
 
 		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -695,26 +760,16 @@
 
 		 // configure strainConfig: add factorSeriouslySick for each strain
 		 VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWild);
-		 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorCritical(factorWildAndAlphaICU);
-		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
-		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorCritical(factorAlpha);
 
-		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
-		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorCritical(factorDeltaICU);
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 double seriouslySickFactorParent = 1.0;
+			 if (strain.parent != null) {
+				 seriouslySickFactorParent = strainConfig.getParams(strain.parent).getFactorSeriouslySick();
+			 }
+			 strainConfig.getOrAddParams(strain).setFactorSeriouslySick(seriouslySickFactorParent * seriouslySickFactorModifier.getOrDefault(strain, 1.0));
 
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(factorOmicronICU);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(factorOmicronICU);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorBA5);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorBA5ICU);
-
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
-
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(facA);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(facAICU);
+			 strainConfig.getOrAddParams(strain).setFactorCritical(factorICU);
+		 }
 
 		 // configure vaccinationConfig: set beta factor
 		 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);

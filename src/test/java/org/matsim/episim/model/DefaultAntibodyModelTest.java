@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.apache.log4j.Logger;
 import org.assertj.core.data.Offset;
 import org.junit.*;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
@@ -29,6 +30,7 @@ import tech.tablesaw.table.TableSliceGroup;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 
 import static com.google.common.math.Quantiles.*;
@@ -179,13 +181,16 @@ public class DefaultAntibodyModelTest {
 	@Test
 	public void testMixOfVaccinesAndInfections() {
 
-		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.mRNA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5);
-		IntList immunityEventDays = IntList.of(538, 644,720,736,845,958,979);
+
+		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
+		IntList immunityEventDays = IntList.of(50, 200, 600);
+//		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.mRNA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5);
+//		IntList immunityEventDays = IntList.of(538, 644,720,736,845,958,979);
 //		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 //		IntList immunityEventDays = IntList.of(1);
 
 		EpisimPerson person = EpisimTestUtils.createPerson();
-		person.setImmuneResponseMultiplier(0.1);
+//		person.setImmuneResponseMultiplier(0.1);
 
 		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 1000, person);
 
@@ -209,6 +214,18 @@ public class DefaultAntibodyModelTest {
 				}
 			}
 			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents, "nAb.html");
+
+			BufferedWriter writer = IOUtils.getBufferedWriter("nAb-table.csv");
+			try {
+				writer.write("day,antibodies,scenario");
+				for (int i = 0; i < records.size(); i++) {
+					writer.newLine();
+					writer.write(records.get(i) + "," + values.get(i) + "," + groupings.get(i));
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+
 
 		}
 

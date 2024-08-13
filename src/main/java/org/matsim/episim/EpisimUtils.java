@@ -547,8 +547,9 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 
+	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
+		//																																	// 18.5						25				18.5			18.5 -> move to 15?
 		Reader in = new FileReader(weatherCSV);
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -570,6 +571,68 @@ public final class EpisimUtils {
 				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 			else {
+				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			}
+
+			lastDate = date;
+		}
+
+		in = new FileReader(avgWeatherCSV);
+		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
+		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+
+		for (CSVRecord record : records) {
+			String monthDay = record.get("monthDay");
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+			tmaxPerDay.put(monthDay, tMax);
+			prcpPerDay.put(monthDay, prcp);
+		}
+
+		for (int i = 1; i < 365*3; i++) {
+			LocalDate date = lastDate.plusDays(i);
+			int month = date.getMonth().getValue();
+			int day = date.getDayOfMonth();
+			String monthDay = month + "-" + day;
+			double tMax = tmaxPerDay.get(monthDay);
+			double prcp = prcpPerDay.get(monthDay);
+			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
+				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
+			}
+			else {
+				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			}
+		}
+
+//		System.exit(-1);
+		return outdoorFractions;
+	}
+
+	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2Fall2022Override(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double TmidFall2022, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
+
+		Reader in = new FileReader(weatherCSV);
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		LocalDate lastDate = null;
+		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
+		for (CSVRecord record : records) {
+//			System.out.println( record );
+			LocalDate date = LocalDate.parse(record.get("date"), fmt);
+			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
+//				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
+				continue;
+			}
+
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+
+			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
+				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
+			} else if (date.isAfter(LocalDate.parse("2022-01-01")) && date.isBefore(LocalDate.parse("2023-01-01"))) {
+				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall2022, Trange, tMax, prcp, rainThreshold, alpha));
+			} else {
 				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 

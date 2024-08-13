@@ -13,6 +13,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?
 
+	// optimistic: 46
+	//
+
 	private final AntibodyModel.Config antibodyConfig;
 	private final SplittableRandom localRnd;
 
@@ -94,10 +97,19 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 		}
 
+		double halflifeDays = HALF_LIFE_DAYS;
+
+		if ((person.getNumInfections() > 0 && person.getNumVaccinations() > 0)
+			|| person.getNumInfections() > 4
+			|| person.getNumVaccinations() > 3) {
+
+			halflifeDays *= antibodyConfig.hlMultiForInfected; // 1, 2, 5
+		}
+
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS));
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halflifeDays));
 		}
 
 	}

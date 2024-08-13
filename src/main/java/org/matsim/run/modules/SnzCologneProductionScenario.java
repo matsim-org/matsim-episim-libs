@@ -54,7 +54,7 @@
  /**
   * Scenario for Cologne using Senozon events for different weekdays.
   */
- public class SnzCologneProductionScenario extends SnzProductionScenario {
+ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 	 public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario> {
 
@@ -66,6 +66,8 @@
 		 private double leisureNightlyScale = 1.0;
 		 private double householdSusc = 1.0;
 		 public CarnivalModel carnivalModel = CarnivalModel.no;
+
+		 public FutureVacations futureVacations = FutureVacations.no;
 
 		 private boolean sebastianUpdate = true;
 
@@ -119,6 +121,11 @@
 			 return this;
 		 }
 
+		 public Builder setFutureVacations(FutureVacations futureVacations){
+			 this.futureVacations = futureVacations;
+			 return this;
+		 }
+
 		 public Builder setSebastianUpdate(boolean sebastianUpdate) {
 			 this.sebastianUpdate = sebastianUpdate;
 			 return this;
@@ -151,8 +158,11 @@
 	 private final LocationBasedRestrictions locationBasedRestrictions;
 	 private final CarnivalModel carnivalModel;
 
+	 private final FutureVacations futureVacations;
 
 	 public enum CarnivalModel {yes, no}
+
+	 public enum FutureVacations {yes, no}
 
 	 public final boolean sebastianUpdate;
 
@@ -193,6 +203,7 @@
 		 this.importFactorAfterJune = builder.importFactorAfterJune;
 		 this.locationBasedRestrictions = builder.locationBasedRestrictions;
 		 this.carnivalModel = builder.carnivalModel;
+		 this.futureVacations = builder.futureVacations;
 
 		 this.sebastianUpdate = builder.sebastianUpdate;
 	 }
@@ -382,7 +393,7 @@
 
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221111.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221231.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -438,12 +449,12 @@
 		 //Herbstferien
 		 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 //Weihnachtsferien todo: reinstate xmas
-//		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-//		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-//		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
-//		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+		 //Weihnachtsferien
+		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//
+		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
+		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
 
 		 if (carnivalModel.equals(CarnivalModel.yes)) {
 			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
@@ -455,6 +466,168 @@
 			 builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure","leisPublic","leisPrivate");
 			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
 		 }
+
+		 if (futureVacations.equals(FutureVacations.yes)){
+
+//			#################################
+//			2022
+//			#################################
+//			 Ostern 11.04.-23.04.
+//				 Sommer 27.06.-09.08.
+//				 Herbst 4.10.-15.10.
+//				 Weihnachten 23.12.22 - 06.01.23
+			 // Ostern
+			 builder.restrict(LocalDate.parse("2022-04-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2022-04-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Sommer
+			 builder.restrict(LocalDate.parse("2022-06-27"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2022-08-09"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+			 // Herbst
+			 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 //Weihnachten
+			 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2022-02-05"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-04-04"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+			 builder.restrict(LocalDate.parse("2022-06-07"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-06-11"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2022-07-16"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-10-10"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+			 builder.restrict(LocalDate.parse("2022-12-23"), 0.2,  "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-01-07"), 1.0, "educ_higher");
+
+
+//			#################################
+//			2023
+//			#################################
+//			 Ostern 03.04.-15.04.
+//				 Sommer 22.06.-04.08.
+//				 Herbst 2.10.-14.10.
+//				 Weihnachten 21.12.23 - 05.01.24
+			 // Ostern
+			 builder.restrict(LocalDate.parse("2023-04-03"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2023-04-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Sommer
+			 builder.restrict(LocalDate.parse("2023-06-22"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2023-08-04"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Herbst
+			 builder.restrict(LocalDate.parse("2023-10-02"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2023-10-14"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 //Weihnachten
+			 builder.restrict(LocalDate.parse("2023-12-21"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2024-01-05"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2023-02-04"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-04-03"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+			 builder.restrict(LocalDate.parse("2023-05-30"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-06-03"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2023-07-15"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2023-10-09"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+			 builder.restrict(LocalDate.parse("2023-12-21"), 0.2,  "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-01-06"), 1.0, "educ_higher");
+
+
+
+//			#################################
+//			2024
+//			#################################
+//			 Ostern 25.03.-06.04.
+//				 Sommer 08.07.-20.08.
+//				 Herbst 14.10.-26.10.
+//				 Weihnachten 23.12.24 - 06.01.25
+
+			 // Ostern
+			 builder.restrict(LocalDate.parse("2024-03-25"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2024-04-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Sommer
+			 builder.restrict(LocalDate.parse("2024-07-08"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2024-08-20"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Herbst
+			 builder.restrict(LocalDate.parse("2024-10-14"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2024-10-26"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 //Weihnachten
+			 builder.restrict(LocalDate.parse("2024-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2025-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2024-02-03"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-04-07"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+			 builder.restrict(LocalDate.parse("2024-05-20"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-05-25"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2024-07-20"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2024-10-07"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+			 builder.restrict(LocalDate.parse("2024-12-23"), 0.2,  "educ_higher");
+			 builder.restrict(LocalDate.parse("2025-01-07"), 1.0, "educ_higher");
+
+
+
+//			#################################
+//			2025
+//			#################################
+//			 Ostern 14.04.-26.04.
+//				 Sommer 14.07.-26.08.
+//				 Herbst 13.10.-25.10.
+//				 Weihnachten 22.12.25-06.01.26
+			 // Ostern
+			 builder.restrict(LocalDate.parse("2025-04-14"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2025-04-26"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Sommer
+			 builder.restrict(LocalDate.parse("2025-07-14"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2025-08-26"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 // Herbst
+			 builder.restrict(LocalDate.parse("2025-10-13"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2025-10-25"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 //Weihnachten
+			 builder.restrict(LocalDate.parse("2025-12-22"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2026-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+			 // Winter Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2025-02-01"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2025-04-07"), 1.0, "educ_higher");
+
+			 // Pfingstferien für Uni
+//			 builder.restrict(LocalDate.parse("2023-05-30"), 0.2, "educ_higher");
+//			 builder.restrict(LocalDate.parse("2023-06-03"), 1.0, "educ_higher");
+
+			 // Sommer Vorlesungsfreiezeit für Uni
+			 builder.restrict(LocalDate.parse("2025-07-19"), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2025-10-06"), 1.0, "educ_higher");
+
+			 // Weihnachten Uni
+//			 builder.restrict(LocalDate.parse("2023-12-21"), 0.2,  "educ_higher");
+//			 builder.restrict(LocalDate.parse("2024-01-06"), 1.0, "educ_higher");
+
+
+		 }
+
+
 		 episimConfig.setInputDays(inputDays);
 
 

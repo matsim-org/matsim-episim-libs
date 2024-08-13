@@ -39,13 +39,13 @@ imm_inf <- imm_inf_raw %>%
 
   # mutate(vax = generic + mRNA + vector + ba1Update + ba5Update + natural)
 ggplot() + #nShowingSymptoms # SARS_CoV_2
+  geom_line(snap_inf, mapping = aes(date, nShowingSymptoms , group = seed, col = "base")) +
   geom_line(imm_inf, mapping = aes(date, nShowingSymptoms , group = seed, col = "imm-hist")) +
-  geom_line(snap_inf, mapping = aes(date, nShowingSymptoms , group = seed, col = "snapshot")) +
   scale_color_manual(name='Regression Model',
-                       breaks=c('snapshot', 'imm-hist'),
-                       values=c('snapshot'='red', 'imm-hist'='blue'))+
-  labs(alt = "hello world") +
-  ggtitle("Infections")
+                       breaks=c('base', 'imm-hist'),
+                       values=c('base'='red', 'imm-hist'='blue'))+
+  ggtitle("Cologne Cases") +
+  labs(x="Date", y="New Cases")
 
 
 
