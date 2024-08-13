@@ -4,7 +4,7 @@
 WD := ../shared-svn/projects/episim/matsim-files
 
 # All available Scenarios
-ALL := BerlinBrandenburg Brandenburg
+ALL := Brandenburg
 
 JAR := matsim-episim-*.jar
 # Shortcut to the scenario creation tool
@@ -24,7 +24,7 @@ clean:
 
 # Includes all the scenarios with local variables
 # https://stackoverflow.com/questions/32904790/can-i-have-local-variables-in-included-makefiles
-SUBDIRS := scenarios/BerlinBrandenburg.mk scenarios/Brandenburg.mk
+SUBDIRS := scenarios/Brandenburg.mk
 define INCLUDE_FILE
 path = $S
 include $S

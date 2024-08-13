@@ -852,7 +852,6 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 		}
 		return zipCodesLK;
 	}
-
 	/**
 	 * Finds the zipCodes for any Area. If more than one area contains the input
 	 * String an exception is thrown.
@@ -862,6 +861,12 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 	 * @throws IOException
 	 */
 	public HashMap<String, IntSet> findZipCodesForAnyArea(String anyArea) throws IOException {
+		return findZipCodesForAnyArea(anyArea, false);
+	}
+
+	public HashMap<String, IntSet> findZipCodesForAnyArea(String anyArea, boolean federalState) throws IOException {
+
+		String searchScope = federalState ? "bundesland" : "landkreis";
 		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
 		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
 		List<String> possibleAreas = new ArrayList<String>();
@@ -870,18 +875,18 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
 
 			for (CSVRecord record : parse) {
-				String nameLK = record.get("landkreis");
-				if (nameLK.isEmpty())
-					nameLK = record.get("ort");
+				String nameArea = record.get(searchScope);
+				if (nameArea.isEmpty())
+					nameArea = record.get("ort");
 
-				if (nameLK.contains(anyArea)) {
+				if (nameArea.contains(anyArea)) {
 
-					if (!possibleAreas.contains(nameLK))
-						possibleAreas.add(nameLK);
-					if (zipCodes.containsKey(nameLK)) {
-						zipCodes.get(nameLK).add(Integer.parseInt(record.get("plz")));
+					if (!possibleAreas.contains(nameArea))
+						possibleAreas.add(nameArea);
+					if (zipCodes.containsKey(nameArea)) {
+						zipCodes.get(nameArea).add(Integer.parseInt(record.get("plz")));
 					} else
-						zipCodes.put(nameLK, new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
+						zipCodes.put(nameArea, new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
 				}
 			}
 		}
@@ -896,6 +901,9 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 								+ possibleAreas.toString() + " Choose one and start again.");
 		return zipCodes;
 	}
+
+
+
 
 
 	/** Finds the date after the last day in the given output file.

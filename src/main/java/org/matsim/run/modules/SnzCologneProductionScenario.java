@@ -208,15 +208,6 @@
 		 this.sebastianUpdate = builder.sebastianUpdate;
 	 }
 
-
-	 /**
-	  * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
-	  */
-	 private static String inputForSample(String base, int sample) {
-		 Path folder = (sample == 100 | sample == 25) ? INPUT : INPUT.resolve("samples");
-		 return folder.resolve(String.format(base, sample)).toString();
-	 }
-
 	 @Override
 	 protected void configure() {
 

@@ -21,7 +21,6 @@
 package org.matsim.run.modules;
 
 import com.google.inject.Provides;
-import com.google.inject.multibindings.Multibinder;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
@@ -34,7 +33,6 @@ import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
-import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.model.vaccination.VaccinationFromData;
@@ -130,14 +128,6 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.easterModel = builder.easterModel;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
-	}
-
-	/**
-	 * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
-	 */
-	private static String inputForSample(String base, int sample) {
-		Path folder = (sample == 100 | sample == 25) ? INPUT : INPUT.resolve("samples");
-		return folder.resolve(String.format(base, sample)).toString();
 	}
 
 	@Override

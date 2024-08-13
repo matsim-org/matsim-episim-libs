@@ -24,6 +24,7 @@ import static org.matsim.episim.model.Transition.to;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -447,6 +448,14 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			double fraction = (double) i / days;
 			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
 		}
+	}
+
+	/**
+	 * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
+	 */
+	protected static String inputForSample(String base, int sample) {
+		Path folder = (sample == 100 | sample == 25) ? SnzBerlinProductionScenario.INPUT : SnzBerlinProductionScenario.INPUT.resolve("samples");
+		return folder.resolve(String.format(base, sample)).toString();
 	}
 
 	@Provides

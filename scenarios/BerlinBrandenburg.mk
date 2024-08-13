@@ -41,12 +41,14 @@ $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(
 $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
 	$(sc) downSample 0.25\
    --population $<\
+   --facilities $(in)/facilities_assigned_simplified.xml.gz\
    --events $(in)/de2020gsmwt_events_reduced.xml.gz\
    --events $(in)/de2020gsmsa_events_reduced.xml.gz\
    --events $(in)/de2020gsmso_events_reduced.xml.gz\
    --output $(tmp)
 
 	mv $(tmp)/population0.25.xml.gz $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz
+	mv $(tmp)/facilities0.25.xml.gz $(out)/bb_2020-week_snz_episim_facilities_25pt.xml.gz
 	mv $(tmp)/de2020gsmwt_events_reduced-0.25.xml.gz $(out)/bb_2020-week_snz_episim_events_wt_25pt.xml.gz
 	mv $(tmp)/de2020gsmsa_events_reduced-0.25.xml.gz $(out)/bb_2020-week_snz_episim_events_sa_25pt.xml.gz
 	mv $(tmp)/de2020gsmso_events_reduced-0.25.xml.gz $(out)/bb_2020-week_snz_episim_events_so_25pt.xml.gz
@@ -57,7 +59,7 @@ $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(
 	 --events $(out)/bb_2020-week_snz_episim_events_wt_25pt.xml.gz\
 	 --events $(out)/bb_2020-week_snz_episim_events_sa_25pt.xml.gz\
 	 --events $(out)/bb_2020-week_snz_episim_events_so_25pt.xml.gz\
-	 --shape-file $(out)/../shape-File/BerlinBrandenburg.shp\
+	 --shape-file $(out)/shape-File/BerlinBrandenburg.shp\
 	 --output $(out)
 
 $(out)/wLeisure/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz $(out)/wLeisure/bb_2020-week_snz_episim_events_wt_25pt_split.xml.gz &: \
@@ -66,7 +68,7 @@ $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(
 	 --events $(out)/bb_2020-week_snz_episim_events_wt_25pt.xml.gz\
 	 --events $(out)/bb_2020-week_snz_episim_events_sa_25pt.xml.gz\
 	 --events $(out)/bb_2020-week_snz_episim_events_so_25pt.xml.gz\
-	 --shape-file $(out)/../shape-File/dilutionArea.shp\
+	 --shape-file $(out)/shape-File/BerlinBrandenburg.shp\
 	 --remap visit --remap leisure\
 	 --output $(out)/wLeisure
 
@@ -78,12 +80,14 @@ $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_filtered
 $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
 	$(sc) downSample 1.0\
    --population $<\
+   --facilities $(in)/facilities_assigned_simplified.xml.gz\
    --events $(in)/de2020gsmwt_events_reduced.xml.gz\
    --events $(in)/de2020gsmsa_events_reduced.xml.gz\
    --events $(in)/de2020gsmso_events_reduced.xml.gz\
    --output $(tmp)
 
 	mv $(tmp)/population1.0.xml.gz $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_filtered.xml.gz
+	mv $(tmp)/facilities1.0.xml.gz $(out)/bb_2020-week_snz_episim_facilities_100pt.xml.gz
 	mv $(tmp)/de2020gsmwt_events_reduced-1.0.xml.gz $(out)/bb_2020-week_snz_episim_events_wt_100pt.xml.gz
 	mv $(tmp)/de2020gsmsa_events_reduced-1.0.xml.gz $(out)/bb_2020-week_snz_episim_events_sa_100pt.xml.gz
 	mv $(tmp)/de2020gsmso_events_reduced-1.0.xml.gz $(out)/bb_2020-week_snz_episim_events_so_100pt.xml.gz
@@ -94,7 +98,7 @@ $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_filtered
 	 --events $(out)/bb_2020-week_snz_episim_events_wt_100pt.xml.gz\
 	 --events $(out)/bb_2020-week_snz_episim_events_sa_100pt.xml.gz\
 	 --events $(out)/bb_2020-week_snz_episim_events_so_100pt.xml.gz\
-	 --shape-file $(out)/../shape-File/dilutionArea.shp\
+	 --shape-file $(out)/shape-File/BerlinBrandenburg.shp\
 	 --output $(out)
 
 #################
@@ -106,14 +110,16 @@ $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_10pt.x
 $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
 	$(sc) downSample 0.1\
 	 --population $<\
+	 --facilities $(in)/facilities_assigned_simplified.xml.gz\
 	 --events $(in)/de2020gsmwt_events_reduced.xml.gz\
 	 --events $(in)/de2020gsmsa_events_reduced.xml.gz\
 	 --events $(in)/de2020gsmso_events_reduced.xml.gz\
 	 --output $(tmp)
 
-	mkdir $(out)/samples
+	mkdir -p $(out)/samples # added -p flag to avoid error if directory already exists
 
-	mv $(tmp)/population0.1.xml.gz $(out)/samples//bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_10pt.xml.gz
+	mv $(tmp)/population0.1.xml.gz $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_10pt.xml.gz
+	mv $(tmp)/facilities0.1.xml.gz $(out)/samples/bb_2020-week_snz_episim_facilities_10pt.xml.gz
 	mv $(tmp)/de2020gsmwt_events_reduced-0.1.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_wt_10pt.xml.gz
 	mv $(tmp)/de2020gsmsa_events_reduced-0.1.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_sa_10pt.xml.gz
 	mv $(tmp)/de2020gsmso_events_reduced-0.1.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_so_10pt.xml.gz
@@ -123,13 +129,15 @@ $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_5pt_sp
 $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
 	$(sc) downSample 0.05\
 	 --population $<\
+	 --facilities $(in)/facilities_assigned_simplified.xml.gz\
 	 --events $(in)/de2020gsmwt_events_reduced.xml.gz\
 	 --events $(in)/de2020gsmsa_events_reduced.xml.gz\
 	 --events $(in)/de2020gsmso_events_reduced.xml.gz\
 	 --output $(tmp)
 
-	mkdir $(out)/samples
-	mv $(tmp)/population0.05.xml.gz $(out)/samples//bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_5pt_split.xml.gz
+	mkdir -p $(out)/samples # added -p flag to avoid error if directory already exists
+	mv $(tmp)/population0.05.xml.gz $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_5pt_split.xml.gz
+	mv $(tmp)/facilities0.05.xml.gz $(out)/samples/bb_2020-week_snz_episim_facilities_5pt.xml.gz
 	mv $(tmp)/de2020gsmwt_events_reduced-0.05.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_wt_5pt_split.xml.gz
 	mv $(tmp)/de2020gsmsa_events_reduced-0.05.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_sa_5pt_split.xml.gz
 	mv $(tmp)/de2020gsmso_events_reduced-0.05.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_so_5pt_split.xml.gz
@@ -138,13 +146,15 @@ $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_1pt_sp
 $(out)/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
 	$(sc) downSample 0.01\
 	 --population $<\
+	 --facilities $(in)/facilities_assigned_simplified.xml.gz\
 	 --events $(in)/de2020gsmwt_events_reduced.xml.gz\
 	 --events $(in)/de2020gsmsa_events_reduced.xml.gz\
 	 --events $(in)/de2020gsmso_events_reduced.xml.gz\
 	 --output $(tmp)
 
-	mkdir $(out)/samples
-	mv $(tmp)/population0.01.xml.gz $(out)/samples//bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_1pt_split.xml.gz
+	mkdir -p $(out)/samples # added -p flag to avoid error if directory already exists
+	mv $(tmp)/population0.01.xml.gz $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_1pt_split.xml.gz
+	mv $(tmp)/facilities0.01.xml.gz $(out)/samples/bb_2020-week_snz_episim_facilities_1pt.xml.gz
 	mv $(tmp)/de2020gsmwt_events_reduced-0.01.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_wt_1pt_split.xml.gz
 	mv $(tmp)/de2020gsmsa_events_reduced-0.01.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_sa_1pt_split.xml.gz
 	mv $(tmp)/de2020gsmso_events_reduced-0.01.xml.gz $(out)/samples/bb_2020-week_snz_episim_events_so_1pt_split.xml.gz
@@ -156,5 +166,5 @@ $(out)/samples/bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_10pt.x
 	 --events $(out)/samples/bb_2020-week_snz_episim_events_wt_10pt.xml.gz\
 	 --events $(out)/samples/bb_2020-week_snz_episim_events_sa_10pt.xml.gz\
 	 --events $(out)/samples/bb_2020-week_snz_episim_events_so_10pt.xml.gz\
-	 --shape-file $(out)/../shape-File/dilutionArea.shp\
+	 --shape-file $(out)/shape-File/BerlinBrandenburg.shp\
 	 --output $(out)/samples
