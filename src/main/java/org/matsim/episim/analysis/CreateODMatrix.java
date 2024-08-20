@@ -21,7 +21,6 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.scenarioCreation.DistrictLookup;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
