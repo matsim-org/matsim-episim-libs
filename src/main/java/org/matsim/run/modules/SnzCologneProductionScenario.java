@@ -208,6 +208,15 @@
 		 this.sebastianUpdate = builder.sebastianUpdate;
 	 }
 
+
+	 /**
+	  * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
+	  */
+	 private static String inputForSample(String base, int sample) {
+		 Path folder = (sample == 100 | sample == 25) ? INPUT : INPUT.resolve("samples");
+		 return folder.resolve(String.format(base, sample)).toString();
+	 }
+
 	 @Override
 	 protected void configure() {
 
@@ -658,6 +667,7 @@
 			 LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			 for (int ii = 0; ii <= 14; ii++) {
 				 LocalDate date = masksCenterDate.plusDays(-14 / 2 + ii);
+				 // assume 90% compliance, divided btwn 3 mask types.
 				 double clothFraction = 1. / 3. * 0.9;
 				 double ffpFraction = 1. / 3. * 0.9;
 				 double surgicalFraction = 1. / 3. * 0.9;
