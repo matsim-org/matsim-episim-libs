@@ -536,6 +536,25 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 
 		//---------------------------------------
+		//		T R A C I N G
+		//---------------------------------------
+
+		SnzProductionScenario.configureTracing(config, brandenburgFactor);
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+		tracingConfig.setQuarantineVaccinated((Map.of(
+			episimConfig.getStartDate(), false
+		)));
+
+		tracingConfig.setQuarantineDuration(Map.of(
+			episimConfig.getStartDate(), 14,
+			LocalDate.parse("2022-01-01"), 10
+		));
+
+		tracingConfig.setQuarantineStatus(Map.of(
+			episimConfig.getStartDate(), EpisimPerson.QuarantineStatus.atHome
+		));
+		//---------------------------------------
 		//		W E A T H E R
 		//---------------------------------------
 
