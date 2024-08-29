@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.analysis.InfectionHomeLocation;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.run.RunParallel;
@@ -41,7 +42,7 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 			.setInfectionModel(InfectionModelWithAntibodies.class)
 //			.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 //			.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
-			.setSample(1)
+			.setSample(25)
 			.build();
 	}
 
@@ -59,7 +60,8 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 	 */
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
-		return List.of();
+		return List.of(new InfectionHomeLocation().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input",
+			"--population-file", "br_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz"));
 	}
 
 	/*
@@ -91,10 +93,10 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 	 */
 	public static final class Params {
 		// general
-		@GenerateSeeds(1)
+		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({1.0, 2.0})
+		@Parameter({0.8, 0.9, 1.0, 1.1, 1.2})
 		public double thetaFactor;
 	}
 
@@ -108,7 +110,7 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 				RunParallel.OPTION_SETUP, StarterBatchBrandenburg.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(8),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(50),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(20),
 				RunParallel.OPTION_METADATA
 		};
 

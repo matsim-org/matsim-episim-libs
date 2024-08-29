@@ -59,6 +59,9 @@ aggregate_run() {
 
     rm -r "${tmp:?}/$run"
 
+    gzip --best *.infectionLoc.csv
+    copy_output *.infectionLoc.csv.gz $tmp
+
     cd "$cwd" || exit
 }
 

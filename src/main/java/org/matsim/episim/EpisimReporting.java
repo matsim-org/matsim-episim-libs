@@ -612,7 +612,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Write all reports for each district
 		for (InfectionReport r : reports.values()) {
-			if (r.name.equals("total")) continue;
+//			if (r.name.equals("total")) continue;
 
 			String[] array = new String[InfectionsWriterFields.values().length];
 			array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);

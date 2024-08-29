@@ -149,7 +149,7 @@ public class UtilsJR {
 	}
 
 
-    protected static void printInitialAntibodiesToConsole(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies, boolean ignoreSuperfluous) {
+    public static void printInitialAntibodiesToConsole(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies, boolean ignoreSuperfluous) {
 
 		List<ImmunityEvent> ignoredEvents = new ArrayList<>();
 		if (ignoreSuperfluous) {
