@@ -286,8 +286,8 @@
 
 		 double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model, -> 2_352_480
 
-		 if (this.sample != 25 && this.sample != 100)
-			 throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		 if (this.sample != 25 && this.sample != 100)
+//			 throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		 //general config
 		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
