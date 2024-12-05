@@ -383,7 +383,7 @@ public abstract class AbstractContactModel implements ContactModel {
 			throw new IllegalStateException("Person to be infected is in full quarantine.");
 		}
 		if (infector.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
-			throw new IllegalStateException("Infector is in ful quarantine.");
+			throw new IllegalStateException("Infector is in full quarantine.");
 		}
 		//		if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
 		//			throw new IllegalStateException("Person and infector are not in same container!");

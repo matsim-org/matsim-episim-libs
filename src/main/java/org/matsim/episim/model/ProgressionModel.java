@@ -54,13 +54,13 @@ public interface ProgressionModel {
 	 */
 	default void afterStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day) {}
 
-	
+
 	/**
 	 * Checks whether any state transitions are possible. Otherwise the simulation will end.
 	 */
 	boolean canProgress(EpisimReporting.InfectionReport report);
 
-	
+
 	/**
 	 * Return the number of days between current state and next one.
 	 * @return next day of transition, or -1 if there is none.
@@ -73,4 +73,9 @@ public interface ProgressionModel {
 	 */
 	EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id<Person> personId);
 
+	/**
+	 * Removes agent from nextStateAndDay
+	 * @param id id of agent to remove
+	 */
+	void removeAgent(Id<Person> id);
 }

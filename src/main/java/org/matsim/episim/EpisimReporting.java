@@ -43,6 +43,7 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimPerson.VaccinationStatus;
 import org.matsim.episim.events.*;
+import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.Restriction;
@@ -848,6 +849,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			out[3] = String.valueOf(infectedByStrain.getInt(strain) / sampleSize);
 			writer.append(diseaseImport, out);
 		}
+	}
+
+	/**
+	 * Write number of initially infected persons.
+	 */
+	void reportDiseaseImportOde(int infected, int iteration, String date) {
+		String[] out = new String[4];
+		out[0] = String.valueOf(iteration);
+		out[1] = date;
+		out[2] = "ODE";
+		out[3] = String.valueOf(infected / sampleSize);
+		writer.append(diseaseImport, out);
 	}
 
 	/**

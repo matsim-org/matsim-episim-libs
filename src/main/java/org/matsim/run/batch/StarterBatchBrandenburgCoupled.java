@@ -10,24 +10,24 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.analysis.InfectionHomeLocation;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
-import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBrandenburgProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.NavigableMap;
 
 
 /**
  * boilerplate batch for brandenburg
  */
-public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg.Params> {
+public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBrandenburgCoupled.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
 
@@ -56,9 +56,10 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 	private SnzBrandenburgProductionScenario getBindings(Params params) {
 		return new SnzBrandenburgProductionScenario.Builder()
 			.setScaleForActivityLevels(params == null ? 1.0 : params.scale)
+//			.setLocationBasedRestrictions(SnzProductionScenario.LocationBasedRestrictions.yes)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 			.setInfectionModel(InfectionModelWithAntibodies.class)
-			.setSample(1)
+			.setSample(25)
 			.build();
 	}
 
@@ -74,11 +75,11 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 	/*
 	 * Here you can add post-processing classes, that will be executed after the simulation.
 	 */
-//	@Override
-//	public Collection<OutputAnalysis> postProcessing() {
-//		return List.of(new InfectionHomeLocation().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input",
-//			"--population-file", "br_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz"));
-//	}
+	@Override
+	public Collection<OutputAnalysis> postProcessing() {
+		return List.of(new InfectionHomeLocation().withArgs("--output", "./output/", "--input", SnzBrandenburgProductionScenario.INPUT.toString(),//"/Users/jakob/git/shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input",
+			"--population-file", "br_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz"));
+	}
 
 	/*
 	 * Here you can specify configuration options
@@ -102,31 +103,50 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 		// Level 2: Episim specific configs:
 		// 		 2a: general episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-//		episimConfig.setThreads(1);
+		episimConfig.setStartDate(LocalDate.parse("2020-03-03"));
 
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7 * params.thetaFactor);
-
-		//		 2b: specific config groups, e.g. virusStrainConfigGroup
-//		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-
-
-		{
-			Map<LocalDate, Integer> infPerDayWild = episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2);
-			LocalDate startDateImport = LocalDate.parse("2020-08-01");
-			LocalDate endDateImport = LocalDate.parse("2020-11-02");
-
-			infPerDayWild.put(startDateImport, (int) params.summerImport);
-
-			for (LocalDate date : infPerDayWild.keySet()) {
-				if (date.isAfter(startDateImport) && date.isBefore(endDateImport)) {
-					infPerDayWild.put(date, (int) params.summerImport);
-				}
-			}
-
-			infPerDayWild.put(endDateImport, 1);
+		episimConfig.setOdeCouplingFactor(params.couplingfactor);
+		switch (params.district) {
+			case "Frankfurt":
+				episimConfig.setOdeCouplingDistrict("Frankfurt (Oder)");
+				break;
+			case "Brandenburg":
+				episimConfig.setOdeCouplingDistrict("Brandenburg an der Havel");
+				break;
+			default:
+				episimConfig.setOdeCouplingDistrict(params.district);
+				break;
 		}
+
+		// 2b: specific config groups, e.g. virusStrainConfigGroup
+		// VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+
+		// turn off all import
+
+		episimConfig.setInitialInfections(0);
+//		episimConfig.setThreads(1);
+
+		for (NavigableMap<LocalDate, Integer> map : episimConfig.getInfections_pers_per_day().values()) {
+			map.clear();
+		}
+		// summer import
+//		{
+//			Map<LocalDate, Integer> infPerDayWild = episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2);
+//			LocalDate startDateImport = LocalDate.parse("2020-08-01");
+//			LocalDate endDateImport = LocalDate.parse("2020-11-02");
+//
+//			infPerDayWild.put(startDateImport, (int) params.summerImport);
+//
+//			for (LocalDate date : infPerDayWild.keySet()) {
+//				if (date.isAfter(startDateImport) && date.isBefore(endDateImport)) {
+//					infPerDayWild.put(date, (int) params.summerImport);
+//				}
+//			}
+//
+//			infPerDayWild.put(endDateImport, 1);
+//		}
 
 		if(params.ci.equals("red")){
 			//work
@@ -166,26 +186,37 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 	 */
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(2)
 		public long seed;
 
-		@StringParameter({"base", "red"})
+		@StringParameter({"red"})
 		public String ci;
 
 		@Parameter({1.3})
 		public double scale;
 
-		@Parameter({0.1, 0.2, 0.3, 0.7, 1.0})
+//		@Parameter({ 0.6, 0.8,  1.0, 1.2, 1.4, 1.6, 2.0})
+//		@Parameter({0.8, 1.0,  1.2})
+		@Parameter({10.0})
 		public double thetaFactor;
 
-		@Parameter({1, 2, 4, 8, 16})
-		public double summerImport;
+//		@Parameter({1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 5.0, 7.5, 10.})
+//		@Parameter({0.5, 1.0, 2.0})
+		@Parameter({10.0})
+		public double couplingfactor;
 
-		@Parameter({ 0.0, 0.25, 0.5, 0.75, 1.0})
+//		@StringParameter({"Cottbus", "Brandenburg", "Frankfurt", "Potsdam",""})
+		@StringParameter({"Potsdam"})
+		public String district;
+
+
+//		@Parameter({1, 2, 4, 8, 16})
+//		public double summerImport;
+
+		@Parameter({0.25})
 		public double pHouseholds;
 
 	}
-
 
 
 	/*
@@ -193,10 +224,10 @@ public class StarterBatchBrandenburg implements BatchRun<StarterBatchBrandenburg
 	 */
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, StarterBatchBrandenburg.class.getName(),
+				RunParallel.OPTION_SETUP, StarterBatchBrandenburgCoupled.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_TASKS, Integer.toString(8),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(20),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(30),
 				RunParallel.OPTION_METADATA
 		};
 

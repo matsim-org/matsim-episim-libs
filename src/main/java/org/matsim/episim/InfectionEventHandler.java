@@ -20,11 +20,13 @@
  */
 package org.matsim.episim;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.objects.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,6 +47,7 @@ import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
@@ -57,7 +60,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.*;
 
@@ -186,6 +188,9 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Set of additional vaccination strategies.
 	 */
 	private Set<VaccinationModel> vaccinations;
+
+	@Inject
+	ContactModel contactModel;
 
 	@Inject
 	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
@@ -833,6 +838,10 @@ public final class InfectionEventHandler implements Externalizable {
 
 		activityParticipationModel.setRestrictionsForIteration(iteration, im);
 
+//		long susceptibleCommuters = 0L;
+//		long nonsusceptibleCommuters = 0L;
+//		long naive = 0L;
+//		long notNaive = 0L;
 		for (EpisimPerson person : personMap.values()) {
 			// update person activity participation for the day
 			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),
@@ -842,7 +851,27 @@ public final class InfectionEventHandler implements Externalizable {
 
 			activityParticipationModel.applyQuarantine(person, person.getActivityParticipation(), person.getStartOfDay(day), person.getActivities(day));
 
+//			if(person.getAttributes().getAsMap().containsKey("berlin")){
+//				if(person.getDiseaseStatus().equals(EpisimPerson.DiseaseStatus.susceptible)){
+//					susceptibleCommuters++;
+//				} else {
+//					nonsusceptibleCommuters++;
+//				}
+//
+//				if (person.getAntibodies(VirusStrain.SARS_CoV_2) == 0.0) {
+//					naive++;
+//				}else {
+//					notNaive++;
+//				}
+//
+//			}
 		}
+
+//		log.warn("Susceptible: " + susceptibleCommuters);
+//		log.warn("Non Susceptible " + nonsusceptibleCommuters);
+//		log.warn("Naive " + naive);
+//		log.warn("Not Naive " + notNaive);
+
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
 		handlers.forEach(h -> {
@@ -998,6 +1027,15 @@ public final class InfectionEventHandler implements Externalizable {
 			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
 		}
 
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
+
+		if (contactModel instanceof SymmetricContactModelWithOdeCoupling) {
+			long odeImport = ((SymmetricContactModelWithOdeCoupling) contactModel).getOdeDiseaseImportCount();
+			reporting.reportDiseaseImportOde((int) odeImport, iteration, date.toString());
+			((SymmetricContactModelWithOdeCoupling) contactModel).resetOdeDiseaseImportCount();
+
+		}
+
 	}
 
 
@@ -1031,7 +1069,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Container that is a facility and occurred during an activity.
 	 */
 	public static final class EpisimFacility extends EpisimContainer<ActivityFacility> {
-		EpisimFacility(Id<ActivityFacility> facilityId) {
+		public EpisimFacility(Id<ActivityFacility> facilityId) {
 			super(facilityId);
 		}
 	}

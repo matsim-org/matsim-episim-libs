@@ -31,11 +31,17 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Population;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
+import org.matsim.facilities.ActivityFacilities;
+import org.matsim.facilities.FacilitiesWriter;
+import org.matsim.facilities.MatsimFacilitiesReader;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import picocli.CommandLine;
@@ -66,20 +72,28 @@ public class DistrictLookup implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(DistrictLookup.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
-	private Path input;
+	// population
+	@CommandLine.Option(names = "--inputPopulation", description = "Population file")
+	private Path inputPopulation;
+	@CommandLine.Option(names = "--output", description = "Output population file")
+	private Path outputPopulation;
 
+	// facilities
+	@CommandLine.Option(names = "--inputFacilities", description = "Facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input/samples/br_2020-week_snz_episim_facilities_1pt.xml.gz")
+	private Path inputFacilities;
+	@CommandLine.Option(names = "--outputFacilities", description = "Output Facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input/samples/br_2020-week_snz_episim_facilities_withDistricts_1pt.xml.gz")
+	private Path outputFacilities;
+
+	// shape file
 	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
-
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
-	private Path output;
 
 	@CommandLine.Option(names = "--attr", description = "Attribute name in the shapefile, which contains the district name", defaultValue = "name_2")
 	private String attr;
 
-	@CommandLine.Option(names = "--input-crs", description = "Overwrite CRS of the population home coordinates. " +
-			"If not given it will be read from the population attributes.", defaultValue = "EPSG:25832")
+	// CRS
+	@CommandLine.Option(names = "--input-crs", description = "Overwrite CRS of the population/facilities coordinates. " +
+				"If not given it will be read from the population attributes.", defaultValue = "EPSG:25832")
 	private String inputCRS;
 
 	// because of the own transformation classes of matsim, the crs can not be easily read from the shapefile, but has to be explicitly defined
@@ -93,39 +107,76 @@ public class DistrictLookup implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Population population = PopulationUtils.readPopulation(input.toString());
-		String crs = inputCRS.equals("null") ? (String) population.getAttributes().getAttribute("coordinateReferenceSystem") : inputCRS;
+		// population
+		if (inputPopulation == null || outputPopulation == null) {
 
-		CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation(crs, shapeCRS);
+			log.info("population skipped");
+		} else {
+			Population population = PopulationUtils.readPopulation(inputPopulation.toString());
+			String crs = inputCRS.equals("null") ? (String) population.getAttributes().getAttribute("coordinateReferenceSystem") : inputCRS;
 
-		Index index = new Index(shapeFile.toFile(), ct, attr);
+			CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation(crs, shapeCRS);
 
-		// Count errors
-		AtomicInteger unknown = new AtomicInteger(0);
+			Index index = new Index(shapeFile.toFile(), ct, attr);
 
-		population.getPersons().values().parallelStream().forEach(p -> {
-			try {
-				double x = (double) p.getAttributes().getAttribute("homeX");
-				double y = (double) p.getAttributes().getAttribute("homeY");
+			// Count errors
+			AtomicInteger unknown = new AtomicInteger(0);
 
-				String district = index.query(x, y);
+			population.getPersons().values().parallelStream().forEach(p -> {
+				try {
+					double x = (double) p.getAttributes().getAttribute("homeX");
+					double y = (double) p.getAttributes().getAttribute("homeY");
 
-				p.getAttributes().putAttribute("district", district);
-			} catch (RuntimeException e) {
-				unknown.incrementAndGet();
+					String district = index.query(x, y);
+
+					p.getAttributes().putAttribute("district", district);
+				} catch (RuntimeException e) {
+					unknown.incrementAndGet();
+				}
+			});
+
+			// Simple check if the lookup might be wrong
+			if (unknown.get() >= population.getPersons().size() * 0.5) {
+				log.error("District lookup failed for {} out of {} persons.", unknown, population.getPersons().size());
+				return 1;
 			}
-		});
 
-		// Simple check if the lookup might be wrong
-		if (unknown.get() >= population.getPersons().size() * 0.5) {
-			log.error("District lookup failed for {} out of {} persons.", unknown, population.getPersons().size());
-			return 1;
+			log.info("Finished with failed lookup for {} out of {} persons.", unknown, population.getPersons().size());
+
+			PopulationUtils.writePopulation(population, outputPopulation.toString());
 		}
+		// facilities
 
-		log.info("Finished with failed lookup for {} out of {} persons.", unknown, population.getPersons().size());
+		if (inputFacilities == null || outputFacilities == null) {
+			log.info("facilities  skipped as parameters are not set ");
+		} else {
+			Scenario scenario = ScenarioUtils.loadScenario(ConfigUtils.createConfig());
+			new MatsimFacilitiesReader(scenario).readFile(inputFacilities.toString());
 
-		PopulationUtils.writePopulation(population, output.toString());
+			ActivityFacilities facilities = scenario.getActivityFacilities();
 
+			String crs = inputCRS.equals("null") ? (String) facilities.getAttributes().getAttribute("coordinateReferenceSystem") : inputCRS;
+
+			CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation(crs, shapeCRS);
+
+			Index index = new Index(shapeFile.toFile(), ct, attr);
+
+			// Count errors
+			AtomicInteger unknown = new AtomicInteger(0);
+			facilities.getFacilities().values().parallelStream().forEach(f -> {
+				try {
+					double x = f.getCoord().getX();
+					double y = f.getCoord().getY();
+
+					String district = index.query(x, y);
+					f.getAttributes().putAttribute("district", district);
+				} catch (RuntimeException e) {
+					unknown.incrementAndGet();
+				}
+			});
+
+			new FacilitiesWriter(facilities).write(outputFacilities.toString());
+		}
 		return 0;
 	}
 

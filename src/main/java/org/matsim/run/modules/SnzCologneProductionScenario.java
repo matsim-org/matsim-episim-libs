@@ -30,7 +30,6 @@
  import org.matsim.episim.model.activity.LocationBasedParticipationModel;
  import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
  import org.matsim.episim.model.listener.HouseholdSusceptibility;
- import org.matsim.episim.model.listener.WriteAntibodies;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
  import org.matsim.episim.model.testing.TestType;

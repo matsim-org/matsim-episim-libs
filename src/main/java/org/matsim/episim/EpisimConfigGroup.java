@@ -50,6 +50,8 @@ import java.util.stream.Collectors;
  */
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
+	private static final String ODE_COUPLING_FACTOR = "odeCouplingFactor";
+	private static final String ODE_COUPLING_DISTRICT = "odeCouplingDistrict";
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
@@ -85,6 +87,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
 
+	private static final String FACILITIES_PATH = "facilitiesPath";
+
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
 
 	/**
@@ -111,7 +115,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private final Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 
-	/**
+	private double odeCouplingFactor = 0.0;
+
+	private String odeCouplingDistrict = null;
+
+    /**
 	 * Which events to write in the output.
 	 */
 	private WriteEvents writeEvents = WriteEvents.episim;
@@ -167,6 +175,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private SingleEventFile singleEventFile = SingleEventFile.yes;
 	private boolean endEarly = false;
 	private int threads = 2;
+	private String facilitiesPath = null;
 
 
 	/**
@@ -179,6 +188,26 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public EpisimConfigGroup() {
 		super(GROUPNAME);
+	}
+
+
+	@StringGetter(ODE_COUPLING_FACTOR)
+	public double getOdeCouplingFactor() {
+		return odeCouplingFactor;
+	}
+
+	@StringSetter(ODE_COUPLING_FACTOR)
+	public void setOdeCouplingFactor(double odeCouplingFactor) {
+		this.odeCouplingFactor = odeCouplingFactor;
+	}
+	@StringGetter(ODE_COUPLING_DISTRICT)
+	public String getOdeCouplingDistrict() {
+		return odeCouplingDistrict;
+	}
+
+	@StringSetter(ODE_COUPLING_DISTRICT)
+	public void setOdeCouplingDistrict(String odeCouplingDistrict) {
+		this.odeCouplingDistrict = odeCouplingDistrict;
 	}
 
 	public String getInputEventsFile() {
@@ -702,6 +731,15 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.reportTimeUse = reportTimeUse;
 	}
 
+	@StringSetter(FACILITIES_PATH)
+	public void setFacilitiesFile(final String facilitiesPath){
+		this.facilitiesPath = facilitiesPath;
+	}
+
+	@StringGetter(FACILITIES_PATH)
+	public String getFacilitiesFile() {
+		return facilitiesPath;
+	}
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
@@ -809,7 +847,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void clearInputEventsFiles() {
 		clearParameterSetsForType(EventFileParams.SET_TYPE);
 	}
-
 	/**
 	 * Get a copy of container params. Don't use this heavily, it is slow because a new map is created every time.
 	 */

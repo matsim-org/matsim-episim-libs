@@ -36,6 +36,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
+import org.matsim.facilities.MatsimFacilitiesReader;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;

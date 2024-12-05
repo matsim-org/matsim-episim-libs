@@ -21,31 +21,18 @@
 
  import com.google.common.base.Joiner;
  import com.google.inject.Inject;
- import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
- import it.unimi.dsi.fastutil.doubles.DoubleList;
  import it.unimi.dsi.fastutil.ints.*;
- import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
- import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
  import org.apache.logging.log4j.Level;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.apache.logging.log4j.core.config.Configurator;
  import org.matsim.api.core.v01.Coord;
- import org.matsim.api.core.v01.Id;
- import org.matsim.api.core.v01.IdMap;
  import org.matsim.api.core.v01.Scenario;
- import org.matsim.api.core.v01.population.Person;
  import org.matsim.api.core.v01.population.Population;
- import org.matsim.core.config.Config;
- import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
- import org.matsim.core.utils.geometry.CoordUtils;
  import org.matsim.core.utils.geometry.CoordinateTransformation;
  import org.matsim.core.utils.geometry.transformations.TransformationFactory;
- import org.matsim.episim.*;
  import org.matsim.episim.events.*;
- import org.matsim.episim.model.VirusStrain;
- import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
 
@@ -53,9 +40,7 @@
  import java.io.IOException;
  import java.nio.file.Files;
  import java.nio.file.Path;
- import java.time.LocalDate;
  import java.util.*;
- import java.util.stream.Collectors;
 
 
  /**
@@ -81,13 +66,16 @@
 
 	 private String inputCRS;
 
-	 private static final Logger log = LogManager.getLogger(HospitalNumbersFromEvents.class);
+	 private static final Logger log = LogManager.getLogger(InfectionHomeLocation.class);
 
 	 private final String DAY = "daysSinceStart";
 
 	 private final String HOME_LON = "home_lon";
 
 	 private final String HOME_LAT = "home_lat";
+	 private final String INFECTION_TYPE = "infection_type";
+
+
 
 	 @Inject
 	 private Scenario scenario;
@@ -148,20 +136,20 @@
 		 // calculates home locations
 		 try (BufferedWriter bw = Files.newBufferedWriter(csvPath)) {
 			 Joiner joiner = Joiner.on(",");
-			 bw.write(joiner.join(DAY, HOME_LON, HOME_LAT));
+			 bw.write(joiner.join(DAY, HOME_LON, HOME_LAT, INFECTION_TYPE));
 			 Handler handler = new Handler(population, coordinateTransformation);
 
 			 List<String> eventFiles = AnalysisCommand.forEachEvent(pathToScenario, s -> {
 			 }, true, handler);
 
 
-			 if (handler.days.size() != handler.lons.size() || handler.days.size() != handler.lats.size()) {
+			 if (handler.days.size() != handler.lons.size() || handler.days.size() != handler.lats.size() || handler.days.size() != handler.infTypes.size()) {
 				 throw new RuntimeException("all three datasets should have same size");
 			 }
 
 			 for (int i = 0; i < handler.days.size(); i++) {
 				 bw.newLine();
-				 bw.write(joiner.join(handler.days.getInt(i), handler.lons.get(i), handler.lats.get(i)));
+				 bw.write(joiner.join(handler.days.getInt(i), handler.lons.get(i), handler.lats.get(i), handler.infTypes.get(i)));
 			 }
 		 }
 
@@ -178,6 +166,7 @@
 		 private final List<Double> lons;
 
 		 private final CoordinateTransformation coordinateTransformation;
+		 private List<String> infTypes;
 
 
 		 Handler(Population population, CoordinateTransformation coordinateTransformation) {
@@ -187,12 +176,16 @@
 			 this.days = new IntArrayList();
 			 this.lats = new ArrayList<>();
 			 this.lons = new ArrayList<>();
+			 this.infTypes = new ArrayList<>();
 
 		 }
 
 
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
+
+			 if(event.getPersonId().toString().startsWith("fake"))
+				 return;
 
 			 int day = (int) (event.getTime() / 86_400);
 			 days.add(day);
@@ -205,6 +198,13 @@
 
 			 lats.add(Math.round(coordWgs84.getY() * 10000.0) / 10000.0);
 			 lons.add(Math.round(coordWgs84.getX() * 10000.0) / 10000.0);
+
+
+			 if(event.getInfectorId().toString().startsWith("fake_")){
+				 infTypes.add("import");
+			 } else {
+				 infTypes.add("normal");
+			 }
 
 		 }
 

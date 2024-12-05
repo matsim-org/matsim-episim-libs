@@ -32,11 +32,16 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
+import static org.matsim.episim.policy.FixedPolicy.*;
+
 public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
+
+
 
 
 	public static class Builder extends SnzProductionScenario.Builder<SnzBrandenburgProductionScenario> {
 
+		public double scale = 1.3;
 		private double householdSusc = 1.0;
 
 		@Override
@@ -49,9 +54,22 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 			return this;
 		}
 
+		public SnzBrandenburgProductionScenario.Builder setScaleForActivityLevels(double scale) {
+			this.scale = scale;
+			return this;
+		}
+
+		public SnzBrandenburgProductionScenario.Builder setLocationBasedRestrictions(LocationBasedRestrictions locationBasedRestrictions) {
+			this.locationBasedRestrictions = locationBasedRestrictions;
+			return this;
+		}
+
 	}
 
 	private final int sample;
+
+	private final double scale;
+
 
 	private final LocationBasedRestrictions locationBasedRestrictions;
 
@@ -75,6 +93,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 	protected  SnzBrandenburgProductionScenario(Builder builder){
 		this.sample = builder.sample;
+		this.scale = builder.scale;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
 		this.householdSusc = builder.householdSusc;
 		this.activityHandling = builder.activityHandling;
@@ -88,7 +107,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 	@Override
 	protected void configure() {
 
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+		bind(ContactModel.class).to(SymmetricContactModelWithOdeCoupling.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(InfectionModelWithAntibodies.class).in(Singleton.class);
 		bind(VaccinationModel.class).to(VaccinationByAge.class).in(Singleton.class);
@@ -174,7 +193,18 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		episimConfig.addInputEventsFile(inputForSample("br_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 			.addDays(DayOfWeek.SUNDAY);
 
+
+		config.facilities().setInputFile(inputForSample("br_2020-week_snz_episim_facilities_withDistricts_%dpt.xml.gz", sample));
+//		config.facilities().setInputCRS("EPSG:25833");
+//		config.global().setCoordinateSystem("EPSG:25833");
+
+//		episimConfig.setFacilitiesFile();
+
 		episimConfig.setActivityHandling(activityHandling);
+
+		if (activityHandling != EpisimConfigGroup.ActivityHandling.startOfDay) {
+			throw new RuntimeException("should be startOfDay");
+		}
 
 		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * 1.4); // TODO: this will have to be updated obviously
 		episimConfig.setStartDate("2020-02-25");
@@ -216,6 +246,13 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
 		activityParticipation.setInput(INPUT.resolve("BrandenburgSnzData_daily_until20221231.csv"));
+
+
+		// TODO: ask sebastian what these do, and add comments.
+		activityParticipation.setScale(this.scale);
+//		activityParticipation.setLeisureAsNightly(false); // this doesn't change wrt to default
+//		activityParticipation.setNightlyScale(1.0); // this doesn't change wrt to default
+
 		// in cologne, "activityParticipation.setNightlyScale()" etc. are modified
 		FixedPolicy.ConfigBuilder builder;
 		try {
@@ -265,8 +302,6 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		builder.restrict(LocalDate.parse("2021-06-24"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-08-08"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
-
-		// TODO: university
 
 		//---------------------------------------
 		//		M A S K S
@@ -406,15 +441,38 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		// TODO: implement normal import + commuter import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		// Source of Import #1: People returning from vacation etc.
-		episimConfig.setInitialInfectionDistrict("Potsdam");
+//		episimConfig.setInitialInfectionDistrict("Potsdam");
 
 		// initialize map to store initial infections per strain
-		Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
+//		Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
 		Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>();
 		Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
 
 		infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+
+
+		// Wild - copied from Cologne, with differrent factor
+//		double importFactorBeforeJune = 4.0;
+//		double imprtFctMult = 1.0;
+//		long importOffset = 0;
+//		interpolateImport(infPerDayWild, brandenburgFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
+//			LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+//		interpolateImport(infPerDayWild, brandenburgFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
+//			LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+//		interpolateImport(infPerDayWild, brandenburgFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
+//			LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+//
+//		infPerDayWild.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
+//		infPerDayWild.put(LocalDate.parse("2020-08-09"), 1);
+//
+//		for (Map.Entry<LocalDate, Integer> entry : infPerDayWild.entrySet()) {
+//			if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
+//				int value = entry.getValue();
+//				value = Math.max(1, value);
+//				infPerDayWild.put(entry.getKey(), value);
+//			}
+//		}
 
 //		Alpha: 18.01. - 24.01.2021
 //		https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/DESH/Bericht_VOC_2021-03-17.pdf?__blob=publicationFile
@@ -434,7 +492,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 
 
-		episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
+//		episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
 		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
 
@@ -478,6 +536,10 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 		rapidTest.setFalseNegativeRate(0.3);
 		rapidTest.setFalsePositiveRate(0.03);
+
+		rapidTest.setTestingCapacity_pers_per_day(Map.of(
+			LocalDate.of(1970, 1, 1), 0,
+			LocalDate.parse("2021-04-19"), Integer.MAX_VALUE));
 
 		//		1i) unvaccianted
 
@@ -561,7 +623,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		// in berlin the maxOutdoor fraction is set at 1.0, in cologne 0.8. I stuck w/ Berlin
 		SnzProductionScenario.configureWeather(episimConfig, WeatherModel.midpoints_185_250,
 			INPUT.resolve("tempelhofWeatherUntil20220208.csv").toFile(),
-			INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 1.0)
+			INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.8)
 		;
 
 
@@ -654,7 +716,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		}
 
 
-			UtilsJR.printInitialAntibodiesToConsole(initialAntibodies, true);
+//			UtilsJR.printInitialAntibodiesToConsole(initialAntibodies, true);
 
 	}
 

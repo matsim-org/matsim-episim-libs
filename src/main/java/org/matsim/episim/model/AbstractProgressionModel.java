@@ -1,7 +1,5 @@
 package org.matsim.episim.model;
 
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimConfigGroup;
@@ -15,7 +13,9 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Map;
 import java.util.SplittableRandom;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract base implementation for a progression model that stores and updates state transitions.
@@ -29,7 +29,8 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	/**
 	 * Stores the next state and after which day. (int & int) = 64bit
 	 */
-	private final Object2LongMap<Id<Person>> nextStateAndDay = new Object2LongOpenHashMap<>();
+	// make thread-safe, allowing for multiple threads to add and remove entries simultaneously. Needed for SymmetricContactModelWithOdeCoupling
+	private final ConcurrentHashMap<Id<Person>, Long> nextStateAndDay = new ConcurrentHashMap<>();
 	private final DiseaseStatusTransitionModel statusTransitionModel;
 
 	@Inject
@@ -66,7 +67,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		}
 
 		// 0 is empty transition
-		long value = nextStateAndDay.getOrDefault(id, 0);
+		long value = nextStateAndDay.getOrDefault(id, 0L);
 
 		if (value != 0) {
 
@@ -92,6 +93,10 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 	/**
 	 * Set next transition state and day for a person.
+	 * person = episim person whose disease status is being updated
+	 * id = their id
+	 * from = disease status they are transitioning from
+	 * day = day of transition
 	 *
 	 * @return true when there should be an immediate update again
 	 */
@@ -99,7 +104,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 		// clear transition
 		if (from == EpisimPerson.DiseaseStatus.susceptible) {
-			nextStateAndDay.removeLong(id);
+			nextStateAndDay.remove(id);
 			return false;
 		}
 
@@ -126,14 +131,14 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 	@Override
 	public EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id<Person> personId) {
-		long value = nextStateAndDay.getOrDefault(personId, 0);
+		long value = nextStateAndDay.getOrDefault(personId, 0L);
 		int nextState = (int) (value >> 32);
 		return EpisimPerson.DiseaseStatus.values()[nextState];
 	}
 
 	@Override
 	public int getNextTransitionDays(Id<Person> personId) {
-		long value = nextStateAndDay.getOrDefault(personId, 0);
+		long value = nextStateAndDay.getOrDefault(personId, 0L);
 		if (value == 0)
 			return -1;
 
@@ -148,9 +153,9 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeInt(nextStateAndDay.size());
-		for (Object2LongMap.Entry<Id<Person>> entry : nextStateAndDay.object2LongEntrySet()) {
+		for (Map.Entry<Id<Person>,Long> entry : nextStateAndDay.entrySet()) {
 			EpisimUtils.writeChars(out, entry.getKey().toString());
-			out.writeLong(entry.getLongValue());
+			out.writeLong(entry.getValue());
 		}
 	}
 
@@ -161,5 +166,15 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			Id<Person> key = Id.createPersonId(EpisimUtils.readChars(in));
 			nextStateAndDay.put(key, in.readLong());
 		}
+	}
+
+	/**
+	 * Removes dummy agent from progression model
+	 * @param id id of agent to be removed
+	 */
+	@Override
+	public void removeAgent(Id<Person> id){
+
+		nextStateAndDay.remove(id);
 	}
 }
