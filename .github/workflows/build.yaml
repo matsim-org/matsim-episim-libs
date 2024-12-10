@@ -35,5 +35,14 @@ jobs:
       - name: Test module
         run:  mvn -Dtest=${{matrix.module}} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
+      - name: Generate reports
+        run: mvn site:site --batch-mode
+
+      - name: Archive reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-site
+          path: target/site/
+
     env:
       MAVEN_OPTS: -Xmx6G
