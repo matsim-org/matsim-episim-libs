@@ -14,8 +14,8 @@ jobs:
       matrix:
         java: [11, 13]
         module:
-          - org.matsim.run.**
-          - org.matsim.episim.**
+          - org.matsim.run
+          - org.matsim.episim
 
     steps:
       - uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: Test module
-        run:  mvn -Dtest=${{matrix.module}} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+        run:  mvn -Dtest=${{matrix.module}}.** test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
       - name: Generate reports
         run: mvn site:site --batch-mode
