@@ -41,7 +41,7 @@ jobs:
       - name: Archive reports
         uses: actions/upload-artifact@v4
         with:
-          name: maven-site
+          name: maven-site-{{ matrix.java }}-${{ matrix.module }}
           path: target/site/
 
     env:
