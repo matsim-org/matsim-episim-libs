@@ -79,8 +79,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 	private EpisimContainer<ActivityFacility> containerFake;
 
 	private Map<Id<Person>, EpisimPerson> fakePersonPool;
-
-
 	private Long odeDiseaseImportCount;
 
 //	public Int2IntMap testDayToTotalCapacityMap = new Int2IntAVLTreeMap();
@@ -113,6 +111,8 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		facilities = scenario.getActivityFacilities();
 
 		odeDiseaseImportCount = 0L;
+		// Reads in Disease Import from ODE
+		//TODO: shouldn't be hardcoded
 		{
 			String odeResultsFilename = INPUT.resolve("ode_inputs/left_s.csv").toString();
 			String line;
@@ -136,11 +136,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
-//			// Printing the map to verify
-//			for (Map.Entry<LocalDate, Double> entry : dateToInfectionShareMap.entrySet()) {
-//				System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
-//			}
 		}
 
 
