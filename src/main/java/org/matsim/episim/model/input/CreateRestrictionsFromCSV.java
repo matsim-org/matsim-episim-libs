@@ -11,6 +11,9 @@ import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -24,13 +27,13 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	// create method without damage.
 
 	private final EpisimConfigGroup episimConfig;
-	private Path input;
+	private String input;
 	private double alpha = 1.;
 	private double scale = 1.;
 	private boolean leisureAsNightly = false;
 	private double nightlyScale = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
-	private Map<String, Path> subdistrictInput;
+	private Map<String, String> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
@@ -40,6 +43,11 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	@Override
 	public CreateRestrictionsFromCSV setInput(Path input) {
 		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
+		this.input = input.toString();
+		return this;
+	}
+
+	public CreateRestrictionsFromCSV setInput(String input) {
 		this.input = input;
 		return this;
 	}
@@ -47,7 +55,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	/**
 	 * Sets the paths for each subdistrict CSV
 	 */
-	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, Path> subdistrictInput) {
+	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, String> subdistrictInput) {
 		this.subdistrictInput = subdistrictInput;
 		return this;
 	}
@@ -86,9 +94,12 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		return extrapolation;
 	}
 
-	static Map<LocalDate, Double> readInput(Path input, String column, double alpha, double scale) throws IOException {
+	static Map<LocalDate, Double> readInput(String input, String column, double alpha, double scale) throws IOException {
 
-		try (BufferedReader in = Files.newBufferedReader(input)) {
+
+
+
+		try (BufferedReader in = createBufferedReader(input)) {
 
 			CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -110,6 +121,38 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 			return days;
 
+		}
+	}
+
+	private static BufferedReader createBufferedReader(String input) throws IOException {
+		Object parsedInput = parseInput(input);
+
+		if (parsedInput instanceof Path) {
+			return Files.newBufferedReader((Path) parsedInput);
+		} else if (parsedInput instanceof URL) {
+			return new BufferedReader(new InputStreamReader(((URL) parsedInput).openStream()));
+		} else {
+			throw new IOException("Input is neither a valid URL nor a valid Path.");
+		}
+	}
+
+	private static Object parseInput(String input) {
+		try {
+			// Check if it's a valid URL
+			return new URL(input);
+		} catch (MalformedURLException e) {
+			// Not a URL, continue to check if it's a valid Path
+		}
+
+		try {
+			Path path = Path.of(input);
+			if (Files.exists(path)) {
+				return path;
+			} else {
+				throw new IllegalArgumentException("Path does not exist: " + input);
+			}
+		} catch (Exception e) {
+			throw new IllegalArgumentException("Input is neither a valid URL nor a valid Path: " + input);
 		}
 	}
 
@@ -152,7 +195,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
 		if (locationBasedRfActive) {
-			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
+			for (Map.Entry<String, String> entry : subdistrictInput.entrySet()) {
 				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), column, alpha, scale));
 			}
 		}
