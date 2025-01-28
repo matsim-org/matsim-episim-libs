@@ -9,31 +9,18 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [11, 13]
-        module:
-          - org.matsim.run
-          - org.matsim.episim
-
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
-          java-version: ${{ matrix.java }}
+          java-version: 11
+          distribution: 'temurin'
           architecture: x64
-
-      - name: Cache Maven packages
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          cache: maven
 
       - name: Test module
-        run:  mvn -Dtest=${{matrix.module}}.** test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+        run:  mvn test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
       - name: Generate reports
         run: mvn site:site --batch-mode
@@ -41,7 +28,7 @@ jobs:
       - name: Archive reports
         uses: actions/upload-artifact@v4
         with:
-          name: maven-site-${{ matrix.java }}-${{ matrix.module }}
+          name: maven-site
           path: target/site/
 
     env:
