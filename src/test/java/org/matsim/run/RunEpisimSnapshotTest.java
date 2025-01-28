@@ -52,11 +52,9 @@ public class RunEpisimSnapshotTest {
 				{TracingConfigGroup.Strategy.IDENTIFY_SOURCE, "bln"}
 		}));
 
-		if (Files.exists(RunSnzIntegrationTest.INPUT) && Files.isDirectory(RunSnzIntegrationTest.INPUT)) {
-			args.add(new Object[]{
-					TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "snz"
-			});
-		}
+		args.add(new Object[]{
+				TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "snz"
+		});
 
 		return args;
 	}
