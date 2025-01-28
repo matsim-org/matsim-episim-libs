@@ -440,6 +440,8 @@
                 <configuration>
                     <excludes>
                         <exclude>org/matsim/episim/analysis/**</exclude>
+                        <exclude>org/matsim/episim/EpisimUtils.java</exclude>
+
                     </excludes>
                 </configuration>
                 <executions>

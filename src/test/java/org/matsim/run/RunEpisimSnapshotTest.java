@@ -92,7 +92,6 @@ public class RunEpisimSnapshotTest {
 
 	}
 
-	@Ignore
 	@Test
 	public void compareSnapshots() throws IOException {
 
