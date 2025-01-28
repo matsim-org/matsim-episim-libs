@@ -263,10 +263,16 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		configureContactIntensities(episimConfig);
 
 		//restrictions and masks
+		RestrictionInput activityParticipation;
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig); // TODO: should SnzBerlinScenario25pct2020 be absorbed into this class to match Cologne
+//		if (adjustRestrictions == AdjustRestrictions.yes) {
+//			activityParticipation = new CreateAdjustedRestrictionsFromCSV();
+//		} else {
+		activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+//		}
 
 		String untilDate = "20220204";
-		((RestrictionInput) new CreateRestrictionsFromCSV(episimConfig)).setInput(INPUT.resolve("be_2020-mobility_data.csv"));
+		activityParticipation.setInput(INPUT.resolve("be_2020-mobility_data.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
@@ -274,7 +280,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
 			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
-			if (new CreateRestrictionsFromCSV(episimConfig) instanceof CreateRestrictionsFromCSV) {
+			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
 				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
 						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
 						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
@@ -285,11 +291,11 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
 				}
 
-				((CreateRestrictionsFromCSV) new CreateRestrictionsFromCSV(episimConfig)).setDistrictInputs(subdistrictInputs);
+				((CreateRestrictionsFromCSV) activityParticipation).setDistrictInputs(subdistrictInputs);
 			}
 		}
 
-		basePolicyBuilder.setActivityParticipation(new CreateRestrictionsFromCSV(episimConfig));
+		basePolicyBuilder.setActivityParticipation(activityParticipation);
 
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
 			basePolicyBuilder.setActivityParticipation(null);
