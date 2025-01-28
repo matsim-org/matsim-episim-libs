@@ -28,7 +28,6 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
-import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.policy.FixedPolicy;
@@ -47,7 +46,6 @@ import java.util.Map;
 /**
  * Snz scenario for Berlin.
  *
- * @see AbstractSnzScenario
  */
 public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
@@ -67,10 +65,11 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		ConfigBuilder restrictions;
 
 		// adjusted restrictions must be created after policy was set, currently there is no nicer way to do this
-		if (activityParticipation == null || activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
+		if (activityParticipation == null) {
 			restrictions = FixedPolicy.config();
-		} else
+		} else {
 			restrictions = (ConfigBuilder) activityParticipation.createPolicy();
+		}
 
 		if (restrictSchoolsAndDayCare) {
 			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
@@ -224,23 +223,6 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				FaceMask.SURGICAL, 0.9 * 1./3.)),
 				"educ_higher", "educ_tertiary", "educ_other");
 
-		if (activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
-			CreateAdjustedRestrictionsFromCSV adjusted = (CreateAdjustedRestrictionsFromCSV) activityParticipation;
-
-			LocalDate[] period = new LocalDate[] {LocalDate.MIN, LocalDate.MAX};
-			adjusted.setPolicy(restrictions);
-			LocalDate[] restaurantPeriod = new LocalDate[] {LocalDate.parse("2020-03-22"), LocalDate.parse("2020-05-14"), LocalDate.parse("2020-11-02"), LocalDate.MAX};
-			adjusted.setAdministrativePeriods(Map.of(
-					"educ_primary", period,
-					"educ_secondary", period,
-					"educ_tertiary", period,
-					"educ_other", period,
-					"educ_kiga" , period,
-					"restaurant", restaurantPeriod
-			));
-
-			return activityParticipation.createPolicy();
-		}
 
 		return restrictions;
 	}

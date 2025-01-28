@@ -30,7 +30,6 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
-import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
@@ -264,16 +263,10 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		configureContactIntensities(episimConfig);
 
 		//restrictions and masks
-		RestrictionInput activityParticipation;
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig); // TODO: should SnzBerlinScenario25pct2020 be absorbed into this class to match Cologne
-		if (adjustRestrictions == AdjustRestrictions.yes) {
-			activityParticipation = new CreateAdjustedRestrictionsFromCSV();
-		} else {
-			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-		}
 
 		String untilDate = "20220204";
-		activityParticipation.setInput(INPUT.resolve("be_2020-mobility_data.csv"));
+		((RestrictionInput) new CreateRestrictionsFromCSV(episimConfig)).setInput(INPUT.resolve("be_2020-mobility_data.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
@@ -281,7 +274,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
 			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
-			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
+			if (new CreateRestrictionsFromCSV(episimConfig) instanceof CreateRestrictionsFromCSV) {
 				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
 						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
 						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
@@ -292,11 +285,11 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
 				}
 
-				((CreateRestrictionsFromCSV) activityParticipation).setDistrictInputs(subdistrictInputs);
+				((CreateRestrictionsFromCSV) new CreateRestrictionsFromCSV(episimConfig)).setDistrictInputs(subdistrictInputs);
 			}
 		}
 
-		basePolicyBuilder.setActivityParticipation(activityParticipation);
+		basePolicyBuilder.setActivityParticipation(new CreateRestrictionsFromCSV(episimConfig));
 
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
 			basePolicyBuilder.setActivityParticipation(null);
