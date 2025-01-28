@@ -255,11 +255,15 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			containerFake.setNumSpaces(containerReal.getNumSpaces());
 			containerFake.setTaskId(taskId);
 
+
+			double infShare = dayToInfectionShareMap.getOrDefault(iteration, 0) * episimConfig.getOdeCouplingFactor();
+
 			//share of berlin agents infectious but not yet showing symptoms
 
 			int maxGroupSize = 0;
 			// todo: how should I deal with sample size. Should I just reduce the capacity by the sample?
 //			for (Map.Entry<String, Double> actTypeToCapacityMap : facilityToCapacityMap.get(idString).entrySet()) {
+
 
 			for (ActivityOption activityOption : facilities.getFacilities().get(Id.create(idString, ActivityFacility.class)).getActivityOptions().values()) {
 
@@ -277,7 +281,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 //				System.out.println(fakePersonPool.size());
 				int dayCounter = (int) (now / 60. / 60. / 24.);
 
-				double infShare = dayToInfectionShareMap.getOrDefault(iteration, 0) * episimConfig.getOdeCouplingFactor();
 
 //
 //				testDayToTotalCapacityMap.merge(iteration, (int) numContactPeople, Integer::sum);

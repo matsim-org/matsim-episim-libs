@@ -11,7 +11,9 @@ import org.matsim.episim.analysis.InfectionHomeLocation;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
+import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunParallel;
+import org.matsim.run.modules.AbstractSnzScenario;
 import org.matsim.run.modules.SnzBrandenburgProductionScenario;
 import org.matsim.run.modules.SnzProductionScenario;
 
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.NavigableMap;
+import java.util.Objects;
 
 
 /**
@@ -109,6 +112,8 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7 * params.thetaFactor);
 		episimConfig.setOdeCouplingFactor(params.couplingfactor);
 		switch (params.district) {
+			case "All":
+				break;
 			case "Frankfurt":
 				episimConfig.setOdeCouplingDistrict("Frankfurt (Oder)");
 				break;
@@ -119,6 +124,23 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 				episimConfig.setOdeCouplingDistrict(params.district);
 				break;
 		}
+
+		// set outdoor fraction
+		if (!Objects.equals(params.outdoorFrac, "base")) {
+			episimConfig.setLeisureOutdoorFraction(Double.parseDouble(params.outdoorFrac));
+		}
+
+		// adjust mobility
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+
+		if (params.mobilityMult != 1.0) {
+			builder.applyToRf("2020-04-01", "2025-04-01", (d, rf) -> rf * params.mobilityMult, "pt", "work", "leisure", "leisPublic", "leisPrivate", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other", "shop_daily", "shop_other", "errands", "business", "visit");
+
+		}
+
+		episimConfig.setPolicy(builder.build());
+
+
 
 		// 2b: specific config groups, e.g. virusStrainConfigGroup
 		// VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
@@ -197,17 +219,30 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 
 //		@Parameter({ 0.6, 0.8,  1.0, 1.2, 1.4, 1.6, 2.0})
 //		@Parameter({0.8, 1.0,  1.2})
-		@Parameter({10.0})
+		@Parameter({1.0})
 		public double thetaFactor;
 
-//		@Parameter({1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 5.0, 7.5, 10.})
+		//5
+		@Parameter({1.0, 2.5, 5.0, 7.5, 10.})
 //		@Parameter({0.5, 1.0, 2.0})
-		@Parameter({10.0})
+//		@Parameter({10.0})
 		public double couplingfactor;
 
-//		@StringParameter({"Cottbus", "Brandenburg", "Frankfurt", "Potsdam",""})
-		@StringParameter({"Potsdam"})
+
+		//5
+		@StringParameter({"Cottbus", "Brandenburg", "Frankfurt", "Potsdam","All"})
+//		@StringParameter({"All"})
 		public String district;
+
+		//3
+		@Parameter({0.5, 0.75, 1.0})
+//		@Parameter({1.0})
+		public double mobilityMult;
+
+
+		//6
+		@StringParameter({"base", "0.0", "0.2", "0.4", "0.8", "1.0"})
+		public String outdoorFrac;
 
 
 //		@Parameter({1, 2, 4, 8, 16})
