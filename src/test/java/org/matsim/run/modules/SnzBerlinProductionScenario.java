@@ -98,7 +98,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+	public static final Path INPUT = EpisimUtils.resolveInputPath("test/input/");
 
 	/**
 	 * Empty constructor is needed for running scenario from command line.
@@ -273,7 +273,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		}
 
 		String untilDate = "20220204";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
+		activityParticipation.setInput(INPUT.resolve("be_2020-mobility_data.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {

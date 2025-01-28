@@ -161,6 +161,9 @@ public class RunSnzIntegrationTest {
 			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 			episimConfig.setThreads(2);
 
+
+
+
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
 
 			return config;
