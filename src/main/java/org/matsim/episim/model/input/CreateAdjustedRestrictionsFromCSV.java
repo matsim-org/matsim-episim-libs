@@ -69,7 +69,7 @@ public final class CreateAdjustedRestrictionsFromCSV implements RestrictionInput
 
 		Objects.requireNonNull(policy, "Administrative policy must be set beforehand");
 
-		Map<LocalDate, Double> days = CreateRestrictionsFromCSV.readInput(input.toString(), "notAtHome", alpha, 1. );
+		Map<LocalDate, Double> days = CreateRestrictionsFromCSV.readInput(input, "notAtHome", alpha, 1. );
 
 		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
 
