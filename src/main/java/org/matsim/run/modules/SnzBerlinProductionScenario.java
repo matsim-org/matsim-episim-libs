@@ -293,14 +293,14 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210518";
+		String untilDate = "20210518	";
 		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 
 		//location based restrictions
 		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
 		config.facilities().setInputFile(INPUT.resolve("be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz").toString());
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
-				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+		List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
 						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
 						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
 

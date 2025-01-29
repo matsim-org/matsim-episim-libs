@@ -38,7 +38,6 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 
 
-
 	public static class Builder extends SnzProductionScenario.Builder<SnzBrandenburgProductionScenario> {
 
 		public double scale = 1.3;

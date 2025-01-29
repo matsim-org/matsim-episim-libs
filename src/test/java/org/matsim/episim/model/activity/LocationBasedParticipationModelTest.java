@@ -13,6 +13,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacilitiesFactory;
 import org.matsim.facilities.ActivityFacility;
@@ -88,7 +89,7 @@ public class LocationBasedParticipationModelTest {
 
 
 		// Create LocationBasedParticipationModel
-		LocationBasedParticipationModel activityParticipationModel = new LocationBasedParticipationModel(rnd, episimConfig, scenario);
+		LocationBasedParticipationModel activityParticipationModel = new LocationBasedParticipationModel(rnd, episimConfig, scenario, new VaccinationConfigGroup());
 
 		ImmutableMap<String, Restriction> restrictionsImmutable = ImmutableMap.copyOf(restrictions);
 
