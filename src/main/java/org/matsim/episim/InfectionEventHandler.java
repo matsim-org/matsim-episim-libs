@@ -44,6 +44,7 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationModel;
+import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -829,7 +830,29 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
+		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			reporting.writeInfections(reportsLocal, districtLevelAttribute);
+		}
+
+		if (policy instanceof AdaptivePolicy && policy.getConfig().getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			((AdaptivePolicy) policy).updateRestrictions(reportsLocal, im);
+		} else {
 		policy.updateRestrictions(report, im);
+		}
+
+
+		if (policy instanceof AdaptivePolicy) {
+			Map<String, Map<String, AdaptivePolicy.RestrictionStatus>> restrictionStatus = ((AdaptivePolicy) policy).getRestrictionStatus();
+			for (String location : restrictionStatus.keySet()) {
+				Map<String, AdaptivePolicy.RestrictionStatus> stringRestrictionStatusMap = restrictionStatus.get(location);
+				for (String activity : stringRestrictionStatusMap.keySet()) {
+					reporting.reportAdaptiveRestrictions(iteration, date.toString(), location, activity, stringRestrictionStatusMap.get(activity).toString());
+				}
+			}
+		}
 
 		reporting.reportCpuTime(iteration, "TestingModel", "start", -1);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
@@ -838,10 +861,6 @@ public final class InfectionEventHandler implements Externalizable {
 
 		activityParticipationModel.setRestrictionsForIteration(iteration, im);
 
-//		long susceptibleCommuters = 0L;
-//		long nonsusceptibleCommuters = 0L;
-//		long naive = 0L;
-//		long notNaive = 0L;
 		for (EpisimPerson person : personMap.values()) {
 			// update person activity participation for the day
 			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),
@@ -851,26 +870,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 			activityParticipationModel.applyQuarantine(person, person.getActivityParticipation(), person.getStartOfDay(day), person.getActivities(day));
 
-//			if(person.getAttributes().getAsMap().containsKey("berlin")){
-//				if(person.getDiseaseStatus().equals(EpisimPerson.DiseaseStatus.susceptible)){
-//					susceptibleCommuters++;
-//				} else {
-//					nonsusceptibleCommuters++;
-//				}
-//
-//				if (person.getAntibodies(VirusStrain.SARS_CoV_2) == 0.0) {
-//					naive++;
-//				}else {
-//					notNaive++;
-//				}
-//
-//			}
 		}
 
-//		log.warn("Susceptible: " + susceptibleCommuters);
-//		log.warn("Non Susceptible " + nonsusceptibleCommuters);
-//		log.warn("Naive " + naive);
-//		log.warn("Not Naive " + notNaive);
 
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 

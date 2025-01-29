@@ -102,13 +102,16 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	/**
 	 * Aggregated cumulative cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
+	 *
+	 * added extra layer of "geoAttribute", so that cumulative cases can be calculated
+	 * for different geographic scopes (e.g. State vs. County vs Neighborhood) -- jr, Sept'21
 	 */
-	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCases = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
+	private final Map<String, Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>>> cumulativeCases = new HashMap<>();
 
 	/**
 	 * Aggregated cumulative vaccinated cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
 	 */
-	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinated = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
+	private final Map<String, Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>>> cumulativeCasesVaccinated = new HashMap<>();
 
 	/**
 	 * Number of daily infections per virus strain.
@@ -157,7 +160,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private int iteration;
 	private Writer events;
-	private BufferedWriter infectionReport;
+	private Map<String, BufferedWriter> infectionReports; // default infectionReport saved under "district"; now infections.txt can be written for different infection scopes
 	private BufferedWriter infectionEvents;
 	private BufferedWriter restrictionReport;
 	private BufferedWriter timeUse;
@@ -165,13 +168,16 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter outdoorFraction;
 	private BufferedWriter virusStrains;
 	private BufferedWriter cpuTime;
+	private BufferedWriter adaptiveRestrictions;
 	private BufferedWriter antibodiesPerPerson;
 	private BufferedWriter vaccinationsPerType;
 	private BufferedWriter vaccinationsPerTypeAndNumber;
 
+	String memorizedDate = null;
+
+	Set<String> geoAttributes;
 	private final Map<String, BufferedWriter> externalWriters = new HashMap<>();
 
-	private String memorizedDate = null;
 
 	/**
 	 * flag to ensure only one threads writes certain outputs.
@@ -219,7 +225,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		this.writer = writer;
 		this.manager = manager;
 
-		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
+		infectionReports = new HashMap<>();
+		infectionReports.put("district", EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class));
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
@@ -233,25 +240,44 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 
+		adaptiveRestrictions = EpisimWriter.prepare(base + "adaptiveRestrictions.tsv", "day", "date", "location", "activity", "policy");
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
 
-		// Init cumulative cases
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap<>());
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap<>());
-		cumulativeCases.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap<>());
+		// Adds local district attribute
+		geoAttributes = new HashSet<>();
+		geoAttributes.add("district");
 
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap<>());
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap<>());
-		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap<>());
+		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
+			if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
+				geoAttributes.add(districtLevelAttribute);
+				BufferedWriter localInfectionReport = EpisimWriter.prepare(base + "infections_" + districtLevelAttribute + ".txt", InfectionsWriterFields.class);
+				infectionReports.put(districtLevelAttribute, localInfectionReport);
+			}
+		}
+		// Init cumulative cases
+		for (String geoAttribute : geoAttributes) {
+			EnumMap<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesForGeo = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap<>());
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap<>());
+			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap<>());
+			cumulativeCases.put(geoAttribute, cumulativeCasesForGeo);
+
+			EnumMap<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinatedForGeo = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap<>());
+			cumulativeCasesVaccinated.put(geoAttribute, cumulativeCasesVaccinatedForGeo);
+		}
 
 		writeConfigFiles();
 	}
@@ -294,7 +320,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				}
 			}
 
-		infectionReport = EpisimWriter.prepare(base + "infections.txt");
+		infectionReports.put("district", EpisimWriter.prepare(base + "infections.txt")); //TODO: how should local scopes be handled?
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
@@ -306,6 +332,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv");
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
+		adaptiveRestrictions = EpisimWriter.prepare(base + "adaptiveRestrictions.tsv");
 		memorizedDate = date;
 
 		if (singleEvents) {
@@ -358,8 +385,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	/**
 	 * Creates infections reports for the day. Grouped by district, but always containing a "total" entry.
+	 *
+	 * This method was overloaded to allow different attribute name -- JR, Sept'2021
 	 */
 	Map<String, InfectionReport> createReports(Collection<EpisimPerson> persons, int iteration) {
+		return createReports(persons, iteration, "district");
+	}
+
+	Map<String, InfectionReport> createReports(Collection<EpisimPerson> persons, int iteration, String geoAttribute) {
 
 		Map<String, InfectionReport> reports = new LinkedHashMap<>();
 
@@ -370,7 +403,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		reports.put("total", report);
 
 		for (EpisimPerson person : persons) {
-			String districtName = (String) person.getAttributes().getAttribute("district");
+			String districtName = (String) person.getAttributes().getAttribute(geoAttribute);
 
 			boolean isVaccinated = isVaccinated(person);
 
@@ -504,19 +537,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		for (String district : reports.keySet()) {
 
-			int nInfected = cumulativeCases.get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);
-			int nContagious = cumulativeCases.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);
-			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
-			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
-			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
-			int nDeceased = cumulativeCases.get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);
+			int nInfected = cumulativeCases.get(geoAttribute).get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);
+			int nContagious = cumulativeCases.get(geoAttribute).get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);
+			int nShowingSymptoms = cumulativeCases.get(geoAttribute).get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
+			int nSeriouslySick = cumulativeCases.get(geoAttribute).get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
+			int nCritical = cumulativeCases.get(geoAttribute).get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
+			int nDeceased = cumulativeCases.get(geoAttribute).get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);
 
-			int nInfectedVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);
-			int nContagiousVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);
-			int nShowingSymptomsVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
-			int nSeriouslySickVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
-			int nCriticalVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
-			int nDeceasedVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);
+			int nInfectedVaccinated = cumulativeCasesVaccinated.get(geoAttribute).get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);
+			int nContagiousVaccinated = cumulativeCasesVaccinated.get(geoAttribute).get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);
+			int nShowingSymptomsVaccinated = cumulativeCasesVaccinated.get(geoAttribute).get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
+			int nSeriouslySickVaccinated = cumulativeCasesVaccinated.get(geoAttribute).get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
+			int nCriticalVaccinated = cumulativeCasesVaccinated.get(geoAttribute).get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
+			int nDeceasedVaccinated = cumulativeCasesVaccinated.get(geoAttribute).get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);
 
 			reports.get(district).nInfectedCumulative = nInfected;
 			reports.get(district).nContagiousCumulative = nContagious;
@@ -612,6 +645,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		vaccinationStats.clear();
 
 		// Write all reports for each district
+		writeInfections(reports, "district");
+	}
+
+	void writeInfections(Map<String, InfectionReport> reports, String geoAttribute) {
 		for (InfectionReport r : reports.values()) {
 //			if (r.name.equals("total")) continue;
 
@@ -662,7 +699,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
-			writer.append(infectionReport, array);
+			writer.append(infectionReports.get(geoAttribute), array);
 		}
 	}
 
@@ -792,11 +829,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		if (newStatus == EpisimPerson.DiseaseStatus.infectedButNotContagious || newStatus == EpisimPerson.DiseaseStatus.seriouslySick ||
 				newStatus == EpisimPerson.DiseaseStatus.contagious || newStatus == EpisimPerson.DiseaseStatus.showingSymptoms ||
 				newStatus == EpisimPerson.DiseaseStatus.critical || newStatus == EpisimPerson.DiseaseStatus.recovered) {
-			String districtName = (String) person.getAttributes().getAttribute("district");
-			cumulativeCases.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
+//			String districtName = (String) person.getAttributes().getAttribute("district");
+//			cumulativeCases.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
 
+			for (String geoAttribute : this.geoAttributes) {
+				String districtName = (String) person.getAttributes().getAttribute(geoAttribute);
+				cumulativeCases.get(geoAttribute).get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
 			if (isVaccinated(person))
-				cumulativeCasesVaccinated.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
+					cumulativeCasesVaccinated.get(geoAttribute).get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
+			}
 		}
 
 		manager.processEvent(event);
@@ -951,10 +992,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		manager.processEvent(new EpisimStartEvent(startDate, startFromImmunization));
 	}
 
+	void reportAdaptiveRestrictions(int day, String date, String location, String activity, String policy) {
+		if (iteration == 0) return;
+		writer.append(adaptiveRestrictions, EpisimWriter.JOINER.join(day, date, location, activity, policy));
+		writer.append(adaptiveRestrictions, "\n");
+	}
+
 	@Override
 	public void close() {
 
-		writer.close(infectionReport);
+		for (BufferedWriter infectionReport : infectionReports.values()) {
+			writer.close(infectionReport);
+		}
 		writer.close(infectionEvents);
 		writer.close(restrictionReport);
 		writer.close(timeUse);
@@ -963,6 +1012,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(virusStrains);
 		writer.close(antibodiesPerPerson);
 		writer.close(cpuTime);
+		writer.close(adaptiveRestrictions);
 		writer.close(vaccinationsPerType);
 		writer.close(vaccinationsPerTypeAndNumber);
 
@@ -1059,9 +1109,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 
-		out.writeInt(cumulativeCases.size());
+		out.writeInt(cumulativeCases.get("district").size());
 
-		for (Map.Entry<EpisimPerson.DiseaseStatus, Object2IntMap<String>> e : cumulativeCases.entrySet()) {
+		for (Map.Entry<EpisimPerson.DiseaseStatus, Object2IntMap<String>> e : cumulativeCases.get("district").entrySet()) {
 			out.writeInt(e.getKey().ordinal());
 			Object2IntMap<String> map = e.getValue();
 			out.writeInt(map.size());
@@ -1072,9 +1122,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			}
 		}
 
-		out.writeInt(cumulativeCasesVaccinated.size());
+		out.writeInt(cumulativeCasesVaccinated.get("district").size());
 
-		for (Map.Entry<EpisimPerson.DiseaseStatus, Object2IntMap<String>> e : cumulativeCasesVaccinated.entrySet()) {
+		for (Map.Entry<EpisimPerson.DiseaseStatus, Object2IntMap<String>> e : cumulativeCasesVaccinated.get("district").entrySet()) {
 			out.writeInt(e.getKey().ordinal());
 			Object2IntMap<String> map = e.getValue();
 			out.writeInt(map.size());
@@ -1099,7 +1149,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			int size = in.readInt();
 			for (int j = 0; j < size; j++) {
 				String key = readChars(in);
-				cumulativeCases.get(state).put(key, in.readInt());
+				cumulativeCases.get("district").get(state).put(key, in.readInt());
 			}
 		}
 
@@ -1109,7 +1159,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			int size = in.readInt();
 			for (int j = 0; j < size; j++) {
 				String key = readChars(in);
-				cumulativeCasesVaccinated.get(state).put(key, in.readInt());
+				cumulativeCasesVaccinated.get("district").get(state).put(key, in.readInt());
 			}
 		}
 

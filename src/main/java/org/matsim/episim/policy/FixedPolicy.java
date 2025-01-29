@@ -301,6 +301,11 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrictWithDistrict(date.toString(), restriction, activities);
 		}
 
+		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecificValue, String... activities) {
+			Restriction restriction = Restriction.ofLocationBasedRf(districtSpecificValue);
+
+			return restrictWithDistrict(date.toString(), restriction, activities);
+		}
 		/**
 		 * See {@link #restrict(String, Restriction, String...)}.
 		 */
