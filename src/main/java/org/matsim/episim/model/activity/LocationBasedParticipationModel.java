@@ -34,7 +34,7 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)
 			throw new IllegalStateException("Participation model can only be used with activityHandling startOfDay");
 
-		if (episimConfig.getDistrictLevelRestrictions() != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.no) {
 			throw new IllegalStateException("LocationBasedParticipationModel can only be used if location based restrictions are used");
 		}
 

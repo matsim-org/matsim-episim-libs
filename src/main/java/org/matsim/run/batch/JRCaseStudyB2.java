@@ -27,6 +27,9 @@ import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
 public class JRCaseStudyB2 implements BatchRun<JRCaseStudyB2.Params> {
 
 
+	boolean DEBUG = true;
+	int runCounter = 0;
+
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
@@ -48,6 +51,11 @@ public class JRCaseStudyB2 implements BatchRun<JRCaseStudyB2.Params> {
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
+
+		if (DEBUG & runCounter == 1) {
+			return null;
+		} else if(DEBUG)
+			runCounter++;
 
 		SnzBerlinProductionScenario module = getBindings(id, params);
 
