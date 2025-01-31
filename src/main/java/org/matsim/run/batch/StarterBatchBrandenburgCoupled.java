@@ -29,7 +29,7 @@ import java.util.*;
  */
 public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBrandenburgCoupled.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 	int runCount = 0;
 
 
@@ -71,7 +71,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 			.setLocationBasedRestrictions(params == null ? SnzProductionScenario.LocationBasedRestrictions.no : params.locationBasedRestrictions)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 			.setInfectionModel(InfectionModelWithAntibodies.class)
-			.setSample(25)
+			.setSample(1)
 			.build();
 	}
 
@@ -100,7 +100,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.locationBasedRestrictions == SnzProductionScenario.LocationBasedRestrictions.yes) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0 && params.locationBasedRestrictions == SnzProductionScenario.LocationBasedRestrictions.yes && params.adaptivePolicy == SnzBerlinProductionScenario.AdaptiveRestrictions.yesLocal) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 
 				runCount++;
 			} else {
@@ -193,6 +193,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 		}
 
 		// LOCATION BASED RESTRICTIONS
+		episimConfig.setReportTimeUse(EpisimConfigGroup.ReportTimeUse.yes);
 		if (params.locationBasedRestrictions == SnzProductionScenario.LocationBasedRestrictions.yes) {
 			List<String> subdistricts = Arrays.asList("Elbe-Elster", "Barnim", "Prignitz", "Uckermark", "Oberspreewald-Lausitz", "Potsdam-Mittelmark", "Märkisch-Oderland", "Oberhavel", "Ostprignitz-Ruppin", "Potsdam", "Brandenburg an der Havel", "Frankfurt (Oder)", "Dahme-Spreewald", "Teltow-Fläming", "Oder-Spree", "Havelland", "Cottbus", "Spree-Neiße");
 			episimConfig.setDistricts(subdistricts);
@@ -419,7 +420,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 				RunParallel.OPTION_SETUP, StarterBatchBrandenburgCoupled.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(90),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(20),
 				RunParallel.OPTION_METADATA
 		};
 

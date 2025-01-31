@@ -249,12 +249,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		geoAttributes.add("district");
 
 		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
-		if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
-			if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
-				geoAttributes.add(districtLevelAttribute);
-				BufferedWriter localInfectionReport = EpisimWriter.prepare(base + "infections_" + districtLevelAttribute + ".txt", InfectionsWriterFields.class);
-				infectionReports.put(districtLevelAttribute, localInfectionReport);
-			}
+		// if the districtLevelAttribute is "district, we don't need an extra report; the default report will suffice.
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("") && !districtLevelAttribute.equals("district")) {
+			geoAttributes.add(districtLevelAttribute);
+			BufferedWriter localInfectionReport = EpisimWriter.prepare(base + "infections_" + districtLevelAttribute + ".txt", InfectionsWriterFields.class);
+			infectionReports.put(districtLevelAttribute, localInfectionReport);
 		}
 		// Init cumulative cases
 		for (String geoAttribute : geoAttributes) {

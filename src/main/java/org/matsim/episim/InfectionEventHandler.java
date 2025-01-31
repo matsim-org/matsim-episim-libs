@@ -831,7 +831,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
-		if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
+		// if the districtLevelAttribute is "district, we don't need an extra report; the default report will suffice.
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("") && !districtLevelAttribute.equals("district")) {
 			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
 			reporting.writeInfections(reportsLocal, districtLevelAttribute);
 		}
