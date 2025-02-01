@@ -100,15 +100,16 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.scenario = scenario;
 
 		subdistrictFacilities = new HashMap<>();
-		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)
-				&& scenario != null
-				&& !scenario.getActivityFacilities().getFacilities().isEmpty()) {
+		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) ||
+			episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation)){
+			if( scenario != null && !scenario.getActivityFacilities().getFacilities().isEmpty()) {
 
-			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
-				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
-				String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);
-				if (subdistrict != null) {
-					this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);
+				for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
+					String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
+					String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);
+					if (subdistrict != null) {
+						this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);
+					}
 				}
 			}
 		}
@@ -251,11 +252,14 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		// Applies location based restriction, if applicable
 		// So far, they are only applied for EpisimFacilities, not EpisimVehicles
-		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) && container != null) {
-			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
-				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
-				if (r.getLocationBasedRf().containsKey(subdistrict)) {
-					remainingFraction = r.getLocationBasedRf().get(subdistrict);
+		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) ||
+			episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation)) {
+			if(container != null) {
+				if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
+					String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
+					if (r.getLocationBasedRf().containsKey(subdistrict)) {
+						remainingFraction = r.getLocationBasedRf().get(subdistrict);
+					}
 				}
 			}
 		}

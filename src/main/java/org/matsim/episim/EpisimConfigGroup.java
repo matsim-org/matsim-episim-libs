@@ -1016,6 +1016,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public enum DistrictLevelRestrictions {
 		yesForActivityLocation,
 		yesForHomeLocation,
+		yesForHomeAndActivityLocation,
 		no
 	}
 

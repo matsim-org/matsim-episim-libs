@@ -47,7 +47,7 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 		}
 
 		subdistrictFacilities = new HashMap<>();
-		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) {
+		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation || episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation)) {
 		if (scenario != null && !scenario.getActivityFacilities().getFacilities().isEmpty()) {
 			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
 				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
@@ -78,24 +78,27 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 
 //			Restriction restriction = im.get(context);
 //			double remainingFraction = restriction.getRemainingFraction();
-
+			Double rLocal = null;
 			// Replaces global remaining fraction with local one, if applicable
 			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)) {
-			if (facilityId != null) {
-				if (subdistrictFacilities.containsKey(facilityId.toString())) {
-					String subdistrict = subdistrictFacilities.get(facilityId.toString());
-						if (context.getLocationBasedRf().containsKey(subdistrict)) {
-							r = context.getLocationBasedRf().get(subdistrict);
-						}
-					}
-				}
+				rLocal = getLocalRfForActivityLocation(facilityId, context);
 			} else if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)) {
-				if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
-					String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
-					if (context.getLocationBasedRf().containsKey(subdistrict)) {
-						r = context.getLocationBasedRf().get(subdistrict);
-					}
+				rLocal = getLocalRfForHomeLocation(person, context);
+			} else if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation)) {
+				// compare restriction at home location to restriction at activity location. Choose more restrictive one.
+				Double rLocalActivity = getLocalRfForActivityLocation(facilityId, context);
+				Double rLocalHome = getLocalRfForHomeLocation(person, context);
+				if (rLocalHome == null) {
+					rLocal = rLocalActivity;
+				} else if (rLocalActivity == null) {
+					rLocal = rLocalHome;
+				} else {
+					rLocal = Math.min(rLocalActivity, rLocalHome);
 				}
+			}
+
+			if (rLocal != null) {
+				r = rLocal;
 			}
 
 			// reduce fraction for persons that are not vaccinated
@@ -117,5 +120,28 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 				trajectory.set(offset + i, rnd.nextDouble() < r);
 
 		}
+	}
+
+	private Double getLocalRfForHomeLocation(EpisimPerson person, Restriction context) {
+		if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
+			String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
+			if (context.getLocationBasedRf().containsKey(subdistrict)) {
+				return context.getLocationBasedRf().get(subdistrict);
+			}
+		}
+		return null;
+	}
+
+	private Double getLocalRfForActivityLocation(Id<ActivityFacility> facilityId, Restriction context) {
+		if (facilityId != null) {
+			if (subdistrictFacilities.containsKey(facilityId.toString())) {
+				String subdistrict = subdistrictFacilities.get(facilityId.toString());
+					if (context.getLocationBasedRf().containsKey(subdistrict)) {
+						return context.getLocationBasedRf().get(subdistrict);
+					}
+				}
+			}
+
+		return null;
 	}
 }

@@ -29,7 +29,7 @@ import java.util.*;
  */
 public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBrandenburgCoupled.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
 
@@ -68,10 +68,10 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	private SnzBrandenburgProductionScenario getBindings(Params params) {
 		return new SnzBrandenburgProductionScenario.Builder()
 			.setScaleForActivityLevels(params == null ? 1.0 : params.scale)
-			.setLocationBasedRestrictions(params == null ? SnzProductionScenario.LocationBasedRestrictions.no : params.locationBasedRestrictions)
+			.setLocationBasedRestrictions(SnzProductionScenario.LocationBasedRestrictions.yes)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 			.setInfectionModel(InfectionModelWithAntibodies.class)
-			.setSample(1)
+			.setSample(25)
 			.build();
 	}
 
@@ -100,7 +100,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.locationBasedRestrictions == SnzProductionScenario.LocationBasedRestrictions.yes && params.adaptivePolicy == SnzBerlinProductionScenario.AdaptiveRestrictions.yesLocal) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0 && params.districtBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation && params.adaptivePolicy == SnzBerlinProductionScenario.AdaptiveRestrictions.yesLocal) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 
 				runCount++;
 			} else {
@@ -194,15 +194,14 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 
 		// LOCATION BASED RESTRICTIONS
 		episimConfig.setReportTimeUse(EpisimConfigGroup.ReportTimeUse.yes);
-		if (params.locationBasedRestrictions == SnzProductionScenario.LocationBasedRestrictions.yes) {
 			List<String> subdistricts = Arrays.asList("Elbe-Elster", "Barnim", "Prignitz", "Uckermark", "Oberspreewald-Lausitz", "Potsdam-Mittelmark", "Märkisch-Oderland", "Oberhavel", "Ostprignitz-Ruppin", "Potsdam", "Brandenburg an der Havel", "Frankfurt (Oder)", "Dahme-Spreewald", "Teltow-Fläming", "Oder-Spree", "Havelland", "Cottbus", "Spree-Neiße");
 			episimConfig.setDistricts(subdistricts);
 			episimConfig.setDistrictLevelRestrictionsAttribute("district");
-			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
+			episimConfig.setDistrictLevelRestrictions(params.districtBasedRestrictions);
 
 			// Set up initial policy - remove all location based restrictions from snz data
 //			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-			builder.apply("2020-01-01", "2022-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).clear(), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+//			builder.apply("2020-01-01", "2022-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).clear(), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
 
 
 			// General setup of adaptive restrictions
@@ -317,8 +316,6 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 				episimConfig.setPolicy(AdaptivePolicy.class, policy);
 			}
 
-		}
-
 		return config;
 	}
 
@@ -345,9 +342,9 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	public static final class Params {
 
 
-		// new
-		@EnumParameter(value = SnzProductionScenario.LocationBasedRestrictions.class, ignore = "no")
-		SnzProductionScenario.LocationBasedRestrictions locationBasedRestrictions;
+		// 4
+		@EnumParameter(EpisimConfigGroup.DistrictLevelRestrictions.class)
+		EpisimConfigGroup.DistrictLevelRestrictions districtBasedRestrictions;
 
 
 		//3
@@ -355,15 +352,17 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 		SnzBerlinProductionScenario.AdaptiveRestrictions adaptivePolicy;
 
 //		@Parameter({0.0, 0.2, 0.4, 0.6})
-		@Parameter({0.0, 0.2})
+		@Parameter({0.0})
 		double restrictedFraction;
 
-//		@Parameter({10, 25, 50, 75, 100, 125, 150})
+		//		@Parameter({10, 25, 50, 75, 100, 125, 150})
 //		@Parameter({0.000000001})
-		@Parameter({0.001, 1, 10})
+		//3
+		@Parameter({1, 10, 100})
 		double trigger;
 
 
+		//2
 		// general
 		@GenerateSeeds(2)
 		public long seed;
@@ -376,7 +375,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 
 //		@Parameter({ 0.6, 0.8,  1.0, 1.2, 1.4, 1.6, 2.0})
 //		@Parameter({0.8, 1.0,  1.2})
-		@Parameter({1.0,10.0})
+		@Parameter({1.0})
 		public double thetaFactor;
 
 		//5
@@ -388,7 +387,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 
 		//5
 //		@StringParameter({"Cottbus", "Brandenburg", "Frankfurt", "Potsdam","All"})
-		@StringParameter({"All","Cottbus", "Frankfurt",})
+		@StringParameter({"All","Cottbus", "Frankfurt"})
 		public String district;
 
 		//3
@@ -398,8 +397,8 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 
 
 		//6
-//		@StringParameter({"base", "0.0", "0.2", "0.4", "0.8", "1.0"})
-		@StringParameter({"0.0", "1.0"})
+		@StringParameter({"base", "0.0", "0.2", "0.4"})
+//		@StringParameter({"0.0",  "1.0"})
 		public String outdoorFrac;
 
 

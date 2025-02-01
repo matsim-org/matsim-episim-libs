@@ -267,40 +267,40 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		//
 		//	https://brandenburg.de/cms/detail.php/bb1.c.691163.de
 		// "Das Kabinett beschließt die Schließung von Schulen und Kitas ab 18. März"
-		builder.restrict(LocalDate.parse("2020-03-18"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-		// 17. April 2020: Das Kabinett beschließt erste Lockerungen:[...], eingesetzt erst am 27. Nur Abschlussklassen  Auch die Schulen starten nach einem Stufenplan wieder den Unterricht.
-		builder.restrict(LocalDate.parse("2020-04-27"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
-		// 6th grade goes back
-		builder.restrict(LocalDate.parse("2020-05-04"), 0.3, "educ_primary");
-		// 9th and 12th grade of secondary school, and 11th grade of gymnasium
-		builder.restrict(LocalDate.parse("2020-05-04"), 0.4, "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2020-05-25"), 1.0, "educ_kiga", "educ_primary",  "educ_secondary", "educ_tertiary", "educ_other");
-		//Sommerferien (Source = https://www.payback.de/ratgeber/besser-leben/reisen/ferien-2020#Brandenburg)
-		builder.restrict(LocalDate.parse("2020-06-25"), 0.2,  "educ_kiga", "educ_primary","educ_secondary", "educ_tertiary", "educ_other");
-		//10. August 2020: Die Schulen starten nach den Sommerferien wieder in den Regelbetrieb.
-		builder.restrict(LocalDate.parse("2020-08-10"), 1.0,  "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Lueften nach den Sommerferien
-		builder.restrict(LocalDate.parse("2020-08-10"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2020-12-31"), Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		//Herbstferien
-		builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2020-10-24"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//14. Dezember 2020: Die Präsenzpflicht in den Schulen wird eine Woche vor den Weihnachtsferien aufgehoben.
-		builder.restrict(LocalDate.parse("2020-12-14"), 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Weihnachtsferien (which morph into school closure)
-		builder.restrict(LocalDate.parse("2020-12-21"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		// Abschlussklassen und Förderschulen wieder unterichtet.
-		builder.restrict(LocalDate.parse("2021-01-21"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
-		//22. Februar 2021: Die Grundschulen öffnen wieder im Wechselunterricht zwischen Schule und zuhause.
-		builder.restrict(LocalDate.parse("2021-02-22"), 0.5, "educ_primary");
-		builder.restrict(LocalDate.parse("2021-03-15"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Osterferien
-		builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-04-10"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Sommerferien
-		builder.restrict(LocalDate.parse("2021-06-24"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-08-08"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-
+//		builder.restrict(LocalDate.parse("2020-03-18"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+//		// 17. April 2020: Das Kabinett beschließt erste Lockerungen:[...], eingesetzt erst am 27. Nur Abschlussklassen  Auch die Schulen starten nach einem Stufenplan wieder den Unterricht.
+//		builder.restrict(LocalDate.parse("2020-04-27"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
+//		// 6th grade goes back
+//		builder.restrict(LocalDate.parse("2020-05-04"), 0.3, "educ_primary");
+//		// 9th and 12th grade of secondary school, and 11th grade of gymnasium
+//		builder.restrict(LocalDate.parse("2020-05-04"), 0.4, "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2020-05-25"), 1.0, "educ_kiga", "educ_primary",  "educ_secondary", "educ_tertiary", "educ_other");
+//		//Sommerferien (Source = https://www.payback.de/ratgeber/besser-leben/reisen/ferien-2020#Brandenburg)
+//		builder.restrict(LocalDate.parse("2020-06-25"), 0.2,  "educ_kiga", "educ_primary","educ_secondary", "educ_tertiary", "educ_other");
+//		//10. August 2020: Die Schulen starten nach den Sommerferien wieder in den Regelbetrieb.
+//		builder.restrict(LocalDate.parse("2020-08-10"), 1.0,  "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		//Lueften nach den Sommerferien
+//		builder.restrict(LocalDate.parse("2020-08-10"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2020-12-31"), Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		//Herbstferien
+//		builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2020-10-24"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		//14. Dezember 2020: Die Präsenzpflicht in den Schulen wird eine Woche vor den Weihnachtsferien aufgehoben.
+//		builder.restrict(LocalDate.parse("2020-12-14"), 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		//Weihnachtsferien (which morph into school closure)
+//		builder.restrict(LocalDate.parse("2020-12-21"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		// Abschlussklassen und Förderschulen wieder unterichtet.
+//		builder.restrict(LocalDate.parse("2021-01-21"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
+//		//22. Februar 2021: Die Grundschulen öffnen wieder im Wechselunterricht zwischen Schule und zuhause.
+//		builder.restrict(LocalDate.parse("2021-02-22"), 0.5, "educ_primary");
+//		builder.restrict(LocalDate.parse("2021-03-15"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		//Osterferien
+//		builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2021-04-10"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		//Sommerferien
+//		builder.restrict(LocalDate.parse("2021-06-24"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2021-08-08"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//
 
 		//---------------------------------------
 		//		M A S K S
