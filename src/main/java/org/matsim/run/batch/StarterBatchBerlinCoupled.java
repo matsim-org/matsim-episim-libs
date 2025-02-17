@@ -16,7 +16,9 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.run.RunParallel;
-import org.matsim.run.modules.*;
+import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzBrandenburgProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
@@ -27,7 +29,7 @@ import java.util.*;
 /**
  * boilerplate batch for brandenburg
  */
-public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBrandenburgCoupled.Params> {
+public class StarterBatchBerlinCoupled implements BatchRun<StarterBatchBerlinCoupled.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -46,8 +48,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 			protected void configure() {
 
 
-
-		bind(HouseholdSusceptibility.Config.class).toInstance(
+				bind(HouseholdSusceptibility.Config.class).toInstance(
 					HouseholdSusceptibility.newConfig()
 						.withSusceptibleHouseholds(0.25, 0.01));
 
@@ -59,10 +60,10 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	/*
 	 * here you select & modify models specified in the SnzCologneProductionScenario & SnzProductionScenario.
 	 */
-	private SnzBrandenburgProductionScenario getBindings(Params params) {
-		return new SnzBrandenburgProductionScenario.Builder()
-			.setScaleForActivityLevels(1.3)
-//			.setLocationBasedRestrictions(SnzProductionScenario.LocationBasedRestrictions.no)
+	private SnzBerlinProductionScenario getBindings(Params params) {
+		return new SnzBerlinProductionScenario.Builder()
+//			.setScaleForActivityLevels(1.3)
+			.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.no)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 			.setInfectionModel(InfectionModelWithAntibodies.class)
 			.setOdeCoupling(SnzProductionScenario.OdeCoupling.yes)
@@ -75,7 +76,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	 */
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("brandenburg", "calibration");
+		return Metadata.of("berlin", "calibration");
 	}
 
 
@@ -84,8 +85,8 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	 */
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
-		return List.of(new InfectionHomeLocation().withArgs("--output", "./output/", "--input", SnzBrandenburgProductionScenario.INPUT.toString(),//"/Users/jakob/git/shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input",
-			"--population-file", "br_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz"));
+		return List.of(new InfectionHomeLocation().withArgs("--output", "./output/", "--input", SnzBerlinProductionScenario.INPUT.toString(),//"/Users/jakob/git/shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input",
+			"--population-file", "be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz"));
 	}
 
 	/*
@@ -95,8 +96,7 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0) {
-
+			if (runCount == 0){
 				runCount++;
 			} else {
 				return null;
@@ -113,7 +113,15 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		episimConfig.setStartDate(LocalDate.parse("2020-03-03"));
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7 *params.theta );
+
+
+
+//		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7 * params.theta);
+
+		//override theta parameter to match Brandenburg
+		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * 1.4);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7 * params.theta);
+
 
 		// COUPLING
 		// turn off other import
@@ -123,25 +131,12 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 			map.clear();
 		}
 
-		episimConfig.setOdeIncidenceFile(SnzBrandenburgProductionScenario.INPUT.resolve("ode_be_infectious_250211.csv").toString());
+		episimConfig.setOdeIncidenceFile(SnzBerlinProductionScenario.INPUT.resolve("ode_br_infectious_250212.csv").toString());
+//		episimConfig.setOdeIncidenceFile(SnzBerlinProductionScenario.INPUT.resolve("ode_inputs/left_s.csv").toString());
 
-		episimConfig.setOdeDistricts(List.of("Berlin"));
+		episimConfig.setOdeDistricts(SnzBrandenburgProductionScenario.BRANDENBURG_LANDKREISE);
 
 		episimConfig.setOdeCouplingFactor(params.couplingfactor);
-
-		switch (params.district) {
-			case "All":
-				break;
-			case "Frankfurt":
-				episimConfig.setOdeInfTargetDistrict("Frankfurt (Oder)");
-				break;
-			case "Brandenburg":
-				episimConfig.setOdeInfTargetDistrict("Brandenburg an der Havel");
-				break;
-			default:
-				episimConfig.setOdeInfTargetDistrict(params.district);
-				break;
-		}
 
 		// set outdoor fraction
 		if (!Objects.equals(params.outdoorFrac, "base")) {
@@ -162,24 +157,45 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 		// 2b: specific config groups, e.g. virusStrainConfigGroup
 		// VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
+		episimConfig.setInitialInfections(0);
+//		episimConfig.setThreads(1);
+
+		for (NavigableMap<LocalDate, Integer> map : episimConfig.getInfections_pers_per_day().values()) {
+			map.clear();
+		}
+
+
+		if(params.ci.equals("red")){
+			//work
+			double workCiMod = 0.75;
+			episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCiMod);
+			episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCiMod);
+
+			//leisure & visit
+			double leisureCiMod = 0.4;
+			episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCiMod);
+			episimConfig.getOrAddContainerParams("leisPublic").setContactIntensity(episimConfig.getOrAddContainerParams("leisPublic").getContactIntensity() * leisureCiMod);
+			episimConfig.getOrAddContainerParams("leisPrivate").setContactIntensity(episimConfig.getOrAddContainerParams("leisPrivate").getContactIntensity() * leisureCiMod);
+			episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCiMod);
+
+
+			//school
+			double schoolCiMod = 0.75;
+			episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCiMod);
+			episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCiMod);
+			episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCiMod);
+			episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCiMod);
+			episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCiMod);
+			episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCiMod);
+
+		} else if (params.ci.equals("base")) {
+
+		} else {
+			throw new RuntimeException();
+		}
+
 		return config;
 	}
-
-	private Restriction constructRestrictionWithLocalAndGlobalRf(List<String> subdistricts, double rf) {
-		Restriction r = Restriction.ofLocationBasedRf(makeUniformLocalRf(subdistricts, rf));
-		r.merge(Restriction.of(rf).asMap());
-
-		return r;
-	}
-
-	private Map<String, Double> makeUniformLocalRf(List<String> districts, Double rf) {
-		Map<String, Double> localRf = new HashMap<>();
-		for (String district : districts) {
-			localRf.put(district, rf);
-		}
-		return localRf;
-	}
-
 
 
 	/*
@@ -187,14 +203,20 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	 */
 	public static final class Params {
 
-//		@Parameter({0.25})
-		@Parameter({0.25, 0.5, 0.75, 1.0})
-		public double theta;
 
-
+		//2
 		// general
 		@GenerateSeeds(2)
 		public long seed;
+
+		@StringParameter({"red"})
+		public String ci;
+
+		@Parameter({0.25, 0.5, 0.75, 1.0})
+//		@Parameter({1.0})
+		public double theta;
+
+
 
 		//5
 //		@Parameter({1.0, 2.5, 5.0, 7.5, 10.})
@@ -203,29 +225,15 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 //		@Parameter({1.0})
 		public double couplingfactor;
 
-
-//		@StringParameter({"false"})
 		@StringParameter({"true", "false"})
 		public String schoolClosure;
 
 
-		//5
-//		@StringParameter({"Cottbus", "Brandenburg", "Frankfurt", "Potsdam","All"})
-		@StringParameter({"All"})
-		public String district;
-
-
-
-
 		//6
-		@StringParameter({"base"})
+//		@StringParameter({"base", "0.0", "0.2", "0.4"})
 //		@StringParameter({"0.0",  "1.0"})
+		@StringParameter({"base"})
 		public String outdoorFrac;
-
-
-//		@Parameter({1, 2, 4, 8, 16})
-//		public double summerImport;
-
 
 	}
 
@@ -235,10 +243,10 @@ public class StarterBatchBrandenburgCoupled implements BatchRun<StarterBatchBran
 	 */
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, StarterBatchBrandenburgCoupled.class.getName(),
+				RunParallel.OPTION_SETUP, StarterBatchBerlinCoupled.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(20),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(300),
 				RunParallel.OPTION_METADATA
 		};
 

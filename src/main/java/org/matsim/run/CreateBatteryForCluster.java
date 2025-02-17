@@ -66,8 +66,10 @@ import java.util.stream.Collectors;
 )
 @SuppressWarnings("unchecked, rawtypes")
 public class CreateBatteryForCluster<T> implements Callable<Integer> {
+	private static final String CLASS_NAME = "StarterBatchBerlinAB";
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
+
 
 	@CommandLine.Option(names = "--output", defaultValue = "battery")
 	private Path output;
@@ -84,10 +86,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms82G -Xmx82G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.StarterBatchBrandenburgCoupled")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch." + CLASS_NAME)
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.StarterBatchBrandenburgCoupled$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch."+ CLASS_NAME + "$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")

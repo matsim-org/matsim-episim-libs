@@ -91,6 +91,9 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	private final DiseaseImport diseaseImport;
 	private final Restrictions restrictions;
 	private final AdjustRestrictions adjustRestrictions;
+
+	private final OdeCoupling odeCoupling;
+
 	private final Masks masks;
 	private final Tracing tracing;
 	private final Snapshot snapshot;
@@ -126,6 +129,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		this.diseaseImport = builder.diseaseImport;
 		this.restrictions = builder.restrictions;
 		this.adjustRestrictions = builder.adjustRestrictions;
+		this.odeCoupling = builder.odeCoupling;
 		this.masks = builder.masks;
 		this.tracing = builder.tracing;
 		this.snapshot = builder.snapshot;
@@ -154,12 +158,20 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 
-		//TODO: this is not in the cologne prod scenario, is it still needed?
+
+		if (odeCoupling == OdeCoupling.yes){
+			bind(ContactModel.class).to(SymmetricContactModelWithOdeCoupling.class).in(Singleton.class);
+		} else if (odeCoupling == OdeCoupling.no) {
+			bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+		} else {
+			throw new IllegalArgumentException("not yet defined option for odeCoupling");
+		}
+
+		//needed for back compatibility
 		if (adjustRestrictions == AdjustRestrictions.yes) {
 			bind(ShutdownPolicy.class).to(AdjustedPolicy.class).in(Singleton.class);
 			if (adaptiveRestrictions != AdaptiveRestrictions.no) {
@@ -179,6 +191,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			}
 		}
 
+		// reference size depends on size of scenario
 		bind(VaccinationFromData.Config.class).toInstance(
 				VaccinationFromData.newConfig("11000")
 						.withAgeGroup("05-11", 237886.9)
@@ -198,8 +211,8 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	@Singleton
 	public Config config() {
 
-		//		if (this.sample != 25 && this.sample != 100)
-		//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25 && this.sample != 100)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		//general config
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -226,16 +239,6 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		episimConfig.setActivityHandling(activityHandling);
 
-		//		episimConfig.setThreads(6); // TODO: check repeat from below
-
-		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
-		//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-		//
-		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
-		//				.addDays(DayOfWeek.SATURDAY);
-		//
-		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
-		//				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
@@ -293,19 +296,22 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210518	";
+		String untilDate = "20210518";
 		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 
 		//location based restrictions
 		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
-		config.facilities().setInputFile(INPUT.resolve("be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz").toString());
-		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
-		List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
-						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
-						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
-
-		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+		config.facilities().setInputFile(INPUT.resolve("bb_2020-week_snz_episim_facilities_100pt_withDistricts.xml.gz").toString());
 		if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+
+			config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
+			List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+				"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
+				"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
+
+			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+
+
 			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
 
 				Map<String, Path> subdistrictInputs = new HashMap<>();

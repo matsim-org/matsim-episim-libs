@@ -35,7 +35,6 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -68,27 +67,14 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 	private final ActivityFacilities facilities;
 
-//	private final Map<String, Map<String, Double>> facilityToCapacityMap;
-//
-//	private final Map<String,Boolean> facilityToBerlinMap;
 	private final ProgressionModel progressionModel;
 	private final EpisimConfigGroup episimConfigGroup;
 	private Int2DoubleMap dayToInfectionShareMap;
 
-	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input");
 	private EpisimContainer<ActivityFacility> containerFake;
 
 	private Map<Id<Person>, EpisimPerson> fakePersonPool;
 	private Long odeDiseaseImportCount;
-
-//	public Int2IntMap testDayToTotalCapacityMap = new Int2IntAVLTreeMap();
-//	public Int2DoubleMap testDayToInfChanceSum = new Int2DoubleAVLTreeMap();
-//	public Int2IntMap testDayToInfChanceCnt = new Int2IntAVLTreeMap();
-//	public Int2DoubleMap testDayToActualInfChanceSum = new Int2DoubleAVLTreeMap();
-//	public Int2IntMap testDayToActualInfChanceCnt = new Int2IntAVLTreeMap();
-//
-
-
 
 
 	@Inject
@@ -107,70 +93,81 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();
 
 		this.containerFake = new InfectionEventHandler.EpisimFacility(Id.create("fake_facility", ActivityFacility.class));
-		dayToInfectionShareMap = new Int2DoubleOpenHashMap();
-		facilities = scenario.getActivityFacilities();
 
 		odeDiseaseImportCount = 0L;
-		// Reads in Disease Import from ODE
-		//TODO: shouldn't be hardcoded
-		{
-			String odeResultsFilename = INPUT.resolve("ode_inputs/left_s.csv").toString();
-			String line;
-			String csvSplitBy = ",";  // Change this to the appropriate delimiter
-
-			// so far, the ode gives a share of all infected agents. What we actually need is contagiousButNotShowingSymptoms. Assuming the infectious also includes those quarentined at home
-
-			LocalDate startDate = episimConfig.getStartDate();
-			try (BufferedReader br = new BufferedReader(new FileReader(odeResultsFilename))) {
-				br.readLine();
-				while ((line = br.readLine()) != null) {
-					// Split line into columns
-					String[] columns = line.split(csvSplitBy);
-
-					// Assuming you want to map column 1 as key and column 2 as value
-					LocalDate date = LocalDate.parse(columns[0]);
-					int day = (int) startDate.until(date, ChronoUnit.DAYS);
-					double value = Double.parseDouble(columns[3]);
-					dayToInfectionShareMap.put(day, value);
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 
 
+		String odeResultsFilename = episimConfig.getOdeIncidenceFile();
+		dayToInfectionShareMap = readOdeInfectionsFile(odeResultsFilename);
 
-//		facilities = new ActivityFacilitiesImpl();
-//		episimConfig.getFacilitiesFile();
-//		new MatsimFacilitiesReader("EPSG:25833", "EPSG:25833", facilities).readFile(episimConfig.getFacilitiesFile());//"../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input/samples/br_2020-week_snz_episim_facilities_withDistricts_10pt.xml.gz");
-
-//
-//		this.facilityToCapacityMap = new HashMap<>();
-//		this.facilityToBerlinMap = new HashMap<>();
-//
-
-//		for (ActivityFacility facility : facilities.getFacilities().values()) {
-//			Map<String, Double> facilityMap = new HashMap<>();
-//			for (ActivityOption value : facility.getActivityOptions().values()) {
-//				String actType = value.getType();
-//
-//				// todo: should they all be shop_daily or also shop_other
-//				if (Objects.equals(actType, "shopping")) {
-//					actType = "shop_other";
-//				} else if (Objects.equals(actType, "restaurant")) {
-//					actType = "leisure";
-//				}
-//
-//				double capacity = value.getCapacity();
-//				facilityMap.put(actType, capacity);
-//			}
-//			String idString = facility.getId().toString();
-//			facilityToCapacityMap.put(idString, facilityMap);
-//			facilityToBerlinMap.put(idString, (boolean) facility.getAttributes().getAttribute("berlin"));
-//		}
-
+		this.facilities = scenario.getActivityFacilities();
 
 	}
+
+
+	private Int2DoubleMap readOdeInfectionsFile(String odeResultsFilename) {
+		String csvSplitBy = ",";  // Adjust the delimiter if needed
+
+		LocalDate startDate = episimConfig.getStartDate();
+		Int2DoubleMap dayToInfectionShareMap = new Int2DoubleOpenHashMap();
+
+		try (BufferedReader br = new BufferedReader(new FileReader(odeResultsFilename))) {
+			// Read header and determine the column index for "infectious"
+			String headerLine = br.readLine();
+			if (headerLine == null) {
+				throw new IOException("CSV file is empty or missing a header row.");
+			}
+
+			String[] headers = headerLine.split(csvSplitBy);
+			int dateIndex = -1;
+			int infectiousIndex = -1;
+
+			for (int i = 0; i < headers.length; i++) {
+				if ("time".equalsIgnoreCase(headers[i].trim())) {
+					dateIndex = i;
+				} else if ("infectious".equalsIgnoreCase(headers[i].trim())) {
+					infectiousIndex = i;
+				}
+			}
+
+			if (dateIndex == -1) {
+				throw new IOException("Column 'date' not found in CSV file.");
+			}
+
+			if (infectiousIndex == -1) {
+				throw new IOException("Column 'infectious' not found in CSV file.");
+			}
+
+
+			String line;
+			while ((line = br.readLine()) != null) {
+				String[] columns = line.split(csvSplitBy);
+
+				if (columns.length <= infectiousIndex) {
+					System.err.println("Skipping malformed line: " + line);
+					continue;
+				}
+
+				try {
+					LocalDate date = LocalDate.parse(columns[dateIndex].trim());
+					int day = (int) startDate.until(date, ChronoUnit.DAYS);
+					double value = Double.parseDouble(columns[infectiousIndex].trim());
+					dayToInfectionShareMap.put(day, value);
+				} catch (Exception e) {
+					System.err.println("Error parsing line: " + line + " - " + e.getMessage());
+				}
+			}
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to read ODE infections file", e);
+		}
+
+		if (dayToInfectionShareMap.size() == 0) {
+			throw new RuntimeException("ODE Infection Map has size 0.");
+		}
+
+		return dayToInfectionShareMap;
+	}
+
 
 	public Long getOdeDiseaseImportCount() {
 		return odeDiseaseImportCount;
@@ -233,20 +230,20 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		EpisimContainer<?> container;
 		// todo activityFacility != null is an important assumption, excludes trains and homes.
 
-		boolean berlin = activityFacility != null &&
-			activityFacility.getAttributes().getAsMap().containsKey("district") && //todo check this assumption
-			activityFacility.getAttributes().getAttribute("district").equals("Berlin");
-		if (berlin) {
 
-			if (episimConfig.getOdeCouplingDistrict() != null && !episimConfig.getOdeCouplingDistrict().equals("")) {
-				if (!personLeavingContainer.getAttributes().getAttribute("district").equals(episimConfig.getOdeCouplingDistrict())) {
+		boolean actInOdeRegion = activityFacility != null &&
+			activityFacility.getAttributes().getAsMap().containsKey("inOdeRegion") &&
+			Objects.equals((String) activityFacility.getAttributes().getAttribute("inOdeRegion"), "true");
+
+		if (actInOdeRegion) {
+
+			if (episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("")) {
+				if (!personLeavingContainer.getAttributes().getAttribute("district").equals(episimConfig.getOdeInfTargetDistrict())) {
 					return;
 				}
 			}
 
-//			personLeavingContainer.getAttributes().putAttribute("berlin", true);
-
-				// we are only interested in susceptible commuters being infected by berliners. At this point, there is no 'Rückkopplung' from ABM to ODE
+			// we are only interested in susceptible commuters being infected by berliners. At this point, there is no 'Rückkopplung' from ABM to ODE
 			if (!personLeavingContainer.getDiseaseStatus().equals(DiseaseStatus.susceptible)) {
 				return;
 			}
@@ -335,7 +332,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			containerFake.setMaxGroupSize(maxGroupSizeScaled);
 			container = containerFake;
 
-		} else{
+		} else {
 			container = containerReal;
 		}
 
@@ -405,8 +402,8 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 				continue;
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer,  container.getPerformedActivity(personLeavingContainer.getPersonId()));
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson,  container.getPerformedActivity(contactPerson.getPersonId()));
+			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, container.getPerformedActivity(personLeavingContainer.getPersonId()));
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, container.getPerformedActivity(contactPerson.getPersonId()));
 
 			String leavingPersonsActivity = leavingParams == qhParams ? "home" : leavingParams.getContainerName();
 			String otherPersonsActivity = contactParams == qhParams ? "home" : contactParams.getContainerName();
@@ -493,11 +490,10 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
-					if(berlin)
+					if (actInOdeRegion)
 						odeDiseaseImportCount++;
 
 				}
-
 
 
 			} else {
@@ -516,7 +512,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			}
 		}
 
-		if(berlin){
+		if (actInOdeRegion) {
 
 
 			for (EpisimPerson person : container.getPersons()) {

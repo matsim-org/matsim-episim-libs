@@ -21,13 +21,13 @@ if (TRUE) {
 
 
   rm(list = ls())
-  setwd("D:/Dropbox/Documents/VSP/episim/location_based_restrictions/")
+  setwd("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2025-02-01/1-adaptive")
 
-  gbl_image_output <- "C:/Users/jakob/projects/60eeeb14daadd7ca9fc56fea/images/"
-  gbl_directory <- "master/b2/"
+  gbl_image_output <- "plots"
+  gbl_directory <- ""
 
   # load all functions
-  source("C:/Users/jakob/projects/matsim-episim/src/main/R/masterJR-utils.R", encoding = 'utf-8')
+  source("~/git/matsim-episim-libs/src/main/R/masterJR-utils.R", encoding = 'utf-8')
 
 }
 
@@ -44,10 +44,13 @@ if (FALSE) {
   run_params <- get_run_parameters(gbl_directory)
 
   # infections in each berlin district
-  episim_infections_district <- read_combine_episim_output(gbl_directory, "infections_subdistrict.txt", TRUE)
-
+  source("~/git/matsim-episim-libs/src/main/R/masterJR-utils.R", encoding = 'utf-8')
+  episim_infections_district <- read_combine_episim_output("", "infections.txt.csv", TRUE)
+  save(episim_infections_district, file = "episim_infections_district.Rdata")
+  
   # incidence in each berlin district
-  episim_incidence_district <- convert_infections_into_incidence(gbl_directory, episim_infections_district, FALSE) %>%
+  episim_incidence_district <- 
+    convert_infections_into_incidence(gbl_directory, episim_infections_district, FALSE)
     rename("Trigger" = trigger, "Rf" = restrictedFraction)
 
   # incidence in each berlin district, only seed 4711

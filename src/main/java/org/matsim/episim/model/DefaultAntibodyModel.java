@@ -80,6 +80,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
 
+		if(person.getNumInfections() == 0 && person.getNumVaccinations() == 0){
+			return;
+		}
+
 		//handle vaccination
 		if (person.getVaccinationDates().contains(day - 1)) {
 			int vaccinationIndex = person.getVaccinationDates().indexOf(day - 1);

@@ -36,6 +36,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.MatsimFacilitiesReader;
 import picocli.CommandLine;
 
@@ -46,10 +47,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -219,6 +217,27 @@ public class RunParallel<T> implements Callable<Integer> {
 
 			if (taskThreads > -1) {
 				episimConfig.setThreads(taskThreads);
+			}
+
+
+
+			// preprocess activity facilities: Tag those facilities that for which ODE applies
+			List<String> odeDistricts = episimConfig.getOdeDistricts();
+			if (odeDistricts == null) {
+				odeDistricts = Collections.emptyList(); // Prevents NPE
+			}
+
+			for (ActivityFacility fac : scenario.getActivityFacilities().getFacilities().values()) {
+				if (fac.getAttributes() == null) {
+					continue; // Skip facilities with no attributes
+				}
+
+				if(fac.getAttributes().getAsMap().containsKey("district")) {
+					String district = (String) fac.getAttributes().getAttribute("district");
+					if (district != null && odeDistricts.contains(district)) {
+						fac.getAttributes().putAttribute("inOdeRegion", "true");
+					}
+				}
 			}
 
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&

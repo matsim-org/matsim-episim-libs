@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Collect and process output of batch runs
-if [ -z "$1" ]
-  then
-    echo "Must pass city name EXACTLY as written in infections.txt"
-    echo "e.g.: collect.sh Berlin"
-    exit 1
-fi
+#if [ -z "$1" ]
+#  then
+#    echo "Must pass city name EXACTLY as written in infections.txt"
+#    echo "e.g.: collect.sh Berlin"
+#    exit 1
+#fi
 
 # Copies output and appends additional file ending
 copy_output() {
@@ -36,8 +36,12 @@ aggregate_run() {
     cd "$dir" || exit
 
     # Copy and grep the infections file
-    head -1 $name > $tmp/$run/$name.csv
-    grep $district $name >> $tmp/$run/$name.csv
+    head -1 "$name" > "$tmp/$run/$name.csv"
+    if [[ -z "$district" ]]; then
+        cat "$name" >> "$tmp/$run/$name.csv"  # No filtering, include all rows
+    else
+        grep "$district" "$name" >> "$tmp/$run/$name.csv"
+    fi
 
     # Copy other output files
     copy_output *.restrictions.txt $tmp/$run .csv
@@ -45,6 +49,7 @@ aggregate_run() {
     copy_output *.infectionsPerActivity.txt $tmp/$run .tsv
     copy_output *.diseaseImport.tsv $tmp/$run
     copy_output *.outdoorFraction.tsv $tmp/$run
+    copy_output *.timeUse.txt $tmp/$run
     copy_output *.strains.tsv $tmp/$run
     copy_output *.vaccinations.tsv $tmp/$run
     copy_output *.vaccinationsDetailed.tsv $tmp/$run

@@ -51,7 +51,11 @@ import java.util.stream.Collectors;
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String ODE_COUPLING_FACTOR = "odeCouplingFactor";
-	private static final String ODE_COUPLING_DISTRICT = "odeCouplingDistrict";
+	private static final String ODE_INF_TARGET_DISTRICT = "odeCouplingDistrict";
+
+	private static final String ODE_INCIDENCE_FILE = "odeIncidenceFile";
+
+	private static final String ODE_DISTRICTS = "odeDistricts";
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
@@ -90,6 +94,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String FACILITIES_PATH = "facilitiesPath";
 
+
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
 
 	/**
@@ -118,7 +123,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private double odeCouplingFactor = 0.0;
 
-	private String odeCouplingDistrict = null;
+	private String odeInfTargetDistrict = null;
+
+	private String odeIncidenceFile = null;
+
+	private List<String> odeDistricts = new ArrayList<>();
+
 
     /**
 	 * Which events to write in the output.
@@ -202,15 +212,48 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setOdeCouplingFactor(double odeCouplingFactor) {
 		this.odeCouplingFactor = odeCouplingFactor;
 	}
-	@StringGetter(ODE_COUPLING_DISTRICT)
-	public String getOdeCouplingDistrict() {
-		return odeCouplingDistrict;
+
+	@StringGetter(ODE_INF_TARGET_DISTRICT)
+	public String getOdeInfTargetDistrict() {
+		return odeInfTargetDistrict;
+	}
+	@StringSetter(ODE_INF_TARGET_DISTRICT)
+	public void setOdeInfTargetDistrict(String odeInfTargetDistrict) {
+		this.odeInfTargetDistrict = odeInfTargetDistrict;
+	}
+	@StringSetter(ODE_INCIDENCE_FILE)
+	public void setOdeIncidenceFile(String odeIncidenceFile) {
+		this.odeIncidenceFile = odeIncidenceFile;
 	}
 
-	@StringSetter(ODE_COUPLING_DISTRICT)
-	public void setOdeCouplingDistrict(String odeCouplingDistrict) {
-		this.odeCouplingDistrict = odeCouplingDistrict;
+	@StringGetter(ODE_INCIDENCE_FILE)
+	public String getOdeIncidenceFile() {
+		return odeIncidenceFile;
 	}
+
+
+	//
+	public void setOdeDistricts(List<String> odeDistricts) {
+		this.odeDistricts = odeDistricts;
+	}
+
+	public List<String> getOdeDistricts() {
+		return this.odeDistricts;
+
+	}
+
+	@StringSetter(ODE_DISTRICTS)
+	void setOdeDistricts(String odeDistricts) {
+		this.odeDistricts = Splitter.on(";").splitToList(odeDistricts);
+	}
+
+	@StringGetter(ODE_DISTRICTS)
+	String getOdeDistrictsString() {
+		return Joiner.on(";").join(this.odeDistricts);
+	}
+
+	//
+
 
 	public String getInputEventsFile() {
 		List<EventFileParams> list = Lists.newArrayList(getInputEventsFiles());

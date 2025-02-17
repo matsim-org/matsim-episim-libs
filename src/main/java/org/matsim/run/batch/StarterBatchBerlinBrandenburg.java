@@ -7,22 +7,20 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.OutputAnalysis;
-import org.matsim.episim.model.AgeAndProgressionDependentInfectionModelWithSeasonality;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.run.RunParallel;
-import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzBerlinBrandenburgProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
 
 /**
- * boilerplate batch for berlin
+ * boilerplate batch for berlin+brandenburg
  */
-public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
+public class StarterBatchBerlinBrandenburg implements BatchRun<StarterBatchBerlinBrandenburg.Params> {
 
 	/*
 	 * here you can swap out vaccination model, antibody model, etc.
@@ -38,13 +36,14 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 	/*
 	 * here you select & modify models specified in the SnzCologneProductionScenario & SnzProductionScenario.
 	 */
-	private SnzBerlinProductionScenario getBindings(Params params) {
-		return new SnzBerlinProductionScenario.Builder()
+	private SnzBerlinBrandenburgProductionScenario getBindings(Params params) {
+		return new SnzBerlinBrandenburgProductionScenario.Builder()
+			.setSchoolVacations(params == null || Boolean.parseBoolean(params.schoolClosure))
+			.setSuscHouseholds_pct(params == null ? 0.0 : params.pHouse5)
+			.setOdeCoupling(SnzBerlinBrandenburgProductionScenario.OdeCoupling.no)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 			.setInfectionModel(InfectionModelWithAntibodies.class)
-			.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-			.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
-			.setSample(25)
+//			.setSample(1)
 			.build();
 	}
 
@@ -53,7 +52,7 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 	 */
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "calibration");
+		return Metadata.of("berlin-brandenburg", "calibration");
 	}
 
 
@@ -80,7 +79,7 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 		// 		 2a: general episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7 * params.thetaFactor);
 
 		//		 2b: specific config groups, e.g. virusStrainConfigGroup
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
@@ -94,14 +93,17 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 	 */
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(2)
 		public long seed;
 
-//		@StringParameter({"true", "false"})
-//		public String antibodyModel;
-
-		@Parameter({0.5, 0.75, 1.0, 1.25, 2.0})
+		@Parameter({0.01, 0.05, 0.1, 0.3})
 		public double thetaFactor;
+
+		@StringParameter({"true", "false"})
+		public String schoolClosure;
+
+		@Parameter({0.0, 1.0})
+		public double pHouse5;
 	}
 
 
@@ -111,7 +113,7 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 	 */
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, StarterBatchBerlin.class.getName(),
+				RunParallel.OPTION_SETUP, StarterBatchBerlinBrandenburg.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(8),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(50),

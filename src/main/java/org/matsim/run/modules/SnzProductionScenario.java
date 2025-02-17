@@ -526,6 +526,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	public enum AdjustRestrictions {yes, no}
 
+	public enum OdeCoupling {yes, no}
+
 	public enum EasterModel {yes, no}
 
 	public enum LocationBasedRestrictions {yes, no}
@@ -539,6 +541,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		DiseaseImport diseaseImport = DiseaseImport.yes;
 		Restrictions restrictions = Restrictions.yes;
 		AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
+
+		OdeCoupling odeCoupling = OdeCoupling.no;
 		Masks masks = Masks.yes;
 		Tracing tracing = Tracing.yes;
 		Vaccinations vaccinations = Vaccinations.yes;
@@ -597,6 +601,11 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		public Builder<T> setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
 			this.adjustRestrictions = adjustRestrictions;
+			return this;
+		}
+
+		public Builder<T> setOdeCoupling(OdeCoupling odeCoupling) {
+			this.odeCoupling = odeCoupling;
 			return this;
 		}
 

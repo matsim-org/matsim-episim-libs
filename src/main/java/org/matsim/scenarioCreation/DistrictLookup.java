@@ -79,9 +79,9 @@ public class DistrictLookup implements Callable<Integer> {
 	private Path outputPopulation;
 
 	// facilities
-	@CommandLine.Option(names = "--inputFacilities", description = "Facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input/samples/br_2020-week_snz_episim_facilities_1pt.xml.gz")
+	@CommandLine.Option(names = "--inputFacilities", description = "Facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinBrandenburg/episim-input/bb_2020-week_snz_episim_facilities_100pt.xml.gz")
 	private Path inputFacilities;
-	@CommandLine.Option(names = "--outputFacilities", description = "Output Facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input/samples/br_2020-week_snz_episim_facilities_withDistricts_1pt.xml.gz")
+	@CommandLine.Option(names = "--outputFacilities", description = "Output Facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinBrandenburg/episim-input/bb_2020-week_snz_episim_facilities_100pt_withDistricts.xml.gz")
 	private Path outputFacilities;
 
 	// shape file

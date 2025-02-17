@@ -52,7 +52,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseAreas {
-		Germany, Berlin, BerlinDistricts, Test, Bundeslaender, Landkreise, AnyArea, UpdateMobilityDashboardData, Koeln, Brandenburg
+		Germany, Berlin, BerlinDistricts, Test, Bundeslaender, Landkreise, AnyArea, UpdateMobilityDashboardData, Koeln, Brandenburg, BerlinBrandenburg
 	};
 
 	private enum AnalyseOptions {
@@ -76,7 +76,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.Brandenburg;
+		AnalyseAreas selectedArea = AnalyseAreas.BerlinBrandenburg;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
 		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise
 		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD, only for Bundeslaender and Landkreise
@@ -194,7 +194,18 @@ class AnalyzeSnzData implements Callable<Integer> {
 			snz.writeDataForCertainArea(outputFolder.resolve("BrandenburgSnzData_daily_until.csv"),
 				zipCodesAnyBrandenburg.values().iterator().next(), getPercentageResults, baseDays, datesToIgnore);
 			break;
+		case BerlinBrandenburg:
+			HashMap<String, IntSet> zipCodesAnyBe = snz.findZipCodesForAnyArea("Berlin", true);
+			HashMap<String, IntSet> zipCodesAnyBr = snz.findZipCodesForAnyArea("Brandenburg", true);
 
+			IntSet combinedZips = new IntOpenHashSet();
+			combinedZips.addAll(zipCodesAnyBe.values().iterator().next());
+			combinedZips.addAll(zipCodesAnyBr.values().iterator().next());
+
+			snz.writeDataForCertainArea(outputFolder.resolve("BerlinBrandenburgSnzData_daily_until.csv"),
+				combinedZips, getPercentageResults, baseDays, datesToIgnore);
+
+			break;
 		case Bundeslaender:
 			switch (selectedOutputOption) {
 			case weeklyResultsOfAllDays:

@@ -7,22 +7,19 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.OutputAnalysis;
-import org.matsim.episim.model.AgeAndProgressionDependentInfectionModelWithSeasonality;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzCologneProductionScenario;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
 
 /**
  * boilerplate batch for berlin
  */
-public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
+public class StarterBatchBerlinOG implements BatchRun<StarterBatchBerlinOG.Params> {
 
 	/*
 	 * here you can swap out vaccination model, antibody model, etc.
@@ -41,7 +38,6 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 	private SnzBerlinProductionScenario getBindings(Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-			.setInfectionModel(InfectionModelWithAntibodies.class)
 			.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 			.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
 			.setSample(25)
@@ -80,7 +76,7 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 		// 		 2a: general episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * params.thetaFactor);
 
 		//		 2b: specific config groups, e.g. virusStrainConfigGroup
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
@@ -111,7 +107,7 @@ public class StarterBatchBerlin implements BatchRun<StarterBatchBerlin.Params> {
 	 */
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, StarterBatchBerlin.class.getName(),
+				RunParallel.OPTION_SETUP, StarterBatchBerlinOG.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(8),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(50),

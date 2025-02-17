@@ -22,7 +22,6 @@ import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
-import org.matsim.run.batch.UtilsJR;
 
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -32,22 +31,20 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
-import static org.matsim.episim.policy.FixedPolicy.*;
-
-public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
+public class SnzBerlinBrandenburgProductionScenario extends SnzProductionScenario {
 
 
-	public static final List<String> BRANDENBURG_LANDKREISE = List.of("Elbe-Elster", "Barnim", "Prignitz", "Uckermark", "Oberspreewald-Lausitz", "Potsdam-Mittelmark", "Märkisch-Oderland", "Oberhavel", "Ostprignitz-Ruppin", "Potsdam", "Brandenburg an der Havel", "Frankfurt (Oder)", "Dahme-Spreewald", "Teltow-Fläming", "Oder-Spree", "Havelland", "Cottbus", "Spree-Neiße");
+	public static class Builder extends SnzProductionScenario.Builder<SnzBerlinBrandenburgProductionScenario> {
 
+		public boolean schoolVacations = true;
 
-	public static class Builder extends SnzProductionScenario.Builder<SnzBrandenburgProductionScenario> {
 
 		public double scale = 1.3;
 		private double householdSusc = 1.0;
 
 		@Override
-		public SnzBrandenburgProductionScenario build() {
-			return new SnzBrandenburgProductionScenario(this);
+		public SnzBerlinBrandenburgProductionScenario build() {
+			return new SnzBerlinBrandenburgProductionScenario(this);
 		}
 
 		public Builder setSuscHouseholds_pct(double householdSusc) {
@@ -55,13 +52,13 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 			return this;
 		}
 
-		public SnzBrandenburgProductionScenario.Builder setScaleForActivityLevels(double scale) {
+		public SnzBerlinBrandenburgProductionScenario.Builder setScaleForActivityLevels(double scale) {
 			this.scale = scale;
 			return this;
 		}
 
-		public SnzBrandenburgProductionScenario.Builder setLocationBasedRestrictions(LocationBasedRestrictions locationBasedRestrictions) {
-			this.locationBasedRestrictions = locationBasedRestrictions;
+		public SnzBerlinBrandenburgProductionScenario.Builder setSchoolVacations(boolean schoolVacations) {
+			this.schoolVacations = schoolVacations;
 			return this;
 		}
 
@@ -79,27 +76,30 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 	private final EpisimConfigGroup.ActivityHandling activityHandling;
 
+	private final boolean schoolVacations;
+
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input");
+	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinBrandenburg/episim-input");
 
 
 	/**
 	 * Empty constructor is needed for running scenario from command line.
 	 */
 	@SuppressWarnings("unused")
-	private SnzBrandenburgProductionScenario() {
+	private SnzBerlinBrandenburgProductionScenario() {
 		this(new Builder());
 	}
 
-	protected  SnzBrandenburgProductionScenario(Builder builder){
+	protected SnzBerlinBrandenburgProductionScenario(Builder builder){
 		this.sample = builder.sample;
 		this.scale = builder.scale;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
 		this.odeCoupling = builder.odeCoupling;
 		this.householdSusc = builder.householdSusc;
 		this.activityHandling = builder.activityHandling;
+		this.schoolVacations = builder.schoolVacations;
 	}
 
 	private static String inputForSample(String base, int sample) {
@@ -173,7 +173,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 	public Config config() {
 
 		// populations (in millions) of brandenburg vs, as taken from wikipedia
-		double brandenburgFactor = 2.520 / 3.878;
+		double berlinBrandenburgFactor = (2.520 + 3.878) / 3.878;
 
 //		if (this.sample != 25 && this.sample != 100)
 //			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
@@ -186,7 +186,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
-		config.plans().setInputFile(inputForSample("br_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+		config.plans().setInputFile(inputForSample("bb_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
@@ -195,17 +195,17 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 
 		// the cologne events files are appended with "withLeisure". Do we need this for Brandenburg as well?
-		episimConfig.addInputEventsFile(inputForSample("br_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("bb_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 			.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("br_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("bb_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
 			.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("br_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("bb_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 			.addDays(DayOfWeek.SUNDAY);
 
 
-		config.facilities().setInputFile(inputForSample("br_2020-week_snz_episim_facilities_withDistricts_%dpt.xml.gz", sample));
+		config.facilities().setInputFile(INPUT.resolve("bb_2020-week_snz_episim_facilities_100pt.xml.gz").toString());
 //		config.facilities().setInputCRS("EPSG:25833");
 //		config.global().setCoordinateSystem("EPSG:25833");
 
@@ -280,7 +280,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("BrandenburgSnzData_daily_until20221231.csv"));
+		activityParticipation.setInput(INPUT.resolve("BerlinBrandenburgSnzData_daily_until20221231.csv"));
 
 
 		// TODO: ask sebastian what these do, and add comments.
@@ -297,46 +297,49 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		}
 
 		// school vacations & lockdowns.
-		// https://www.maz-online.de/brandenburg/corona-krise-in-brandenburg-eine-chronologie-SIFYHOEII3ZG6G5XW4HULSD4GI.html
-		//
-		// https://brandenburg.de/cms/detail.php/detail.php?gsid=bb1.c.663534.de
-		//
-		//	https://brandenburg.de/cms/detail.php/bb1.c.691163.de
-//		 "Das Kabinett beschließt die Schließung von Schulen und Kitas ab 18. März"
-		builder.restrict(LocalDate.parse("2020-03-18"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-		// 17. April 2020: Das Kabinett beschließt erste Lockerungen:[...], eingesetzt erst am 27. Nur Abschlussklassen  Auch die Schulen starten nach einem Stufenplan wieder den Unterricht.
-		builder.restrict(LocalDate.parse("2020-04-27"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
-		// 6th grade goes back
-		builder.restrict(LocalDate.parse("2020-05-04"), 0.3, "educ_primary");
-		// 9th and 12th grade of secondary school, and 11th grade of gymnasium
-		builder.restrict(LocalDate.parse("2020-05-04"), 0.4, "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2020-05-25"), 1.0, "educ_kiga", "educ_primary",  "educ_secondary", "educ_tertiary", "educ_other");
-		//Sommerferien (Source = https://www.payback.de/ratgeber/besser-leben/reisen/ferien-2020#Brandenburg)
-		builder.restrict(LocalDate.parse("2020-06-25"), 0.2,  "educ_kiga", "educ_primary","educ_secondary", "educ_tertiary", "educ_other");
-		//10. August 2020: Die Schulen starten nach den Sommerferien wieder in den Regelbetrieb.
-		builder.restrict(LocalDate.parse("2020-08-10"), 1.0,  "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Lueften nach den Sommerferien
-		builder.restrict(LocalDate.parse("2020-08-10"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2020-12-31"), Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		//Herbstferien
-		builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2020-10-24"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//14. Dezember 2020: Die Präsenzpflicht in den Schulen wird eine Woche vor den Weihnachtsferien aufgehoben.
-		builder.restrict(LocalDate.parse("2020-12-14"), 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Weihnachtsferien (which morph into school closure)
-		builder.restrict(LocalDate.parse("2020-12-21"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		// Abschlussklassen und Förderschulen wieder unterichtet.
-		builder.restrict(LocalDate.parse("2021-01-21"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
-		//22. Februar 2021: Die Grundschulen öffnen wieder im Wechselunterricht zwischen Schule und zuhause.
-		builder.restrict(LocalDate.parse("2021-02-22"), 0.5, "educ_primary");
-		builder.restrict(LocalDate.parse("2021-03-15"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Osterferien
-		builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-04-10"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		//Sommerferien
-		builder.restrict(LocalDate.parse("2021-06-24"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-08-08"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
+		if(schoolVacations) {
+			// https://www.maz-online.de/brandenburg/corona-krise-in-brandenburg-eine-chronologie-SIFYHOEII3ZG6G5XW4HULSD4GI.html
+			//
+			// https://brandenburg.de/cms/detail.php/detail.php?gsid=bb1.c.663534.de
+			//
+			//	https://brandenburg.de/cms/detail.php/bb1.c.691163.de
+			// "Das Kabinett beschließt die Schließung von Schulen und Kitas ab 18. März"
+			builder.restrict(LocalDate.parse("2020-03-18"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+			// 17. April 2020: Das Kabinett beschließt erste Lockerungen:[...], eingesetzt erst am 27. Nur Abschlussklassen  Auch die Schulen starten nach einem Stufenplan wieder den Unterricht.
+			builder.restrict(LocalDate.parse("2020-04-27"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
+			// 6th grade goes back
+			builder.restrict(LocalDate.parse("2020-05-04"), 0.3, "educ_primary");
+			// 9th and 12th grade of secondary school, and 11th grade of gymnasium
+			builder.restrict(LocalDate.parse("2020-05-04"), 0.4, "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2020-05-25"), 1.0, "educ_kiga", "educ_primary",  "educ_secondary", "educ_tertiary", "educ_other");
+			//Sommerferien (Source = https://www.payback.de/ratgeber/besser-leben/reisen/ferien-2020#Brandenburg)
+			builder.restrict(LocalDate.parse("2020-06-25"), 0.2,  "educ_kiga", "educ_primary","educ_secondary", "educ_tertiary", "educ_other");
+			//10. August 2020: Die Schulen starten nach den Sommerferien wieder in den Regelbetrieb.
+			builder.restrict(LocalDate.parse("2020-08-10"), 1.0,  "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//Lueften nach den Sommerferien
+			builder.restrict(LocalDate.parse("2020-08-10"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2020-12-31"), Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			//Herbstferien
+			builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2020-10-24"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//14. Dezember 2020: Die Präsenzpflicht in den Schulen wird eine Woche vor den Weihnachtsferien aufgehoben.
+			builder.restrict(LocalDate.parse("2020-12-14"), 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//Weihnachtsferien (which morph into school closure)
+			builder.restrict(LocalDate.parse("2020-12-21"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			// Abschlussklassen und Förderschulen wieder unterichtet.
+			builder.restrict(LocalDate.parse("2021-01-21"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
+			//22. Februar 2021: Die Grundschulen öffnen wieder im Wechselunterricht zwischen Schule und zuhause.
+			builder.restrict(LocalDate.parse("2021-02-22"), 0.5, "educ_primary");
+			builder.restrict(LocalDate.parse("2021-03-15"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//Osterferien
+			builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2021-04-10"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//Sommerferien
+			builder.restrict(LocalDate.parse("2021-06-24"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2021-08-08"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+
+		}
 
 		//---------------------------------------
 		//		M A S K S
@@ -636,7 +639,7 @@ public class SnzBrandenburgProductionScenario extends SnzProductionScenario {
 		//		T R A C I N G
 		//---------------------------------------
 
-		SnzProductionScenario.configureTracing(config, brandenburgFactor);
+		SnzProductionScenario.configureTracing(config, berlinBrandenburgFactor);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		tracingConfig.setQuarantineVaccinated((Map.of(
