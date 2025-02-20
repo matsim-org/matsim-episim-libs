@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -122,6 +123,9 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 	}
 
 	private static final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
+	public static final AtomicInteger personCounter = new AtomicInteger(0);  // Thread-safe counter
+
+
 
 
 	public Long getOdeDiseaseImportCount() {
@@ -140,11 +144,12 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 //		unknownCnt = 0L;
 //	}
 
-	private EpisimPerson borrowPerson(Id<Person> personId, Attributes sharedAttributes, EpisimReporting reporting) {
+	private EpisimPerson borrowPerson(Attributes sharedAttributes, EpisimReporting reporting) {
 		Deque<EpisimPerson> pool = personPool.get();
 		EpisimPerson person = pool.poll();
 		if (person == null) {
 			// No available objects in the pool — create a new one
+			Id<Person> personId = Id.createPersonId("fake_" + personCounter.getAndIncrement());
 			person = new EpisimPerson(personId, sharedAttributes, reporting);
 		} else {
 			// Reuse the existing object, resetting its state
@@ -324,10 +329,10 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 
 
-						Id<Person> personId = Id.createPersonId("fake_task" + taskId + "_" + i);
-//						EpisimPerson person = borrowPerson(personId, sharedAttributes, reporting);
+//						Id<Person> personId = Id.createPersonId("fake_task" + taskId + "_" + i);
+						EpisimPerson person = borrowPerson(sharedAttributes, reporting);
 //
-						EpisimPerson person = new EpisimPerson(personId, sharedAttributes, reporting);
+//						EpisimPerson person = new EpisimPerson(personId, sharedAttributes, reporting);
 
 						containerFake.addPerson(person, 0, new EpisimPerson.PerformedActivity(0, episimConfig.getOrAddContainerParams(actType), null));
 
@@ -538,6 +543,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			while (iterator.hasNext()) {
 				EpisimPerson person = iterator.next();
 				if (person.getPersonId().toString().startsWith("fake")) {
+					returnPerson(person);
 					((AbstractProgressionModel) progressionModel).removeAgent(person.getPersonId());
 					iterator.remove();  // Properly remove from the list
 				}
