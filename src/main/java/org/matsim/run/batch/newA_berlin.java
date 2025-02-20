@@ -118,8 +118,8 @@ public class newA_berlin implements BatchRun<newA_berlin.Params> {
 		@Parameter({1.0})
 		public double thetaFactor;
 
-//		@Parameter({-1.0, 0.5, 0.75, 1.0, 1.25, 1.5})
-		@Parameter({1.})
+		@Parameter({0.5, 0.75, 1.0, 1.25, 1.5})
+//		@Parameter({1.})
 		public double ode;
 
 	}
@@ -133,7 +133,7 @@ public class newA_berlin implements BatchRun<newA_berlin.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, newA_berlin.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_TASKS, Integer.toString(2),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(50),
 				RunParallel.OPTION_METADATA
 		};

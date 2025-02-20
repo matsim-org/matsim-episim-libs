@@ -772,7 +772,15 @@ public final class InfectionEventHandler implements Externalizable {
 		// Sum of antibodies
 		Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
+		boolean fakeAgentsPossible = contactModel instanceof SymmetricContactModelWithOdeCoupling;
+
 		for (EpisimPerson person : personMap.values()) {
+
+			if (fakeAgentsPossible && person.getPersonId().toString().startsWith("fake_")) {
+				progressionModel.removeAgent(person.getPersonId());
+			}
+
+
 			progressionModel.updateState(person, iteration);
 			antibodyModel.updateAntibodies(person, iteration);
 

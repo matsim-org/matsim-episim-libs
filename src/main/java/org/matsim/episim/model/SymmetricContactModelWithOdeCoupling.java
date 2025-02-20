@@ -144,7 +144,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 //		unknownCnt = 0L;
 //	}
 
-	private EpisimPerson borrowPerson(Attributes sharedAttributes, EpisimReporting reporting) {
+	private EpisimPerson borrowPerson(Attributes sharedAttributes, EpisimReporting reporting, double now, int dayCounter) {
 		Deque<EpisimPerson> pool = personPool.get();
 		EpisimPerson person = pool.poll();
 		if (person == null) {
@@ -157,6 +157,19 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			person.setDiseaseStatus(0, DiseaseStatus.susceptible);
 //			person.getActivities().clear();  // Clear any leftover activities
 		}
+
+//		if (person.getDiseaseStatus().equals(DiseaseStatus.contagious)) {
+//			return person;
+//		}
+
+		// this do-while loop will add a person, check if they are actually contagious; if not, they'll add another person.
+		do {
+			progressionModel.removeAgent(person.getPersonId());
+			person.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
+			//todo: talk to kai: should we this be a distribution of when they become infectious, because infectivity depends on how long they've been infectious.
+			progressionModel.updateState(person, dayCounter);
+		} while (!person.getDiseaseStatus().equals(DiseaseStatus.contagious));
+
 		return person;
 	}
 
@@ -330,21 +343,11 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 
 //						Id<Person> personId = Id.createPersonId("fake_task" + taskId + "_" + i);
-						EpisimPerson person = borrowPerson(sharedAttributes, reporting);
+						EpisimPerson person = borrowPerson(sharedAttributes, reporting, now, dayCounter);
 //
 //						EpisimPerson person = new EpisimPerson(personId, sharedAttributes, reporting);
 
 						containerFake.addPerson(person, 0, new EpisimPerson.PerformedActivity(0, episimConfig.getOrAddContainerParams(actType), null));
-
-						// this do-while loop will add a person, check if they are actually contagious; if not, they'll add another person.
-						do {
-							progressionModel.removeAgent(person.getPersonId());
-							person.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
-							//todo: talk to kai: should we this be a distribution of when they become infectious, because infectivity depends on how long they've been infectious.
-							progressionModel.updateState(person, dayCounter);
-						} while (!person.getDiseaseStatus().equals(DiseaseStatus.contagious));
-
-
 					}
 				}
 			}
@@ -544,7 +547,10 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 				EpisimPerson person = iterator.next();
 				if (person.getPersonId().toString().startsWith("fake")) {
 					returnPerson(person);
+
+					// remove from progression model
 					((AbstractProgressionModel) progressionModel).removeAgent(person.getPersonId());
+
 					iterator.remove();  // Properly remove from the list
 				}
 			}

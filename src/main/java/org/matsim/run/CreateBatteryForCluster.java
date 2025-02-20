@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
 )
 @SuppressWarnings("unchecked, rawtypes")
 public class CreateBatteryForCluster<T> implements Callable<Integer> {
-	private static final String CLASS_NAME = "newC_berlin_brand";
+	private static final String CLASS_NAME = "newA_berlin";
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
 
