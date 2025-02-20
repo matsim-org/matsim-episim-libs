@@ -1036,6 +1036,9 @@ public final class InfectionEventHandler implements Externalizable {
 			reporting.reportDiseaseImportOde((int) odeImport, iteration, date.toString());
 			((SymmetricContactModelWithOdeCoupling) contactModel).resetOdeDiseaseImportCount();
 
+//			log.warn("Unknown Count for iteration " + iteration + ": " + ((SymmetricContactModelWithOdeCoupling) contactModel).getUnknownCnt());
+//			((SymmetricContactModelWithOdeCoupling) contactModel).resetUnknownCnt();
+
 		}
 
 	}

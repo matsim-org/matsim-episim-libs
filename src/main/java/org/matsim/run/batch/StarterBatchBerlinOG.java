@@ -37,6 +37,8 @@ public class StarterBatchBerlinOG implements BatchRun<StarterBatchBerlinOG.Param
 	 */
 	private SnzBerlinProductionScenario getBindings(Params params) {
 		return new SnzBerlinProductionScenario.Builder()
+			.setBerlinBrandenburgInput(params == null ? SnzBerlinProductionScenario.BerlinBrandenburgInput.berlin : params.region)
+//			.setBerlinBrandenburgInput(SnzBerlinProductionScenario.BerlinBrandenburgInput.berlinBrandenburg)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 			.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 			.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
@@ -78,9 +80,6 @@ public class StarterBatchBerlinOG implements BatchRun<StarterBatchBerlinOG.Param
 
 		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * params.thetaFactor);
 
-		//		 2b: specific config groups, e.g. virusStrainConfigGroup
-		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-
 		return config;
 	}
 
@@ -93,11 +92,11 @@ public class StarterBatchBerlinOG implements BatchRun<StarterBatchBerlinOG.Param
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@StringParameter({"true", "false"})
-//		public String antibodyModel;
-
-		@Parameter({0.5, 0.75, 1.0, 1.25, 2.0})
+		@Parameter({1.0})
 		public double thetaFactor;
+
+		@EnumParameter(SnzBerlinProductionScenario.BerlinBrandenburgInput.class)
+		SnzBerlinProductionScenario.BerlinBrandenburgInput region;
 	}
 
 
@@ -109,7 +108,7 @@ public class StarterBatchBerlinOG implements BatchRun<StarterBatchBerlinOG.Param
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, StarterBatchBerlinOG.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_TASKS, Integer.toString(8),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(50),
 				RunParallel.OPTION_METADATA
 		};

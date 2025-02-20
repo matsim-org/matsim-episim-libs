@@ -5,21 +5,24 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.OutputAnalysis;
-import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzBrandenburgProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.NavigableMap;
+import java.util.Objects;
 
 
 /**
  * boilerplate batch for berlin
  */
-public class StarterBatchBerlinAB implements BatchRun<StarterBatchBerlinAB.Params> {
+public class newA_berlin implements BatchRun<newA_berlin.Params> {
 
 	/*
 	 * here you can swap out vaccination model, antibody model, etc.
@@ -37,11 +40,12 @@ public class StarterBatchBerlinAB implements BatchRun<StarterBatchBerlinAB.Param
 	 */
 	private SnzBerlinProductionScenario getBindings(Params params) {
 		return new SnzBerlinProductionScenario.Builder()
+			.setBerlinBrandenburgInput(SnzBerlinProductionScenario.BerlinBrandenburgInput.berlin)
 			.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-			.setInfectionModel(InfectionModelWithAntibodies.class)
 			.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 			.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
 			.setSample(25)
+			.setOdeCoupling(params == null || params.ode != -1.0 ? SnzProductionScenario.OdeCoupling.yes : SnzProductionScenario.OdeCoupling.no)
 			.build();
 	}
 
@@ -77,10 +81,26 @@ public class StarterBatchBerlinAB implements BatchRun<StarterBatchBerlinAB.Param
 		// 		 2a: general episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * params.thetaFactor);
 
-		//		 2b: specific config groups, e.g. virusStrainConfigGroup
-		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		// ODE COUPLING
+
+		if (params.ode != -1.0) {
+
+			episimConfig.setInitialInfections(0);
+
+			for (NavigableMap<LocalDate, Integer> map : episimConfig.getInfections_pers_per_day().values()) {
+				map.clear();
+			}
+
+			episimConfig.setOdeIncidenceFile(SnzBerlinProductionScenario.INPUT.resolve("ode_br_infectious_250212.csv").toString());
+			//		episimConfig.setOdeIncidenceFile(SnzBerlinProductionScenario.INPUT.resolve("ode_inputs/left_s.csv").toString());
+
+			episimConfig.setOdeDistricts(SnzBrandenburgProductionScenario.BRANDENBURG_LANDKREISE);
+
+			episimConfig.setOdeCouplingFactor(params.ode);
+
+		}
 
 		return config;
 	}
@@ -94,11 +114,14 @@ public class StarterBatchBerlinAB implements BatchRun<StarterBatchBerlinAB.Param
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@StringParameter({"true", "false"})
-//		public String antibodyModel;
-
-		@Parameter({0.8, 0.9, 1.0, 1.1, 1.2})
+//		@Parameter({0.7, 0.8, 0.9, 1.0})
+		@Parameter({1.0})
 		public double thetaFactor;
+
+//		@Parameter({-1.0, 0.5, 0.75, 1.0, 1.25, 1.5})
+		@Parameter({1.})
+		public double ode;
+
 	}
 
 
@@ -108,9 +131,9 @@ public class StarterBatchBerlinAB implements BatchRun<StarterBatchBerlinAB.Param
 	 */
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, StarterBatchBerlinAB.class.getName(),
+				RunParallel.OPTION_SETUP, newA_berlin.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_TASKS, Integer.toString(8),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(50),
 				RunParallel.OPTION_METADATA
 		};

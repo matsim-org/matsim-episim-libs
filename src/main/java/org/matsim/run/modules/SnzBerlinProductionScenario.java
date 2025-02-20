@@ -62,6 +62,14 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		private EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions = EpisimConfigGroup.DistrictLevelRestrictions.no;
 		private AdaptiveRestrictions adaptiveRestrictions = AdaptiveRestrictions.no;
+
+		private BerlinBrandenburgInput berlinBrandenburgInput = BerlinBrandenburgInput.berlin;
+
+
+		public Builder setBerlinBrandenburgInput(BerlinBrandenburgInput berlinBrandenburgInput) {
+			this.berlinBrandenburgInput = berlinBrandenburgInput;
+			return this;
+		}
 		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
 			return this;
@@ -84,6 +92,11 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
+
+	public enum BerlinBrandenburgInput{berlin, brandenburg, berlinBrandenburg}
+
+
+	private final BerlinBrandenburgInput berlinBrandenburgInput;
 
 	public static enum AdaptiveRestrictions {yesGlobal, yesLocal, no}
 	private final int sample;
@@ -114,7 +127,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+	public static Path INPUT;
 
 	/**
 	 * Empty constructor is needed for running scenario from command line.
@@ -146,6 +159,17 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		this.easterModel = builder.easterModel;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
 		this.adaptiveRestrictions = builder.adaptiveRestrictions;
+		this.berlinBrandenburgInput = builder.berlinBrandenburgInput;
+
+		if (this.berlinBrandenburgInput == BerlinBrandenburgInput.berlin) {
+			INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+		} else if (this.berlinBrandenburgInput == BerlinBrandenburgInput.brandenburg) {
+			INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/Brandenburg/episim-input");
+		} else if (this.berlinBrandenburgInput == BerlinBrandenburgInput.berlinBrandenburg) {
+			INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinBrandenburg/episim-input");
+		} else {
+			throw new IllegalArgumentException("option not yet implemented");
+		}
 	}
 
 	/**
@@ -214,6 +238,24 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		if (this.sample != 25 && this.sample != 100)
 			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
+
+		String prefixShort;
+		String prefixLong;
+
+		if(berlinBrandenburgInput == BerlinBrandenburgInput.berlin){
+			prefixShort= "be";
+			prefixLong = "Berlin";
+		} else if (berlinBrandenburgInput == BerlinBrandenburgInput.brandenburg) {
+			prefixShort = "br";
+			prefixLong = "Brandenburg";
+		} else if (berlinBrandenburgInput == BerlinBrandenburgInput.berlinBrandenburg) {
+			prefixShort = "bb";
+			prefixLong = "BerlinBrandenburg";
+		}else {
+			throw new IllegalArgumentException("not yet implemented");
+		}
+
+
 		//general config
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -223,19 +265,25 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		// overwritten later, if location-based restrictions implemented
-		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+
 
 		//episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+
+		// SET INPUT FILES
+		config.plans().setInputFile(inputForSample(prefixShort + "_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+
+		episimConfig.addInputEventsFile(inputForSample(prefixShort + "_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample(prefixShort + "_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample(prefixShort + "_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
+
+		config.facilities().setInputFile(INPUT.resolve(prefixShort + "_2020-week_snz_episim_facilities_withDistricts_25pt.xml.gz").toString());
 
 		episimConfig.setActivityHandling(activityHandling);
 
@@ -271,7 +319,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			);
 
 		} else {
-			episimConfig.setInitialInfectionDistrict("Berlin");
+			episimConfig.setInitialInfectionDistrict("Berlin"); // todo: what if we do a brandenburg sc
 			episimConfig.setCalibrationParameter(2.54e-5);
 		}
 
@@ -289,19 +337,20 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		//restrictions and masks
 		RestrictionInput activityParticipation;
+
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig); // TODO: should SnzBerlinScenario25pct2020 be absorbed into this class to match Cologne
+
 		if (adjustRestrictions == AdjustRestrictions.yes) {
 			activityParticipation = new CreateAdjustedRestrictionsFromCSV();
 		} else {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210518";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
+		String untilDate = "20221231";
+		activityParticipation.setInput(INPUT.resolve(prefixLong + "SnzData_daily_until" + untilDate + ".csv"));
 
 		//location based restrictions
 		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
-		config.facilities().setInputFile(INPUT.resolve("bb_2020-week_snz_episim_facilities_100pt_withDistricts.xml.gz").toString());
 		if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
 
 			config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
@@ -337,7 +386,12 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
-		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
+		FixedPolicy.ConfigBuilder builder;
+		if (berlinBrandenburgInput.equals(BerlinBrandenburgInput.brandenburg)) {
+			builder= basePolicyBuilder.buildFixedBrandenburg();
+		} else {
+			builder = basePolicyBuilder.buildFixed();
+		}
 
 		//curfew TODO: when is the restriction of closing hours lifted? (also for Cologne)
 		builder.restrict("2021-04-24", Restriction.ofClosingHours(22, 5), "leisure", "visit");
@@ -349,8 +403,17 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		//tracing
 		if (this.tracing == Tracing.yes) {
-
-			SnzProductionScenario.configureTracing(config, 1.0);
+			double factor;
+			if (berlinBrandenburgInput == BerlinBrandenburgInput.berlin) {
+				factor = 1.0;
+			} else if (berlinBrandenburgInput == BerlinBrandenburgInput.brandenburg) {
+				factor = 2.520 / 3.878;
+			} else if (berlinBrandenburgInput == BerlinBrandenburgInput.berlinBrandenburg) {
+				factor = (2.520 + 3.878) / 3.878;
+			} else {
+				throw new IllegalArgumentException("not yet implemented");
+			}
+			SnzProductionScenario.configureTracing(config, factor);
 
 		}
 

@@ -50,6 +50,11 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	@Override
 	public void updateState(EpisimPerson person, int day) {
 
+//		// This is useful for fake agents in SymmetricContactModelWithOdeCoupling.
+//		if (person.isExcludeFromDiseaseStateProgression()) {
+//			return;
+//		}
+
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 
 		// No transitions from susceptible

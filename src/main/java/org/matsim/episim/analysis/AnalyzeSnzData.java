@@ -76,7 +76,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.BerlinBrandenburg;
+		AnalyseAreas selectedArea = AnalyseAreas.Berlin;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
 		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise
 		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD, only for Bundeslaender and Landkreise

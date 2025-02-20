@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -93,6 +94,13 @@ public class EpisimContainer<T> {
 	 * which have the DiseaseStatus contagious or showingSymptoms.
 	 */
  	private int contagiousCounter = 0;
+
+	public enum InOdeRegion{yes, no, unknown}
+
+	private InOdeRegion inOdeRegion = InOdeRegion.unknown;
+
+	private Object2DoubleMap<String> actToOdeContacts = null;
+
 
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
@@ -237,6 +245,22 @@ public class EpisimContainer<T> {
 		return taskId;
 	}
 
+
+	public void setInOdeRegion(InOdeRegion inOdeRegion) {
+		this.inOdeRegion = inOdeRegion;
+	}
+
+	public InOdeRegion getInOdeRegion() {
+		return inOdeRegion;
+	}
+
+	public Object2DoubleMap<String> getActToOdeContacts() {
+		return actToOdeContacts;
+	}
+
+	public void setActToOdeContacts(Object2DoubleMap<String> actToOdeContacts) {
+		this.actToOdeContacts = actToOdeContacts;
+	}
 
 	void clearPersons() {
 		this.persons.clear();

@@ -246,6 +246,122 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		return restrictions;
 	}
 
+	private static ShutdownPolicy.ConfigBuilder<?> basePolicyBrandenburg(RestrictionInput activityParticipation, Map<String, Double> ciCorrections,
+															  long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+															  boolean restrictUniversities) throws IOException {
+
+		if(!restrictUniversities || !restrictSchoolsAndDayCare) {
+			throw new RuntimeException("Brandenburg scenario currently restricts schools, daycare, and universities. Not currently configurable");
+		}
+
+		// note that there is already a builder around this
+		ConfigBuilder builder;
+		if (activityParticipation == null || activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
+			throw new RuntimeException("Adjusted Restrictions not supported in Brandenburg");
+		} else {
+			builder = (ConfigBuilder) activityParticipation.createPolicy();
+		}
+
+
+		// school vacations & lockdowns.
+		// https://www.maz-online.de/brandenburg/corona-krise-in-brandenburg-eine-chronologie-SIFYHOEII3ZG6G5XW4HULSD4GI.html
+		//
+		// https://brandenburg.de/cms/detail.php/detail.php?gsid=bb1.c.663534.de
+		//
+		//	https://brandenburg.de/cms/detail.php/bb1.c.691163.de
+//		 "Das Kabinett beschließt die Schließung von Schulen und Kitas ab 18. März"
+		builder.restrict(LocalDate.parse("2020-03-18"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+		// 17. April 2020: Das Kabinett beschließt erste Lockerungen:[...], eingesetzt erst am 27. Nur Abschlussklassen  Auch die Schulen starten nach einem Stufenplan wieder den Unterricht.
+		builder.restrict(LocalDate.parse("2020-04-27"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
+		// 6th grade goes back
+		builder.restrict(LocalDate.parse("2020-05-04"), 0.3, "educ_primary");
+		// 9th and 12th grade of secondary school, and 11th grade of gymnasium
+		builder.restrict(LocalDate.parse("2020-05-04"), 0.4, "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2020-05-25"), 1.0, "educ_kiga", "educ_primary",  "educ_secondary", "educ_tertiary", "educ_other");
+		//Sommerferien (Source = https://www.payback.de/ratgeber/besser-leben/reisen/ferien-2020#Brandenburg)
+		builder.restrict(LocalDate.parse("2020-06-25"), 0.2,  "educ_kiga", "educ_primary","educ_secondary", "educ_tertiary", "educ_other");
+		//10. August 2020: Die Schulen starten nach den Sommerferien wieder in den Regelbetrieb.
+		builder.restrict(LocalDate.parse("2020-08-10"), 1.0,  "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//Lueften nach den Sommerferien
+		builder.restrict(LocalDate.parse("2020-08-10"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2020-12-31"), Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Herbstferien
+		builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2020-10-24"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//14. Dezember 2020: Die Präsenzpflicht in den Schulen wird eine Woche vor den Weihnachtsferien aufgehoben.
+		builder.restrict(LocalDate.parse("2020-12-14"), 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//Weihnachtsferien (which morph into school closure)
+		builder.restrict(LocalDate.parse("2020-12-21"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		// Abschlussklassen und Förderschulen wieder unterichtet.
+		builder.restrict(LocalDate.parse("2021-01-21"), 0.3, "educ_secondary", "educ_tertiary", "educ_other");
+		//22. Februar 2021: Die Grundschulen öffnen wieder im Wechselunterricht zwischen Schule und zuhause.
+		builder.restrict(LocalDate.parse("2021-02-22"), 0.5, "educ_primary");
+		builder.restrict(LocalDate.parse("2021-03-15"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//Osterferien
+		builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2021-04-10"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//Sommerferien
+		builder.restrict(LocalDate.parse("2021-06-24"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2021-08-08"), 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+		{
+			// Part 1: pt, shopping, errands
+
+			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
+			for (int ii = 0; ii <= 14; ii++) {
+				LocalDate date = masksCenterDate.plusDays(-14 / 2 + ii);
+				// assume 90% compliance, divided btwn 3 mask types.
+				double clothFraction = 1. / 3. * 0.9;
+				double ffpFraction = 1. / 3. * 0.9;
+				double surgicalFraction = 1. / 3. * 0.9;
+
+				builder.restrict(date, Restriction.ofMask(Map.of(
+						FaceMask.CLOTH, clothFraction * ii / 14,
+						FaceMask.N95, ffpFraction * ii / 14,
+						FaceMask.SURGICAL, surgicalFraction * ii / 14)),
+					"pt", "shop_daily", "shop_other", "errands");
+			}
+
+
+			// cloth mask no longer allowed
+			//https://brandenburg.de/cms/detail.php/detail.php?gsid=bb1.c.664579.de
+			//https://brandenburg.de/cms/detail.php/detail.php?gsid=bb1.c.693535.de
+			builder.restrict(LocalDate.of(2021, 1, 23), Restriction.ofMask(Map.of(
+					FaceMask.CLOTH, 0.,
+					FaceMask.N95, 1. / 2. * 0.9,
+					FaceMask.SURGICAL, 1. / 2. * 0.9)),
+				"pt", "shop_daily", "shop_other", "errands");
+
+
+			// Part 2: School
+			// skipped the mask recommendations/mandates for spaces within school but not within classrooms
+			//https://mbjs.brandenburg.de/aktuelles/pressemitteilungen.html?news=bb1.c.684838.de
+			//
+			//https://bravors.brandenburg.de/verordnungen/sars_cov_2_eindv_30_10_2020#17
+			//
+			//https://bravors.brandenburg.de/verordnungen/2__sars_cov_2_eindv_30_11_2020#17
+			//
+			//https://bravors.brandenburg.de/verordnungen/5__sars_cov_2_eindv_22_01_2021
+			builder.restrict(LocalDate.parse("2020-11-02"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 1./3. * 0.9,
+				FaceMask.N95, 1. / 3. * 0.9,
+				FaceMask.SURGICAL, 1. / 3. * 0.9)), "educ_tertiary");
+			builder.restrict(LocalDate.parse("2020-12-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 1./3. * 0.9,
+				FaceMask.N95, 1. / 3. * 0.9,
+				FaceMask.SURGICAL, 1. / 3. * 0.9)), "educ_secondary");
+			builder.restrict(LocalDate.parse("2021-01-23"), Restriction.ofMask(Map.of(
+					FaceMask.CLOTH, 0.,
+					FaceMask.N95, 1. / 2. * 0.9,
+					FaceMask.SURGICAL, 1. / 2. * 0.9)),
+				"educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		}
+
+
+		return builder;
+	}
+
 	@Provides
 	@Singleton
 	public Config config() {
@@ -365,6 +481,17 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			try {
 				configBuilder = (ConfigBuilder) basePolicy(activityParticipation, ciCorrections,introductionPeriod,
 						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
+			return configBuilder;
+		}
+
+		public ConfigBuilder buildFixedBrandenburg() {
+			ConfigBuilder configBuilder;
+			try {
+				configBuilder = (ConfigBuilder) basePolicyBrandenburg(activityParticipation, ciCorrections,introductionPeriod,
+					maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}

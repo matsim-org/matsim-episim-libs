@@ -219,27 +219,6 @@ public class RunParallel<T> implements Callable<Integer> {
 				episimConfig.setThreads(taskThreads);
 			}
 
-
-
-			// preprocess activity facilities: Tag those facilities that for which ODE applies
-			List<String> odeDistricts = episimConfig.getOdeDistricts();
-			if (odeDistricts == null) {
-				odeDistricts = Collections.emptyList(); // Prevents NPE
-			}
-
-			for (ActivityFacility fac : scenario.getActivityFacilities().getFacilities().values()) {
-				if (fac.getAttributes() == null) {
-					continue; // Skip facilities with no attributes
-				}
-
-				if(fac.getAttributes().getAsMap().containsKey("district")) {
-					String district = (String) fac.getAttributes().getAttribute("district");
-					if (district != null && odeDistricts.contains(district)) {
-						fac.getAttributes().putAttribute("inOdeRegion", "true");
-					}
-				}
-			}
-
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
 			episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
 

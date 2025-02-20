@@ -22,6 +22,7 @@ package org.matsim.episim.model;
 
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.objects.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -76,6 +77,12 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 	private Map<Id<Person>, EpisimPerson> fakePersonPool;
 	private Long odeDiseaseImportCount;
 
+//	private Long unknownCnt;
+
+
+	private final List<String> odeDistricts;
+
+	boolean odeInfTargetDistrictActive;
 
 	@Inject
 		/* package */
@@ -96,12 +103,61 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 		odeDiseaseImportCount = 0L;
 
+//		unknownCnt = 0L;
+
 
 		String odeResultsFilename = episimConfig.getOdeIncidenceFile();
 		dayToInfectionShareMap = readOdeInfectionsFile(odeResultsFilename);
 
 		this.facilities = scenario.getActivityFacilities();
 
+
+		odeDistricts = episimConfig.getOdeDistricts();
+		if(odeDistricts == null || odeDistricts.isEmpty() ){
+			throw new RuntimeException("There need to be districts defined");
+		}
+
+		this.odeInfTargetDistrictActive = episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("");
+
+	}
+
+	private static final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
+
+
+	public Long getOdeDiseaseImportCount() {
+		return odeDiseaseImportCount;
+	}
+
+	public void resetOdeDiseaseImportCount() {
+		odeDiseaseImportCount = 0L;
+	}
+
+//	public Long getUnknownCnt() {
+//		return unknownCnt;
+//	}
+//
+//	public void resetUnknownCnt() {
+//		unknownCnt = 0L;
+//	}
+
+	private EpisimPerson borrowPerson(Id<Person> personId, Attributes sharedAttributes, EpisimReporting reporting) {
+		Deque<EpisimPerson> pool = personPool.get();
+		EpisimPerson person = pool.poll();
+		if (person == null) {
+			// No available objects in the pool — create a new one
+			person = new EpisimPerson(personId, sharedAttributes, reporting);
+		} else {
+			// Reuse the existing object, resetting its state
+			person.getAttributes().putAttribute("age", sharedAttributes.getAttribute("age"));
+			person.setDiseaseStatus(0, DiseaseStatus.susceptible);
+//			person.getActivities().clear();  // Clear any leftover activities
+		}
+		return person;
+	}
+
+	private void returnPerson(EpisimPerson person) {
+		// Optional: sanity check before returning to the pool
+		personPool.get().offer(person);
 	}
 
 
@@ -168,15 +224,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		return dayToInfectionShareMap;
 	}
 
-
-	public Long getOdeDiseaseImportCount() {
-		return odeDiseaseImportCount;
-	}
-
-	public void resetOdeDiseaseImportCount() {
-		odeDiseaseImportCount = 0L;
-	}
-
 	@Override
 	public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
 		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);
@@ -207,37 +254,21 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
 
-		String idString = containerReal.getContainerId().toString();
 
-		ActivityFacility activityFacility = facilities.getFacilities().get(Id.create(idString, ActivityFacility.class));
-
-		if (activityFacility == null) {
-			if (idString.startsWith("home_")) {
-				idString = idString.replaceFirst("home_", "");
-				idString = idString.replaceFirst("_split\\d*", "");
-				activityFacility = facilities.getFacilities().get(Id.create(idString, ActivityFacility.class));
-				if (activityFacility == null) {
-//					throw new RuntimeException("we have a home facility that is not found in facilities file:" + idString );
-				}
-			} else {
-				if (!idString.startsWith("tr_")) {
-//					throw new RuntimeException("we have a unidentifiable facility that is not a train");
-				}
-			}
+		if (containerReal.getInOdeRegion().equals(EpisimContainer.InOdeRegion.unknown)) {
+			determineWhetherInOdeRegion(containerReal);
+//			unknownCnt++;
 		}
 
 
 		EpisimContainer<?> container;
 		// todo activityFacility != null is an important assumption, excludes trains and homes.
 
-
-		boolean actInOdeRegion = activityFacility != null &&
-			activityFacility.getAttributes().getAsMap().containsKey("inOdeRegion") &&
-			Objects.equals((String) activityFacility.getAttributes().getAttribute("inOdeRegion"), "true");
-
+		boolean actInOdeRegion = containerReal.getInOdeRegion().equals(EpisimContainer.InOdeRegion.yes);
 		if (actInOdeRegion) {
 
-			if (episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("")) {
+
+			if (odeInfTargetDistrictActive) {
 				if (!personLeavingContainer.getAttributes().getAttribute("district").equals(episimConfig.getOdeInfTargetDistrict())) {
 					return;
 				}
@@ -258,63 +289,51 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			//share of berlin agents infectious but not yet showing symptoms
 
 			int maxGroupSize = 0;
-			// todo: how should I deal with sample size. Should I just reduce the capacity by the sample?
-//			for (Map.Entry<String, Double> actTypeToCapacityMap : facilityToCapacityMap.get(idString).entrySet()) {
 
 
-			for (ActivityOption activityOption : facilities.getFacilities().get(Id.create(idString, ActivityFacility.class)).getActivityOptions().values()) {
-
-				String actType = activityOption.getType();
-				if (Objects.equals(actType, "shopping")) {
-					actType = "shop_other";
-				} else if (Objects.equals(actType, "restaurant")) {
-					actType = "leisure";
-				}
-				// we scale down the capacity by sample size todo: does this give us problems
-				//todo: include RF in the future
-				// todo: for now, I'm taking the unscaled capacity. Because I don't know if we should really reduce the capacity or remove
+			// we scale down the capacity by sample size todo: does this give us problems. how should I deal with sample size. Should I just reduce the capacity by the sample?
+			//todo: include RF in the future
+			// todo: for now, I'm taking the unscaled capacity. Because I don't know if we should really reduce the capacity or remove
 //				double numContactPeople = actTypeToCapacityMap.getValue() * episimConfig.getSampleSize();
-				double numContactPeople = activityOption.getCapacity();
-//				System.out.println(fakePersonPool.size());
-				int dayCounter = (int) (now / 60. / 60. / 24.);
+
+			int dayCounter = (int) (now / 60. / 60. / 24.);
 
 
-//
-//				testDayToTotalCapacityMap.merge(iteration, (int) numContactPeople, Integer::sum);
-//
-//				testDayToInfChanceSum.merge(iteration, infShare, Double::sum);
-//				testDayToInfChanceCnt.merge(iteration, 1, Integer::sum);
-//
 
-				for (int i = 0; i < numContactPeople; i++) {
+			Attributes sharedAttributes = new Attributes();
+			sharedAttributes.putAttribute("age", personLeavingContainer.getAge());
+
+			for(Map.Entry<String,Double> actTypeToCap : containerReal.getActToOdeContacts().object2DoubleEntrySet()){
+				String actType = actTypeToCap.getKey();
+				double capacity = actTypeToCap.getValue();
+
+//				if (capacity > 1000) {
+//					System.out.println("Warning: unusually high actToOdeContacts capacity: " + capacity);
+//					System.out.println(containerReal.getActToOdeContacts());
+//
+//					continue;
+//				}
+
+				for (int i = 0; i < capacity; i++) {
 					maxGroupSize++;
 					if (rnd.nextDouble() < infShare) {
 
 						//place infected fake berliner agent in container w/ susceptible brandenburger agent
-
-
 						// assumption: all contact agents have same age as brandenburger agent. // todo: should we put a distribution on this
 
 
-						// this do-while loop will add a person, check if they are actually contagious; if not, they'll add another person.
-						//						do { //todo
 
-						Attributes attributes = new Attributes();
-						attributes.putAttribute("age", personLeavingContainer.getAge());
 
 						Id<Person> personId = Id.createPersonId("fake_task" + taskId + "_" + i);
-//						EpisimPerson person = fakePersonPool.getOrDefault(personId, new EpisimPerson(personId, attributes, reporting));
-//						person.getAttributes().putAttribute("age", personLeavingContainer.getAge());
-//						fakePersonPool.putIfAbsent(personId, person);
+//						EpisimPerson person = borrowPerson(personId, sharedAttributes, reporting);
+//
+						EpisimPerson person = new EpisimPerson(personId, sharedAttributes, reporting);
 
-						EpisimPerson person = new EpisimPerson(personId, attributes, reporting);
+						containerFake.addPerson(person, 0, new EpisimPerson.PerformedActivity(0, episimConfig.getOrAddContainerParams(actType), null));
 
-						containerFake.addPerson(person, 0, new EpisimPerson.PerformedActivity(0, episimConfig.getOrAddContainerParams(actType), activityFacility.getId()));
-
+						// this do-while loop will add a person, check if they are actually contagious; if not, they'll add another person.
 						do {
-//							if (progressionModel.containsAgent(person.getPersonId())) {
 							progressionModel.removeAgent(person.getPersonId());
-//							}
 							person.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
 							//todo: talk to kai: should we this be a distribution of when they become infectious, because infectivity depends on how long they've been infectious.
 							progressionModel.updateState(person, dayCounter);
@@ -515,18 +534,70 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		if (actInOdeRegion) {
 
 
-			for (EpisimPerson person : container.getPersons()) {
-
+			Iterator<EpisimPerson> iterator = container.getPersons().iterator();
+			while (iterator.hasNext()) {
+				EpisimPerson person = iterator.next();
 				if (person.getPersonId().toString().startsWith("fake")) {
 					((AbstractProgressionModel) progressionModel).removeAgent(person.getPersonId());
-					person = null;
+					iterator.remove();  // Properly remove from the list
 				}
 			}
-//			if(((ConfigurableProgressionModel) progressionModel).nextStateAndDay.size() > 0){
-//				System.out.println("heh????");
-//			}
 			containerFake.getPersons().clear();
+			containerFake.setMaxGroupSize(0);  // Optional, in case scaling persists
 			container = null;
+
+		}
+
+	}
+
+	private void determineWhetherInOdeRegion(EpisimContainer<?> containerReal) {
+		String idString = containerReal.getContainerId().toString();
+
+		ActivityFacility activityFacility = facilities.getFacilities().get(Id.create(idString, ActivityFacility.class));
+		// this doesn't include home facilities that only show up in the population file and not in the events files...
+		if (activityFacility == null) {
+			if (idString.startsWith("home_")) {
+				idString = idString.replaceFirst("home_", "");
+				idString = idString.replaceFirst("_split\\d*", "");
+				activityFacility = facilities.getFacilities().get(Id.create(idString, ActivityFacility.class));
+				if (activityFacility == null) {
+//					throw new RuntimeException("we have a home facility that is not found in facilities file:" + idString );
+				}
+			} else {
+				if (!idString.startsWith("tr_")) {
+//					throw new RuntimeException("we have a unidentifiable facility that is not a train");
+				}
+			}
+		}
+
+
+		if (activityFacility == null || activityFacility.getAttributes() == null || !activityFacility.getAttributes().getAsMap().containsKey("district")) {
+			containerReal.setInOdeRegion(EpisimContainer.InOdeRegion.no);
+			return;
+		}
+
+		String district = (String) activityFacility.getAttributes().getAttribute("district");
+		if (district != null && odeDistricts.contains(district)) {
+			containerReal.setInOdeRegion(EpisimContainer.InOdeRegion.yes);
+
+			Object2DoubleMap<String> actTypeToCapacityMap = new Object2DoubleOpenHashMap<>();
+
+			for (ActivityOption activityOption : activityFacility.getActivityOptions().values()) {
+				String actType = activityOption.getType();
+				if (Objects.equals(actType, "shopping")) {
+					actType = "shop_other";
+				} else if (Objects.equals(actType, "restaurant")) {
+					actType = "leisure";
+				}
+
+				actTypeToCapacityMap.put(actType, activityOption.getCapacity());
+
+			}
+
+			containerReal.setActToOdeContacts(actTypeToCapacityMap);
+
+		} else {
+			containerReal.setInOdeRegion(EpisimContainer.InOdeRegion.no);
 		}
 
 	}
