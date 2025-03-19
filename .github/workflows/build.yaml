@@ -19,8 +19,8 @@ jobs:
           architecture: x64
           cache: maven
 
-      - name: Test module
-        run:  mvn test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+      - name: Test and generate coverage
+        run:  mvn verify --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
       - name: Generate reports
         run: mvn site:site --batch-mode

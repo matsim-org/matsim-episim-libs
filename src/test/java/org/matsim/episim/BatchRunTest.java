@@ -1,11 +1,16 @@
 package org.matsim.episim;
 
+import org.apache.commons.csv.CSVRecord;
 import org.junit.Test;
 import org.matsim.core.config.Config;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import javax.annotation.Nullable;
+import java.time.DayOfWeek;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BatchRunTest {
 
@@ -14,8 +19,18 @@ public class BatchRunTest {
 	public void prepare() {
 		PreparedRun preparedRun = BatchRun.prepare(TestBatch.class, TestBatch.TestParams.class);
 
-		// 20 runs should be created
-		assertThat(preparedRun.runs.size()).isEqualTo(20);
+		// 140 runs should be created
+		assertThat(preparedRun.runs.size()).isEqualTo(140);
+
+	}
+
+
+	@Test
+	public void lookup(){
+
+		List<CSVRecord> records = new ArrayList<>();
+		BatchRun.lookup(TestBatch.TestParams.class, records);
+
 
 	}
 }
@@ -45,6 +60,9 @@ class TestBatch implements BatchRun<TestBatch.TestParams> {
 
 		@StringParameter({"yes", "no"})
 		public String stringParam;
+
+		@EnumParameter(DayOfWeek.class)
+		public DayOfWeek enumParam;
 
 		@Parameter({1.0, 2.0})
 		public double doubleParam;
