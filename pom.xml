@@ -445,13 +445,14 @@
                     </execution>
                     <execution>
                         <id>report</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
                         <configuration>
                             <excludes>
                                 <exclude>org/matsim/episim/analysis/**</exclude>
+                                <exclude>org/matsim/episim/EpisimUtils.java</exclude>
                             </excludes>
                         </configuration>
                     </execution>
