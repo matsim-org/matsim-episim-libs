@@ -20,7 +20,7 @@ jobs:
           cache: maven
 
       - name: Test and generate coverage
-        run:  mvn verify --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+        run:  mvn clean verify --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
       - name: Generate reports
         run: mvn site:site --batch-mode

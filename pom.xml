@@ -452,7 +452,7 @@
                         <configuration>
                             <excludes>
                                 <exclude>org/matsim/episim/analysis/**</exclude>
-                                <exclude>org/matsim/episim/EpisimUtils.java</exclude>
+                                <exclude>org/matsim/episim/EpisimUtils</exclude>
                             </excludes>
                         </configuration>
                     </execution>
