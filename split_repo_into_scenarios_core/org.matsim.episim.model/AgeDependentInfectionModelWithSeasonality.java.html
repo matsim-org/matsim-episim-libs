@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AgeDependentInfectionModelWithSeasonality.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">AgeDependentInfectionModelWithSeasonality.java</span></div><h1>AgeDependentInfectionModelWithSeasonality.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.*;
+import org.matsim.episim.policy.Restriction;
+
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.SplittableRandom;
+
+import static org.matsim.episim.model.DefaultInfectionModel.*;
+
+/**
+ * Extension of the {@link DefaultInfectionModel}, with age-dependent additions.
+ */
+public final class AgeDependentInfectionModelWithSeasonality implements InfectionModel {
+
+	private final FaceMaskModel maskModel;
+	private final EpisimConfigGroup episimConfig;
+	private final EpisimReporting reporting;
+	private final SplittableRandom rnd;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
+
+<span class="nc" id="L27">	private final Map&lt;VirusStrain, double[]&gt; susceptibility = new EnumMap&lt;&gt;(VirusStrain.class);</span>
+<span class="nc" id="L28">	private final Map&lt;VirusStrain, double[]&gt; infectivity = new EnumMap&lt;&gt;(VirusStrain.class);</span>
+
+	private double outdoorFactor;
+	private int iteration;
+
+	@Inject
+<span class="nc" id="L34">	AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, EpisimReporting reporting, SplittableRandom rnd) {</span>
+<span class="nc" id="L35">		this.maskModel = faceMaskModel;</span>
+<span class="nc" id="L36">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="nc" id="L37">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="nc" id="L38">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="nc" id="L39">		this.reporting = reporting;</span>
+<span class="nc" id="L40">		this.rnd = rnd;</span>
+
+<span class="nc" id="L42">		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);</span>
+<span class="nc" id="L43">	}</span>
+
+	/**
+	 *  Pre-compute interpolated age dependent entries
+	 */
+	static void preComputeAgeDependency(Map&lt;VirusStrain, double[]&gt; susceptibility, Map&lt;VirusStrain, double[]&gt; infectivity, VirusStrainConfigGroup virusStrainConfig) {
+
+<span class="fc bfc" id="L50" title="All 2 branches covered.">		for (VirusStrain strain : VirusStrain.values()) {</span>
+
+<span class="fc bfc" id="L52" title="All 2 branches covered.">			if (!virusStrainConfig.hasParams(strain))</span>
+<span class="fc" id="L53">				continue;</span>
+
+<span class="fc" id="L55">			double[] susp = susceptibility.computeIfAbsent(strain, k -&gt; new double[128]);</span>
+<span class="fc" id="L56">			double[] inf = infectivity.computeIfAbsent(strain, k -&gt; new double[susp.length]);</span>
+
+<span class="fc" id="L58">			VirusStrainConfigGroup.StrainParams strainConfig = virusStrainConfig.getParams(strain);</span>
+
+<span class="fc bfc" id="L60" title="All 2 branches covered.">			for (int i = 0; i &lt; susp.length; i++) {</span>
+<span class="fc" id="L61">				susp[i] = EpisimUtils.interpolateEntry(strainConfig.getAgeSusceptibility(), i);</span>
+<span class="fc" id="L62">				inf[i] = EpisimUtils.interpolateEntry(strainConfig.getAgeInfectivity(), i);</span>
+			}
+		}
+<span class="fc" id="L65">	}</span>
+
+	@Override
+	public void setIteration(int iteration) {
+<span class="nc" id="L69">		this.outdoorFactor = InfectionModelWithSeasonality.interpolateOutdoorFraction(episimConfig, iteration);</span>
+<span class="nc" id="L70">		this.iteration = iteration;</span>
+<span class="nc" id="L71">		reporting.reportOutdoorFraction(this.outdoorFactor, iteration);</span>
+
+<span class="nc" id="L73">	}</span>
+
+	@Override
+	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions,
+										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   double contactIntensity, double jointTimeInContainer) {
+
+		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
+<span class="nc" id="L81">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+
+<span class="nc" id="L83">		double susceptibility = this.susceptibility.get(infector.getVirusStrain())[target.getAge()];</span>
+<span class="nc" id="L84">		double infectivity = this.infectivity.get(infector.getVirusStrain())[infector.getAge()];</span>
+
+		// apply reduced susceptibility of vaccinated persons
+<span class="nc" id="L87">		VirusStrainConfigGroup.StrainParams params = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+<span class="nc" id="L88">		susceptibility *= Math.min(getVaccinationEffectiveness(params, target, vaccinationConfig, iteration), getImmunityEffectiveness(params, target, vaccinationConfig, iteration));</span>
+
+<span class="nc" id="L90">		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);</span>
+
+<span class="nc" id="L92">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection</span>
+<span class="nc" id="L93">				* getVaccinationInfectivity(infector, params, vaccinationConfig, iteration)</span>
+<span class="nc" id="L94">				* target.getSusceptibility()</span>
+<span class="nc" id="L95">				* params.getInfectiousness()</span>
+<span class="nc" id="L96">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
+<span class="nc" id="L97">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake</span>
+				* indoorOutdoorFactor
+		);
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

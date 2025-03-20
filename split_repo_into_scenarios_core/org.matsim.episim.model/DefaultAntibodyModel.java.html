@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultAntibodyModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">DefaultAntibodyModel.java</span></div><h1>DefaultAntibodyModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+
+import com.google.inject.Inject;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
+
+import java.util.Collection;
+import java.util.SplittableRandom;
+
+public class DefaultAntibodyModel implements AntibodyModel {
+
+	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?
+
+	// optimistic: 46
+	//
+
+	private final AntibodyModel.Config antibodyConfig;
+	private final SplittableRandom localRnd;
+
+	private final EpisimConfigGroup episimConfig;
+
+
+	@Inject
+<span class="fc" id="L26">	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {</span>
+<span class="fc" id="L27">		this.antibodyConfig = antibodyConfig;</span>
+<span class="fc" id="L28">		this.episimConfig = episimConfigGroup;</span>
+<span class="fc" id="L29">		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots</span>
+
+
+<span class="fc" id="L32">	}</span>
+
+	@Override
+	public void init(Collection&lt;EpisimPerson&gt; persons, int iteration) {
+
+<span class="fc bfc" id="L37" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
+
+			// mu = log(median); log(1)=0
+
+
+			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
+<span class="fc" id="L43">			double immuneResponseMultiplier = 0;</span>
+<span class="fc bfc" id="L44" title="All 4 branches covered.">			while (immuneResponseMultiplier &lt; 0.1 || immuneResponseMultiplier &gt; 10) {</span>
+<span class="fc" id="L45">				immuneResponseMultiplier = EpisimUtils.nextLogNormal(localRnd, 0, antibodyConfig.getImmuneReponseSigma());</span>
+			}
+
+<span class="fc" id="L48">			person.setImmuneResponseMultiplier(immuneResponseMultiplier);</span>
+
+<span class="fc" id="L50">		}</span>
+
+
+<span class="fc" id="L53">	}</span>
+
+	@Override
+	public void recalculateAntibodiesAfterSnapshot(Collection&lt;EpisimPerson&gt; persons, int iteration) {
+<span class="fc bfc" id="L57" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
+
+			// reset to 0.0
+<span class="fc bfc" id="L60" title="All 2 branches covered.">			for (VirusStrain strain : VirusStrain.values()) {</span>
+<span class="fc" id="L61">				person.setAntibodies(strain, 0.0);</span>
+			}
+
+			// recalculate antibodies from immune history
+<span class="fc bfc" id="L65" title="All 2 branches covered.">			for (int it = 1; it &lt; iteration; it++) {</span>
+<span class="fc" id="L66">				updateAntibodies(person, it);</span>
+
+			}
+<span class="fc" id="L69">		}</span>
+<span class="fc" id="L70">	}</span>
+
+	/**
+	 * Updates the antibody levels for person. If an immunity event occurs (vaccination or infection) on the previous
+	 * day, antibodies will increase. If not, they will decrease. This method was designed to also recalculate antibodies
+	 * when the simulation is started from snapshot.
+	 *
+	 * @param person person whose antibodies to update
+	 * @param day    current day / iteration
+	 */
+	@Override
+	public void updateAntibodies(EpisimPerson person, int day) {
+
+		//handle vaccination
+<span class="fc bfc" id="L84" title="All 2 branches covered.">		if (person.getVaccinationDates().contains(day - 1)) {</span>
+<span class="fc" id="L85">			int vaccinationIndex = person.getVaccinationDates().indexOf(day - 1);</span>
+<span class="fc" id="L86">			VaccinationType vaccinationType = person.getVaccinationType(vaccinationIndex);</span>
+<span class="fc" id="L87">			handleImmunization(person, vaccinationType);</span>
+<span class="fc" id="L88">			return;</span>
+		}
+
+		// handle infection
+<span class="fc bfc" id="L92" title="All 2 branches covered.">		for (int infectionIndex = 0; infectionIndex &lt; person.getNumInfections(); infectionIndex++) {</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">			if (person.daysSinceInfection(infectionIndex, day) == 1) {</span>
+<span class="fc" id="L94">				VirusStrain virusStrain = person.getVirusStrain(infectionIndex);</span>
+<span class="fc" id="L95">				handleImmunization(person, virusStrain);</span>
+<span class="fc" id="L96">				return;</span>
+			}
+		}
+
+<span class="fc" id="L100">		double halflifeDays = HALF_LIFE_DAYS;</span>
+
+<span class="fc bfc" id="L102" title="All 4 branches covered.">		if ((person.getNumInfections() &gt; 0 &amp;&amp; person.getNumVaccinations() &gt; 0)</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">			|| person.getNumInfections() &gt; 4</span>
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">			|| person.getNumVaccinations() &gt; 3) {</span>
+
+<span class="fc" id="L106">			halflifeDays *= antibodyConfig.hlMultiForInfected; // 1, 2, 5</span>
+		}
+
+		// if no immunity event: exponential decay, day by day:
+<span class="fc bfc" id="L110" title="All 2 branches covered.">		for (VirusStrain strain : VirusStrain.values()) {</span>
+<span class="fc" id="L111">			double oldAntibodyLevel = person.getAntibodies(strain);</span>
+<span class="fc" id="L112">			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halflifeDays));</span>
+		}
+
+<span class="fc" id="L115">	}</span>
+
+	private void handleImmunization(EpisimPerson person, ImmunityEvent immunityEventType) {
+
+<span class="fc" id="L119">		boolean firstImmunization = checkFirstImmunization(person);</span>
+		// 1st immunization:
+<span class="fc bfc" id="L121" title="All 2 branches covered.">		if (firstImmunization) {</span>
+
+<span class="fc bfc" id="L123" title="All 2 branches covered.">			for (VirusStrain strain2 : VirusStrain.values()) {</span>
+<span class="fc" id="L124">				double antibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2);</span>
+
+<span class="fc" id="L126">				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());</span>
+
+<span class="fc" id="L128">				person.setAntibodies(strain2, antibodies);</span>
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				// should always be the case for initial immunization
+<span class="fc" id="L132">				person.updateMaxAntibodies(strain2, antibodies);</span>
+			}
+
+
+		} else {
+<span class="fc bfc" id="L137" title="All 2 branches covered.">			for (VirusStrain strain2 : VirusStrain.values()) {</span>
+<span class="fc" id="L138">				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(immunityEventType).get(strain2);</span>
+
+				// antibodies before refresh
+<span class="fc" id="L141">				double antibodies = person.getAntibodies(strain2);</span>
+
+				// refresh antibodies
+<span class="fc" id="L144">				antibodies = antibodies * refreshFactor;</span>
+
+				// check that new antibody level at least as high as initial antibodies
+<span class="fc" id="L147">				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();</span>
+<span class="fc" id="L148">				antibodies = Math.max(antibodies, initialAntibodies);</span>
+
+				// check that new antibody level is at most 150
+<span class="fc" id="L151">				antibodies = Math.min(150., antibodies);</span>
+
+<span class="fc" id="L153">				person.setAntibodies(strain2, antibodies);</span>
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+<span class="fc" id="L156">				person.updateMaxAntibodies(strain2, antibodies);</span>
+			}
+		}
+<span class="fc" id="L159">	}</span>
+
+	private boolean checkFirstImmunization(EpisimPerson person) {
+<span class="fc" id="L162">		boolean firstImmunization = true;</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">		for (double abLevel : person.getAntibodies().values()) {</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">			if (abLevel &gt; 0) {</span>
+<span class="fc" id="L165">				firstImmunization = false;</span>
+<span class="fc" id="L166">				break;</span>
+			}
+<span class="fc" id="L168">		}</span>
+<span class="fc" id="L169">		return firstImmunization;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

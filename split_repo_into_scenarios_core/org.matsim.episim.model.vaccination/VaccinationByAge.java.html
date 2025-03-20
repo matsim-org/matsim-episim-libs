@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VaccinationByAge.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.vaccination</a> &gt; <span class="el_source">VaccinationByAge.java</span></div><h1>VaccinationByAge.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.vaccination;
+
+import com.google.inject.Inject;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.model.VaccinationType;
+
+import java.time.LocalDate;
+import java.util.*;
+
+/**
+ * Vaccinate people starting with the oldest first
+ */
+public class VaccinationByAge implements VaccinationModel {
+
+	protected final SplittableRandom rnd;
+	protected final VaccinationConfigGroup vaccinationConfig;
+
+	protected final static int MAX_AGE = 130;
+	protected final static int MINIMUM_AGE_FOR_VACCINATIONS = 0;
+
+	@Inject
+<span class="fc" id="L26">	public VaccinationByAge(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {</span>
+<span class="fc" id="L27">		this.rnd = rnd;</span>
+<span class="fc" id="L28">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L29">	}</span>
+
+	/**
+	 * Return an array where we have for each age (in years) an ArrayList of Persons that are qualified for a vaccination
+	 */
+	List&lt;EpisimPerson&gt;[] collectPerAge(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, int iteration, boolean reVaccination) {
+<span class="fc" id="L35">		final List&lt;EpisimPerson&gt;[] perAge = new List[MAX_AGE];</span>
+
+<span class="fc bfc" id="L37" title="All 2 branches covered.">		for (int i = 0; i &lt; MAX_AGE; i++)</span>
+<span class="fc" id="L38">			perAge[i] = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L40" title="All 2 branches covered.">		for (EpisimPerson p : persons.values()) {</span>
+<span class="fc" id="L41">			if (</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">					p.isVaccinable() &amp;&amp;</span>
+<span class="pc bpc" id="L43" title="2 of 4 branches missed.">							p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &amp;&amp; !p.isRecentlyRecovered(iteration, 180) &amp;&amp;</span>
+<span class="pc bpc" id="L44" title="1 of 4 branches missed.">							(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &amp;&amp;</span>
+<span class="pc bpc" id="L45" title="2 of 4 branches missed.">							(p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) &amp;&amp;</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">							(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) &gt;= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)) {</span>
+
+<span class="fc" id="L48">				perAge[p.getAge()].add(p);</span>
+			}
+<span class="fc" id="L50">		}</span>
+
+<span class="fc" id="L52">		return perAge;</span>
+	}
+
+	@Override
+	public int handleVaccination(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">		if (availableVaccinations &lt;= 0)</span>
+<span class="nc" id="L58">			return 0;</span>
+
+<span class="fc" id="L60">		Map&lt;VaccinationType, Double&gt; prob = vaccinationConfig.getVaccinationTypeProb(date);</span>
+
+<span class="fc" id="L62">		final List&lt;EpisimPerson&gt;[] perAge = collectPerAge(persons, iteration, reVaccination);</span>
+
+<span class="fc" id="L64">		int age = MAX_AGE - 1;</span>
+<span class="fc" id="L65">		int vaccinationsLeft = availableVaccinations;</span>
+
+<span class="fc bfc" id="L67" title="All 4 branches covered.">		while (vaccinationsLeft &gt; 0 &amp;&amp; age &gt; MINIMUM_AGE_FOR_VACCINATIONS) {</span>
+
+<span class="fc" id="L69">			List&lt;EpisimPerson&gt; candidates = perAge[age];</span>
+
+			// list is shuffled to avoid eventual bias
+<span class="fc bfc" id="L72" title="All 2 branches covered.">			if (candidates.size() &gt; vaccinationsLeft)</span>
+<span class="fc" id="L73">				Collections.shuffle(perAge[age], new Random(EpisimUtils.getSeed(rnd)));</span>
+
+<span class="fc bfc" id="L75" title="All 2 branches covered.">			for (int i = 0; i &lt; Math.min(candidates.size(), vaccinationsLeft); i++) { //todo: should vaccinationsLeft be both in loop statement as maximum and counter?</span>
+<span class="fc" id="L76">				EpisimPerson person = candidates.get(i);</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">				vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));</span>
+<span class="fc" id="L78">				vaccinationsLeft--;</span>
+			}
+
+<span class="fc" id="L81">			age--;</span>
+<span class="fc" id="L82">		}</span>
+
+<span class="fc" id="L84">		return availableVaccinations - vaccinationsLeft;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

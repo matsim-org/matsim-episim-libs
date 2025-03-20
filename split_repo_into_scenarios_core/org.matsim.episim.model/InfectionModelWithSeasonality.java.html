@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InfectionModelWithSeasonality.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">InfectionModelWithSeasonality.java</span></div><h1>InfectionModelWithSeasonality.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.*;
+import org.matsim.episim.policy.Restriction;
+
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.SplittableRandom;
+
+import static org.matsim.episim.model.DefaultInfectionModel.*;
+
+/**
+ * Extension of the {@link DefaultInfectionModel} with a seasonality component.
+ */
+public final class InfectionModelWithSeasonality implements InfectionModel {
+
+	private final FaceMaskModel maskModel;
+	private final SplittableRandom rnd;
+	private final EpisimConfigGroup episimConfig;
+	private final EpisimReporting reporting;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
+
+	private double outdoorFactor;
+	private int iteration;
+
+	@Inject
+<span class="fc" id="L32">	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, SplittableRandom rnd, Config config, EpisimReporting reporting) {</span>
+<span class="fc" id="L33">		this.maskModel = faceMaskModel;</span>
+<span class="fc" id="L34">		this.rnd = rnd;</span>
+<span class="fc" id="L35">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L36">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="fc" id="L37">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="fc" id="L38">		this.reporting = reporting;</span>
+<span class="fc" id="L39">	}</span>
+
+	@Override
+	public void setIteration(int iteration) {
+<span class="fc" id="L43">		this.outdoorFactor = interpolateOutdoorFraction(episimConfig, iteration);</span>
+<span class="fc" id="L44">		this.iteration = iteration;</span>
+<span class="fc" id="L45">		reporting.reportOutdoorFraction(this.outdoorFactor, iteration);</span>
+<span class="fc" id="L46">	}</span>
+
+	@Override
+	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions,
+										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   double contactIntensity, double jointTimeInContainer) {
+
+		// ci corr can not be null, because sim is initialized with non null value
+<span class="fc" id="L54">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+
+		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
+		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
+		// no effect.  kai, mar'20
+<span class="fc" id="L59">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+<span class="fc" id="L60">		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));</span>
+
+<span class="fc" id="L62">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection</span>
+<span class="fc" id="L63">				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)</span>
+<span class="fc" id="L64">				* target.getSusceptibility()</span>
+				* susceptibility
+<span class="fc" id="L66">				* strain.getInfectiousness()</span>
+<span class="fc" id="L67">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
+<span class="fc" id="L68">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake</span>
+<span class="fc" id="L69">				* getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2)</span>
+		);
+
+	}
+
+	/**
+	 * Interpolate outdoor fraction for current day.
+	 */
+	static double interpolateOutdoorFraction(EpisimConfigGroup episimConfig, int iteration) {
+<span class="fc" id="L78">		LocalDate date = episimConfig.getStartDate().plusDays(iteration-1);</span>
+<span class="fc" id="L79">		return EpisimUtils.interpolateEntry((NavigableMap&lt;LocalDate, ? extends Number&gt;) episimConfig.getLeisureOutdoorFraction(), date);</span>
+	}
+
+	static double getIndoorOutdoorFactor(double outdoorFraction, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+
+<span class="fc bfc" id="L84" title="All 4 branches covered.">		if (act1.getSeasonality() == 0.0 &amp;&amp; act2.getSeasonality() == 0.0) {</span>
+<span class="fc" id="L85">			return 1.;</span>
+		}
+
+<span class="fc" id="L88">		outdoorFraction = outdoorFraction * Math.max(act1.getSeasonality(), act2.getSeasonality());</span>
+
+<span class="fc" id="L90">		double indoorOutdoorFactor = 1.;</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">		if (rnd.nextDouble() &lt; outdoorFraction) {</span>
+<span class="fc" id="L92">			indoorOutdoorFactor = 0.1;</span>
+		}
+
+<span class="fc" id="L95">		return indoorOutdoorFactor;</span>
+
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
