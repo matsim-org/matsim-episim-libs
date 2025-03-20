@@ -5,6 +5,9 @@
 ![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
 [![Join the chat at https://gitter.im/matsim-episim-libs/community](https://badges.gitter.im/matsim-episim-libs/community.svg)](https://gitter.im/matsim-episim-libs/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+[Coverage Report](blob/${{ github.ref_name }}/target/site/jacoco/index.html)
+
+
 
 This repository contains an epidemic simulation based on MATSim, provided by the [Transport Systems Planning and Transport Telematics group](https://www.vsp.tu-berlin.de) of [Technische Universität Berlin](https://www.tu-berlin.de).
 
