@@ -32,15 +32,53 @@ jobs:
           path: target/site/
 
 
-      - name: Deploy coverage report to GitHub Pages
-        if: github.ref != 'refs/heads/gh-pages'  # Avoid deploying from gh-pages itself
+      - name: Extract coverage % and create badge
+        run: |
+          COVERAGE=$(grep -m1 LINE target/site/jacoco/jacoco.csv | awk -F',' '{printf "%.1f", ($4/$5)*100}')
+          echo "Coverage: $COVERAGE%"
+
+          mkdir -p target/site/badges
+          cat <<EOF > target/site/badges/coverage.json
+          {
+            "schemaVersion": 1,
+            "label": "coverage",
+            "message": "$COVERAGE%",
+            "color": "blue"
+          }
+EOF
+
+      - name: Deploy report + badge to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/site/jacoco  # The JaCoCo HTML report directory
+          publish_dir: ./target/site
           publish_branch: gh-pages
-          # Create a folder with the branch name under the gh-pages branch
-          destination_dir: ${{ github.ref_name }}  # This is the branch name (e.g., 'feature-branch')
+          destination_dir: ${{ github.ref_name }}
+
+      - name: Update README with coverage badge
+        run: |
+          BRANCH_NAME=${{ github.ref_name }}
+          USERNAME=${{ github.repository_owner }}
+          REPO_NAME=$(basename "${{ github.repository }}")
+          
+          BADGE_URL="https://${USERNAME}.github.io/${REPO_NAME}/${BRANCH_NAME}/badges/coverage.json"
+          REPORT_URL="https://${USERNAME}.github.io/${REPO_NAME}/${BRANCH_NAME}/index.html"
+          
+          NEW_BADGE="[![Coverage](https://img.shields.io/endpoint?url=${BADGE_URL})](${REPORT_URL})"
+          
+          # Replace content between markers
+          sed -i '/<!-- COVERAGE_BADGE_START -->/,/<!-- COVERAGE_BADGE_END -->/c\
+        <!-- COVERAGE_BADGE_START -->\
+        '"$NEW_BADGE"'\
+        <!-- COVERAGE_BADGE_END -->' README.md
+
+      - name: Commit README update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update coverage badge for branch ${{ github.ref_name }}" || echo "No changes"
+          git push || echo "No changes to push"
 
 
     env:
