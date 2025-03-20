@@ -4,8 +4,7 @@
 ![license](https://img.shields.io/github/license/matsim-org/matsim-episim.svg)
 ![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
 [![Join the chat at https://gitter.im/matsim-episim-libs/community](https://badges.gitter.im/matsim-episim-libs/community.svg)](https://gitter.im/matsim-episim-libs/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-[Coverage Report](blob/${{ github.ref_name }}/target/site/jacoco/index.html)
+[![Coverage](https://img.shields.io/badge/Coverage-View-blue)](https://matsim-org.github.io/matsim-episim-libs/main/index.html)
 
 
 
