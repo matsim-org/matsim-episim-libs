@@ -31,5 +31,17 @@ jobs:
           name: maven-site
           path: target/site/
 
+
+      - name: Deploy coverage report to GitHub Pages
+        if: github.ref != 'refs/heads/gh-pages'  # Avoid deploying from gh-pages itself
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/site/jacoco  # The JaCoCo HTML report directory
+          publish_branch: gh-pages
+          # Create a folder with the branch name under the gh-pages branch
+          destination_dir: ${{ github.ref_name }}  # This is the branch name (e.g., 'feature-branch')
+
+
     env:
       MAVEN_OPTS: -Xmx6G
