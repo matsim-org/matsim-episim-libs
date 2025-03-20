@@ -22,8 +22,8 @@ jobs:
       - name: Test and generate coverage
         run:  mvn clean verify --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
-      - name: Generate reports
-        run: mvn site:site --batch-mode
+#      - name: Generate reports
+#        run: mvn site:site --batch-mode
 
       - name: Archive reports
         uses: actions/upload-artifact@v4
