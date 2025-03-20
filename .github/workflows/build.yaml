@@ -45,7 +45,6 @@ jobs:
             "message": "$COVERAGE%",
             "color": "blue"
           }
-EOF
 
       - name: Deploy report + badge to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
