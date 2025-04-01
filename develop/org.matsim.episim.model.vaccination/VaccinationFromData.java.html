@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VaccinationFromData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.vaccination</a> &gt; <span class="el_source">VaccinationFromData.java</span></div><h1>VaccinationFromData.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.vaccination;
+
+import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.InfectionEventHandler;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.model.VaccinationType;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.vehicles.Vehicle;
+import tech.tablesaw.api.*;
+import tech.tablesaw.io.csv.CsvReadOptions;
+import tech.tablesaw.selection.Selection;
+
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static tech.tablesaw.api.ColumnType.*;
+
+/**
+ * Read vaccination from file for each age group.
+ */
+public class VaccinationFromData extends VaccinationByAge {
+
+<span class="fc" id="L37">	private static final Logger log = LogManager.getLogger(org.matsim.episim.model.vaccination.VaccinationFromData.class);</span>
+
+	/**
+	 * All known age groups.
+	 */
+<span class="fc" id="L42">	private List&lt;VaccinationFromData.AgeGroup&gt; ageGroups = null;</span>
+
+	/**
+	 * Entries for each day.
+	 */
+<span class="fc" id="L47">	private TreeMap&lt;LocalDate, DoubleList&gt; entries = null;</span>
+
+	/**
+	 * Entries with booster vaccinations for each day.
+	 */
+<span class="fc" id="L52">	private TreeMap&lt;LocalDate, DoubleList&gt; booster = null;</span>
+
+	/**
+	 * Refresher vaccination for each day.
+	 */
+<span class="fc" id="L57">	private TreeMap&lt;LocalDate, DoubleList&gt; refresher = null;</span>
+
+	/**
+	 * Config for this class.
+	 */
+	private final VaccinationFromData.Config config;
+
+	/**
+	 * Fallback to random vaccinations.
+	 */
+	private final RandomVaccination random;
+
+	@Inject
+	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, org.matsim.episim.model.vaccination.VaccinationFromData.Config config) {
+<span class="fc" id="L71">		super(rnd, vaccinationConfig);</span>
+<span class="fc" id="L72">		this.config = config;</span>
+<span class="fc" id="L73">		this.random = new RandomVaccination(rnd, vaccinationConfig);</span>
+<span class="fc" id="L74">	}</span>
+
+	@Override
+	public void init(SplittableRandom rnd, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; facilities, Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicles) {
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">		if (vaccinationConfig.getFromFile() == null)</span>
+<span class="nc" id="L79">			throw new IllegalArgumentException(&quot;Vaccination file must be set, but was null&quot;);</span>
+
+<span class="fc" id="L81">		ageGroups = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L82">		entries = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L83">		booster = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L84">		refresher = new TreeMap&lt;&gt;();</span>
+
+<span class="fc" id="L86">		ColumnType[] types = {LOCAL_DATE, STRING, STRING, INTEGER, INTEGER};</span>
+
+<span class="fc" id="L88">		ageGroups.add(new VaccinationFromData.AgeGroup(5, 11));</span>
+<span class="fc" id="L89">		ageGroups.add(new VaccinationFromData.AgeGroup(12, 17));</span>
+<span class="fc" id="L90">		ageGroups.add(new VaccinationFromData.AgeGroup(18, 59));</span>
+<span class="fc" id="L91">		ageGroups.add(new VaccinationFromData.AgeGroup(60, MAX_AGE - 1));</span>
+
+		try {
+<span class="fc" id="L94">			Table rkiData = Table.read().usingOptions(CsvReadOptions.builder(vaccinationConfig.getFromFile())</span>
+<span class="fc" id="L95">					.tableName(&quot;rkidata&quot;)</span>
+<span class="fc" id="L96">					.columnTypes(types));</span>
+
+<span class="fc" id="L98">			LocalDate endDate = rkiData.dateColumn(&quot;Impfdatum&quot;).max();</span>
+
+<span class="fc" id="L100">			StringColumn locationColumn = rkiData.stringColumn(&quot;LandkreisId_Impfort&quot;);</span>
+<span class="fc" id="L101">			Selection location = locationColumn.isEqualTo(config.locationId);</span>
+<span class="fc" id="L102">			Table table = rkiData.where(location);</span>
+
+<span class="fc" id="L104">			IntColumn vaccinationno = table.intColumn(&quot;Impfschutz&quot;);</span>
+
+<span class="fc" id="L106">			Selection firstVaccinations = vaccinationno.isEqualTo(1);</span>
+<span class="fc" id="L107">			Table filtered = table.where(firstVaccinations);</span>
+
+<span class="fc" id="L109">			mergeData(filtered, entries, endDate, &quot;05-11&quot;, config.groups.getDouble(&quot;05-11&quot;), 0);</span>
+<span class="fc" id="L110">			mergeData(filtered, entries, endDate, &quot;12-17&quot;, config.groups.getDouble(&quot;12-17&quot;), 1);</span>
+<span class="fc" id="L111">			mergeData(filtered, entries, endDate, &quot;18-59&quot;, config.groups.getDouble(&quot;18-59&quot;), 2);</span>
+<span class="fc" id="L112">			mergeData(filtered, entries, endDate, &quot;60+&quot;, config.groups.getDouble(&quot;60+&quot;), 3);</span>
+
+
+<span class="fc" id="L115">			Selection boosterVaccinations = vaccinationno.isEqualTo(3);</span>
+<span class="fc" id="L116">			filtered = table.where(boosterVaccinations);</span>
+
+<span class="fc" id="L118">			mergeData(filtered, booster, endDate, &quot;05-11&quot;, config.groups.getDouble(&quot;05-11&quot;), 0);</span>
+<span class="fc" id="L119">			mergeData(filtered, booster, endDate, &quot;12-17&quot;, config.groups.getDouble(&quot;12-17&quot;), 1);</span>
+<span class="fc" id="L120">			mergeData(filtered, booster, endDate, &quot;18-59&quot;, config.groups.getDouble(&quot;18-59&quot;), 2);</span>
+<span class="fc" id="L121">			mergeData(filtered, booster, endDate, &quot;60+&quot;, config.groups.getDouble(&quot;60+&quot;), 3);</span>
+
+
+<span class="fc" id="L124">			Selection refresherVaccinations = vaccinationno.isEqualTo(4);</span>
+<span class="fc" id="L125">			filtered = table.where(refresherVaccinations);</span>
+
+<span class="fc" id="L127">			mergeData(filtered, refresher, endDate, &quot;05-11&quot;, config.groups.getDouble(&quot;05-11&quot;), 0);</span>
+<span class="fc" id="L128">			mergeData(filtered, refresher, endDate, &quot;12-17&quot;, config.groups.getDouble(&quot;12-17&quot;), 1);</span>
+<span class="fc" id="L129">			mergeData(filtered, refresher, endDate, &quot;18-59&quot;, config.groups.getDouble(&quot;18-59&quot;), 2);</span>
+<span class="fc" id="L130">			mergeData(filtered, refresher, endDate, &quot;60+&quot;, config.groups.getDouble(&quot;60+&quot;), 3);</span>
+
+
+<span class="nc" id="L133">		} catch (IOException e) {</span>
+<span class="nc" id="L134">			throw new UncheckedIOException(e);</span>
+<span class="fc" id="L135">		}</span>
+
+		// collect population sizes
+<span class="fc bfc" id="L138" title="All 2 branches covered.">		for (EpisimPerson p : persons.values()) {</span>
+<span class="fc" id="L139">			Integer ag = findAgeGroup(p.getAge());</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">			if (ag != null)</span>
+<span class="fc" id="L141">				ageGroups.get(ag).size++;</span>
+<span class="fc" id="L142">		}</span>
+
+<span class="fc" id="L144">		log.info(&quot;Using age-groups: {}&quot;, ageGroups);</span>
+<span class="fc" id="L145">	}</span>
+
+	@Nullable
+	private Integer findAgeGroup(int age) {
+
+<span class="pc bpc" id="L150" title="1 of 2 branches missed.">		for (int i = 0; i &lt; ageGroups.size(); i++) {</span>
+<span class="fc" id="L151">			AgeGroup ag = ageGroups.get(i);</span>
+<span class="pc bpc" id="L152" title="1 of 4 branches missed.">			if (age &gt;= ag.from &amp;&amp; age &lt;= ag.to)</span>
+<span class="fc" id="L153">				return i;</span>
+		}
+
+<span class="nc" id="L156">		return null;</span>
+	}
+
+	@Override
+	public int handleVaccination(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
+
+		// If available vaccination is given, data will be ignored and vaccination by age executed
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">		if (availableVaccinations &gt;= 0)</span>
+<span class="nc" id="L164">			return random.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);</span>
+
+		// booster and refresher shot
+		// TODO: upstream API and config would not an update to better differentiate
+<span class="fc bfc" id="L168" title="All 2 branches covered.">		if (reVaccination)</span>
+<span class="fc" id="L169">			return vaccinate(persons, booster, 2, date, iteration, now) + vaccinate(persons, refresher,3, date, iteration, now);</span>
+		else
+<span class="fc" id="L171">			return vaccinate(persons, entries, 1, date, iteration, now);</span>
+
+	}
+
+	/**
+	 * Vaccinate all persons with the nth vaccination
+	 * @param vaccinationN the nth vaccination
+	 */
+	private int vaccinate(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, TreeMap&lt;LocalDate, DoubleList&gt; entries, int vaccinationN, LocalDate date, int iteration, double now) {
+
+<span class="fc" id="L181">		DoubleList entry = EpisimUtils.findValidEntry(entries, null, date);</span>
+
+		// No vaccinations today
+<span class="fc bfc" id="L184" title="All 2 branches covered.">		if (entry == null)</span>
+<span class="fc" id="L185">			return 0;</span>
+
+		// reset count
+<span class="fc bfc" id="L188" title="All 2 branches covered.">		for (VaccinationFromData.AgeGroup ag : ageGroups) {</span>
+<span class="fc" id="L189">			ag.vaccinated = 0;</span>
+<span class="fc" id="L190">		}</span>
+
+<span class="fc" id="L192">		final List&lt;EpisimPerson&gt;[] perAge = new List[ageGroups.size()];</span>
+
+<span class="fc bfc" id="L194" title="All 2 branches covered.">		for (int i = 0; i &lt; ageGroups.size(); i++)</span>
+<span class="fc" id="L195">			perAge[i] = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L197" title="All 2 branches covered.">		for (EpisimPerson p : persons.values()) {</span>
+
+<span class="fc" id="L199">			Integer idx = findAgeGroup(p.getAge());</span>
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">			if (idx == null) continue;</span>
+
+<span class="fc" id="L202">			VaccinationFromData.AgeGroup ag = ageGroups.get(idx);</span>
+
+<span class="fc bfc" id="L204" title="All 2 branches covered.">			if (p.getNumVaccinations() &gt;= vaccinationN) {</span>
+<span class="fc" id="L205">				ag.vaccinated++;</span>
+<span class="fc" id="L206">				continue;</span>
+			}
+
+<span class="pc bpc" id="L209" title="2 of 4 branches missed.">			if (p.isVaccinable() &amp;&amp; p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &amp;&amp;</span>
+					//!p.isRecentlyRecovered(iteration) &amp;&amp;
+<span class="fc bfc" id="L211" title="All 4 branches covered.">					(p.getNumVaccinations() == vaccinationN - 1) &amp;&amp;</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">					(vaccinationN &gt; 1 ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) &gt;= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)</span>
+			) {
+<span class="fc" id="L214">				perAge[idx].add(p);</span>
+			}
+<span class="fc" id="L216">		}</span>
+
+<span class="fc" id="L218">		Map&lt;VaccinationType, Double&gt; prob = vaccinationConfig.getVaccinationTypeProb(date);</span>
+
+<span class="fc" id="L220">		int totalVaccinations = 0;</span>
+
+<span class="fc bfc" id="L222" title="All 2 branches covered.">		for (int ii = 0; ii &lt; ageGroups.size(); ii++) {</span>
+
+<span class="fc" id="L224">			VaccinationFromData.AgeGroup ag = ageGroups.get(ii);</span>
+<span class="fc" id="L225">			double share = entry.getDouble(ii);</span>
+
+			// vaccinations left per age group
+<span class="fc" id="L228">			int vaccinationsLeft = (int) ((ag.size * share) - ag.vaccinated);</span>
+
+<span class="fc" id="L230">			List&lt;EpisimPerson&gt; candidates = perAge[ii];</span>
+
+			// list is shuffled to avoid eventual bias
+<span class="fc bfc" id="L233" title="All 2 branches covered.">			if (candidates.size() != 0)</span>
+<span class="fc" id="L234">				Collections.shuffle(perAge[ii], new Random(EpisimUtils.getSeed(rnd)));</span>
+
+<span class="fc" id="L236">			int n = Math.min(candidates.size(), vaccinationsLeft);</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">			for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L238">				EpisimPerson person = candidates.get(i);</span>
+<span class="fc bfc" id="L239" title="All 2 branches covered.">				vaccinate(person, iteration, vaccinationN &gt; 1 ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));</span>
+<span class="fc" id="L240">				vaccinationsLeft--;</span>
+<span class="fc" id="L241">				totalVaccinations++;</span>
+			}
+		}
+
+
+<span class="fc" id="L246">		return totalVaccinations;</span>
+	}
+
+	static Table filterData(Table table, LocalDate endDate, String ageGroup, double population) {
+
+<span class="fc" id="L251">		Selection selection = table.stringColumn(&quot;Altersgruppe&quot;).isEqualTo(ageGroup);</span>
+<span class="fc" id="L252">		Table data = table.where(selection);</span>
+
+<span class="fc" id="L254">		DateColumn dateColumn = data.dateColumn(&quot;Impfdatum&quot;);</span>
+
+<span class="fc" id="L256">		LocalDate startDate = dateColumn.min();</span>
+
+		// This column is empty
+<span class="pc bpc" id="L259" title="1 of 2 branches missed.">		if (startDate == null) {</span>
+<span class="nc" id="L260">			return Table.create();</span>
+		}
+
+<span class="fc" id="L263">		List&lt;LocalDate&gt; dates = startDate.datesUntil(endDate.plusDays(1)).collect(Collectors.toList());</span>
+
+<span class="fc bfc" id="L265" title="All 2 branches covered.">		for (LocalDate date : dates) {</span>
+<span class="fc" id="L266">			Selection thisDateSelection = dateColumn.isEqualTo(date);</span>
+<span class="fc" id="L267">			Table thisDateTable = data.where(thisDateSelection);</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">			if (thisDateTable.rowCount() == 0) {</span>
+<span class="fc" id="L269">				Table singlerow = data.emptyCopy(1);</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">				for (Row row : singlerow) {</span>
+<span class="fc" id="L271">					row.setDate(&quot;Impfdatum&quot;, date);</span>
+<span class="fc" id="L272">					row.setString(&quot;Altersgruppe&quot;, ageGroup);</span>
+<span class="fc" id="L273">					row.setInt(&quot;Anzahl&quot;, 0);</span>
+<span class="fc" id="L274">				}</span>
+<span class="fc" id="L275">				data.append(singlerow);</span>
+			}
+<span class="fc" id="L277">		}</span>
+<span class="fc" id="L278">		data = data.sortAscendingOn(&quot;Impfdatum&quot;);</span>
+<span class="fc" id="L279">		DoubleColumn cumsumAnzahl = data.intColumn(&quot;Anzahl&quot;).cumSum();</span>
+<span class="fc" id="L280">		DoubleColumn quota = cumsumAnzahl.divide(population);</span>
+<span class="fc" id="L281">		quota.setName(ageGroup);</span>
+<span class="fc" id="L282">		data.addColumns(quota);</span>
+<span class="fc" id="L283">		data.removeColumns(&quot;Impfschutz&quot;, &quot;LandkreisId_Impfort&quot;, &quot;Altersgruppe&quot;, &quot;Anzahl&quot;);</span>
+<span class="fc" id="L284">		data.column(&quot;Impfdatum&quot;).setName(&quot;date&quot;);</span>
+
+<span class="fc" id="L286">		return data;</span>
+	}
+
+	static void mergeData(Table filtered, TreeMap&lt;LocalDate, DoubleList&gt; entries, LocalDate endDate, String ageGroup, double population, int i) {
+<span class="fc bfc" id="L290" title="All 2 branches covered.">		for (Row row : filterData(filtered, endDate, ageGroup, population)) {</span>
+<span class="fc" id="L291">			LocalDate date = row.getDate(0);</span>
+<span class="fc" id="L292">			DoubleList values = entries.computeIfAbsent(date, (k) -&gt; new DoubleArrayList(new double[]{0, 0, 0, 0}));</span>
+
+<span class="fc" id="L294">			values.set(i, row.getDouble(1));</span>
+<span class="fc" id="L295">		}</span>
+<span class="fc" id="L296">	}</span>
+
+	/**
+	 * Create a new configuration, that needs to be bound with guice.
+	 */
+	public static VaccinationFromData.Config newConfig(String locationId) {
+<span class="fc" id="L302">		return new VaccinationFromData.Config(locationId);</span>
+	}
+
+	private static final class AgeGroup {
+
+		private final int from;
+		private final int to;
+
+<span class="fc" id="L310">		private int size = 0;</span>
+<span class="fc" id="L311">		private int vaccinated = 0;</span>
+
+<span class="fc" id="L313">		private AgeGroup(int from, int to) {</span>
+<span class="fc" id="L314">			this.from = from;</span>
+<span class="fc" id="L315">			this.to = to;</span>
+<span class="fc" id="L316">		}</span>
+
+		@Override
+		public String toString() {
+<span class="fc" id="L320">			return &quot;AgeGroup{&quot; +</span>
+					&quot;from=&quot; + from +
+					&quot;, to=&quot; + to +
+					&quot;, size=&quot; + size +
+					'}';
+		}
+	}
+
+	/**
+	 * Holds config options for this class.
+	 */
+	public static final class Config {
+
+		final String locationId;
+<span class="fc" id="L334">		final Object2DoubleMap&lt;String&gt; groups = new Object2DoubleLinkedOpenHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L336">		public Config(String locationId) {</span>
+<span class="fc" id="L337">			this.locationId = locationId;</span>
+<span class="fc" id="L338">		}</span>
+
+		/**
+		 * Define an age group and reference size in the population.
+		 *
+		 * @param ageGroup      string that must be exactly like in the data
+		 * @param referenceSize unscaled reference size of this age group.
+		 */
+		public VaccinationFromData.Config withAgeGroup(String ageGroup, double referenceSize) {
+<span class="fc" id="L347">			groups.put(ageGroup, referenceSize);</span>
+<span class="fc" id="L348">			return this;</span>
+		}
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

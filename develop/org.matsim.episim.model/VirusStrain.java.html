@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VirusStrain.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">VirusStrain.java</span></div><h1>VirusStrain.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+/**
+ * Definition of virus strains with different characteristics.
+ */
+<span class="fc" id="L6">public enum VirusStrain implements ImmunityEvent {</span>
+
+	/**
+	 * This describes the base virus strain.
+	 */
+<span class="fc" id="L11">	SARS_CoV_2(null),</span>
+
+	/**
+	 * More &quot;infectious&quot; variant B.1.1.7 that has been prevalent in the UK, starting during end of 2020.
+	 * Also known as VOC-202012/01.
+	 */
+//	B117,
+<span class="fc" id="L18">	ALPHA(SARS_CoV_2),</span>
+
+	/**
+	 * South-african variant also known as auch 501Y.V2.
+	 */
+<span class="fc" id="L23">	B1351(SARS_CoV_2), //todo?</span>
+
+	/**
+	 * unknown mutation
+	 */
+//	MUTB,
+<span class="fc" id="L29">	DELTA(ALPHA),</span>
+
+	/**
+	 * VoC B.1.1.529, first reported to WHO from South Africa on 24 November 2021
+	 */
+//	OMICRON,
+<span class="fc" id="L35">	OMICRON_BA1(DELTA),</span>
+
+<span class="fc" id="L37">	OMICRON_BA2(OMICRON_BA1),</span>
+
+<span class="fc" id="L39">	OMICRON_BA5(OMICRON_BA2),</span>
+
+<span class="fc" id="L41">	XBB_15(OMICRON_BA2),</span>
+
+<span class="fc" id="L43">	XBB_19(OMICRON_BA2),</span>
+
+<span class="fc" id="L45">	BQ(OMICRON_BA5),</span>
+
+<span class="fc" id="L47">	EG(XBB_19),</span>
+
+<span class="fc" id="L49">	STRAIN_A(OMICRON_BA5),</span>
+
+<span class="fc" id="L51">	STRAIN_B(OMICRON_BA5),</span>
+
+<span class="fc" id="L53">	A_1(EG),</span>
+
+<span class="fc" id="L55">	A_2(A_1),</span>
+
+<span class="fc" id="L57">	A_3(A_2),</span>
+
+<span class="fc" id="L59">	A_4(A_3),</span>
+
+<span class="fc" id="L61">	A_5(A_4),</span>
+
+<span class="fc" id="L63">	A_6(A_5),</span>
+
+<span class="fc" id="L65">	A_7(A_6),</span>
+
+<span class="fc" id="L67">	A_8(A_7),</span>
+
+<span class="fc" id="L69">	A_9(A_8),</span>
+
+<span class="fc" id="L71">	A_10(A_9),</span>
+
+<span class="fc" id="L73">	A_11(A_10),</span>
+
+<span class="fc" id="L75">	A_12(A_11),</span>
+
+<span class="fc" id="L77">	A_13(A_12),</span>
+
+<span class="fc" id="L79">	A_14(A_13),</span>
+
+<span class="fc" id="L81">	A_15(A_14),</span>
+
+<span class="fc" id="L83">	A_16(A_15),</span>
+
+<span class="fc" id="L85">	A_17(A_16),</span>
+
+<span class="fc" id="L87">	A_18(A_17),</span>
+
+<span class="fc" id="L89">	A_19(A_18),</span>
+
+<span class="fc" id="L91">	A_20(A_19),</span>
+
+<span class="fc" id="L93">	B_1(null),</span>
+
+<span class="fc" id="L95">	B_2(null),</span>
+
+<span class="fc" id="L97">	B_3(null),</span>
+
+<span class="fc" id="L99">	B_4(null),</span>
+
+<span class="fc" id="L101">	B_5(null),</span>
+
+<span class="fc" id="L103">	B_6(null),</span>
+
+<span class="fc" id="L105">	B_7(null),</span>
+
+<span class="fc" id="L107">	B_8(null),</span>
+
+<span class="fc" id="L109">	B_9(null),</span>
+
+<span class="fc" id="L111">	B_10(null),</span>
+
+<span class="fc" id="L113">	B_11(null),</span>
+
+<span class="fc" id="L115">	B_12(null),</span>
+
+<span class="fc" id="L117">	B_13(null),</span>
+
+<span class="fc" id="L119">	B_14(null),</span>
+
+<span class="fc" id="L121">	B_15(null),</span>
+
+<span class="fc" id="L123">	B_16(null),</span>
+
+<span class="fc" id="L125">	B_17(null),</span>
+
+<span class="fc" id="L127">	B_18(null),</span>
+
+<span class="fc" id="L129">	B_19(null),</span>
+
+<span class="fc" id="L131">	B_20(null);</span>
+
+	public final VirusStrain parent;
+
+<span class="fc" id="L135">	VirusStrain(VirusStrain parent) {</span>
+<span class="fc" id="L136">		this.parent = parent;</span>
+<span class="fc" id="L137">	}</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

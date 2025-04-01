@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AgeDependentDiseaseStatusTransitionModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.progression</a> &gt; <span class="el_source">AgeDependentDiseaseStatusTransitionModel.java</span></div><h1>AgeDependentDiseaseStatusTransitionModel.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim.model.progression;
+
+import org.matsim.episim.*;
+
+import com.google.inject.Inject;
+import org.matsim.episim.model.ConfigurableProgressionModel;
+
+import java.util.SplittableRandom;
+
+/**
+ * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
+ */
+public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentTransitionModel {
+
+	private final EpisimConfigGroup episimConfig;
+
+	@Inject
+	public AgeDependentDiseaseStatusTransitionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
+	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
+<span class="fc" id="L40">		super(rnd, vaccinationConfig, strainConfigGroup);</span>
+<span class="fc" id="L41">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L42">	}</span>
+
+
+	@Override
+	protected double getProbaOfTransitioningToShowingSymptoms (EpisimPerson person) {
+
+<span class="fc" id="L48">		double proba = 0.8;</span>
+
+//		int age = EpisimUtils.getAge( person );
+//
+//		if (age &lt; 10) {
+//			proba = 0.1 / 100;
+//		} else if (age &lt; 20) {
+//			proba = 0.3 / 100;
+//		} else if (age &lt; 30) {
+//			proba = 1.2 / 100;
+//		} else if (age &lt; 40) {
+//			proba = 3.2 / 100;
+//		} else if (age &lt; 50) {
+//			proba = 4.9 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 10.2 / 100;
+//		} else if (age &lt; 70) {
+//			proba = 16.6 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 24.3 / 100;
+//		} else {
+//			proba = 27.3 / 100;
+//		}
+
+<span class="fc" id="L72">		return proba;</span>
+	}
+
+	@Override
+	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
+		// https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=802030488
+
+
+		double proba;
+
+<span class="fc" id="L82">		int age = person.getAge();</span>
+
+		// source 3: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8353925/
+<span class="fc bfc" id="L85" title="All 2 branches covered.">		if (age &lt; 5) {</span>
+<span class="fc" id="L86">			proba = 4.0 / 100;</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">		} else if (age &lt; 15) {</span>
+<span class="fc" id="L88">			proba = 1.1 / 100;</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">		} else if (age &lt; 35) {</span>
+<span class="fc" id="L90">			proba = 2.4 / 100;</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">		} else if (age &lt; 60) {</span>
+<span class="fc" id="L92">			proba = 5.6 / 100;</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">		} else if (age &lt; 80) {</span>
+<span class="fc" id="L94">			proba = 23. / 100;</span>
+		} else {
+<span class="fc" id="L96">			proba = 36. / 100;</span>
+		}
+
+<span class="fc" id="L99">		return proba * episimConfig.getHospitalFactor();</span>
+
+
+		// source 2
+//		if (age &lt; 10) {
+//			proba = 0.1 / 100;
+//		} else if (age &lt; 20) {
+//			proba = 0.2 / 100;
+//		} else if (age &lt; 30) {
+//			proba = 0.5 / 100;
+//		} else if (age &lt; 40) {
+//			proba = 1.0 / 100;
+//		} else if (age &lt; 50) {
+//			proba = 2.1 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 4.1 / 100;
+//		} else if (age &lt; 70) {
+//			proba = 8.9 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 17.1 / 100;
+//		} else {
+//			proba = 30.3 / 100;
+//		}
+
+		// source 1
+//		if (age &lt; 5) {
+//			proba = 12.9 / 100;
+//		} else if (age &lt; 20) {
+//			proba = 4.0 / 100;
+//		} else if (age &lt; 40) {
+//			proba = 5.9 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 13.0 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 43.2 / 100;
+//		} else {
+//			proba = 64.8 / 100;
+//		}
+
+
+		//old
+//		if (age &lt; 10) {
+//			proba = 0.1 / 100;
+//		} else if (age &lt; 20) {
+//			proba = 0.3 / 100;
+//		} else if (age &lt; 30) {
+//			proba = 1.2 / 100;
+//		} else if (age &lt; 40) {
+//			proba = 3.2 / 100;
+//		} else if (age &lt; 50) {
+//			proba = 4.9 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 10.2 / 100;
+//		} else if (age &lt; 70) {
+//			proba = 16.6 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 24.3 / 100;
+//		} else {
+//			proba = 27.3 / 100;
+//		}
+
+
+	}
+
+	@Override
+	public double getProbaOfTransitioningToCritical(Immunizable person) {
+<span class="fc" id="L165">		double proba = -1;</span>
+
+<span class="fc" id="L167">		int age = person.getAge();</span>
+
+		// source 3
+<span class="pc bpc" id="L170" title="1 of 2 branches missed.">		if (age &lt; 5) {</span>
+<span class="nc" id="L171">			proba = 7.0 / 100;</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">		} else if (age &lt; 15) {</span>
+<span class="fc" id="L173">			proba = 0.0 / 100;</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">		} else if (age &lt; 35) {</span>
+<span class="fc" id="L175">			proba = 15.0 / 100;</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">		} else if (age &lt; 60) {</span>
+<span class="fc" id="L177">			proba = 30.0 / 100;</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">		} else if (age &lt; 80) {</span>
+<span class="fc" id="L179">			proba = 41. / 100;</span>
+		} else {
+<span class="fc" id="L181">			proba = 27. / 100;</span>
+		}
+
+
+		// source 2
+//		if (age &lt; 10) {
+//			proba = 8.5 / 100;
+//		} else if (age &lt; 20) {
+//			proba = 10.9 / 100;
+//		} else if (age &lt; 30) {
+//			proba = 13.4 / 100;
+//		} else if (age &lt; 40) {
+//			proba = 17.2 / 100;
+//		} else if (age &lt; 50) {
+//			proba = 21.9 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 27.3 / 100;
+//		} else if (age &lt; 70) {
+//			proba = 37.1 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 48.5/ 100;
+//		} else {
+//			proba = 64.0 / 100;
+//		}
+
+////		// source 1
+//		if (age &lt; 5) {
+//			proba = 3.5 / 100;
+//		} else if (age &lt; 20) {
+//			proba = 1.7 / 100;
+//		} else if (age &lt; 40) {
+//			proba = 7.3 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 18.0 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 37.0 / 100;
+//		} else {
+//			proba = 42.9 / 100;
+//		}
+//
+
+		// old
+//		if (age &lt; 40) {
+//			proba = 5. / 100;
+//		} else if (age &lt; 50) {
+//			proba = 6.3 / 100;
+//		} else if (age &lt; 60) {
+//			proba = 12.2 / 100;
+//		} else if (age &lt; 70) {
+//			proba = 27.4 / 100;
+//		} else if (age &lt; 80) {
+//			proba = 43.2 / 100;
+//		} else {
+//			proba = 70.9 / 100;
+//		}
+
+<span class="fc" id="L237">		return proba;</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

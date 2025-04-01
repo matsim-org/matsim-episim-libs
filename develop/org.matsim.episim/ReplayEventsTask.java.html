@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReplayEventsTask.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">ReplayEventsTask.java</span></div><h1>ReplayEventsTask.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2021 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.*;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.vehicles.Vehicle;
+
+import java.lang.invoke.VarHandle;
+import java.util.Collection;
+import java.util.List;
+
+/**
+ * Replays all events for a single day to one {@link TrajectoryHandler}.
+ */
+final public class ReplayEventsTask implements Runnable {
+
+	private final List&lt;Event&gt; events;
+	private final TrajectoryHandler trajectoryHandler;
+
+	/**
+	 * taskId is in [0, numThreads - 1], and each thread must have
+	 * a different taskId
+	 */
+	private final int taskId;
+	private final int numThreads;
+
+
+	public ReplayEventsTask(TrajectoryHandler trajectoryHandler,
+							List&lt;Event&gt; events,
+							int taskId,
+<span class="fc" id="L51">							int numThreads) {</span>
+<span class="fc" id="L52">		this.trajectoryHandler = trajectoryHandler;</span>
+<span class="fc" id="L53">		this.events = events;</span>
+<span class="fc" id="L54">		this.taskId = taskId;</span>
+<span class="fc" id="L55">		this.numThreads = numThreads;</span>
+<span class="fc" id="L56">	}</span>
+
+	/**
+	 * Check whether the handler is responsible for the facility with this id.
+	 */
+	boolean handlesFacility(Id&lt;ActivityFacility&gt; id) {
+<span class="fc bfc" id="L62" title="All 2 branches covered.">		return trajectoryHandler.getEpisimFacility(id).getTaskId() == taskId;</span>
+	}
+
+	/**
+	 * Check whether the handler is responsible for the vehicle with this id.
+	 */
+	boolean handlesVehicle(Id&lt;Vehicle&gt; id) {
+<span class="fc bfc" id="L69" title="All 2 branches covered.">		return trajectoryHandler.getEpisimVehicle(id).getTaskId() == taskId;</span>
+	}
+
+	public void run() {
+<span class="fc" id="L73">		trajectoryHandler.reportCpuTime(&quot;start&quot;, taskId);</span>
+<span class="fc" id="L74">		trajectoryHandler.onStartDay(this::handlesFacility, this::handlesVehicle);</span>
+
+<span class="fc bfc" id="L76" title="All 2 branches covered.">		for (final Event e : events) {</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">			if (e instanceof ActivityStartEvent) {</span>
+<span class="fc" id="L78">				ActivityStartEvent ase = (ActivityStartEvent) e;</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">				if (handlesFacility(ase.getFacilityId()))</span>
+<span class="fc" id="L80">					trajectoryHandler.handleEvent(ase);</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">			} else if (e instanceof ActivityEndEvent) {</span>
+<span class="fc" id="L82">				ActivityEndEvent aee = (ActivityEndEvent) e;</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">				if (handlesFacility(aee.getFacilityId())) {</span>
+<span class="fc" id="L84">					trajectoryHandler.handleEvent(aee);</span>
+				}
+<span class="fc bfc" id="L86" title="All 2 branches covered.">			} else if (e instanceof PersonEntersVehicleEvent) {</span>
+<span class="fc" id="L87">				PersonEntersVehicleEvent peve = (PersonEntersVehicleEvent) e;</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">				if (handlesVehicle(peve.getVehicleId()))</span>
+<span class="fc" id="L89">					trajectoryHandler.handleEvent(peve);</span>
+<span class="fc" id="L90">			} else {</span>
+<span class="fc" id="L91">				PersonLeavesVehicleEvent plve = (PersonLeavesVehicleEvent) e;</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">				if (handlesVehicle(plve.getVehicleId()))</span>
+<span class="fc" id="L93">					trajectoryHandler.handleEvent(plve);</span>
+			}
+<span class="fc" id="L95">		}</span>
+
+<span class="fc" id="L97">		trajectoryHandler.reportCpuTime(&quot;finished&quot;, taskId);</span>
+<span class="fc" id="L98">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

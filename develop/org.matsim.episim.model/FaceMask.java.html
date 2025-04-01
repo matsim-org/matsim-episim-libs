@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FaceMask.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">FaceMask.java</span></div><h1>FaceMask.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+/**
+ * Type of face mask a person can wear, to decrease shedding rate, virus intake etc.
+ */
+<span class="fc" id="L6">public enum FaceMask {</span>
+
+	// Mask types need to be order by effectiveness
+	// Values based on Eikenberry et al. https://arxiv.org/pdf/2004.03251.pdf, chapter 2.3 
+<span class="fc" id="L10">	NONE(1d, 1d),</span>
+//	CLOTH(0.6, 0.5),
+//	SURGICAL(0.3, 0.2),
+//	N95(0.15, 0.025);
+	
+	// values based on Kriegel
+<span class="fc" id="L16">	CLOTH(0.8, 0.7),</span>
+<span class="fc" id="L17">	SURGICAL(0.8, 0.7),</span>
+<span class="fc" id="L18">	N95(0.6, 0.2);</span>
+	
+	// http://dx.doi.org/10.1016/S0140-6736(20)31142-9 is good, but difficult to translate into what we need.  It only treats the intake side.  I first
+	// take from wikipedia
+	// RR ≈ OR / ( 1 - RC + (RC * OR) )
+	//with RR relative risk, OR odds ratio, RC base risk.  Base risk is reported as 17.4% (&quot;no face mask&quot;).  With this:
+	//
+	//across all masks: OR=0.15, RR = 0.176
+	//
+	//surgical/cloth masks: OR=0.33, RR = 0.37
+	//
+	//N95 masks: OR=0.04, RR = 0.048
+	//
+	//The values for N95 vs. surgical/cloth are hidden in some footnote of some table.
+	//
+	// This gives support for the numbers we use, but it is not very readable.
+
+	public final double shedding;
+	public final double intake;
+
+<span class="fc" id="L38">	FaceMask(double shedding, double intake) {</span>
+<span class="fc" id="L39">		this.shedding = shedding;</span>
+<span class="fc" id="L40">		this.intake = intake;</span>
+<span class="fc" id="L41">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

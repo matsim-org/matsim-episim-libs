@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FixedPolicy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.policy</a> &gt; <span class="el_source">FixedPolicy.java</span></div><h1>FixedPolicy.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim.policy;
+
+import com.google.common.annotations.Beta;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigValue;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.episim.EpisimReporting;
+
+import javax.annotation.Nullable;
+import javax.inject.Named;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+
+/**
+ * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
+ */
+public final class FixedPolicy extends ShutdownPolicy {
+
+<span class="fc" id="L46">	private static final Logger log = LogManager.getLogger(FixedPolicy.class);</span>
+
+	private final double hospitalScale;
+
+	/**
+	 * Constructor.
+	 */
+	@Inject
+	public FixedPolicy(@Named(&quot;policy&quot;) Config config) {
+<span class="fc" id="L55">		super(config);</span>
+
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">		if (config.hasPath(&quot;hospital&quot;)) {</span>
+<span class="nc" id="L58">			Config c = config.getConfig(&quot;hospital&quot;);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			if (c.hasPath(&quot;scale&quot;))</span>
+<span class="nc" id="L60">				hospitalScale = c.getDouble(&quot;scale&quot;);</span>
+			else
+<span class="nc" id="L62">				hospitalScale = 1d;</span>
+<span class="nc" id="L63">		} else</span>
+<span class="fc" id="L64">			hospitalScale = 1d;</span>
+<span class="fc" id="L65">	}</span>
+
+	/**
+	 * Config builder for fixed policy.
+	 */
+	public static ConfigBuilder config() {
+<span class="fc" id="L71">		return new ConfigBuilder();</span>
+	}
+
+	/**
+	 * Create a config builder with an existing config.
+	 */
+	public static ConfigBuilder parse(Config config) {
+<span class="fc" id="L78">		return new ConfigBuilder(config);</span>
+	}
+
+	@Override
+	public void init(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions) {
+<span class="fc" id="L83">		initRestrictions(start, restrictions, config);</span>
+<span class="fc" id="L84">	}</span>
+
+	/**
+	 * Init restrictions that are before simulation start
+	 */
+	static void initRestrictions(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions, Config config) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">		for (Map.Entry&lt;String, Restriction&gt; entry : restrictions.entrySet()) {</span>
+
+			// activity name
+<span class="fc bfc" id="L93" title="All 2 branches covered.">			if (!config.hasPath(entry.getKey())) continue;</span>
+
+<span class="fc" id="L95">			Config actConfig = config.getConfig(entry.getKey());</span>
+
+<span class="fc bfc" id="L97" title="All 2 branches covered.">			List&lt;Map.Entry&lt;String, ConfigValue&gt;&gt; entries = actConfig.root().entrySet().stream().filter(e -&gt; !e.getKey().startsWith(&quot;day&quot;))</span>
+<span class="fc" id="L98">					.sorted(Comparator.comparing(e -&gt; LocalDate.parse(e.getKey())))</span>
+<span class="fc" id="L99">					.collect(Collectors.toList());</span>
+
+<span class="fc bfc" id="L101" title="All 2 branches covered.">			for (Map.Entry&lt;String, ConfigValue&gt; days : entries) {</span>
+
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">				if (days.getKey().startsWith(&quot;day&quot;)) continue;</span>
+
+<span class="fc" id="L105">				LocalDate date = LocalDate.parse(days.getKey());</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">				if (date.isBefore(start.plusDays(1))) {</span>
+<span class="fc" id="L107">					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));</span>
+<span class="fc" id="L108">					entry.getValue().update(r);</span>
+
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">					if (ShutdownPolicy.REG_HOSPITAL.equals(r.getRemainingFraction()))</span>
+<span class="nc" id="L111">						entry.getValue().setExtrapolate(true);</span>
+
+				}
+<span class="fc" id="L114">			}</span>
+<span class="fc" id="L115">		}</span>
+<span class="fc" id="L116">	}</span>
+
+	@Override
+	public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap&lt;String, Restriction&gt; restrictions) {
+<span class="fc bfc" id="L120" title="All 2 branches covered.">		for (Map.Entry&lt;String, Restriction&gt; entry : restrictions.entrySet()) {</span>
+			// activity name
+<span class="fc bfc" id="L122" title="All 2 branches covered.">			if (!config.hasPath(entry.getKey())) continue;</span>
+
+<span class="fc" id="L124">			Restriction r = readForDay(report, config, entry.getKey());</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">			if (r != null) {</span>
+
+<span class="fc bfc" id="L127" title="All 2 branches covered.">				if (ShutdownPolicy.REG_HOSPITAL.equals(r.getRemainingFraction()))</span>
+<span class="fc" id="L128">					entry.getValue().setExtrapolate(true);</span>
+
+<span class="fc" id="L130">				entry.getValue().update(r);</span>
+			}
+
+<span class="fc bfc" id="L133" title="All 2 branches covered.">			if (entry.getValue().isExtrapolate()) {</span>
+
+<span class="fc" id="L135">				double hospital = (report.nCritical + report.nSeriouslySick) * (100_000d / report.nTotal());</span>
+<span class="fc" id="L136">				double rf = 1 - (1 - Math.exp(-hospital / (3838 * (100_000d / report.nTotal()))));</span>
+
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">				if (rf &lt; 0)</span>
+<span class="nc" id="L139">					log.warn(&quot;Remaining fraction smaller 0: {} (critical/sick: {}/{}, total: {})&quot;, rf, report.nCritical, report.nSeriouslySick, report.nTotal());</span>
+
+<span class="fc" id="L141">				entry.getValue().setRemainingFraction(rf / hospitalScale);</span>
+			}
+
+<span class="fc" id="L144">		}</span>
+<span class="fc" id="L145">	}</span>
+
+	/**
+	 * Read restriction from map.
+	 */
+	@Nullable
+	static Restriction readForDay(EpisimReporting.InfectionReport report, Config config, String act) {
+
+<span class="fc bfc" id="L153" title="All 2 branches covered.">		if (!config.hasPath(act))</span>
+<span class="fc" id="L154">			return null;</span>
+
+<span class="fc" id="L156">		Config actConfig = config.getConfig(act);</span>
+<span class="fc" id="L157">		String dayKey = &quot;day-&quot; + report.day;</span>
+<span class="fc" id="L158">		String dateKey = report.date;</span>
+
+		// check for day or date config
+<span class="fc" id="L161">		Config dayConfig = null;</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">		if (actConfig.hasPath(dayKey))</span>
+<span class="fc" id="L163">			dayConfig = actConfig.getConfig(dayKey);</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">		else if (actConfig.hasPath(dateKey))</span>
+<span class="fc" id="L165">			dayConfig = actConfig.getConfig(dateKey);</span>
+
+<span class="fc bfc" id="L167" title="All 2 branches covered.">		if (dayConfig != null) {</span>
+<span class="fc" id="L168">			return Restriction.fromConfig(dayConfig);</span>
+		}
+<span class="fc" id="L170">		return null;</span>
+	}
+
+	/**
+	 * Builder for {@link FixedPolicy} config.
+	 */
+	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder&lt;Map&lt;String, ?&gt;&gt; {
+
+		private ConfigBuilder() {
+		}
+
+<span class="fc" id="L181">		private ConfigBuilder(Config config) {</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">			for (Map.Entry&lt;String, ConfigValue&gt; e : config.root().entrySet()) {</span>
+<span class="fc" id="L183">				Object value = config.getValue(e.getKey()).unwrapped();</span>
+<span class="fc" id="L184">				params.put(e.getKey(), (Map&lt;String, ?&gt;) value);</span>
+<span class="fc" id="L185">			}</span>
+<span class="fc" id="L186">		}</span>
+
+		/**
+		 * Removes all specified restrictions after or equal to {@code date}. Restriction before are sill valid and will be continued if not
+		 * overwritten explicitly!.
+		 */
+		public ConfigBuilder clearAfter(String date) {
+<span class="nc" id="L193">			params.keySet().forEach(k -&gt; this.clearAfter(date, k));</span>
+<span class="nc" id="L194">			return this;</span>
+		}
+
+		/**
+		 * See {@link #clearAfter(String)}, but for specific activities.
+		 */
+		public ConfigBuilder clearAfter(String date, String... activities) {
+
+<span class="nc" id="L202">			LocalDate ref = LocalDate.parse(date);</span>
+
+<span class="nc bnc" id="L204" title="All 2 branches missed.">			for (String activity : activities) {</span>
+<span class="nc" id="L205">				Map&lt;String, Object&gt; map = (Map&lt;String, Object&gt;) params.get(activity);</span>
+
+<span class="nc bnc" id="L207" title="All 2 branches missed.">				if (map == null) {</span>
+<span class="nc" id="L208">					log.warn(&quot;Activity {} not set&quot;, activity);</span>
+<span class="nc" id="L209">					continue;</span>
+				}
+
+<span class="nc" id="L212">				Iterator&lt;Map.Entry&lt;String, Object&gt;&gt; it = map.entrySet().iterator();</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">				while (it.hasNext()) {</span>
+<span class="nc" id="L214">					Map.Entry&lt;String, Object&gt; e = it.next();</span>
+<span class="nc" id="L215">					LocalDate other = LocalDate.parse(e.getKey());</span>
+<span class="nc bnc" id="L216" title="All 4 branches missed.">					if (other.isEqual(ref) || other.isAfter(ref))</span>
+<span class="nc" id="L217">						it.remove();</span>
+
+<span class="nc" id="L219">				}</span>
+			}
+
+<span class="nc" id="L222">			return this;</span>
+		}
+
+		/**
+		 * Restrict activities at specific date in absolute time.
+		 *
+		 * @param date        the date (yyyy-mm-dd) when it will be in effect
+		 * @param restriction restriction to apply
+		 * @param activities  activities to restrict
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, Restriction, String...)}
+		 */
+		@SuppressWarnings(&quot;unchecked&quot;)
+		public ConfigBuilder restrict(String date, Restriction restriction, String... activities) {
+
+<span class="pc bpc" id="L236" title="1 of 2 branches missed.">			if (activities.length == 0)</span>
+<span class="nc" id="L237">				throw new IllegalArgumentException(&quot;No activities given&quot;);</span>
+
+<span class="fc bfc" id="L239" title="All 2 branches covered.">			for (String act : activities) {</span>
+<span class="fc" id="L240">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.computeIfAbsent(act, m -&gt; new HashMap&lt;&gt;());</span>
+
+				// Because of merging, each activity needs a separate restriction
+<span class="fc" id="L243">				Restriction clone = Restriction.clone(restriction);</span>
+
+				// merge if there is an entry already
+<span class="fc bfc" id="L246" title="All 2 branches covered.">				if (p.containsKey(date))</span>
+<span class="fc" id="L247">					clone.merge(p.get(date));</span>
+
+<span class="fc" id="L249">				p.put(date, clone.asMap());</span>
+			}
+
+<span class="fc" id="L252">			return this;</span>
+		}
+
+		/**
+		 * Restrict activities at specific date in absolute time.
+		 *
+		 * @param date        the date (yyyy-mm-dd) when it will be in effect
+		 * @param restriction restriction to apply
+		 * @param activities  activities to restrict
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, Restriction, String...)}
+		 */
+		@SuppressWarnings(&quot;unchecked&quot;)
+		public ConfigBuilder restrictWithDistrict(String date, Restriction restriction, String... activities) {
+
+<span class="pc bpc" id="L266" title="1 of 2 branches missed.">			if (activities.length == 0)</span>
+<span class="nc" id="L267">				throw new IllegalArgumentException(&quot;No activities given&quot;);</span>
+
+<span class="fc" id="L269">			Map&lt;String, Double&gt; locationBasedRf = restriction.getLocationBasedRf();</span>
+
+<span class="fc bfc" id="L271" title="All 2 branches covered.">			for (String act : activities) {</span>
+<span class="fc" id="L272">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.computeIfAbsent(act, m -&gt; new HashMap&lt;&gt;());</span>
+
+				// Because of merging, each activity needs a separate restriction
+<span class="fc" id="L275">				Restriction clone = Restriction.clone(restriction);</span>
+<span class="fc" id="L276">				clone.setLocationBasedRf(locationBasedRf);</span>
+
+				// merge if there is an entry already
+<span class="pc bpc" id="L279" title="1 of 2 branches missed.">				if (p.containsKey(date))</span>
+<span class="nc" id="L280">					clone.merge(p.get(date));</span>
+
+<span class="fc" id="L282">				Map&lt;String, Object&gt; value = clone.asMap();</span>
+<span class="fc" id="L283">				p.put(date, value);</span>
+			}
+
+<span class="fc" id="L286">			return this;</span>
+		}
+
+
+		/**
+		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
+		 */
+		public ConfigBuilder restrict(LocalDate date, double fraction, String... activities) {
+<span class="fc" id="L294">			return restrict(date.toString(), Restriction.of(fraction), activities);</span>
+		}
+
+		public ConfigBuilder restrictWithDistrict(LocalDate date, Map&lt;String, Double&gt; districtSpecificValue, double fraction, String... activities) {
+<span class="nc" id="L298">			Restriction restriction = Restriction.of(fraction);</span>
+<span class="nc" id="L299">			restriction.setLocationBasedRf(districtSpecificValue);</span>
+
+<span class="nc" id="L301">			return restrictWithDistrict(date.toString(), restriction, activities);</span>
+		}
+
+		/**
+		 * See {@link #restrict(String, Restriction, String...)}.
+		 */
+		public ConfigBuilder restrict(LocalDate date, Restriction restriction, String... activities) {
+<span class="fc" id="L308">			return restrict(date.toString(), restriction, activities);</span>
+		}
+
+		/**
+		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
+		 */
+		public ConfigBuilder restrict(String date, double fraction, String... activities) {
+			// check if date is valid
+<span class="fc" id="L318">			return restrict(LocalDate.parse(date), fraction, activities);</span>
+		}
+
+		/**
+		 * See {@link #restrict(String, Restriction, String...)}.
+		 */
+		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
+<span class="pc bpc" id="L325" title="1 of 2 branches missed.">			if (day &lt;= 0) throw new IllegalArgumentException(&quot;Day must be larger than 0&quot;);</span>
+
+<span class="fc" id="L327">			return restrict(&quot;day-&quot; + day, restriction, activities);</span>
+		}
+
+		public ConfigBuilder restrictWithDistrict(long day, Map&lt;String, Double&gt; locationBasedRf, double fraction, String... activities) {
+<span class="fc" id="L331">			Restriction restriction = Restriction.of(fraction);</span>
+<span class="fc" id="L332">			restriction.setLocationBasedRf(locationBasedRf);</span>
+
+<span class="fc" id="L334">			return restrictWithDistrict(&quot;day-&quot; + day, restriction, activities);</span>
+		}
+
+		/**
+		 * Same as {@link #restrict(long, Restriction, String...)}  with default values.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
+		 */
+		public ConfigBuilder restrict(long day, double fraction, String... activities) {
+<span class="fc" id="L343">			return restrict(day, Restriction.of(fraction), activities);</span>
+		}
+
+		/**
+		 * Shutdown activities completely after certain day.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
+		 */
+		public ConfigBuilder shutdown(long day, String... activities) {
+<span class="fc" id="L352">			return this.restrict(day, Restriction.of(0), activities);</span>
+		}
+
+		/**
+		 * Open activities freely after certain day.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
+		 */
+		public ConfigBuilder open(long day, String... activities) {
+<span class="nc" id="L361">			return this.restrict(day, Restriction.none(), activities);</span>
+		}
+
+
+		/**
+		 * Create a config entry with linear interpolated {@link Restriction#getRemainingFraction()} and {@link Restriction#getCiCorrection()} ()}.
+		 * If any of these is not defined the interpolation will also be undefined.
+		 * Required mask is always the same as in first parameter {@code restriction}.
+		 * All start and end values are inclusive.
+		 *
+		 * @param start          starting date
+		 * @param end            end date
+		 * @param restriction    starting restriction at start date
+		 * @param restrictionEnd remaining fraction / ci corr at end date
+		 * @param activities     activities to restrict
+		 */
+		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, Restriction restrictionEnd, String... activities) {
+<span class="fc" id="L378">			double day = 0;</span>
+
+<span class="fc" id="L380">			long diff = ChronoUnit.DAYS.between(start, end);</span>
+
+<span class="fc" id="L382">			double rf = Objects.requireNonNullElse(restriction.getRemainingFraction(), Double.NaN);</span>
+<span class="fc" id="L383">			double rfEnd = Objects.requireNonNullElse(restrictionEnd.getRemainingFraction(), Double.NaN);</span>
+
+<span class="fc" id="L385">			double exp = Objects.requireNonNullElse(restriction.getCiCorrection(), Double.NaN);</span>
+<span class="fc" id="L386">			double expEnd = Objects.requireNonNullElse(restrictionEnd.getCiCorrection(), Double.NaN);</span>
+
+<span class="fc" id="L388">			LocalDate today = start;</span>
+<span class="fc bfc" id="L389" title="All 4 branches covered.">			while (today.isBefore(end) || today.isEqual(end)) {</span>
+<span class="fc" id="L390">				double r = rf + (rfEnd - rf) * (day / diff);</span>
+<span class="fc" id="L391">				double e = exp + (expEnd - exp) * (day / diff);</span>
+
+<span class="pc bpc" id="L393" title="3 of 4 branches missed.">				if (Double.isNaN(r) &amp;&amp; Double.isNaN(e))</span>
+<span class="nc" id="L394">					throw new IllegalArgumentException(&quot;The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.&quot;);</span>
+
+<span class="pc bpc" id="L396" title="1 of 4 branches missed.">				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,</span>
+						null, null, null, null, null, new HashMap&lt;String, Double&gt;(), null, null, restriction), activities);
+<span class="fc" id="L398">				today = today.plusDays(1);</span>
+<span class="fc" id="L399">				day++;</span>
+<span class="fc" id="L400">			}</span>
+
+<span class="fc" id="L402">			return this;</span>
+		}
+
+		/**
+		 * Interpolation for {@link Restriction#getRemainingFraction()} only.
+		 * See {@link #interpolate(LocalDate, LocalDate, Restriction, Restriction, String...)}.
+		 */
+		public ConfigBuilder interpolate(String start, String end, Restriction restriction, Restriction restrictionEnd, String... activities) {
+<span class="nc" id="L410">			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, restrictionEnd, activities);</span>
+		}
+
+		/**
+		 * Applies a function on the raw remaining fraction for certain activities. Note that, if no fractions are set then nothing will be executed.
+		 *
+		 * @param from       from date (inclusive)
+		 * @param to         to date (inclusive)
+		 * @param f          function to apply, first parameter is the date, second is the current remaining fraction
+		 * @param activities activities where to apply
+		 */
+		public ConfigBuilder applyToRf(String from, String to, BiFunction&lt;LocalDate, Double, Double&gt; f, String... activities) {
+
+<span class="fc" id="L423">			LocalDate fromDate = LocalDate.parse(from);</span>
+<span class="fc" id="L424">			LocalDate toDate = LocalDate.parse(to);</span>
+
+<span class="fc bfc" id="L426" title="All 2 branches covered.">			for (String act : activities) {</span>
+<span class="fc" id="L427">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.get(act);</span>
+
+<span class="fc bfc" id="L429" title="All 2 branches covered.">				for (Map.Entry&lt;String, Map&lt;String, Object&gt;&gt; e : p.entrySet()) {</span>
+<span class="fc" id="L430">					LocalDate other = LocalDate.parse(e.getKey());</span>
+
+<span class="fc" id="L432">					Double rf = (Double) e.getValue().get(&quot;fraction&quot;);</span>
+
+					// skip empty and special values
+<span class="pc bpc" id="L435" title="1 of 4 branches missed.">					if (rf == null || rf &lt; -100)</span>
+<span class="nc" id="L436">						continue;</span>
+
+<span class="pc bpc" id="L438" title="2 of 8 branches missed.">					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) &amp;&amp; (other.isEqual(toDate) || other.isBefore(toDate)))</span>
+<span class="fc" id="L439">						e.getValue().put(&quot;fraction&quot;, f.apply(other, rf));</span>
+
+<span class="fc" id="L441">				}</span>
+			}
+
+<span class="fc" id="L444">			return this;</span>
+
+		}
+
+		/**
+		 * Applies a function on the raw config for certain activities.
+		 *
+		 * @param from       from date (inclusive)
+		 * @param to         to date (inclusive)
+		 * @param activities activities where to apply
+		 * @implNote Unstable API that might be removed,
+		 * @deprecated unstable API
+		 */
+		@Beta
+		public ConfigBuilder apply(String from, String to, BiConsumer&lt;LocalDate, Map&lt;String, Object&gt;&gt; f, String... activities) {
+
+<span class="nc" id="L460">			LocalDate fromDate = LocalDate.parse(from);</span>
+<span class="nc" id="L461">			LocalDate toDate = LocalDate.parse(to);</span>
+
+<span class="nc bnc" id="L463" title="All 2 branches missed.">			for (String act : activities) {</span>
+<span class="nc" id="L464">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.get(act);</span>
+
+<span class="nc bnc" id="L466" title="All 2 branches missed.">				for (Map.Entry&lt;String, Map&lt;String, Object&gt;&gt; e : p.entrySet()) {</span>
+<span class="nc" id="L467">					LocalDate other = LocalDate.parse(e.getKey());</span>
+
+<span class="nc bnc" id="L469" title="All 8 branches missed.">					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) &amp;&amp; (other.isEqual(toDate) || other.isBefore(toDate)))</span>
+<span class="nc" id="L470">						f.accept(other, e.getValue());</span>
+
+<span class="nc" id="L472">				}</span>
+			}
+
+<span class="nc" id="L475">			return this;</span>
+		}
+
+
+		/**
+		 * Set scaling for remaining fraction when regression is used.
+		 */
+		public ConfigBuilder setHospitalScale(double scale) {
+<span class="nc" id="L483">			params.put(&quot;hospital&quot;, Map.of(&quot;scale&quot;, scale));</span>
+<span class="nc" id="L484">			return this;</span>
+		}
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

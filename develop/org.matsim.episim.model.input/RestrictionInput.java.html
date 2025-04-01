@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RestrictionInput.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.input</a> &gt; <span class="el_source">RestrictionInput.java</span></div><h1>RestrictionInput.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.input;
+
+import com.google.common.collect.Iterables;
+import com.google.common.io.Resources;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import org.apache.commons.math3.fitting.WeightedObservedPoint;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.apache.logging.log4j.util.TriConsumer;
+import org.matsim.core.utils.io.UncheckedIOException;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.policy.ShutdownPolicy;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+
+/**
+ * Interface for providing activity participation data.
+ */
+public interface RestrictionInput {
+
+	/**
+	 * Sets the input for this file.
+	 */
+	RestrictionInput setInput(Path input);
+
+	/**
+	 * Parameter to modulates the activity participation.
+	 */
+	default RestrictionInput setAlpha(double alpha) {
+<span class="nc" id="L37">		return this;</span>
+	}
+
+	/**
+	 * Provide policy with activity reduction.
+	 */
+	ShutdownPolicy.ConfigBuilder&lt;?&gt; createPolicy() throws IOException;
+
+
+	/**
+	 * Interpolate series of {@code trend} by {@code n} elements using method given by {@code type}.
+	 *
+	 * @return list of size n, containing the extrapolated elements.
+	 */
+	static List&lt;Double&gt; extrapolate(List&lt;Double&gt; trend, int n, EpisimUtils.Extrapolation type) {
+
+<span class="fc" id="L53">		int size = trend.size();</span>
+<span class="fc" id="L54">		List&lt;Double&gt; result = new ArrayList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">		if (type == EpisimUtils.Extrapolation.linear) {</span>
+
+<span class="nc" id="L58">			SimpleRegression reg = new SimpleRegression();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			for (int i = 0; i &lt; size; i++) {</span>
+<span class="nc" id="L60">				reg.addData(i, trend.get(i));</span>
+			}
+
+			// continue the trend
+<span class="nc bnc" id="L64" title="All 2 branches missed.">			for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L65">				result.add(reg.predict(n + i));</span>
+			}
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">		} else if (type == EpisimUtils.Extrapolation.exponential) {</span>
+
+<span class="nc" id="L69">			List&lt;WeightedObservedPoint&gt; points = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">			for (int i = 0; i &lt; Math.min(size, n); i++) {</span>
+<span class="nc" id="L71">				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));</span>
+			}
+
+<span class="nc" id="L74">			CreateRestrictionsFromCSV.Exponential expFunction = new CreateRestrictionsFromCSV.Exponential();</span>
+<span class="nc" id="L75">			EpisimUtils.FuncFitter fitter = new EpisimUtils.FuncFitter(expFunction);</span>
+<span class="nc" id="L76">			double[] coeff = fitter.fit(points);</span>
+
+			// continue the trend
+<span class="nc bnc" id="L79" title="All 2 branches missed.">			for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L80">				double predict = expFunction.value(i + n, coeff);</span>
+<span class="nc" id="L81">				result.add(predict);</span>
+			}
+
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">		} else if (type == EpisimUtils.Extrapolation.regHospital) {</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">			for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L86">				result.add(ShutdownPolicy.REG_HOSPITAL);</span>
+			}
+		}
+
+
+<span class="fc" id="L91">		return result;</span>
+	}
+
+	/**
+	 * Resamples given values to weekly averages, ignoring weekend and holidays.
+	 * The resampling result will be feed into consumer function {@code f} and not returned directly.
+	 *
+	 * @param start start of sampling interval
+	 * @param f     bi consumer that receives the date and average weekly value
+	 * @return date for next week after last sampling
+	 */
+	static LocalDate resampleAvgWeekday(Map&lt;LocalDate, Double&gt; values, LocalDate start, BiConsumer&lt;LocalDate, Double&gt; f) {
+
+		Set&lt;LocalDate&gt; ignored;
+		try {
+<span class="fc" id="L106">			ignored = Resources.readLines(Resources.getResource(&quot;bankHolidays.txt&quot;), StandardCharsets.UTF_8)</span>
+<span class="fc" id="L107">					.stream().map(LocalDate::parse).collect(Collectors.toSet());</span>
+<span class="nc" id="L108">		} catch (IOException e) {</span>
+<span class="nc" id="L109">			throw new UncheckedIOException(&quot;Could not read bank holidays.&quot;, e);</span>
+<span class="fc" id="L110">		}</span>
+
+<span class="fc" id="L112">		LocalDate end = Iterables.getLast(values.keySet());</span>
+
+<span class="fc bfc" id="L114" title="All 2 branches covered.">		while (start.isBefore(end)) {</span>
+
+<span class="fc" id="L116">			DoubleList week = new DoubleArrayList();</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">			for (int i = 0; i &lt; 7; i++) {</span>
+<span class="fc" id="L118">				LocalDate day = start.plusDays(i);</span>
+<span class="fc bfc" id="L119" title="All 6 branches covered.">				if (!ignored.contains(day) &amp;&amp; day.getDayOfWeek() != DayOfWeek.SATURDAY &amp;&amp; day.getDayOfWeek() != DayOfWeek.SUNDAY</span>
+<span class="pc bpc" id="L120" title="1 of 4 branches missed.">						&amp;&amp; day.getDayOfWeek() != DayOfWeek.FRIDAY &amp;&amp; values.containsKey(day)) {</span>
+<span class="fc" id="L121">					week.add((double) values.get(day));</span>
+				}
+			}
+
+<span class="fc" id="L125">			double avg = week.doubleStream().average().orElseThrow();</span>
+			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
+
+<span class="fc" id="L128">			f.accept(start, avg);</span>
+
+			// calc next sunday:
+<span class="fc" id="L131">			int n = 7 - start.getDayOfWeek().getValue() % 7;</span>
+<span class="fc" id="L132">			start = start.plusDays(n);</span>
+<span class="fc" id="L133">		}</span>
+
+<span class="fc" id="L135">		return start;</span>
+	}
+
+	static LocalDate resampleAvgWeekdayBySubdistrict(Map&lt;LocalDate, Double&gt; daysGlobal,
+	                                                 Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; daysPerDistrict,
+	                                                 LocalDate start,
+	                                                 TriConsumer&lt;LocalDate, Double, Map&lt;String, Double&gt;&gt; f) {
+
+		Set&lt;LocalDate&gt; ignored;
+		try {
+<span class="nc" id="L145">			ignored = Resources.readLines(Resources.getResource(&quot;bankHolidays.txt&quot;), StandardCharsets.UTF_8)</span>
+<span class="nc" id="L146">					.stream().map(LocalDate::parse).collect(Collectors.toSet());</span>
+<span class="nc" id="L147">		} catch (IOException e) {</span>
+<span class="nc" id="L148">			throw new UncheckedIOException(&quot;Could not read bank holidays.&quot;, e);</span>
+<span class="nc" id="L149">		}</span>
+
+<span class="nc" id="L151">		LocalDate end = Iterables.getLast(daysGlobal.keySet());</span>
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">		while (start.isBefore(end)) {</span>
+
+<span class="nc" id="L155">			DoubleList weekGlobal = new DoubleArrayList();</span>
+<span class="nc" id="L156">			Map&lt;String, DoubleArrayList&gt; weekPerDistrict = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L158" title="All 2 branches missed.">			for (int i = 0; i &lt; 7; i++) {</span>
+<span class="nc" id="L159">				LocalDate day = start.plusDays(i);</span>
+<span class="nc bnc" id="L160" title="All 6 branches missed.">				if (!ignored.contains(day) &amp;&amp; day.getDayOfWeek() != DayOfWeek.SATURDAY &amp;&amp; day.getDayOfWeek() != DayOfWeek.SUNDAY</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">						&amp;&amp; day.getDayOfWeek() != DayOfWeek.FRIDAY) {</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">					if (daysGlobal.containsKey(day)) {</span>
+<span class="nc" id="L163">						weekGlobal.add((double) daysGlobal.get(day));</span>
+					}
+					// now per district
+<span class="nc bnc" id="L166" title="All 2 branches missed.">					for (Map.Entry&lt;String, Map&lt;LocalDate, Double&gt;&gt; entry : daysPerDistrict.entrySet()) {</span>
+<span class="nc" id="L167">						String districtName = entry.getKey();</span>
+<span class="nc" id="L168">						Map&lt;LocalDate, Double&gt; daysForDistrict = entry.getValue();</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">						if (daysForDistrict.containsKey(day)) {</span>
+<span class="nc" id="L170">							DoubleArrayList weekForDistrict = weekPerDistrict.getOrDefault(districtName, new DoubleArrayList());</span>
+<span class="nc" id="L171">							weekForDistrict.add((double) daysForDistrict.get(day));</span>
+<span class="nc" id="L172">							weekPerDistrict.put(districtName, weekForDistrict);</span>
+						}
+<span class="nc" id="L174">					}</span>
+				}
+			}
+
+<span class="nc" id="L178">			double avg = weekGlobal.doubleStream().average().orElseThrow();</span>
+
+<span class="nc" id="L180">			Map&lt;String, Double&gt; avgPerDistrict = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">			for (String districtName : weekPerDistrict.keySet()) {</span>
+<span class="nc" id="L182">				double avgForDistrict = weekPerDistrict.get(districtName).doubleStream().average().orElseThrow();</span>
+<span class="nc" id="L183">				avgPerDistrict.put(districtName, avgForDistrict);</span>
+<span class="nc" id="L184">			}</span>
+			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
+
+<span class="nc" id="L187">			f.accept(start, avg, avgPerDistrict);</span>
+
+			// calc next sunday:
+<span class="nc" id="L190">			int n = 7 - start.getDayOfWeek().getValue() % 7;</span>
+<span class="nc" id="L191">			start = start.plusDays(n);</span>
+<span class="nc" id="L192">		}</span>
+
+<span class="nc" id="L194">		return start;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

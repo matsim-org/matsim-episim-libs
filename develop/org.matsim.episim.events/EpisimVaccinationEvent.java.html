@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimVaccinationEvent.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.events</a> &gt; <span class="el_source">EpisimVaccinationEvent.java</span></div><h1>EpisimVaccinationEvent.java</h1><pre class="source lang-java linenums">package org.matsim.episim.events;
+
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.Event;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.internal.HasPersonId;
+import org.matsim.episim.model.VaccinationType;
+
+import java.util.Map;
+
+/**
+ * Notifies about performed vaccinations.
+ */
+public class EpisimVaccinationEvent extends Event implements HasPersonId {
+
+	public static final String EVENT_TYPE = &quot;episimVaccination&quot;;
+	public static final String TYPE = &quot;vaccinationType&quot;;
+	public static final String N = &quot;n&quot;;
+
+	private final Id&lt;Person&gt; personId;
+	private final VaccinationType type;
+	private final int n;
+
+	public EpisimVaccinationEvent(double time, Id&lt;Person&gt; personId, VaccinationType type, int n) {
+<span class="fc" id="L25">		super(time);</span>
+<span class="fc" id="L26">		this.personId = personId;</span>
+<span class="fc" id="L27">		this.type = type;</span>
+<span class="fc" id="L28">		this.n = n;</span>
+<span class="fc" id="L29">	}</span>
+
+
+	@Override
+	public String getEventType() {
+<span class="fc" id="L34">		return EVENT_TYPE;</span>
+	}
+
+	@Override
+	public Id&lt;Person&gt; getPersonId() {
+<span class="fc" id="L39">		return personId;</span>
+	}
+
+	public VaccinationType getVaccinationType() {
+<span class="fc" id="L43">		return type;</span>
+	}
+
+	@Deprecated
+	public boolean getReVaccination() {
+<span class="nc bnc" id="L48" title="All 2 branches missed.">		return n &gt; 1;</span>
+	}
+
+	/**
+	 * Number of vaccination. Starts at 1.
+	 */
+	public int getN() {
+<span class="nc" id="L55">		return n;</span>
+	}
+
+	@Override
+	public Map&lt;String, String&gt; getAttributes() {
+<span class="fc" id="L60">		Map&lt;String, String&gt; attr = super.getAttributes();</span>
+<span class="fc" id="L61">		attr.put(N, String.valueOf(n));</span>
+<span class="fc" id="L62">		attr.put(TYPE, type.toString());</span>
+
+<span class="fc" id="L64">		return attr;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

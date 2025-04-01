@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultDiseaseStatusTransitionModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.progression</a> &gt; <span class="el_source">DefaultDiseaseStatusTransitionModel.java</span></div><h1>DefaultDiseaseStatusTransitionModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.progression;
+
+import com.google.inject.Inject;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.VirusStrainConfigGroup;
+
+import java.util.SplittableRandom;
+
+public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransitionModel {
+
+	private final SplittableRandom rnd;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup strainConfig;
+
+	@Inject
+	public DefaultDiseaseStatusTransitionModel(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+<span class="fc" id="L19">	                                           VirusStrainConfigGroup strainConfigGroup) {</span>
+<span class="fc" id="L20">		this.rnd = rnd;</span>
+<span class="fc" id="L21">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L22">		this.strainConfig = strainConfigGroup;</span>
+<span class="fc" id="L23">	}</span>
+
+	@Override
+	public final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status, int day) {
+
+<span class="pc bpc" id="L28" title="1 of 8 branches missed.">		switch (status) {</span>
+			case infectedButNotContagious:
+<span class="fc" id="L30">				return EpisimPerson.DiseaseStatus.contagious;</span>
+
+			case contagious:
+<span class="fc bfc" id="L33" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))</span>
+<span class="fc" id="L34">					return EpisimPerson.DiseaseStatus.showingSymptoms;</span>
+				else
+<span class="fc" id="L36">					return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case showingSymptoms:
+<span class="fc" id="L39">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToSeriouslySick(person)</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?</span>
+<span class="fc" id="L41">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :</span>
+<span class="fc" id="L42">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">						* getSeriouslySickFactor(person, vaccinationConfig, day))</span>
+//						* (person.getNumInfections() &gt; 1 ? getFactorRecovered(person, day) : 1.0))
+<span class="fc" id="L45">					return EpisimPerson.DiseaseStatus.seriouslySick;</span>
+				else
+<span class="fc" id="L47">					return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case seriouslySick:
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)</span>
+<span class="fc" id="L51">						&amp;&amp; (rnd.nextDouble() &lt; getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">						* getCriticalFactor(person, vaccinationConfig, day)))</span>
+<span class="fc" id="L53">					return EpisimPerson.DiseaseStatus.critical;</span>
+				else
+<span class="fc" id="L55">					return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case critical:
+<span class="fc" id="L58">				double proba = getProbaOfTransitioningToDeceased(person);</span>
+<span class="pc bpc" id="L59" title="3 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
+<span class="nc" id="L60">					return DiseaseStatus.deceased;</span>
+				else
+<span class="fc" id="L62">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
+
+			case seriouslySickAfterCritical:
+<span class="fc" id="L65">				return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case recovered:
+<span class="fc" id="L68">				return EpisimPerson.DiseaseStatus.susceptible;</span>
+
+			default:
+<span class="nc" id="L71">				throw new IllegalStateException(&quot;No state transition defined for &quot; + person.getDiseaseStatus());</span>
+		}
+	}
+
+	/**
+	 * Probability that a person transitions from {@code showingSymptoms} to {@code seriouslySick} when person was already infected.
+	 */
+	protected double getFactorRecovered(EpisimPerson person, int day) {
+
+<span class="nc" id="L80">		int daysSince = person.daysSince(DiseaseStatus.recovered, day);</span>
+
+		//we assume about 20% loss of protection against severe progression every year
+<span class="nc" id="L83">		return Math.min(0.2 * (daysSince / 365), 1.0);</span>
+	}
+
+	/**
+	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
+	 */
+	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
+<span class="fc" id="L90">		return 0.05625;</span>
+	}
+
+	/**
+	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
+	 */
+	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
+<span class="fc" id="L97">		return 0.25;</span>
+	}
+
+	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
+<span class="fc" id="L101">		return 0.8;</span>
+	}
+
+	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
+<span class="fc" id="L105">		return 0.0;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

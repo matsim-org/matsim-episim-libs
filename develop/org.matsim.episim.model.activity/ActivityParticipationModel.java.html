@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ActivityParticipationModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.activity</a> &gt; <span class="el_source">ActivityParticipationModel.java</span></div><h1>ActivityParticipationModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.activity;
+
+import com.google.common.collect.ImmutableMap;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.policy.Restriction;
+
+import java.util.BitSet;
+import java.util.List;
+
+/**
+ * Model to determine at the start of the day if a person is participating at the planned activity.
+ */
+public interface ActivityParticipationModel {
+
+	/**
+	 * Sets iteration and restrictions of the current day.
+	 */
+	void setRestrictionsForIteration(int iteration, ImmutableMap&lt;String, Restriction&gt; im);
+
+	/**
+	 * Method that needs to update the activity participation of a certain day by setting the bit flags in {@code trajectory}.
+	 * The person given to this method is just informational. All updates need to be performed in {@code trajectory}.
+	 * The trajectory might be for multiple days, the starting point of the current day is given by {@code offset}.
+	 * {@code activities} contains only the subset of activities for the current day, thus updates in {@code trajectory} needs
+	 * to be set at offset + index.
+	 *
+	 * @param person     the person that is currently handled.
+	 * @param trajectory bit set of the whole trajectory
+	 * @param offset     starting index in the bitset for the current day
+	 * @param activities activities of the current day
+	 */
+	void updateParticipation(EpisimPerson person, BitSet trajectory, int offset,
+							 List&lt;EpisimPerson.PerformedActivity&gt; activities);
+
+	/**
+	 * Apply quarantine restrictions to this persons trajectory.
+	 */
+	default void applyQuarantine(EpisimPerson person, BitSet trajectory, int offset, List&lt;EpisimPerson.PerformedActivity&gt; activities) {
+
+<span class="fc bfc" id="L40" title="All 2 branches covered.">		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">			for (int i = 0; i &lt; trajectory.size(); i++) {</span>
+<span class="fc" id="L42">				trajectory.set(i, false);</span>
+			}
+<span class="fc bfc" id="L44" title="All 2 branches covered.">		} else if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome) {</span>
+
+<span class="fc bfc" id="L46" title="All 2 branches covered.">			for (int i = 0; i &lt; activities.size(); i++) {</span>
+<span class="fc" id="L47">				EpisimPerson.PerformedActivity act = activities.get(i);</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">				if (!act.actType().startsWith(&quot;home&quot;))</span>
+<span class="fc" id="L49">					trajectory.set(offset + i, false);</span>
+			}
+		}
+<span class="fc" id="L52">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

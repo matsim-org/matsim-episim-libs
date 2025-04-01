@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PreparedRun.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">PreparedRun.java</span></div><h1>PreparedRun.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Streams;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.core.config.Config;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Class holding the result of {@link BatchRun#prepare(Class, Class)} with all information of the run.
+ */
+public final class PreparedRun {
+
+<span class="fc" id="L39">	private static final Logger log = LogManager.getLogger(PreparedRun.class);</span>
+
+	/**
+	 * Instance of the setup class.
+	 */
+	public final BatchRun&lt;?&gt; setup;
+
+	/**
+	 * Parameter names.
+	 */
+	public final List&lt;String&gt; parameter;
+
+	/**
+	 * Parameter values for all parameter defined in {@link #parameter}.
+	 */
+	public final List&lt;List&lt;Object&gt;&gt; parameterValues;
+
+	/**
+	 * All generated runs.
+	 */
+	public final List&lt;Run&gt; runs;
+
+	/**
+	 * Constructor, see Javadoc of {@link PreparedRun}s fields for additional info.
+	 */
+<span class="fc" id="L64">	public PreparedRun(BatchRun&lt;?&gt; setup, List&lt;String&gt; parameter, List&lt;List&lt;Object&gt;&gt; parameterValues, List&lt;Run&gt; runs) {</span>
+<span class="fc" id="L65">		this.setup = setup;</span>
+<span class="fc" id="L66">		this.parameter = parameter;</span>
+<span class="fc" id="L67">		this.parameterValues = parameterValues;</span>
+<span class="fc" id="L68">		this.runs = runs;</span>
+<span class="fc" id="L69">	}</span>
+
+	/**
+	 * Name of the run.
+	 */
+	public String getName() {
+<span class="nc" id="L75">		return setup.getMetadata().name;</span>
+	}
+
+	/**
+	 * Returns metadata information of this run that can be written in desired format.
+	 */
+	public Map&lt;String, Object&gt; getMetadata() {
+
+<span class="nc" id="L83">		Map&lt;String, Object&gt; data = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="nc" id="L85">		int index = parameter.indexOf(&quot;startDate&quot;);</span>
+
+<span class="nc" id="L87">		data.put(&quot;city&quot;, setup.getMetadata().region);</span>
+<span class="nc" id="L88">		data.put(&quot;runName&quot;, setup.getMetadata().name);</span>
+<span class="nc" id="L89">		data.put(&quot;defaultStartDate&quot;, setup.getDefaultStartDate());</span>
+<span class="nc" id="L90">		data.put(&quot;endDate&quot;, setup.getMetadata().endDate);</span>
+
+<span class="nc bnc" id="L92" title="All 2 branches missed.">		if (index &gt; -1) {</span>
+<span class="nc" id="L93">			data.put(&quot;startDates&quot;, parameterValues.get(index));</span>
+		} else {
+<span class="nc" id="L95">			data.put(&quot;startDates&quot;, List.of(setup.getDefaultStartDate()));</span>
+		}
+
+		// Newer runs should not need to use the offset parameter anymore
+<span class="nc" id="L99">		int indexOffset = parameter.indexOf(&quot;offset&quot;);</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">		if (indexOffset &gt; -1)</span>
+<span class="nc" id="L101">			data.put(&quot;offset&quot;, parameterValues.get(indexOffset));</span>
+
+<span class="nc" id="L103">		List&lt;Object&gt; opts = new ArrayList&lt;&gt;();</span>
+
+		// Check if parameters have been described in the options
+<span class="nc" id="L106">		Set&lt;String&gt; describedParams = new HashSet&lt;&gt;();</span>
+
+		List&lt;BatchRun.Option&gt; options;
+<span class="nc bnc" id="L109" title="All 2 branches missed.">		if (setup.getOptions().isEmpty())</span>
+<span class="nc" id="L110">			options = generateOptions();</span>
+		else
+<span class="nc" id="L112">			options = setup.getOptions();</span>
+
+<span class="nc bnc" id="L114" title="All 2 branches missed.">		for (BatchRun.Option option : options) {</span>
+
+<span class="nc" id="L116">			Map&lt;String, Object&gt; byDay = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="nc" id="L118">			byDay.put(&quot;day&quot;, option.day);</span>
+<span class="nc" id="L119">			byDay.put(&quot;heading&quot;, option.heading);</span>
+<span class="nc" id="L120">			byDay.put(&quot;subheading&quot;, option.subheading);</span>
+
+<span class="nc" id="L122">			List&lt;Map&lt;String, Object&gt;&gt; measures = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">			for (Pair&lt;String, String&gt; m : option.measures) {</span>
+
+<span class="nc bnc" id="L125" title="All 2 branches missed.">				if (!parameter.contains(m.getRight())) {</span>
+<span class="nc" id="L126">					log.warn(&quot;The parameter '{}' ({}) in the description is not defined in the run.&quot;, m.getRight(), m.getLeft());</span>
+				}
+
+<span class="nc" id="L129">				describedParams.add(m.getRight());</span>
+
+<span class="nc" id="L131">				measures.add(</span>
+<span class="nc" id="L132">						Map.of(&quot;measure&quot;, m.getRight(), &quot;title&quot;, m.getLeft())</span>
+				);
+<span class="nc" id="L134">			}</span>
+
+<span class="nc" id="L136">			byDay.put(&quot;measures&quot;, measures);</span>
+
+<span class="nc" id="L138">			opts.add(byDay);</span>
+<span class="nc" id="L139">		}</span>
+
+<span class="nc bnc" id="L141" title="All 2 branches missed.">		for (String param : parameter) {</span>
+<span class="nc bnc" id="L142" title="All 4 branches missed.">			if (param.equals(&quot;startDate&quot;) || param.equals(&quot;offset&quot;)) continue;</span>
+
+<span class="nc bnc" id="L144" title="All 2 branches missed.">			if (!describedParams.contains(param))</span>
+<span class="nc" id="L145">				log.warn(&quot;Parameter '{}' is not in any measure in .getOptions()&quot;, param);</span>
+<span class="nc" id="L146">		}</span>
+
+<span class="nc" id="L148">		data.put(&quot;optionGroups&quot;, opts);</span>
+
+<span class="nc" id="L150">		return data;</span>
+	}
+
+	/**
+	 * Generates default options.
+	 */
+	private List&lt;BatchRun.Option&gt; generateOptions() {
+<span class="nc" id="L157">		BatchRun.Option opt = BatchRun.Option.of(&quot;&quot;, &quot;&quot;, -1);</span>
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">		for (String p : parameter) {</span>
+<span class="nc" id="L160">			String[] words = StringUtils.splitByCharacterTypeCamelCase(p);</span>
+<span class="nc" id="L161">			opt.measure(StringUtils.capitalize(Joiner.on(' ').join(words)), p);</span>
+<span class="nc" id="L162">		}</span>
+
+<span class="nc" id="L164">		return List.of(opt);</span>
+	}
+
+	/**
+	 * Creates the output name of a run.
+	 */
+	public Object getOutputName(Run run) {
+<span class="nc" id="L171">		return Joiner.on(&quot;-&quot;).join(</span>
+<span class="nc" id="L172">				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -&gt; p + &quot;_&quot; + EpisimUtils.asString(v)).collect(Collectors.toList())</span>
+		);
+	}
+
+	/**
+	 * One individual parameter set of a run.
+	 */
+	public static final class Run {
+
+		public final int id;
+		public final List&lt;Object&gt; params;
+		public final Config config;
+
+		/**
+		 * Params as argument for the {@link BatchRun}.
+		 */
+		public final Object args;
+
+		/**
+		 * Constructor.
+		 */
+<span class="fc" id="L193">		public Run(int id, List&lt;Object&gt; params, Config config, Object args) {</span>
+<span class="fc" id="L194">			this.id = id;</span>
+<span class="fc" id="L195">			this.params = params;</span>
+<span class="fc" id="L196">			this.config = config;</span>
+<span class="fc" id="L197">			this.args = args;</span>
+<span class="fc" id="L198">		}</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

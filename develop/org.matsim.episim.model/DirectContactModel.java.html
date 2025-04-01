@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DirectContactModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">DirectContactModel.java</span></div><h1>DirectContactModel.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.core.config.Config;
+import org.matsim.episim.*;
+
+import java.util.*;
+
+import static org.matsim.episim.EpisimPerson.DiseaseStatus;
+import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
+import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
+
+/**
+ * Model where persons are only interacting pairwise.
+ */
+@Deprecated
+public final class DirectContactModel extends AbstractContactModel {
+
+<span class="nc" id="L42">	private static final Logger log = LogManager.getLogger(DirectContactModel.class);</span>
+
+	/**
+	 * Flag to enable tracking, which is considerably slower.
+	 */
+	private final int trackingAfterDay;
+
+	/**
+	 * Whether to trace susceptible persons.
+	 */
+	private final boolean traceSusceptible;
+
+	/**
+	 * This buffer is used to store the infection type.
+	 */
+<span class="nc" id="L57">	private final StringBuilder buffer = new StringBuilder();</span>
+
+<span class="nc" id="L59">	private final Map&lt;EpisimContainer&lt;?&gt;, EpisimPerson&gt; singlePersons = new IdentityHashMap&lt;&gt;();</span>
+<span class="nc" id="L60">	private final Map&lt;EpisimContainer&lt;?&gt;, List&lt;Group&gt;&gt; groups = new IdentityHashMap&lt;&gt;();</span>
+
+	@Inject
+		/*package*/ DirectContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+									   EpisimReporting reporting, InfectionModel infectionModel) {
+<span class="nc" id="L65">		super(rnd, config, infectionModel, reporting);</span>
+<span class="nc" id="L66">		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();</span>
+<span class="nc" id="L67">		this.traceSusceptible = tracingConfig.getTraceSusceptible();</span>
+<span class="nc" id="L68">	}</span>
+
+	@Override
+	public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, EpisimVehicle vehicle, double now) {
+<span class="nc" id="L72">		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);</span>
+<span class="nc" id="L73">	}</span>
+
+	@Override
+	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, EpisimFacility facility, double now) {
+<span class="nc" id="L77">		infectionDynamicsGeneralized(personLeavingFacility, facility, now);</span>
+<span class="nc" id="L78">	}</span>
+
+	@Override
+	public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now) {
+<span class="nc" id="L82">		notifyEnterContainerGeneralized(personEnteringVehicle, vehicle, now);</span>
+<span class="nc" id="L83">	}</span>
+
+	@Override
+	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now) {
+<span class="nc" id="L87">		notifyEnterContainerGeneralized(personEnteringFacility, facility, now);</span>
+<span class="nc" id="L88">	}</span>
+
+	private void notifyEnterContainerGeneralized(EpisimPerson personEnteringContainer, EpisimContainer&lt;?&gt; container, double now) {
+
+		// this can happen because persons are not removed during initialization
+<span class="nc bnc" id="L93" title="All 2 branches missed.">		if (findGroup(container, personEnteringContainer) != null)</span>
+<span class="nc" id="L94">			return;</span>
+
+		// for same reason a person currently at home will enter again
+<span class="nc bnc" id="L97" title="All 4 branches missed.">		if (!singlePersons.containsKey(container) || singlePersons.get(container) == personEnteringContainer) {</span>
+<span class="nc" id="L98">			singlePersons.put(container, personEnteringContainer);</span>
+		} else {
+<span class="nc" id="L100">			groups.computeIfAbsent(container, k -&gt; new ArrayList&lt;&gt;())</span>
+<span class="nc" id="L101">					.add(Group.of(personEnteringContainer, singlePersons.get(container), now));</span>
+<span class="nc" id="L102">			singlePersons.remove(container);</span>
+		}
+<span class="nc" id="L104">	}</span>
+
+	private Group findGroup(EpisimContainer&lt;?&gt; container, EpisimPerson person) {
+
+<span class="nc bnc" id="L108" title="All 2 branches missed.">		if (!groups.containsKey(container))</span>
+<span class="nc" id="L109">			return null;</span>
+
+<span class="nc bnc" id="L111" title="All 2 branches missed.">		for (Group group : groups.get(container)) {</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">			if (group.contains(person)) {</span>
+<span class="nc" id="L113">				return group;</span>
+			}
+<span class="nc" id="L115">		}</span>
+
+<span class="nc" id="L117">		return null;</span>
+	}
+
+	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer&lt;?&gt; container, double now) {
+<span class="nc" id="L121">		throw new UnsupportedOperationException();</span>
+	}
+
+	/**
+	 * A group of two persons and time when the group was formed.
+	 */
+	private static final class Group {
+
+		private final EpisimPerson a;
+		private final EpisimPerson b;
+		private final double time;
+
+<span class="nc" id="L133">		private Group(EpisimPerson a, EpisimPerson b, double time) {</span>
+<span class="nc" id="L134">			this.a = a;</span>
+<span class="nc" id="L135">			this.b = b;</span>
+<span class="nc" id="L136">			this.time = time;</span>
+<span class="nc" id="L137">		}</span>
+
+		private static Group of(EpisimPerson a, EpisimPerson b, double time) {
+<span class="nc" id="L140">			return new Group(a, b, time);</span>
+		}
+
+		public boolean contains(EpisimPerson person) {
+<span class="nc bnc" id="L144" title="All 4 branches missed.">			return a == person || b == person;</span>
+		}
+
+		/**
+		 * Return the left over person.
+		 */
+		public EpisimPerson remove(EpisimPerson p) {
+<span class="nc bnc" id="L151" title="All 2 branches missed.">			if (p == a) return b;</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">			else if (p == b) return a;</span>
+<span class="nc" id="L153">			throw new IllegalStateException(&quot;Leaving person not in group.&quot;);</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
