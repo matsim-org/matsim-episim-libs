@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RandomVaccination.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.vaccination</a> &gt; <span class="el_source">RandomVaccination.java</span></div><h1>RandomVaccination.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.vaccination;
+
+import com.google.inject.Inject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.model.VaccinationType;
+
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Vaccinate people in the population randomly.
+ */
+public class RandomVaccination implements VaccinationModel {
+
+<span class="fc" id="L22">	private static final Logger log = LogManager.getLogger(RandomVaccination.class);</span>
+
+	private final SplittableRandom rnd;
+	private final VaccinationConfigGroup vaccinationConfig;
+
+	@Inject
+<span class="fc" id="L28">	public RandomVaccination(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {</span>
+<span class="fc" id="L29">		this.rnd = rnd;</span>
+<span class="fc" id="L30">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L31">	}</span>
+
+
+	@Override
+	public int handleVaccination(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
+
+<span class="fc bfc" id="L37" title="All 2 branches covered.">		if (availableVaccinations &lt;= 0)</span>
+<span class="fc" id="L38">			return 0;</span>
+
+<span class="fc" id="L40">		Map&lt;VaccinationType, Double&gt; prob = vaccinationConfig.getVaccinationTypeProb(date);</span>
+
+<span class="fc" id="L42">		List&lt;EpisimPerson&gt; candidates = persons.values().stream()</span>
+<span class="fc" id="L43">				.filter(EpisimPerson::isVaccinable)</span>
+<span class="pc bpc" id="L44" title="1 of 4 branches missed.">				.filter(p -&gt; p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &amp;&amp; !p.isRecentlyRecovered(iteration, 180))</span>
+<span class="pc bpc" id="L45" title="1 of 4 branches missed.">				.filter(p -&gt; p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no))</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">				.filter(p -&gt; p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="pc bpc" id="L47" title="3 of 4 branches missed.">				.filter(p -&gt; reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) &gt;= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)</span>
+<span class="fc" id="L48">				.collect(Collectors.toList());</span>
+
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">		if (candidates.isEmpty()) {</span>
+<span class="nc" id="L51">			log.warn(&quot;Not enough people to vaccinate left ({})&quot;, availableVaccinations);</span>
+<span class="nc" id="L52">			return 0;</span>
+		}
+
+<span class="fc" id="L55">		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));</span>
+
+<span class="fc" id="L57">		int vaccinationsLeft = availableVaccinations;</span>
+<span class="fc" id="L58">		int n = Math.min(candidates.size(), vaccinationsLeft);</span>
+
+<span class="fc bfc" id="L60" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L61">			EpisimPerson person = candidates.get(i);</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">			vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));</span>
+<span class="fc" id="L63">			vaccinationsLeft--;</span>
+		}
+
+<span class="fc" id="L66">		return availableVaccinations - vaccinationsLeft;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultParticipationModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.activity</a> &gt; <span class="el_source">DefaultParticipationModel.java</span></div><h1>DefaultParticipationModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.activity;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.policy.Restriction;
+
+import java.time.LocalDate;
+import java.util.BitSet;
+import java.util.List;
+import java.util.SplittableRandom;
+
+/**
+ * Default participation model that restricts participation based on remaining fraction.
+ */
+public class DefaultParticipationModel implements ActivityParticipationModel {
+
+	private final SplittableRandom rnd;
+	private final EpisimConfigGroup episimConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private ImmutableMap&lt;String, Restriction&gt; im;
+	private int iteration;
+	private LocalDate date;
+
+	@Inject
+<span class="fc" id="L28">	public DefaultParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig) {</span>
+<span class="fc" id="L29">		this.rnd = rnd;</span>
+<span class="fc" id="L30">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L31">		this.vaccinationConfig = vaccinationConfig;</span>
+
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)</span>
+<span class="nc" id="L34">			throw new IllegalStateException(&quot;Participation model can only be used with activityHandling startOfDay&quot;);</span>
+<span class="fc" id="L35">	}</span>
+
+	@Override
+	public void setRestrictionsForIteration(int iteration, ImmutableMap&lt;String, Restriction&gt; im) {
+<span class="fc" id="L39">		this.im = im;</span>
+<span class="fc" id="L40">		this.iteration = iteration;</span>
+<span class="fc" id="L41">		this.date = episimConfig.getStartDate().plusDays(iteration - 1);</span>
+<span class="fc" id="L42">	}</span>
+
+	@Override
+	public void updateParticipation(EpisimPerson person, BitSet trajectory, int offset, List&lt;EpisimPerson.PerformedActivity&gt; activities) {
+<span class="fc bfc" id="L46" title="All 2 branches covered.">		for (int i = 0; i &lt; activities.size(); i++) {</span>
+<span class="fc" id="L47">			Restriction context = im.get(activities.get(i).params.getContainerName());</span>
+<span class="fc" id="L48">			double r = context.getRemainingFraction();</span>
+
+			// reduce fraction for persons that are not vaccinated
+<span class="pc bpc" id="L51" title="1 of 4 branches missed.">			if (context.getSusceptibleRf() != null &amp;&amp; context.getSusceptibleRf() != 1d) {</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">				if (!vaccinationConfig.hasGreenPass(person, iteration, date))</span>
+<span class="fc" id="L53">					r *= context.getSusceptibleRf();</span>
+			}
+
+<span class="pc bpc" id="L56" title="2 of 4 branches missed.">			if (context.getVaccinatedRf() != null &amp;&amp; context.getVaccinatedRf() != 1d) {</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">				if (vaccinationConfig.hasGreenPass(person, iteration, date))</span>
+<span class="nc" id="L58">					r *= context.getVaccinatedRf();</span>
+			}
+
+<span class="fc bfc" id="L61" title="All 2 branches covered.">			if (r == 1.0)</span>
+<span class="fc" id="L62">				trajectory.set(offset + i, true);</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">			else if (r == 0.0)</span>
+<span class="fc" id="L64">				trajectory.set(offset + i, false);</span>
+			else
+<span class="fc bfc" id="L66" title="All 2 branches covered.">				trajectory.set(offset + i, rnd.nextDouble() &lt; r);</span>
+
+
+		}
+<span class="fc" id="L70">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TestingConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">TestingConfigGroup.java</span></div><h1>TestingConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.testing.TestType;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Config option specific to testing and measures performed in {@link org.matsim.episim.model.ProgressionModel}.
+ */
+public class TestingConfigGroup extends ReflectiveConfigGroup {
+
+<span class="fc" id="L21">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L22">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+
+	private static final String TYPE = &quot;type&quot;;
+	private static final String CAPACITY = &quot;testingCapacity&quot;;
+	private static final String RATE = &quot;testingRate&quot;;
+	private static final String DAYS = &quot;days&quot;;
+	private static final String RATE_PER_ACTIVITY = &quot;testingRatePerActivity&quot;;
+	private static final String RATE_PER_ACTIVITY_VAC = &quot;testingRatePerActivityVaccinated&quot;;
+	private static final String FALSE_POSITIVE_RATE = &quot;falsePositiveRate&quot;;
+	private static final String FALSE_NEGATIVE_RATE = &quot;falseNegativeRate&quot;;
+	private static final String HOUSEHOLD_COMPLIANCE = &quot;householdCompliance&quot;;
+	private static final String ACTIVITIES = &quot;activities&quot;;
+	private static final String STRATEGY = &quot;strategy&quot;;
+	private static final String TEST_ALL_PERSONS_AFTER = &quot;testAllPersonsAfter&quot;;
+	private static final String STOP_TEST_BOOSTER_AFTER = &quot;stopTestBoosterAfter&quot;;
+	private static final String ACTIVITY_CAPACITIES = &quot;activityCapacities&quot;;
+
+	private static final String GROUPNAME = &quot;episimTesting&quot;;
+
+	/**
+	 * Percentage of (fixed) households that are tested.
+	 */
+<span class="fc" id="L44">	private double householdCompliance = 1.0;</span>
+
+	/**
+	 * Testing and containment strategy.
+	 */
+<span class="fc" id="L49">	private Strategy strategy = Strategy.NONE;</span>
+
+	/**
+	 * Test all persons after this date
+	 */
+<span class="fc" id="L54">	private LocalDate testAllPersonsAfter = null;</span>
+
+	/**
+	 * Stop testing persons with booster vaccine after some date.
+	 */
+<span class="fc" id="L59">	private LocalDate stopTestBoosterAfter = null;</span>
+
+	/**
+	 * Activities to test when using {@link Strategy#ACTIVITIES}.
+	 */
+<span class="fc" id="L64">	private final Set&lt;String&gt; activities = new HashSet&lt;&gt;();</span>
+
+	/**
+	 * Path to csv file for individual activity capacities.
+	 */
+	private String activityCapacities;
+
+	/**
+	 * Holds all testing params.
+	 */
+<span class="fc" id="L74">	private final Map&lt;TestType, TestingParams&gt; types = new EnumMap&lt;&gt;(TestType.class);</span>
+
+	/**
+	 * Holds testing specific options
+	 */
+	public static final class TestingParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = &quot;testingParams&quot;;
+
+		/**
+		 * Type of test
+		 */
+		private TestType type;
+
+		/**
+		 * Amount of tests per day.
+		 */
+<span class="fc" id="L91">		private final Map&lt;LocalDate, Integer&gt; testingCapacity = new TreeMap&lt;&gt;();</span>
+
+		/**
+		 * Probability that a not infected person is reported as positive.
+		 */
+<span class="fc" id="L96">		private double falsePositiveRate = 0.03;</span>
+
+		/**
+		 * Probability that an infected person is not identified.
+		 */
+<span class="fc" id="L101">		private double falseNegativeRate = 0.1;</span>
+
+		/**
+		 * Share of people that are tested (if applicable for a test)
+		 */
+<span class="fc" id="L106">		private double testingRate = 1.0;</span>
+
+		/**
+		 * Separate testing rates for individual activities.
+		 */
+<span class="fc" id="L111">		private final Map&lt;String, NavigableMap&lt;LocalDate, Double&gt;&gt; ratePerActivity = new HashMap&lt;&gt;();</span>
+
+		/**
+		 * Separate testing rates for vaccinated persons.
+		 */
+<span class="fc" id="L116">		private final Map&lt;String, NavigableMap&lt;LocalDate, Double&gt;&gt; ratePerActivityVaccinated = new HashMap&lt;&gt;();</span>
+
+		/**
+		 * Days on which a person is tested.
+		 */
+<span class="fc" id="L121">		private final Set&lt;DayOfWeek&gt; testDays = new HashSet&lt;&gt;(Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY));</span>
+
+
+		public TestingParams() {
+<span class="fc" id="L125">			super(SET_TYPE);</span>
+<span class="fc" id="L126">		}</span>
+
+		@StringSetter(TYPE)
+		public void setType(TestType type) {
+<span class="nc" id="L130">			this.type = type;</span>
+<span class="nc" id="L131">		}</span>
+
+		@StringGetter(TYPE)
+		public TestType getType() {
+<span class="fc" id="L135">			return type;</span>
+		}
+
+		/**
+		 * Sets the tracing capacity for the whole simulation period.
+		 *
+		 * @param capacity number of persons to trace per day.
+		 * @see #setTestingCapacity_pers_per_day(int) (Map)
+		 */
+		public void setTestingCapacity_pers_per_day(int capacity) {
+<span class="fc" id="L145">			setTestingCapacity_pers_per_day(Map.of(LocalDate.of(1970, 1, 1), capacity));</span>
+<span class="fc" id="L146">		}</span>
+
+		/**
+		 * Sets the tracing capacity for individual days. If a day has no entry the previous will be still valid.
+		 *
+		 * @param capacity map of dates to changes in capacity.
+		 */
+		public void setTestingCapacity_pers_per_day(Map&lt;LocalDate, Integer&gt; capacity) {
+<span class="fc" id="L154">			testingCapacity.clear();</span>
+<span class="fc" id="L155">			testingCapacity.putAll(capacity);</span>
+<span class="fc" id="L156">		}</span>
+
+		public Map&lt;LocalDate, Integer&gt; getTestingCapacity() {
+<span class="fc" id="L159">			return testingCapacity;</span>
+		}
+
+		@StringSetter(CAPACITY)
+		void setTestingCapacity(String capacity) {
+
+<span class="nc" id="L165">			Map&lt;String, String&gt; map = SPLITTER.split(capacity);</span>
+<span class="nc" id="L166">			setTestingCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L167">					e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+			)));
+<span class="nc" id="L169">		}</span>
+
+		@StringGetter(CAPACITY)
+		String getTracingCapacityString() {
+<span class="fc" id="L173">			return JOINER.join(testingCapacity);</span>
+		}
+
+		@StringGetter(RATE)
+		public double getTestingRate() {
+<span class="fc" id="L178">			return testingRate;</span>
+		}
+
+		@StringSetter(RATE)
+		public void setTestingRate(double testingRate) {
+<span class="fc" id="L183">			this.testingRate = testingRate;</span>
+<span class="fc" id="L184">		}</span>
+
+		public Set&lt;DayOfWeek&gt; getTestDays() {
+<span class="nc" id="L187">			return testDays;</span>
+		}
+
+		public void setTestDays(Collection&lt;DayOfWeek&gt; days) {
+<span class="nc" id="L191">			this.testDays.clear();</span>
+<span class="nc" id="L192">			this.testDays.addAll(days);</span>
+<span class="nc" id="L193">		}</span>
+
+
+		@StringGetter(DAYS)
+		String getTestDaysString() {
+<span class="fc" id="L198">			return Joiner.on(&quot;,&quot;).join(testDays);</span>
+		}
+
+		@StringSetter(DAYS)
+		void setTestDays(String days) {
+<span class="nc" id="L203">			setTestDays(Arrays.stream(days.split(&quot;,&quot;)).map(DayOfWeek::valueOf)</span>
+<span class="nc" id="L204">					.collect(Collectors.toSet()));</span>
+<span class="nc" id="L205">		}</span>
+
+		/**
+		 * Set testing rate for activities individually for certain dates.
+		 */
+		public void setTestingRatePerActivityAndDate(Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; rates) {
+<span class="nc" id="L211">			this.ratePerActivity.clear();</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">			for (Map.Entry&lt;String, Map&lt;LocalDate, Double&gt;&gt; e : rates.entrySet()) {</span>
+<span class="nc" id="L213">				ratePerActivity.put(e.getKey(), new TreeMap&lt;&gt;(e.getValue()));</span>
+<span class="nc" id="L214">			}</span>
+<span class="nc" id="L215">		}</span>
+
+		@StringSetter(RATE_PER_ACTIVITY)
+		void setRatePerActivity(String rates) {
+
+<span class="nc" id="L220">			Map&lt;String, String&gt; rate = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).split(rates);</span>
+<span class="nc" id="L221">			this.ratePerActivity.clear();</span>
+
+<span class="nc bnc" id="L223" title="All 2 branches missed.">			for (Map.Entry&lt;String, String&gt; v : rate.entrySet()) {</span>
+<span class="nc" id="L224">				Map&lt;String, String&gt; map = SPLITTER.split(v.getValue());</span>
+<span class="nc" id="L225">				ratePerActivity.put(v.getKey(), new TreeMap&lt;&gt;(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L226">						e -&gt; LocalDate.parse(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+				))));
+<span class="nc" id="L228">			}</span>
+<span class="nc" id="L229">		}</span>
+
+		@StringGetter(RATE_PER_ACTIVITY)
+		String getRatesPerActivity() {
+
+<span class="fc" id="L234">			Map&lt;String, String&gt; collect =</span>
+<span class="pc" id="L235">					ratePerActivity.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -&gt; JOINER.join(e.getValue())));</span>
+
+<span class="fc" id="L237">			return Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).join(collect);</span>
+		}
+
+		public void setTestingRatePerActivityAndDateVaccinated(Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; rates) {
+<span class="nc" id="L241">			this.ratePerActivityVaccinated.clear();</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">			for (Map.Entry&lt;String, Map&lt;LocalDate, Double&gt;&gt; e : rates.entrySet()) {</span>
+<span class="nc" id="L243">				ratePerActivityVaccinated.put(e.getKey(), new TreeMap&lt;&gt;(e.getValue()));</span>
+<span class="nc" id="L244">			}</span>
+<span class="nc" id="L245">		}</span>
+
+		@StringSetter(RATE_PER_ACTIVITY_VAC)
+		void setRatePerActivityVac(String rates) {
+
+<span class="nc" id="L250">			Map&lt;String, String&gt; rate = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).split(rates);</span>
+<span class="nc" id="L251">			this.ratePerActivityVaccinated.clear();</span>
+
+<span class="nc bnc" id="L253" title="All 2 branches missed.">			for (Map.Entry&lt;String, String&gt; v : rate.entrySet()) {</span>
+<span class="nc" id="L254">				Map&lt;String, String&gt; map = SPLITTER.split(v.getValue());</span>
+<span class="nc" id="L255">				ratePerActivityVaccinated.put(v.getKey(), new TreeMap&lt;&gt;(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L256">						e -&gt; LocalDate.parse(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+				))));
+<span class="nc" id="L258">			}</span>
+<span class="nc" id="L259">		}</span>
+
+		@StringGetter(RATE_PER_ACTIVITY_VAC)
+		String getRatesPerActivityVac() {
+
+<span class="fc" id="L264">			Map&lt;String, String&gt; collect =</span>
+<span class="pc" id="L265">					ratePerActivityVaccinated.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -&gt; JOINER.join(e.getValue())));</span>
+
+<span class="fc" id="L267">			return Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).join(collect);</span>
+		}
+
+		/**
+		 * Return the testing rate for configured activities for a specific date.
+		 */
+		public Object2DoubleMap&lt;String&gt; getDailyTestingRateForActivities(LocalDate date) {
+
+<span class="fc" id="L275">			Object2DoubleOpenHashMap&lt;String&gt; map = new Object2DoubleOpenHashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">			for (Map.Entry&lt;String, NavigableMap&lt;LocalDate, Double&gt;&gt; e : ratePerActivity.entrySet()) {</span>
+<span class="nc" id="L277">				map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));</span>
+<span class="nc" id="L278">			}</span>
+
+<span class="fc" id="L280">			return map;</span>
+		}
+
+		/**
+		 * Daily testing rate for vaccinated persons. If not configured same value as for uncaccinated is used.
+		 * @see #getDailyTestingRateForActivities(LocalDate)
+		 */
+		public Object2DoubleMap&lt;String&gt; getDailyTestingRateForActivitiesVaccinated(LocalDate date) {
+
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">			if (ratePerActivityVaccinated.isEmpty())</span>
+<span class="fc" id="L290">				return getDailyTestingRateForActivities(date);</span>
+
+<span class="nc" id="L292">			Object2DoubleOpenHashMap&lt;String&gt; map = new Object2DoubleOpenHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L293" title="All 2 branches missed.">			for (Map.Entry&lt;String, NavigableMap&lt;LocalDate, Double&gt;&gt; e : ratePerActivityVaccinated.entrySet()) {</span>
+<span class="nc" id="L294">				map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));</span>
+<span class="nc" id="L295">			}</span>
+
+<span class="nc" id="L297">			return map;</span>
+		}
+
+		/**
+		 * testing rate for configured activities
+		 * @return
+		 */
+		public Map&lt;String, NavigableMap&lt;LocalDate, Double&gt;&gt; getTestingRateForActivities() {
+<span class="nc" id="L305">			return ratePerActivity;</span>
+		}
+
+		/**
+		 * testing rate for vaccinated persons.
+		 * @see #getDailyTestingRateForActivities(LocalDate)
+		 * @return
+		 */
+		public Map&lt;String, NavigableMap&lt;LocalDate, Double&gt;&gt; getTestingRateForActivitiesVaccinated() {
+<span class="nc" id="L314">			return ratePerActivityVaccinated;</span>
+		}
+
+
+		@StringGetter(FALSE_POSITIVE_RATE)
+		public double getFalsePositiveRate() {
+<span class="fc" id="L320">			return falsePositiveRate;</span>
+		}
+
+		@StringSetter(FALSE_POSITIVE_RATE)
+		public void setFalsePositiveRate(double falsePositiveRate) {
+<span class="nc" id="L325">			this.falsePositiveRate = falsePositiveRate;</span>
+<span class="nc" id="L326">		}</span>
+
+		@StringGetter(FALSE_NEGATIVE_RATE)
+		public double getFalseNegativeRate() {
+<span class="fc" id="L330">			return falseNegativeRate;</span>
+		}
+
+		@StringSetter(FALSE_NEGATIVE_RATE)
+		public void setFalseNegativeRate(double falseNegativeRate) {
+<span class="nc" id="L335">			this.falseNegativeRate = falseNegativeRate;</span>
+<span class="nc" id="L336">		}</span>
+
+	}
+
+
+	/**
+	 * Default constructor.
+	 */
+	public TestingConfigGroup() {
+<span class="fc" id="L345">		super(GROUPNAME);</span>
+
+<span class="fc" id="L347">		getOrAddParams(TestType.RAPID_TEST);</span>
+<span class="fc" id="L348">	}</span>
+
+	/**
+	 * Get config parameter for a specific strain.
+	 */
+	public TestingParams getParams(TestType type) {
+<span class="pc bpc" id="L354" title="1 of 2 branches missed.">		if (!types.containsKey(type))</span>
+<span class="nc" id="L355">			throw new IllegalStateException((&quot;Testing type &quot; + type + &quot; is not configured.&quot;));</span>
+
+<span class="fc" id="L357">		return types.get(type);</span>
+	}
+
+	/**
+	 * Get an existing or add new parameter set.
+	 */
+	public TestingParams getOrAddParams(TestType type) {
+<span class="pc bpc" id="L364" title="1 of 2 branches missed.">		if (!types.containsKey(type)) {</span>
+<span class="fc" id="L365">			TestingParams p = new TestingParams();</span>
+<span class="fc" id="L366">			p.type = type;</span>
+<span class="fc" id="L367">			addParameterSet(p);</span>
+<span class="fc" id="L368">			return p;</span>
+		}
+
+<span class="nc" id="L371">		return types.get(type);</span>
+	}
+
+	/**
+	 * Return all testing params.
+	 */
+	public Collection&lt;TestingParams&gt; getTestingParams() {
+<span class="fc" id="L378">		return types.values();</span>
+	}
+
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+<span class="nc bnc" id="L383" title="All 2 branches missed.">		if (TestingParams.SET_TYPE.equals(type)) {</span>
+<span class="nc" id="L384">			return new TestingParams();</span>
+		}
+<span class="nc" id="L386">		throw new IllegalArgumentException(&quot;Unknown type&quot; + type);</span>
+	}
+
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+<span class="pc bpc" id="L391" title="1 of 2 branches missed.">		if (TestingParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L392">			TestingParams p = (TestingParams) set;</span>
+<span class="fc" id="L393">			types.put(p.type, p);</span>
+<span class="fc" id="L394">			super.addParameterSet(set);</span>
+
+<span class="fc" id="L396">		} else</span>
+<span class="nc" id="L397">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
+<span class="fc" id="L398">	}</span>
+
+	@StringSetter(HOUSEHOLD_COMPLIANCE)
+	public void setHouseholdCompliance(double householdCompliance) {
+<span class="nc" id="L402">		this.householdCompliance = householdCompliance;</span>
+<span class="nc" id="L403">	}</span>
+
+	@StringGetter(HOUSEHOLD_COMPLIANCE)
+	public double getHouseholdCompliance() {
+<span class="fc" id="L407">		return householdCompliance;</span>
+	}
+
+	@StringGetter(STRATEGY)
+	public Strategy getStrategy() {
+<span class="fc" id="L412">		return strategy;</span>
+	}
+
+	@StringSetter(STRATEGY)
+	public void setStrategy(Strategy strategy) {
+<span class="fc" id="L417">		this.strategy = strategy;</span>
+<span class="fc" id="L418">	}</span>
+
+	@StringSetter(TEST_ALL_PERSONS_AFTER)
+	void setTestAllPersonsAfter(String testAllPersonsAfter) {
+<span class="nc" id="L422">		this.testAllPersonsAfter = LocalDate.parse(testAllPersonsAfter);</span>
+<span class="nc" id="L423">	}</span>
+
+	public void setTestAllPersonsAfter(LocalDate testAllPersonsAfter) {
+<span class="nc" id="L426">		this.testAllPersonsAfter = testAllPersonsAfter;</span>
+<span class="nc" id="L427">	}</span>
+
+	@StringGetter(TEST_ALL_PERSONS_AFTER)
+	public LocalDate getTestAllPersonsAfter() {
+<span class="fc" id="L431">		return testAllPersonsAfter;</span>
+	}
+
+	@StringSetter(STOP_TEST_BOOSTER_AFTER)
+	void setStopTestBoosterAfter(String value) {
+<span class="nc" id="L436">		this.stopTestBoosterAfter = LocalDate.parse(value);</span>
+<span class="nc" id="L437">	}</span>
+
+	public void setStopTestBoosterAfter(LocalDate stopTestBoosterAfter) {
+<span class="nc" id="L440">		this.stopTestBoosterAfter = stopTestBoosterAfter;</span>
+<span class="nc" id="L441">	}</span>
+
+	@StringGetter(STOP_TEST_BOOSTER_AFTER)
+	public LocalDate getStopTestBoosterAfter() {
+<span class="fc" id="L445">		return stopTestBoosterAfter;</span>
+	}
+
+	@StringGetter(ACTIVITY_CAPACITIES)
+	public String getActivityCapacities() {
+<span class="fc" id="L450">		return activityCapacities;</span>
+	}
+
+	@StringSetter(ACTIVITY_CAPACITIES)
+	public void setActivityCapacities(String activityCapacities) {
+<span class="nc" id="L455">		this.activityCapacities = activityCapacities;</span>
+<span class="nc" id="L456">	}</span>
+
+	public void setActivities(List&lt;String&gt; activities) {
+<span class="fc" id="L459">		this.activities.clear();</span>
+<span class="fc" id="L460">		this.activities.addAll(activities);</span>
+<span class="fc" id="L461">	}</span>
+
+	public Set&lt;String&gt; getActivities() {
+<span class="fc" id="L464">		return activities;</span>
+	}
+
+	@StringSetter(ACTIVITIES)
+	void setActivitiesString(String activitiesString) {
+<span class="nc" id="L469">		setActivities(Splitter.on(&quot;,&quot;).splitToList(activitiesString));</span>
+<span class="nc" id="L470">	}</span>
+
+	@StringGetter(ACTIVITIES)
+	String getActivitiesString() {
+<span class="fc" id="L474">		return Joiner.on(&quot;,&quot;).join(activities);</span>
+	}
+
+	/**
+	 * Use configuration for individual test types.
+	 */
+	@Deprecated
+	public void setTestingRatePerActivityAndDate(Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; rates) {
+<span class="nc" id="L482">		getOrAddParams(TestType.RAPID_TEST).setTestingRatePerActivityAndDate(rates);</span>
+<span class="nc" id="L483">	}</span>
+
+	@Deprecated
+	public void setFalsePositiveRate(double falsePositiveRate) {
+<span class="nc" id="L487">		getParams(TestType.RAPID_TEST).setFalsePositiveRate(falsePositiveRate);</span>
+<span class="nc" id="L488">	}</span>
+
+	@Deprecated
+	public void setFalseNegativeRate(double falseNegativeRate) {
+<span class="nc" id="L492">		getParams(TestType.RAPID_TEST).setFalseNegativeRate(falseNegativeRate);</span>
+<span class="nc" id="L493">	}</span>
+
+	@Deprecated
+	public void setTestingCapacity_pers_per_day(Map&lt;LocalDate, Integer&gt; capacity) {
+<span class="nc" id="L497">		getParams(TestType.RAPID_TEST).setTestingCapacity_pers_per_day(capacity);</span>
+<span class="nc" id="L498">	}</span>
+
+<span class="fc" id="L500">	public enum Strategy {</span>
+
+		/**
+		 * No tracing.
+		 */
+<span class="fc" id="L505">		NONE,</span>
+
+		/**
+		 * Test with at fixed days.
+		 */
+<span class="fc" id="L510">		FIXED_DAYS,</span>
+
+		/**
+		 * Test persons that have certain activity at each day.
+		 */
+<span class="fc" id="L515">		ACTIVITIES,</span>
+
+		/**
+		 * Test persons at fixed days, if they have certain activity.
+		 */
+<span class="fc" id="L520">		FIXED_ACTIVITIES,</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

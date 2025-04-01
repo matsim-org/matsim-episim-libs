@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AsyncEpisimWriter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.reporting</a> &gt; <span class="el_source">AsyncEpisimWriter.java</span></div><h1>AsyncEpisimWriter.java</h1><pre class="source lang-java linenums">package org.matsim.episim.reporting;
+
+import com.lmax.disruptor.*;
+import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
+import com.lmax.disruptor.util.DaemonThreadFactory;
+import com.lmax.disruptor.util.Util;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.events.Event;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Writer;
+
+/**
+ * Overwrites the default episim writer to do all IO in an extra thread using the {@link Disruptor} library.
+ */
+public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler&lt;AsyncEpisimWriter.LogEvent&gt;,
+		EventTranslatorThreeArg&lt;AsyncEpisimWriter.LogEvent, Writer, Event, Double&gt;, Closeable {
+
+<span class="nc" id="L22">	private static final Logger log = LogManager.getLogger(AsyncEpisimWriter.class);</span>
+	private final Disruptor&lt;LogEvent&gt; disruptor;
+<span class="nc" id="L24">	private final StringEventTranslator translator = new StringEventTranslator();</span>
+<span class="nc" id="L25">	private final StringArrayEventTranslator arrayTranslator = new StringArrayEventTranslator();</span>
+
+	/**
+	 * Constructor.
+	 *
+	 * @param numProducer Expected number of producer. Does not need to be exact, but has to be larger 1 if there are multiple.
+	 */
+<span class="nc" id="L32">	public AsyncEpisimWriter(int numProducer) {</span>
+
+		// Specify the size of the ring buffer, must be power of 2.
+<span class="nc" id="L35">		int bufferSize = Math.max(16384, Util.ceilingNextPowerOfTwo(4096 * numProducer));</span>
+
+<span class="nc" id="L37">		disruptor = new Disruptor&lt;&gt;(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE, ProducerType.MULTI, new SleepingWaitStrategy());</span>
+
+		// Connect the handler
+<span class="nc" id="L40">		disruptor.handleEventsWith(this);</span>
+
+<span class="nc" id="L42">		log.info(&quot;Using async writer with producer={}, bufferSize={}&quot;, numProducer, bufferSize);</span>
+
+<span class="nc" id="L44">		disruptor.start();</span>
+<span class="nc" id="L45">	}</span>
+
+	@Override
+	public void append(Writer writer, String[] array) {
+<span class="nc" id="L49">		disruptor.publishEvent(arrayTranslator, writer, array);</span>
+<span class="nc" id="L50">	}</span>
+
+	@Override
+	public void append(Writer writer, String content) {
+<span class="nc" id="L54">		disruptor.publishEvent(translator, writer, content, false);</span>
+<span class="nc" id="L55">	}</span>
+
+	@Override
+	public void append(Writer writer, Event event) {
+<span class="nc" id="L59">		disruptor.publishEvent(this, writer, event, -1d);</span>
+<span class="nc" id="L60">	}</span>
+
+	@Override
+	public void append(Writer writer, Event event, double correctedTime) {
+<span class="nc" id="L64">		disruptor.publishEvent(this, writer, event, correctedTime);</span>
+<span class="nc" id="L65">	}</span>
+
+	@Override
+	public void close(Writer writer) {
+<span class="nc" id="L69">		disruptor.publishEvent(translator, writer, null, true);</span>
+<span class="nc" id="L70">	}</span>
+
+	@Override
+	public void onEvent(LogEvent event, long sequence, boolean endOfBatch) throws Exception {
+
+<span class="nc bnc" id="L75" title="All 2 branches missed.">		if (event.close) {</span>
+<span class="nc" id="L76">			event.writer.close();</span>
+		} else {
+<span class="nc" id="L78">			event.writer.append(event.content);</span>
+			// Flushing is not enabled
+			// Events are async anyway, flushing does not make much sense
+			//if (event.flush)
+			//	event.writer.flush();
+		}
+
+<span class="nc" id="L85">		event.reset();</span>
+<span class="nc" id="L86">	}</span>
+
+	@Override
+	public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1, Double arg2) {
+<span class="nc" id="L90">		event.writer = arg0;</span>
+<span class="nc" id="L91">		event.flush = false;</span>
+		try {
+<span class="nc" id="L93">			EpisimWriter.writeEvent(event.content, arg1, arg2);</span>
+<span class="nc" id="L94">		} catch (IOException e) {</span>
+<span class="nc" id="L95">			log.error(&quot;Could not append event&quot;);</span>
+<span class="nc" id="L96">		}</span>
+<span class="nc" id="L97">	}</span>
+
+	@Override
+	public void close() throws IOException {
+<span class="nc" id="L101">		log.info(&quot;Shutting down...&quot;);</span>
+<span class="nc" id="L102">		disruptor.shutdown();</span>
+<span class="nc" id="L103">	}</span>
+
+<span class="nc" id="L105">	protected static class LogEvent {</span>
+
+		private static final int BUFFER_SIZE = 120;
+
+<span class="nc" id="L109">		private final StringBuilder content = new StringBuilder(BUFFER_SIZE);</span>
+		private Writer writer;
+<span class="nc" id="L111">		private boolean close = false;</span>
+<span class="nc" id="L112">		private boolean flush = true;</span>
+
+		private void reset() {
+<span class="nc" id="L115">			close = false;</span>
+<span class="nc" id="L116">			flush = true;</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">			if (content.capacity() &gt; BUFFER_SIZE) {</span>
+<span class="nc" id="L118">				content.setLength(BUFFER_SIZE);</span>
+<span class="nc" id="L119">				content.trimToSize();</span>
+			}
+
+<span class="nc" id="L122">			content.setLength(0);</span>
+<span class="nc" id="L123">		}</span>
+	}
+
+	/**
+	 * Copy the string to buffer and also set close attribute.
+	 */
+<span class="nc" id="L129">	public static final class StringEventTranslator implements EventTranslatorThreeArg&lt;LogEvent, Writer, String, Boolean&gt; {</span>
+
+		@Override
+		public void translateTo(LogEvent event, long sequence, Writer arg0, String arg1, Boolean arg2) {
+
+<span class="nc" id="L134">			event.writer = arg0;</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">			if (arg2) {</span>
+<span class="nc" id="L136">				event.close = true;</span>
+			} else {
+<span class="nc" id="L138">				event.content.append(arg1);</span>
+<span class="nc" id="L139">				event.flush = false;</span>
+			}
+<span class="nc" id="L141">		}</span>
+	}
+
+	/**
+	 * Convert MATSim event to log event.
+	 */
+<span class="nc" id="L147">	public static final class StringArrayEventTranslator implements EventTranslatorTwoArg&lt;LogEvent, Writer, String[]&gt; {</span>
+
+		/**
+		 * Write one line with content separated by separator.
+		 */
+		@Override
+		public void translateTo(LogEvent event, long sequence, Writer arg0, String[] arg1) {
+<span class="nc" id="L154">			event.writer = arg0;</span>
+
+<span class="nc bnc" id="L156" title="All 2 branches missed.">			for (int i = 0; i &lt; arg1.length; i++) {</span>
+<span class="nc" id="L157">				event.content.append(arg1[i]);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">				if (i &lt; arg1.length - 1) event.content.append(SEPARATOR);</span>
+			}
+
+<span class="nc" id="L161">			event.content.append(&quot;\n&quot;);</span>
+<span class="nc" id="L162">		}</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultTestingModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.testing</a> &gt; <span class="el_source">DefaultTestingModel.java</span></div><h1>DefaultTestingModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.testing;
+
+import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.config.Config;
+import org.matsim.episim.*;
+import org.matsim.episim.model.VirusStrain;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
+
+/**
+ * Testing model that provides some default testing capabilities and helper functions.
+ */
+public class DefaultTestingModel implements TestingModel {
+
+	protected final SplittableRandom rnd;
+	protected final VaccinationConfigGroup vaccinationConfig;
+	protected final EpisimConfigGroup episimConfig;
+	protected final TestingConfigGroup testingConfig;
+	protected final Config config;
+
+	/**
+	 * Testing capacity left for the day.
+	 */
+<span class="fc" id="L29">	protected Map&lt;TestType, Integer&gt; testingCapacity = new EnumMap&lt;&gt;(TestType.class);</span>
+
+	/**
+	 * Testing rates for configured activities for current day.
+	 */
+<span class="fc" id="L34">	protected final Map&lt;TestType, Object2DoubleMap&lt;String&gt;&gt; testingRateForActivities = new EnumMap&lt;&gt;(TestType.class);</span>
+
+<span class="fc" id="L36">	protected final Map&lt;TestType, Object2DoubleMap&lt;String&gt;&gt; testingRateForActivitiesVaccinated = new EnumMap&lt;&gt;(TestType.class);</span>
+
+	/**
+	 * Current date
+	 */
+	protected LocalDate date;
+
+	/**
+	 * Ids of households that are not compliant.
+	 */
+<span class="fc" id="L46">	private final Set&lt;String&gt; nonCompliantHouseholds = new HashSet&lt;&gt;();</span>
+
+	/**
+	 * Whether to test all persons on this day.
+	 */
+	private boolean testAllPersons;
+
+	/**
+	 * Don't test person with booster.
+	 */
+	private boolean withOutBooster;
+
+	@Inject
+<span class="fc" id="L59">	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {</span>
+<span class="fc" id="L60">		this.rnd = rnd;</span>
+<span class="fc" id="L61">		this.config = config;</span>
+<span class="fc" id="L62">		this.testingConfig = testingConfig;</span>
+<span class="fc" id="L63">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L64">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L65">	}</span>
+
+	@Override
+	public void setIteration(int day) {
+
+<span class="fc" id="L70">		date = episimConfig.getStartDate().plusDays(day - 1);</span>
+
+<span class="pc bpc" id="L72" title="3 of 4 branches missed.">		testAllPersons = testingConfig.getTestAllPersonsAfter() != null &amp;&amp; date.isAfter(testingConfig.getTestAllPersonsAfter());</span>
+<span class="pc bpc" id="L73" title="3 of 4 branches missed.">		withOutBooster = testingConfig.getStopTestBoosterAfter() != null &amp;&amp; date.isAfter(testingConfig.getStopTestBoosterAfter());</span>
+
+<span class="fc bfc" id="L75" title="All 2 branches covered.">		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {</span>
+
+<span class="fc" id="L77">			int testingCapacity = EpisimUtils.findValidEntry(params.getTestingCapacity(), 0, date);</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">			if (testingCapacity != Integer.MAX_VALUE)</span>
+<span class="fc" id="L79">				testingCapacity *= episimConfig.getSampleSize();</span>
+
+<span class="fc" id="L81">			this.testingCapacity.put(params.getType(), testingCapacity);</span>
+<span class="fc" id="L82">			this.testingRateForActivities.put(params.getType(), params.getDailyTestingRateForActivities(date));</span>
+<span class="fc" id="L83">			this.testingRateForActivitiesVaccinated.put(params.getType(), params.getDailyTestingRateForActivitiesVaccinated(date));</span>
+<span class="fc" id="L84">		}</span>
+<span class="fc" id="L85">	}</span>
+
+	@Override
+	public void beforeStateUpdates(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; personMap, int iteration, EpisimReporting.InfectionReport report) {
+
+<span class="pc bpc" id="L90" title="2 of 4 branches missed.">		if (nonCompliantHouseholds.isEmpty() &amp;&amp; testingConfig.getHouseholdCompliance() &lt; 1.0)</span>
+<span class="nc" id="L91">			initCompliance(personMap);</span>
+
+<span class="fc" id="L93">	}</span>
+
+	private void initCompliance(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; personMap) {
+
+		// TODO: this class may needs to be added to the snapshot
+<span class="nc" id="L98">		SplittableRandom rnd = new SplittableRandom(config.global().getRandomSeed());</span>
+
+		// don't draw one household multiple times
+<span class="nc" id="L101">		Set&lt;String&gt; checked = new HashSet&lt;&gt;();</span>
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">		for (EpisimPerson p : personMap.values()) {</span>
+<span class="nc" id="L104">			String home = getHomeId(p);</span>
+
+<span class="nc bnc" id="L106" title="All 2 branches missed.">			if (!checked.contains(home)) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">				if (rnd.nextDouble() &gt; testingConfig.getHouseholdCompliance())</span>
+<span class="nc" id="L108">					nonCompliantHouseholds.add(home);</span>
+
+<span class="nc" id="L110">				checked.add(home);</span>
+			}
+<span class="nc" id="L112">		}</span>
+<span class="nc" id="L113">	}</span>
+
+	private String getHomeId(EpisimPerson person) {
+<span class="fc" id="L116">		String home = (String) person.getAttributes().getAttribute(&quot;homeId&quot;);</span>
+		// fallback to person id if there is no home
+<span class="fc bfc" id="L118" title="All 2 branches covered.">		return home != null ? home : person.getPersonId().toString();</span>
+	}
+
+	/**
+	 * Perform the testing procedure.
+	 */
+	public void performTesting(EpisimPerson person, int day) {
+
+		// person with positive test is not tested twice
+		// test status will be set when released from quarantine
+<span class="fc bfc" id="L128" title="All 2 branches covered.">		if (person.getTestStatus() == EpisimPerson.TestStatus.positive)</span>
+<span class="fc" id="L129">			return;</span>
+
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.testing) {</span>
+<span class="nc" id="L132">			testAndQuarantine(person, day, testingConfig.getParams(TestType.RAPID_TEST), 1.0);</span>
+<span class="nc" id="L133">			return;</span>
+		}
+
+<span class="fc bfc" id="L136" title="All 2 branches covered.">		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)</span>
+<span class="fc" id="L137">			return;</span>
+
+		// vaccinated and recovered persons are not tested
+<span class="fc" id="L140">		boolean fullyVaccinated = vaccinationConfig.hasValidVaccination(person, day, date);</span>
+
+<span class="pc bpc" id="L142" title="1 of 4 branches missed.">		if (!testAllPersons &amp;&amp; (vaccinationConfig.hasGreenPass(person, day, date)))</span>
+<span class="fc" id="L143">			return;</span>
+
+<span class="pc bpc" id="L145" title="3 of 4 branches missed.">		if (withOutBooster &amp;&amp; person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)</span>
+<span class="nc" id="L146">			return;</span>
+
+<span class="fc bfc" id="L148" title="All 2 branches covered.">		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {</span>
+
+<span class="fc" id="L150">			TestType type = params.getType();</span>
+
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">			if (testingCapacity.get(type) &lt;= 0)</span>
+<span class="nc" id="L153">				continue;</span>
+
+			// update is run at end of day, the test needs to be for the next day
+<span class="fc" id="L156">			DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);</span>
+
+			// Choose testing rate depending on vaccination status
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">			Object2DoubleMap&lt;String&gt; useRate = fullyVaccinated ? testingRateForActivitiesVaccinated.get(type) : testingRateForActivities.get(type);</span>
+
+<span class="pc bpc" id="L161" title="3 of 4 branches missed.">			if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS &amp;&amp; params.getTestDays().contains(dow)) {</span>
+<span class="nc" id="L162">				testAndQuarantine(person, day, params, params.getTestingRate());</span>
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {</span>
+
+<span class="fc" id="L165">				double rate = person.matchActivities(dow, testingConfig.getActivities(),</span>
+<span class="fc" id="L166">						(act, v) -&gt; Math.max(v, useRate.getOrDefault(act, params.getTestingRate())), 0d);</span>
+
+<span class="fc" id="L168">				testAndQuarantine(person, day, params, rate);</span>
+<span class="pc bnc" id="L169" title="All 4 branches missed.">			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES &amp;&amp; params.getTestDays().contains(dow)) {</span>
+
+<span class="nc" id="L171">				double rate = person.matchActivities(dow, testingConfig.getActivities(),</span>
+<span class="nc" id="L172">						(act, v) -&gt; Math.max(v, useRate.getOrDefault(act, params.getTestingRate())), 0d);</span>
+
+<span class="nc" id="L174">				testAndQuarantine(person, day, params, rate);</span>
+			}
+
+<span class="fc" id="L177">		}</span>
+
+<span class="fc" id="L179">	}</span>
+
+	/**
+	 * Perform testing and quarantine person.
+	 *
+	 * @return true if the person was tested (test result does not matter)
+	 */
+	protected boolean testAndQuarantine(EpisimPerson person, int day, TestingConfigGroup.TestingParams params, double testingRate) {
+
+<span class="fc bfc" id="L188" title="All 2 branches covered.">		if (testingRate == 0)</span>
+<span class="fc" id="L189">			return false;</span>
+
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">		if (nonCompliantHouseholds.contains(getHomeId(person)))</span>
+<span class="nc" id="L192">			return false;</span>
+
+<span class="fc bfc" id="L194" title="All 4 branches covered.">		if (testingRate != 1d &amp;&amp; rnd.nextDouble() &gt;= testingRate)</span>
+<span class="fc" id="L195">			return false;</span>
+
+<span class="fc bfc" id="L197" title="All 2 branches covered.">		if (params.getType().shouldDetectNegative(person, day)) {</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">			EpisimPerson.TestStatus testStatus = rnd.nextDouble() &gt;= params.getFalsePositiveRate() ? EpisimPerson.TestStatus.negative : EpisimPerson.TestStatus.positive;</span>
+<span class="fc" id="L199">			person.setTestStatus(testStatus, day);</span>
+
+<span class="fc bfc" id="L201" title="All 2 branches covered.">		} else if (params.getType().canDetectPositive(person, day)) {</span>
+
+<span class="fc" id="L203">			double rate = params.getFalseNegativeRate();</span>
+
+			// TODO: configurable
+<span class="pc bpc" id="L206" title="1 of 2 branches missed.">			if (params.getType().equals(TestType.RAPID_TEST) &amp;&amp; (</span>
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||</span>
+<span class="pc bpc" id="L208" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||</span>
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.OMICRON_BA5 ||</span>
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.BQ ||</span>
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.XBB_15 ||</span>
+<span class="pc bpc" id="L212" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.STRAIN_A ||</span>
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">					person.getVirusStrain() == VirusStrain.STRAIN_B ||</span>
+<span class="pc bpc" id="L214" title="1 of 2 branches missed.">					person.getVirusStrain().toString().startsWith(&quot;A_&quot;) ||</span>
+<span class="pc bpc" id="L215" title="1 of 2 branches missed.">					person.getVirusStrain().toString().startsWith(&quot;B_&quot;))</span>
+			) {
+<span class="nc" id="L217">				rate = 0.5;</span>
+			}
+
+<span class="fc bfc" id="L220" title="All 2 branches covered.">			EpisimPerson.TestStatus testStatus = rnd.nextDouble() &gt;= rate ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;</span>
+<span class="fc" id="L221">			person.setTestStatus(testStatus, day);</span>
+		}
+
+
+<span class="fc bfc" id="L225" title="All 2 branches covered.">		if (person.getTestStatus() == EpisimPerson.TestStatus.positive) {</span>
+<span class="fc" id="L226">			quarantinePerson(person, day);</span>
+		}
+
+<span class="fc" id="L229">		testingCapacity.merge(params.getType(), -1, Integer::sum);</span>
+<span class="fc" id="L230">		return true;</span>
+	}
+
+	private void quarantinePerson(EpisimPerson p, int day) {
+
+		// recovered state will be reset quickly
+<span class="pc bpc" id="L236" title="1 of 4 branches missed.">		if (p.getQuarantineStatus() != EpisimPerson.QuarantineStatus.full &amp;&amp; p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {</span>
+<span class="fc" id="L237">			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);</span>
+		}
+<span class="fc" id="L239">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
