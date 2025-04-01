@@ -5,8 +5,9 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.events.HasFacilityId;
 import org.matsim.episim.ReplayHandler;
+import org.matsim.episim.SyntheticBatch;
+import org.matsim.episim.SyntheticScenario;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.run.batch.SyntheticBatch;
 
 import java.time.DayOfWeek;
 import java.util.List;

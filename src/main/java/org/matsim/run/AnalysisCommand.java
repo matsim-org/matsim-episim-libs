@@ -56,7 +56,7 @@ import java.util.zip.GZIPInputStream;
 		usageHelpWidth = 120,
 		subcommands = {
 				CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
-				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class,
+				RValuesFromEvents.class, ExtractInfectionsByAge.class,
 				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class,
 				VaccinationEffectiveness.class, FilterEvents.class, HospitalNumbersFromEvents.class, SecondaryAttackRateFromEvents.class
 		},

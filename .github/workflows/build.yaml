@@ -9,31 +9,39 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [11, 13]
-        module:
-          - org.matsim.run.**
-          - org.matsim.episim.**
-
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
-          java-version: ${{ matrix.java }}
+          java-version: 11
+          distribution: 'temurin'
           architecture: x64
+          cache: maven
 
-      - name: Cache Maven packages
-        uses: actions/cache@v2
+      - name: Test and generate coverage
+        run:  mvn clean verify --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+
+      #      - name: Generate reports
+      #        run: mvn site:site --batch-mode
+
+      - name: Archive reports
+        uses: actions/upload-artifact@v4
         with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          name: maven-site
+          path: target/site/
 
-      - name: Test module
-        run:  mvn -Dtest=${{matrix.module}} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+
+      - name: Deploy coverage report to GitHub Pages
+        if: github.ref != 'refs/heads/gh-pages'  # Avoid deploying from gh-pages itself
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/site/jacoco  # The JaCoCo HTML report directory
+          publish_branch: gh-pages
+          # Create a folder with the branch name under the gh-pages branch
+          destination_dir: ${{ github.ref_name }}  # This is the branch name (e.g., 'feature-branch')
+
 
     env:
       MAVEN_OPTS: -Xmx6G

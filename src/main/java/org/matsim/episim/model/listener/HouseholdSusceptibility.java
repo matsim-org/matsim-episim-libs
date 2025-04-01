@@ -13,9 +13,9 @@ import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
+import org.matsim.episim.analysis.DistrictLookup;
 import org.matsim.episim.model.SimulationListener;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.scenarioCreation.DistrictLookup;
 import org.matsim.vehicles.Vehicle;
 
 import java.io.IOException;

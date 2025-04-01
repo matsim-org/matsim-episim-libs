@@ -443,7 +443,7 @@ public class DefaultAntibodyModelTest {
 				antibodyLevelsAvg = new Int2ObjectAVLTreeMap<>(antibodyLevels) ;
 				antibodyLevelsAvg.forEach((k, v) -> v.forEach((k2, v2) -> antibodyLevels.get(k).put(k2, v2 / popSize)));
 
-				System.out.println("");
+//				System.out.println("");
 			} else {
 				for (int day : antibodyLevels.keySet()) {
 					Object2DoubleMap<VirusStrain> dayLevelAvg = antibodyLevelsAvg.get(day);
@@ -1516,7 +1516,7 @@ public class DefaultAntibodyModelTest {
 				throw new RuntimeException("unknown immunity event type");
 			}
 
-			System.out.println(immunityEvent + " on day " + day);
+//			System.out.println(immunityEvent + " on day " + day);
 
 
 			model.updateAntibodies(person, day);

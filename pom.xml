@@ -3,8 +3,8 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.matsim-org</groupId>
-    <artifactId>matsim-episim</artifactId>
-    <version>24.8</version>
+    <artifactId>matsim-episim-libs</artifactId>
+    <version>2025.1</version>
 
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
@@ -247,7 +247,6 @@
 
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -272,15 +271,16 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.2</version>
+                <version>3.5.2</version>
                 <configuration>
                     <excludes>
                         <exclude>**/*$*</exclude> <!-- exclude all inner classes -->
                     </excludes>
                     <!-- Don't run multiple tests in one jvm! Class mocking interferes with the integration test -->
+                    <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
                     <!-- avoid out of memory errors: -->
-                    <argLine>-Xmx6000m -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
+                    <argLine>@{argLine} -Xmx6500m -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
                 </configuration>
             </plugin>
 
@@ -431,8 +431,84 @@
                 </executions>
             </plugin>
 
+            <!-- Java Code Coverage-->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <exclude>org/matsim/episim/analysis/**</exclude>
+                                <exclude>org/matsim/run/**</exclude>
+                                <exclude>org/matsim/episim/EpisimUtils</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>org.jacoco</groupId>-->
+<!--                <artifactId>jacoco-maven-plugin</artifactId>-->
+<!--                <version>0.8.12</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <goals>-->
+<!--                            <goal>prepare-agent</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                    <execution>-->
+<!--                        <id>report</id>-->
+<!--                        <phase>verify</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>report</goal>-->
+<!--                        </goals>-->
+<!--                        <configuration>-->
+<!--                            <excludes>-->
+<!--                                <exclude>org/matsim/episim/analysis/**</exclude>-->
+<!--                                <exclude>org/matsim/episim/EpisimUtils</exclude>-->
+<!--                            </excludes>-->
+<!--                        </configuration>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.21.0</version>
+            </plugin>
+
         </plugins>
     </build>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <!-- select non-aggregate reports -->
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
 
     <profiles>
         <profile>
