@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VirusStrainConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">VirusStrainConfigGroup.java</span></div><h1>VirusStrainConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VirusStrain;
+
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+/**
+ * Config option specific to {@link org.matsim.episim.model.VirusStrain}.
+ */
+public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
+
+<span class="fc" id="L20">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L21">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+
+	private static final String GROUPNAME = &quot;virusStrains&quot;;
+
+	/**
+	 * Holds all virus strains params.
+	 */
+<span class="fc" id="L28">	private final Map&lt;VirusStrain, StrainParams&gt; strains = new EnumMap&lt;&gt;(VirusStrain.class);</span>
+
+	/**
+	 * Default constructor.
+	 */
+	public VirusStrainConfigGroup() {
+<span class="fc" id="L34">		super(GROUPNAME);</span>
+
+		// add default params
+<span class="fc" id="L37">		getOrAddParams(VirusStrain.SARS_CoV_2);</span>
+<span class="fc" id="L38">	}</span>
+
+	/**
+	 * Get config parameter for a specific strain.
+	 */
+	public StrainParams getParams(VirusStrain strain) {
+<span class="pc bpc" id="L44" title="1 of 2 branches missed.">		if (!strains.containsKey(strain))</span>
+<span class="nc" id="L45">			throw new IllegalStateException((&quot;Virus strain &quot; + strain + &quot; is not configured.&quot;));</span>
+
+<span class="fc" id="L47">		return strains.get(strain);</span>
+	}
+
+	/**
+	 * Get an existing or add new parameter set.
+	 */
+	public StrainParams getOrAddParams(VirusStrain strain) {
+<span class="fc bfc" id="L54" title="All 2 branches covered.">		if (!strains.containsKey(strain)) {</span>
+<span class="fc" id="L55">			StrainParams p = new StrainParams();</span>
+<span class="fc" id="L56">			p.strain = strain;</span>
+<span class="fc" id="L57">			addParameterSet(p);</span>
+<span class="fc" id="L58">			return p;</span>
+		}
+
+<span class="fc" id="L61">		return strains.get(strain);</span>
+	}
+
+	/**
+	 * Whether params for strain are present.
+	 */
+	public boolean hasParams(VirusStrain strain) {
+<span class="fc" id="L68">		return strains.containsKey(strain);</span>
+	}
+
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">		if (StrainParams.SET_TYPE.equals(type)) {</span>
+<span class="fc" id="L74">			return new StrainParams();</span>
+		}
+<span class="nc" id="L76">		throw new IllegalArgumentException(&quot;Unknown type&quot; + type);</span>
+	}
+
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">		if (StrainParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L82">			StrainParams p = (StrainParams) set;</span>
+<span class="fc" id="L83">			strains.put(p.strain, p);</span>
+<span class="fc" id="L84">			super.addParameterSet(set);</span>
+
+<span class="fc" id="L86">		} else</span>
+<span class="nc" id="L87">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
+<span class="fc" id="L88">	}</span>
+
+	/**
+	 * Holds strain specific options.
+	 */
+	public static final class StrainParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = &quot;strainParams&quot;;
+
+		private static final String STRAIN = &quot;strain&quot;;
+		private static final String INFECTIOUSNESS = &quot;infectiousness&quot;;
+		private static final String FACTOR_SERIOUSLY_SICK = &quot;factorSeriouslySick&quot;;
+		private static final String FACTOR_CRITICAL = &quot;factorCritical&quot;;
+		private static final String FACTOR_SERIOUSLY_SICK_VAC = &quot;factorSeriouslySickVaccinated&quot;;
+		private static final String AGE_SUSCEPTIBILITY = &quot;ageSusceptibility&quot;;
+		private static final String AGE_INFECTIVITY = &quot;ageInfectivity&quot;;
+
+		/**
+		 * Type of the strain.
+		 */
+		private VirusStrain strain;
+
+		/**
+		 * v Infectiousness of this variant.
+		 */
+<span class="fc" id="L113">		private double infectiousness = 1.0;</span>
+
+		/**
+		 * Factor for probability
+		 */
+<span class="fc" id="L118">		private double factorSeriouslySick = 1.0;</span>
+
+		/**
+		 * Factor for critical probability.
+		 */
+<span class="fc" id="L123">		private double factorCritical = 1.0;</span>
+
+		/**
+		 * Factor for probability when person is vaccinated
+		 */
+<span class="fc" id="L128">		private double factorSeriouslySickVaccinated = 1.0;</span>
+
+		/**
+		 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
+		 * Taken from https://doi.org/10.1101/2020.06.03.20121145
+		 */
+<span class="fc" id="L134">		private final NavigableMap&lt;Integer, Double&gt; ageSusceptibility = new TreeMap&lt;&gt;(Map.of(</span>
+<span class="fc" id="L135">				19, 0.45,</span>
+<span class="fc" id="L136">				20, 1d</span>
+		));
+
+		/**
+		 * Child infectivity used in AgeDependentInfectionModelWithSeasonality.
+		 * Taken from https://doi.org/10.1101/2020.06.03.20121145
+		 */
+<span class="fc" id="L143">		private final NavigableMap&lt;Integer, Double&gt; ageInfectivity = new TreeMap&lt;&gt;(Map.of(</span>
+<span class="fc" id="L144">				19, 0.85,</span>
+<span class="fc" id="L145">				20, 1d</span>
+		));
+
+		StrainParams() {
+<span class="fc" id="L149">			super(SET_TYPE);</span>
+<span class="fc" id="L150">		}</span>
+
+		@StringGetter(STRAIN)
+		public VirusStrain getStrain() {
+<span class="fc" id="L154">			return strain;</span>
+		}
+
+		@StringSetter(STRAIN)
+		public void setStrain(VirusStrain strain) {
+<span class="fc" id="L159">			this.strain = strain;</span>
+<span class="fc" id="L160">		}</span>
+
+		@StringGetter(INFECTIOUSNESS)
+		public double getInfectiousness() {
+<span class="fc" id="L164">			return infectiousness;</span>
+		}
+
+		@StringSetter(INFECTIOUSNESS)
+		public void setInfectiousness(double infectiousness) {
+<span class="fc" id="L169">			this.infectiousness = infectiousness;</span>
+<span class="fc" id="L170">		}</span>
+
+		@Deprecated
+		public double getVaccineEffectiveness() {
+<span class="nc" id="L174">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+		}
+
+		@Deprecated
+		public void setVaccineEffectiveness(double vaccineEffectiveness) {
+<span class="nc" id="L179">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+		}
+
+		@Deprecated
+		public double getReVaccineEffectiveness() {
+<span class="nc" id="L184">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+		}
+
+		@Deprecated
+		public void setReVaccineEffectiveness(double vaccineEffectiveness) {
+<span class="nc" id="L189">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+		}
+
+		@StringSetter(FACTOR_SERIOUSLY_SICK)
+		public void setFactorSeriouslySick(double factorSeriouslySick) {
+<span class="fc" id="L194">			this.factorSeriouslySick = factorSeriouslySick;</span>
+<span class="fc" id="L195">		}</span>
+
+		@StringGetter(FACTOR_SERIOUSLY_SICK)
+		public double getFactorSeriouslySick() {
+<span class="fc" id="L199">			return factorSeriouslySick;</span>
+		}
+
+		@StringGetter(FACTOR_CRITICAL)
+		public double getFactorCritical() {
+<span class="fc" id="L204">			return factorCritical;</span>
+		}
+
+		@StringSetter(FACTOR_CRITICAL)
+		public void setFactorCritical(double factorCritical) {
+<span class="fc" id="L209">			this.factorCritical = factorCritical;</span>
+<span class="fc" id="L210">		}</span>
+
+		/**
+		 * Configure this in the vaccination config instead. Nonetheless, for now this value will still be respected.
+		 */
+		@Deprecated
+		@StringSetter(FACTOR_SERIOUSLY_SICK_VAC)
+		public void setFactorSeriouslySickVaccinated(double factorSeriouslySickVaccinated) {
+<span class="fc" id="L218">			this.factorSeriouslySickVaccinated = factorSeriouslySickVaccinated;</span>
+<span class="fc" id="L219">		}</span>
+
+		@StringGetter(FACTOR_SERIOUSLY_SICK_VAC)
+		public double getFactorSeriouslySickVaccinated() {
+<span class="fc" id="L223">			return factorSeriouslySickVaccinated;</span>
+		}
+
+
+		@StringGetter(AGE_SUSCEPTIBILITY)
+		String getAgeSusceptibilityString() {
+<span class="fc" id="L229">			return JOINER.join(ageSusceptibility);</span>
+		}
+
+		@StringSetter(AGE_SUSCEPTIBILITY)
+		void setAgeSusceptibility(String config) {
+<span class="fc" id="L234">			Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
+<span class="fc" id="L235">			setAgeSusceptibility(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L236">					e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+			)));
+<span class="fc" id="L238">		}</span>
+
+		/**
+		 * Return susceptibility for different age groups.
+		 */
+		public NavigableMap&lt;Integer, Double&gt; getAgeSusceptibility() {
+<span class="fc" id="L244">			return ageSusceptibility;</span>
+		}
+
+		/**
+		 * Set susceptibility for all age groups, previous entries will be overwritten.
+		 */
+		public void setAgeSusceptibility(Map&lt;Integer, Double&gt; ageSusceptibility) {
+<span class="fc" id="L251">			this.ageSusceptibility.clear();</span>
+<span class="fc" id="L252">			this.ageSusceptibility.putAll(ageSusceptibility);</span>
+<span class="fc" id="L253">		}</span>
+
+		@StringGetter(AGE_INFECTIVITY)
+		String getAgeInfectivityString() {
+<span class="fc" id="L257">			return JOINER.join(ageInfectivity);</span>
+		}
+
+		@StringSetter(AGE_INFECTIVITY)
+		void setAgeInfectivity(String config) {
+<span class="fc" id="L262">			Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
+<span class="fc" id="L263">			setAgeInfectivity(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L264">					e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+			)));
+<span class="fc" id="L266">		}</span>
+
+		/**
+		 * Return infectivity for different age groups.
+		 */
+		public NavigableMap&lt;Integer, Double&gt; getAgeInfectivity() {
+<span class="fc" id="L272">			return ageInfectivity;</span>
+		}
+
+		/**
+		 * Set infectivity for all age groups, previous entries will be overwritten.
+		 */
+		public void setAgeInfectivity(Map&lt;Integer, Double&gt; ageInfectivity) {
+<span class="fc" id="L279">			this.ageInfectivity.clear();</span>
+<span class="fc" id="L280">			this.ageInfectivity.putAll(ageInfectivity);</span>
+<span class="fc" id="L281">		}</span>
+
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurableProgressionModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">ConfigurableProgressionModel.java</span></div><h1>ConfigurableProgressionModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import com.typesafe.config.Config;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.*;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.EpisimPerson.TestStatus;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.facilities.ActivityFacility;
+
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.time.LocalDate;
+import java.util.*;
+
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.model.Transition.to;
+
+/**
+ * Progression model with configurable state transitions.
+ * This class in designed to for subclassing to support defining different transition probabilities.
+ */
+public class ConfigurableProgressionModel extends AbstractProgressionModel {
+
+	/**
+	 * Default config of the progression model.
+	 */
+<span class="fc" id="L37">	public static final Config DEFAULT_CONFIG = Transition.config()</span>
+			// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
+<span class="fc" id="L39">			.from(DiseaseStatus.infectedButNotContagious,</span>
+<span class="fc" id="L40">					to(DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(0., 0.))) // 3 3</span>
+
+// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
+// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
+<span class="fc" id="L44">			.from(DiseaseStatus.contagious,</span>
+<span class="fc" id="L45">					to(DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(6., 6.)),    //80%</span>
+<span class="fc" id="L46">					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))            //20%</span>
+
+// Erkankungsbeginn -&gt; Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
+<span class="fc" id="L49">			.from(DiseaseStatus.showingSymptoms,</span>
+<span class="fc" id="L50">					to(DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),</span>
+<span class="fc" id="L51">					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))</span>
+
+// Hospitalisierung -&gt; ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
+<span class="fc" id="L54">			.from(DiseaseStatus.seriouslySick,</span>
+<span class="fc" id="L55">					to(DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),</span>
+<span class="fc" id="L56">					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))</span>
+
+// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
+<span class="fc" id="L59">			.from(DiseaseStatus.critical,</span>
+<span class="fc" id="L60">					to(DiseaseStatus.deceased, Transition.logNormalWithMedianAndStd(21, 21)),</span>
+<span class="fc" id="L61">					to(DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))</span>
+
+<span class="fc" id="L63">			.from(DiseaseStatus.seriouslySickAfterCritical,</span>
+<span class="fc" id="L64">					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))</span>
+
+			// TODO: just placeholder
+<span class="fc" id="L67">			.from(DiseaseStatus.recovered,</span>
+<span class="fc" id="L68">					to(DiseaseStatus.susceptible, Transition.logNormalWithMean(360, 15)))</span>
+
+<span class="fc" id="L70">			.build();</span>
+
+	// yyyy Quellen für alle Aussagen oben??  &quot;Es ...&quot; oder &quot;Eine Studie aus ...&quot; ist mir eigentlich nicht genug.  kai, aug'20
+	// yyyy Der obige Code existiert nochmals in AbstractSnzScenario2020.  Können wir in konsolidieren?  kai, oct'20
+
+
+<span class="fc" id="L76">	private static final Logger log = LogManager.getLogger(ConfigurableProgressionModel.class);</span>
+
+	private static final double DAY = 24. * 3600;
+
+	/**
+	 * Definition of state transitions from x -&gt; y
+	 * Indices are the ordinal values of {@link DiseaseStatus} (as 2d matrix form)
+	 */
+	private final Transition[] tMatrix;
+	private final TracingConfigGroup tracingConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
+
+	/**
+	 * Counts how many infections occurred at each location.
+	 */
+<span class="fc" id="L91">	private final Object2IntMap&lt;Id&lt;ActivityFacility&gt;&gt; locations = new Object2IntOpenHashMap&lt;&gt;();</span>
+
+	/**
+	 * Person ids already traced.
+	 */
+<span class="fc" id="L96">	private final Set&lt;Id&lt;Person&gt;&gt; traced = Collections.newSetFromMap(new IdentityHashMap&lt;&gt;());</span>
+
+	/**
+	 * Persons marked for contact tracing.
+	 */
+<span class="fc" id="L101">	private final Set&lt;Id&lt;Person&gt;&gt; tracingQueue = new LinkedHashSet&lt;&gt;();</span>
+
+	/**
+	 * Tracing capacity left for the day.
+	 */
+<span class="fc" id="L106">	private int tracingCapacity = Integer.MAX_VALUE;</span>
+
+	/**
+	 * Tracing probability for current day.
+	 */
+<span class="fc" id="L111">	private double tracingProb = 1;</span>
+
+	/**
+	 * Tracing delay for current day.
+	 */
+<span class="fc" id="L116">	private int tracingDelay = 0;</span>
+
+	/**
+	 * Quarantine vaccinated persons.
+	 */
+<span class="fc" id="L121">	private boolean quarantineVaccinated = true;</span>
+
+	/**
+	 * Quarantine duration for current date.
+	 */
+	private int quarantineDuration;
+
+	/**
+	 * Current date.
+	 */
+	private LocalDate date;
+	private EpisimPerson.QuarantineStatus status;
+
+	/**
+	 * Used to track how many new people started showing symptoms.
+	 */
+	private long prevShowingSymptoms;
+
+	@Inject
+	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	                                    VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
+<span class="fc" id="L142">		super(rnd, episimConfig, statusTransitionModel);</span>
+<span class="fc" id="L143">		this.tracingConfig = tracingConfig;</span>
+<span class="fc" id="L144">		this.vaccinationConfig = vaccinationConfig;</span>
+
+<span class="fc" id="L146">		Config config = episimConfig.getProgressionConfig();</span>
+
+<span class="fc bfc" id="L148" title="All 2 branches covered.">		if (config.isEmpty()) {</span>
+<span class="fc" id="L149">			config = DEFAULT_CONFIG;</span>
+<span class="fc" id="L150">			log.info(&quot;Using default disease progression&quot;);</span>
+		}
+
+<span class="fc" id="L153">		Transition.Builder t = Transition.parse(config);</span>
+<span class="fc" id="L154">		log.info(&quot;Using disease progression config: {}&quot;, t);</span>
+<span class="fc" id="L155">		tMatrix = t.asArray();</span>
+<span class="fc" id="L156">	}</span>
+
+	@Override
+	public void setIteration(int day) {
+
+<span class="fc" id="L161">		date = episimConfig.getStartDate().plusDays(day - 1);</span>
+
+		// Default capacity if none is set
+<span class="fc" id="L164">		tracingCapacity = EpisimUtils.findValidEntry(tracingConfig.getTracingCapacity(), Integer.MAX_VALUE, date);</span>
+
+		// scale by sample size
+<span class="fc bfc" id="L167" title="All 2 branches covered.">		if (tracingCapacity != Integer.MAX_VALUE)</span>
+<span class="fc" id="L168">			tracingCapacity *= episimConfig.getSampleSize();</span>
+
+<span class="fc" id="L170">		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);</span>
+<span class="fc" id="L171">		tracingDelay = EpisimUtils.findValidEntry(tracingConfig.getTracingDelay(), 0, date);</span>
+<span class="fc" id="L172">		quarantineVaccinated = EpisimUtils.findValidEntry(tracingConfig.getQuarantineVaccinated(), true, date);</span>
+<span class="fc" id="L173">		quarantineDuration = EpisimUtils.findValidEntry(tracingConfig.getQuarantineDuration(), 14, date);</span>
+<span class="fc" id="L174">		status = EpisimUtils.findValidEntry(tracingConfig.getQuarantineStatus(), EpisimPerson.QuarantineStatus.atHome, date);</span>
+<span class="fc" id="L175">	}</span>
+
+	@Override
+	public final void updateState(EpisimPerson person, int day) {
+<span class="fc" id="L179">		super.updateState(person, day);</span>
+
+		// A healthy quarantined person is dismissed from quarantine after some time
+<span class="fc bfc" id="L182" title="All 4 branches covered.">		if (releasePerson(person) &amp;&amp; person.daysSinceQuarantine(day) &gt; quarantineDuration) {</span>
+<span class="fc" id="L183">			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);</span>
+<span class="fc" id="L184">			person.setTestStatus(TestStatus.untested, day - 1);</span>
+		}
+
+		// person is reset to untested after two days of quarantine at home, if it was false positive
+<span class="fc bfc" id="L188" title="All 6 branches covered.">		if (releasePerson(person) &amp;&amp; person.getTestStatus() == TestStatus.positive &amp;&amp; person.daysSinceTest(day) &gt; 2) {</span>
+			// test status will be reset and back-dated so it won't interfere with reporting
+<span class="fc" id="L190">			person.setTestStatus(TestStatus.untested, day - 1);</span>
+<span class="fc" id="L191">			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);</span>
+		}
+
+<span class="fc" id="L194">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);</span>
+
+		// Delay 0 is already handled
+<span class="fc bfc" id="L197" title="All 4 branches covered.">		if (person.hadDiseaseStatus(DiseaseStatus.showingSymptoms) &amp;&amp; tracingDelay &gt; 0 &amp;&amp;</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">				person.daysSince(DiseaseStatus.showingSymptoms, day) == tracingDelay) {</span>
+
+<span class="fc" id="L200">			performTracing(person, now - tracingDelay * DAY, day);</span>
+		}
+
+<span class="fc" id="L203">	}</span>
+
+	@Override
+	public final void afterStateUpdates(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, int day) {
+<span class="fc" id="L207">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);</span>
+<span class="fc" id="L208">		int tracingDistance = tracingConfig.getTracingDayDistance();</span>
+		// clear tracing if not relevant anymore
+<span class="fc" id="L210">		persons.values().parallelStream().forEach(person -&gt;</span>
+<span class="fc" id="L211">		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));</span>
+<span class="fc" id="L212">	}</span>
+
+
+	/**
+	 * Checks whether person can be released from quarantine.
+	 */
+	private boolean releasePerson(EpisimPerson person) {
+
+		// person not in quarantine can not be released
+<span class="fc bfc" id="L221" title="All 2 branches covered.">		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no)</span>
+<span class="fc" id="L222">			return false;</span>
+
+<span class="fc" id="L224">		TracingConfigGroup.QuarantineRelease release = tracingConfig.getQuarantineRelease();</span>
+<span class="fc" id="L225">		DiseaseStatus status = person.getDiseaseStatus();</span>
+
+<span class="pc bpc" id="L227" title="1 of 4 branches missed.">		if (release == TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE &amp;&amp; status == DiseaseStatus.susceptible)</span>
+<span class="fc" id="L228">			return true;</span>
+
+<span class="pc bpc" id="L230" title="7 of 8 branches missed.">		if (release == TracingConfigGroup.QuarantineRelease.NON_SYMPTOMATIC &amp;&amp;</span>
+				(status == DiseaseStatus.susceptible || status == DiseaseStatus.contagious || status == DiseaseStatus.infectedButNotContagious))
+<span class="nc" id="L232">			return true;</span>
+
+<span class="fc" id="L234">		return false;</span>
+	}
+
+	@Override
+	protected final void onTransition(EpisimPerson person, double now, int day, DiseaseStatus from, DiseaseStatus to) {
+
+<span class="fc bfc" id="L240" title="All 2 branches covered.">		if (to == DiseaseStatus.showingSymptoms) {</span>
+
+<span class="fc" id="L242">			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);</span>
+			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
+<span class="fc bfc" id="L244" title="All 2 branches covered.">			if (tracingDelay == 0) {</span>
+<span class="fc" id="L245">				performTracing(person, now, day);</span>
+			}
+
+			// count infections at locations
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION ||</span>
+<span class="fc bfc" id="L250" title="All 2 branches covered.">					tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {</span>
+				// persons with no infection container have been initially infected
+<span class="pc bpc" id="L252" title="1 of 4 branches missed.">				if (person.getInfectionContainer() != null &amp;&amp; person.getInfectionType() != null) {</span>
+<span class="fc" id="L253">					String container = person.getInfectionContainer().toString();</span>
+<span class="fc bfc" id="L254" title="All 4 branches covered.">					if (!container.startsWith(&quot;home&quot;) &amp;&amp; !container.startsWith(&quot;tr&quot;) &amp;&amp;</span>
+<span class="pc bpc" id="L255" title="1 of 4 branches missed.">							!person.getInfectionType().contains(&quot;shop&quot;) &amp;&amp; !person.getInfectionType().contains(&quot;pt&quot;)) {</span>
+<span class="fc" id="L256">						locations.mergeInt(person.getInfectionContainer(), 1, Integer::sum);</span>
+					}
+				}
+			}
+		}
+<span class="fc" id="L261">	}</span>
+
+	@Override
+	public final void beforeStateUpdates(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, int day, EpisimReporting.InfectionReport report) {
+
+<span class="fc" id="L266">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);</span>
+
+		// perform the location based tracing
+		// there is always a delay of 1 day
+<span class="fc" id="L270">		ObjectIterator&lt;Object2IntMap.Entry&lt;Id&lt;ActivityFacility&gt;&gt;&gt; it = locations.object2IntEntrySet().iterator();</span>
+<span class="fc bfc" id="L271" title="All 2 branches covered.">		while (it.hasNext()) {</span>
+
+<span class="fc" id="L273">			Object2IntMap.Entry&lt;Id&lt;ActivityFacility&gt;&gt; e = it.next();</span>
+
+			// trace facilities that are above the threshold
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">			if (e.getIntValue() &gt;= tracingConfig.getLocationThreshold()) {</span>
+
+<span class="fc" id="L278">				log.debug(&quot;Trace location {}&quot;, e.getKey());</span>
+
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">				if (tracingCapacity &lt;= 0)</span>
+<span class="nc" id="L281">					break;</span>
+
+<span class="fc bfc" id="L283" title="All 2 branches covered.">				for (EpisimPerson p : persons.values()) {</span>
+
+<span class="fc bfc" id="L285" title="All 2 branches covered.">					if (p.getInfectionContainer() == e.getKey()) {</span>
+
+<span class="fc" id="L287">						quarantinePerson(p, day);</span>
+
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">						if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION) {</span>
+<span class="nc" id="L290">							tracingCapacity--;</span>
+<span class="pc bpc" id="L291" title="1 of 2 branches missed.">						} else if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {</span>
+							// assumes that all contact persons get tested
+							// then quarantines all of their contacts
+<span class="fc" id="L294">							performTracing(p, now, day);</span>
+						}
+					}
+<span class="fc" id="L297">				}</span>
+
+<span class="fc" id="L299">				it.remove();</span>
+			}
+<span class="fc" id="L301">		}</span>
+
+<span class="fc bfc" id="L303" title="All 2 branches covered.">		if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE) {</span>
+
+			// Persons that will be traced for the day
+<span class="fc" id="L306">			Queue&lt;Id&lt;Person&gt;&gt; queue = new ArrayDeque&lt;&gt;(tracingQueue);</span>
+
+<span class="pc bpc" id="L308" title="1 of 4 branches missed.">			while (tracingCapacity &gt; 0 &amp;&amp; !queue.isEmpty()) {</span>
+
+<span class="fc" id="L310">				Id&lt;Person&gt; id = queue.poll();</span>
+<span class="fc" id="L311">				EpisimPerson person = persons.get(id);</span>
+<span class="fc" id="L312">				tracingQueue.remove(id);</span>
+
+				// Assume that each contact got tested
+				// if the test is positive contacts will be quarantined as well and also tested at the next day
+<span class="fc bfc" id="L316" title="All 2 branches covered.">				if (person.hadDiseaseStatus(DiseaseStatus.infectedButNotContagious)) {</span>
+<span class="fc" id="L317">					performTracing(person, now, day);</span>
+				}
+<span class="fc" id="L319">			}</span>
+
+<span class="pc bpc" id="L321" title="1 of 2 branches missed.">		} else if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM) {</span>
+
+<span class="nc" id="L323">			double newCases = report.nShowingSymptomsCumulative - prevShowingSymptoms;</span>
+<span class="nc" id="L324">			prevShowingSymptoms = report.nShowingSymptomsCumulative;</span>
+
+<span class="nc" id="L326">			LocalDate date = episimConfig.getStartDate().plusDays(day - 1);</span>
+<span class="nc" id="L327">			Double prob = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);</span>
+
+			// scale probability with config value
+<span class="nc" id="L330">			double p = prob * newCases / report.nTotal();</span>
+
+			// put persons randomly into quarantine
+<span class="nc bnc" id="L333" title="All 2 branches missed.">			for (EpisimPerson person : persons.values()) {</span>
+<span class="nc bnc" id="L334" title="All 2 branches missed.">				if (rnd.nextDouble() &lt; p)</span>
+<span class="nc" id="L335">					quarantinePerson(person, day);</span>
+
+<span class="nc" id="L337">			}</span>
+		}
+<span class="fc" id="L339">	}</span>
+
+	@Override
+	protected final int decideTransitionDay(EpisimPerson person, DiseaseStatus from, DiseaseStatus to) {
+<span class="fc" id="L343">		Transition t = tMatrix[from.ordinal() * DiseaseStatus.values().length + to.ordinal()];</span>
+<span class="pc bpc" id="L344" title="1 of 2 branches missed.">		if (t == null) throw new IllegalStateException(String.format(&quot;No transition from %s to %s defined&quot;, from, to));</span>
+
+<span class="fc" id="L346">		return t.getTransitionDay(rnd);</span>
+	}
+
+
+	/**
+	 * Perform the tracing procedure for a person. Also ensures if enabled for current day.
+	 */
+	private void performTracing(EpisimPerson person, double now, int day) {
+
+<span class="fc bfc" id="L355" title="All 2 branches covered.">		if (day &lt; tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()</span>
+<span class="pc bpc" id="L356" title="1 of 2 branches missed.">				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM</span>
+<span class="pc bpc" id="L357" title="1 of 2 branches missed.">				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.NONE) {</span>
+<span class="fc" id="L358">			return;</span>
+		}
+
+<span class="fc bfc" id="L361" title="All 2 branches covered.">		if (tracingCapacity &lt;= 0) {</span>
+<span class="fc" id="L362">			return;</span>
+		}
+
+		// check if already traced
+		//if (traced.contains(person.getPersonId()))
+		//	return;
+		// traced.add(person.getPersonId());
+
+<span class="fc" id="L370">		String homeId = null;</span>
+
+		// quarantine household flag controls direct household and 2nd order household
+<span class="fc bfc" id="L373" title="All 2 branches covered.">		if (tracingConfig.getQuarantineHousehold())</span>
+<span class="fc" id="L374">			homeId = (String) person.getAttributes().getAttribute(&quot;homeId&quot;);</span>
+
+<span class="fc bfc" id="L376" title="All 2 branches covered.">		for (EpisimPerson pw : person.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {</span>
+
+<span class="pc bpc" id="L378" title="1 of 2 branches missed.">			if (tracingConfig.getCapacityType() == TracingConfigGroup.CapacityType.PER_CONTACT_PERSON) {</span>
+<span class="nc" id="L379">				tracingCapacity--;</span>
+<span class="nc bnc" id="L380" title="All 2 branches missed.">				if (tracingCapacity &lt;= 0)</span>
+<span class="nc" id="L381">					break;</span>
+			}
+
+			// don't draw random number when tracing is practically off
+<span class="fc bfc" id="L385" title="All 4 branches covered.">			if (tracingProb == 0 &amp;&amp; homeId == null)</span>
+<span class="fc" id="L386">				continue;</span>
+
+			// Persons of the same household are always traced successfully
+<span class="fc bfc" id="L389" title="All 6 branches covered.">			if ((homeId != null &amp;&amp; homeId.equals(pw.getAttributes().getAttribute(&quot;homeId&quot;)))</span>
+<span class="fc bfc" id="L390" title="All 2 branches covered.">					|| tracingProb == 1d || rnd.nextDouble() &lt; tracingProb) {</span>
+<span class="fc" id="L391">				quarantinePerson(pw, day);</span>
+<span class="fc" id="L392">				log.debug(&quot;sending person={} into quarantine because of contact to person={}&quot;, pw.getPersonId(), person.getPersonId());</span>
+			}
+
+<span class="fc" id="L395">		}</span>
+
+<span class="pc bpc" id="L397" title="1 of 2 branches missed.">		if (tracingConfig.getCapacityType() == TracingConfigGroup.CapacityType.PER_PERSON)</span>
+<span class="fc" id="L398">			tracingCapacity--;</span>
+
+<span class="fc bfc" id="L400" title="All 2 branches covered.">		if (tracingCapacity == 0) {</span>
+<span class="fc" id="L401">			log.debug(&quot;tracing capacity exhausted for day={}&quot;, now);</span>
+		}
+<span class="fc" id="L403">	}</span>
+
+	private void quarantinePerson(EpisimPerson p, int day) {
+
+		// recovered persons are not quarantined, but they loose this status very quickly depending on config
+<span class="fc bfc" id="L408" title="All 4 branches covered.">		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no &amp;&amp; p.getDiseaseStatus() != DiseaseStatus.recovered) {</span>
+
+<span class="pc bpc" id="L410" title="3 of 4 branches missed.">			if (quarantineVaccinated || !(vaccinationConfig.hasGreenPassForBooster(p, day, date, tracingConfig.getGreenPassValidDays(), tracingConfig.getGreenPassBoosterValidDays())))</span>
+<span class="fc" id="L411">				p.setQuarantineStatus(status, day);</span>
+
+<span class="fc bfc" id="L413" title="All 2 branches covered.">			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)</span>
+<span class="fc" id="L414">				tracingQueue.add(p.getPersonId());</span>
+		}
+<span class="fc" id="L416">	}</span>
+
+	@Override
+	public void readExternal(ObjectInput in) throws IOException {
+<span class="fc" id="L420">		super.readExternal(in);</span>
+
+<span class="fc" id="L422">		prevShowingSymptoms = in.readLong();</span>
+
+<span class="fc" id="L424">		int n = in.readInt();</span>
+<span class="fc bfc" id="L425" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L426">			Id&lt;ActivityFacility&gt; id = Id.create(readChars(in), ActivityFacility.class);</span>
+<span class="fc" id="L427">			locations.put(id, in.readInt());</span>
+		}
+
+<span class="fc" id="L430">		n = in.readInt();</span>
+<span class="fc bfc" id="L431" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L432">			Id&lt;Person&gt; id = Id.createPersonId(readChars(in));</span>
+<span class="fc" id="L433">			tracingQueue.add(id);</span>
+		}
+
+<span class="fc" id="L436">		n = in.readInt();</span>
+<span class="pc bpc" id="L437" title="1 of 2 branches missed.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L438">			Id&lt;Person&gt; id = Id.createPersonId(readChars(in));</span>
+<span class="nc" id="L439">			traced.add(id);</span>
+		}
+<span class="fc" id="L441">	}</span>
+
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+<span class="fc" id="L445">		super.writeExternal(out);</span>
+
+<span class="fc" id="L447">		out.writeLong(prevShowingSymptoms);</span>
+
+<span class="fc" id="L449">		out.writeInt(locations.size());</span>
+<span class="fc bfc" id="L450" title="All 2 branches covered.">		for (Object2IntMap.Entry&lt;Id&lt;ActivityFacility&gt;&gt; e : locations.object2IntEntrySet()) {</span>
+<span class="fc" id="L451">			writeChars(out, e.getKey().toString());</span>
+<span class="fc" id="L452">			out.writeInt(e.getIntValue());</span>
+<span class="fc" id="L453">		}</span>
+
+<span class="fc" id="L455">		out.writeInt(tracingQueue.size());</span>
+<span class="fc bfc" id="L456" title="All 2 branches covered.">		for (Id&lt;Person&gt; personId : tracingQueue) {</span>
+<span class="fc" id="L457">			writeChars(out, personId.toString());</span>
+<span class="fc" id="L458">		}</span>
+
+<span class="fc" id="L460">		out.writeInt(traced.size());</span>
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">		for (Id&lt;Person&gt; personId : traced) {</span>
+<span class="nc" id="L462">			writeChars(out, personId.toString());</span>
+<span class="nc" id="L463">		}</span>
+<span class="fc" id="L464">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

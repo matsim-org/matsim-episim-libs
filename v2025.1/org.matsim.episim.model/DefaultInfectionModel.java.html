@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultInfectionModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">DefaultInfectionModel.java</span></div><h1>DefaultInfectionModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.policy.Restriction;
+
+import java.util.Map;
+
+/**
+ * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
+ * &lt;pre&gt;
+ *      1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * ci_correction)
+ * &lt;/pre&gt;
+ */
+public final class DefaultInfectionModel implements InfectionModel {
+
+	private final FaceMaskModel maskModel;
+	private final EpisimConfigGroup episimConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
+	private int iteration;
+
+	@Inject
+<span class="fc" id="L29">	public DefaultInfectionModel(FaceMaskModel faceMaskModel, Config config) {</span>
+<span class="fc" id="L30">		this.maskModel = faceMaskModel;</span>
+<span class="fc" id="L31">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L32">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="fc" id="L33">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+
+<span class="fc" id="L35">	}</span>
+
+	@Override
+	public void setIteration(int iteration) {
+<span class="fc" id="L39">		this.iteration = iteration;</span>
+<span class="fc" id="L40">	}</span>
+
+	@Override
+	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions,
+	                                       EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+	                                       double contactIntensity, double jointTimeInContainer) {
+
+		// ci corr can not be null, because sim is initialized with non null value
+<span class="fc" id="L48">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+
+		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
+		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
+		// no effect.  kai, mar'20
+<span class="fc" id="L53">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+<span class="fc" id="L54">		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));</span>
+
+<span class="fc" id="L56">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection</span>
+<span class="fc" id="L57">				* getInfectivity(infector, strain, vaccinationConfig, iteration)</span>
+<span class="fc" id="L58">				* target.getSusceptibility()</span>
+				* susceptibility
+<span class="fc" id="L60">				* strain.getInfectiousness()</span>
+<span class="fc" id="L61">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
+<span class="fc" id="L62">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake</span>
+		);
+	}
+
+	/**
+	 * Calculate the current effectiveness of vaccination.
+	 */
+	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
+
+<span class="fc bfc" id="L71" title="All 2 branches covered.">		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="fc" id="L72">			return 1;</span>
+
+<span class="fc" id="L74">		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);</span>
+
+<span class="fc" id="L76">		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());</span>
+<span class="fc" id="L77">		VirusStrain strain = virusStrain.getStrain();</span>
+
+		double vaccineEffectiveness;
+
+		// person with infection also have the boost effectiveness
+<span class="pc bpc" id="L82" title="1 of 4 branches missed.">		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || target.getNumInfections() &gt;= 1) {</span>
+<span class="fc" id="L83">			vaccineEffectiveness = params.getBoostEffectiveness(strain, Math.min(daysVaccinated, target.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));</span>
+		} else {
+<span class="fc" id="L85">			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);</span>
+		}
+
+		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
+
+<span class="fc" id="L90">		return 1 - vaccineEffectiveness;</span>
+	}
+
+	/**
+	 * Calculate the infectivity of an infector based on vaccine or previous infections.
+	 */
+	static double getInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
+
+<span class="fc" id="L98">		double naturalInfectivity = 1;</span>
+
+<span class="pc bpc" id="L100" title="3 of 4 branches missed.">		if (config.hasParams(VaccinationType.natural) &amp;&amp; infector.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)) {</span>
+<span class="nc" id="L101">			VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);</span>
+<span class="nc" id="L102">			naturalInfectivity = params.getInfectivity(strain.getStrain(), infector.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration));</span>
+		}
+
+<span class="fc" id="L105">		return Math.min(getVaccinationInfectivity(infector, strain, config, iteration), naturalInfectivity);</span>
+	}
+
+	/**
+	 * Reduced infectivity of a vaccinated persson.
+	 */
+	static double getVaccinationInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
+
+<span class="fc bfc" id="L113" title="All 2 branches covered.">		if (infector.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="fc" id="L114">			return 1;</span>
+
+<span class="fc" id="L116">		int daysVaccinated = infector.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);</span>
+
+<span class="fc" id="L118">		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());</span>
+
+<span class="fc bfc" id="L120" title="All 4 branches covered.">		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || infector.getNumInfections() &gt;= 1) {</span>
+<span class="fc" id="L121">			return params.getBoostInfectivity(strain.getStrain(), Math.min(daysVaccinated, infector.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));</span>
+		} else
+<span class="fc" id="L123">			return params.getInfectivity(strain.getStrain(), daysVaccinated);</span>
+	}
+
+	/**
+	 * Calculate factor for natural immunity after infection.
+	 */
+	static double getImmunityEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
+<span class="pc bpc" id="L130" title="1 of 4 branches missed.">		if (target.getNumInfections() &lt; 1 || !target.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))</span>
+<span class="fc" id="L131">			return 1;</span>
+
+<span class="fc bfc" id="L133" title="All 2 branches covered.">		if (!config.hasParams(VaccinationType.natural))</span>
+<span class="fc" id="L134">			return 1;</span>
+
+<span class="fc" id="L136">		int daysSince = target.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration);</span>
+
+		// persons can not get infected for 180 days when
+		// they had 2 infections or 1 infection and vaccinations
+		// TODO: only here a quick fix and needs to be remodelled
+<span class="pc bpc" id="L141" title="3 of 8 branches missed.">		if (daysSince &lt; 180 &amp;&amp; (target.getNumInfections() &gt;= 2 || (target.getNumInfections() &gt;= 1 &amp;&amp; target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)))</span>
+<span class="nc" id="L142">			return 0;</span>
+
+<span class="fc" id="L144">		VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);</span>
+
+<span class="fc" id="L146">		return 1 - params.getEffectiveness(virusStrain.getStrain(), daysSince);</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

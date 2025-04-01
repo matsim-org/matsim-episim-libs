@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BatchRun.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">BatchRun.java</span></div><h1>BatchRun.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import com.google.common.collect.Lists;
+import com.google.inject.Module;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.analysis.OutputAnalysis;
+import org.matsim.episim.analysis.RValuesFromEvents;
+
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+/**
+ * Interface for defining the setup procedure of a batch run and the corresponding parameter class.
+ * The batch runner will create the cross-product of all possible parameters configuration and prepare
+ * the config for each.
+ *
+ * @param &lt;T&gt; Class holding the available parameters.
+ */
+public interface BatchRun&lt;T&gt; {
+
+	/**
+	 * Find calibration parameter for given params from a list of csv records.
+	 *
+	 * @param params  params to lookup
+	 * @param records parsed records with parameter
+	 * @param ignore fields that will be ignored and not matched
+	 * @return calibration parameter if present or NaN.
+	 */
+	static double lookup(Object params, List&lt;CSVRecord&gt; records, String... ignore) {
+
+<span class="fc" id="L71">		Field[] fields = params.getClass().getDeclaredFields();</span>
+
+<span class="fc" id="L73">		List&lt;String&gt; ignoreList = Arrays.asList(ignore);</span>
+
+		outer:
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">		for (CSVRecord record : records) {</span>
+
+<span class="nc" id="L78">			int matched = 0;</span>
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">			for (Field field : fields) {</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">				if (ignoreList.contains(field.getName()))</span>
+<span class="nc" id="L82">					continue;</span>
+
+				try {
+<span class="nc" id="L85">					Object obj = field.get(params);</span>
+<span class="nc" id="L86">					String value = EpisimUtils.asString(obj);</span>
+					try {
+
+<span class="nc" id="L89">						String cmp = record.get(field.getName());</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">						if (!cmp.equals(value))</span>
+<span class="nc" id="L91">							continue outer;</span>
+
+<span class="nc" id="L93">					} catch (IllegalArgumentException e) {</span>
+						// skip records not present
+<span class="nc" id="L95">					}</span>
+
+<span class="nc" id="L97">					matched++;</span>
+<span class="nc" id="L98">				} catch (ReflectiveOperationException e) {</span>
+					// noting to do
+<span class="nc" id="L100">				}</span>
+			}
+
+			// when no mismatches occurred this records is returned
+<span class="nc bnc" id="L104" title="All 2 branches missed.">			if (matched &gt; 0) {</span>
+<span class="nc" id="L105">				String param = record.get(&quot;param&quot;);</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">				if (param.isEmpty())</span>
+<span class="nc" id="L107">					return Double.NaN;</span>
+
+<span class="nc" id="L109">				return Double.parseDouble(param);</span>
+			}
+<span class="nc" id="L111">		}</span>
+
+<span class="fc" id="L113">		return Double.NaN;</span>
+	}
+
+	/**
+	 * Loads the defined parameters and executes the {@link #prepareConfig(int, Object)} procedure.
+	 *
+	 * @param clazz      setup class
+	 * @param paramClazz class holding the parameters
+	 * @param &lt;T&gt;        params type
+	 */
+	static &lt;T&gt; PreparedRun prepare(Class&lt;? extends BatchRun&lt;T&gt;&gt; clazz, Class&lt;T&gt; paramClazz) {
+
+<span class="fc" id="L125">		Logger log = LogManager.getLogger(BatchRun.class);</span>
+<span class="fc" id="L126">		List&lt;Field&gt; fields = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L127">		List&lt;List&lt;Object&gt;&gt; allParams = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L129" title="All 2 branches covered.">		for (Field field : paramClazz.getDeclaredFields()) {</span>
+<span class="fc" id="L130">			Parameter param = field.getAnnotation(Parameter.class);</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">			if (param != null) {</span>
+<span class="fc" id="L132">				allParams.add(DoubleStream.of(param.value()).boxed().collect(Collectors.toList()));</span>
+<span class="fc" id="L133">				fields.add(field);</span>
+			}
+<span class="fc" id="L135">			StartDates dateParam = field.getAnnotation(StartDates.class);</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">			if (dateParam != null) {</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">				if (!field.getName().equals(&quot;startDate&quot;))</span>
+<span class="nc" id="L138">					throw new IllegalArgumentException(&quot;StartDates field must be called 'startDate'&quot;);</span>
+
+<span class="nc" id="L140">				allParams.add(Stream.of(dateParam.value()).map(LocalDate::parse).collect(Collectors.toList()));</span>
+<span class="nc" id="L141">				fields.add(field);</span>
+			}
+<span class="fc" id="L143">			IntParameter intParam = field.getAnnotation(IntParameter.class);</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">			if (intParam != null) {</span>
+<span class="nc" id="L145">				allParams.add(IntStream.of(intParam.value()).boxed().collect(Collectors.toList()));</span>
+<span class="nc" id="L146">				fields.add(field);</span>
+			}
+<span class="fc" id="L148">			StringParameter stringParam = field.getAnnotation(StringParameter.class);</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">			if (stringParam != null) {</span>
+<span class="fc" id="L150">				allParams.add(Arrays.asList(stringParam.value()));</span>
+<span class="fc" id="L151">				fields.add(field);</span>
+			}
+<span class="fc" id="L153">			EnumParameter enumParam = field.getAnnotation(EnumParameter.class);</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">			if (enumParam != null) {</span>
+				try {
+<span class="fc" id="L156">					Method m = enumParam.value().getDeclaredMethod(&quot;values&quot;);</span>
+<span class="fc" id="L157">					Object[] invoke = (Object[]) m.invoke(null);</span>
+<span class="fc" id="L158">					List&lt;Object&gt; enums = Lists.newArrayList(invoke);</span>
+					// remove the ignored enums
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">					enums.removeIf(p -&gt; ArrayUtils.indexOf(enumParam.ignore(), p.toString()) &gt; -1);</span>
+
+<span class="fc" id="L162">					allParams.add(enums);</span>
+<span class="fc" id="L163">					fields.add(field);</span>
+<span class="nc" id="L164">				} catch (ReflectiveOperationException e) {</span>
+<span class="nc" id="L165">					throw new IllegalStateException(e);</span>
+<span class="fc" id="L166">				}</span>
+			}
+<span class="fc" id="L168">			ClassParameter classParam = field.getAnnotation(ClassParameter.class);</span>
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">			if (classParam != null) {</span>
+<span class="nc" id="L170">				allParams.add(Arrays.asList(classParam.value()));</span>
+<span class="nc" id="L171">				fields.add(field);</span>
+			}
+<span class="fc" id="L173">			GenerateSeeds seed = field.getAnnotation(GenerateSeeds.class);</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">			if (seed != null) {</span>
+<span class="fc" id="L175">				Random rnd = new Random(seed.seed());</span>
+<span class="fc" id="L176">				Object[] seeds = IntStream.range(0, seed.value()).mapToLong(i -&gt; rnd.nextLong()).boxed().toArray();</span>
+<span class="fc" id="L177">				seeds[0] = seed.first();</span>
+
+<span class="fc" id="L179">				allParams.add(Arrays.asList(seeds));</span>
+<span class="fc" id="L180">				fields.add(field);</span>
+			}
+		}
+
+<span class="fc" id="L184">		List&lt;PreparedRun.Run&gt; runs = new ArrayList&lt;&gt;();</span>
+		BatchRun&lt;T&gt; setup;
+		try {
+<span class="fc" id="L187">			setup = clazz.getDeclaredConstructor().newInstance();</span>
+<span class="nc" id="L188">		} catch (ReflectiveOperationException e) {</span>
+<span class="nc" id="L189">			log.error(&quot;Could not create run class&quot;, e);</span>
+<span class="nc" id="L190">			throw new IllegalArgumentException(e);</span>
+<span class="fc" id="L191">		}</span>
+
+<span class="fc" id="L193">		Config base = setup.baseCase(0);</span>
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">		if (base != null)</span>
+<span class="nc" id="L195">			runs.add(new PreparedRun.Run(0, Lists.newArrayList(&quot;base&quot;), base, null));</span>
+
+<span class="fc" id="L197">		List&lt;List&lt;Object&gt;&gt; combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));</span>
+
+<span class="fc" id="L199">		int id = setup.getOffset();</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">		for (List&lt;Object&gt; params : combinations) {</span>
+
+			try {
+<span class="fc" id="L203">				T inst = paramClazz.getDeclaredConstructor().newInstance();</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">				for (int i = 0; i &lt; params.size(); i++) {</span>
+<span class="fc" id="L205">					fields.get(i).setAccessible(true);</span>
+<span class="fc" id="L206">					fields.get(i).set(inst, params.get(i));</span>
+				}
+
+<span class="fc" id="L209">				Config config = setup.prepareConfig(++id, inst);</span>
+
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">				if (config != null)</span>
+<span class="fc" id="L212">					runs.add(new PreparedRun.Run(id, params, config, inst));</span>
+
+<span class="nc" id="L214">			} catch (ReflectiveOperationException e) {</span>
+<span class="nc" id="L215">				log.error(&quot;Could not create param class&quot;, e);</span>
+<span class="nc" id="L216">				throw new IllegalArgumentException(e);</span>
+<span class="fc" id="L217">			}</span>
+<span class="fc" id="L218">		}</span>
+
+<span class="fc" id="L220">		log.info(&quot;Prepared {} runs for {} with params {}&quot;, runs.size(), clazz.getSimpleName(), paramClazz.getName());</span>
+
+<span class="fc" id="L222">		return new PreparedRun(setup, fields.stream().map(Field::getName).collect(Collectors.toList()), allParams, runs);</span>
+	}
+
+
+	/**
+	 * Resolve input path automatically using given input, or cluster input directory.
+	 *
+	 * @param input input path to resolve for
+	 * @param name  file name
+	 * @return resolved input file name
+	 */
+	static String resolveForCluster(Path input, String name) {
+<span class="nc bnc" id="L234" title="All 2 branches missed.">		if (System.getProperty(&quot;EPISIM_ON_CLUSTER&quot;, &quot;false&quot;).equals(&quot;true&quot;))</span>
+<span class="nc" id="L235">			input = Path.of(&quot;/scratch/projects/bzz0020/episim-input&quot;);</span>
+
+		// convert windows path separators
+<span class="nc" id="L238">		return input.resolve(name).toString().replace(&quot;\\&quot;, &quot;/&quot;);</span>
+	}
+
+	/**
+	 * Get the offset for this run, that is used to generate ids.
+	 * This can be used to concatenate multiple runs together if they have disjunkt ids.
+	 */
+	default int getOffset() {
+<span class="fc" id="L246">		return 0;</span>
+	}
+
+	/**
+	 * The default start of the scenario as day in real world. Only needed if there are multiple start dates in the batch run.
+	 */
+	default LocalDate getDefaultStartDate() {
+<span class="nc" id="L253">		return LocalDate.now();</span>
+	}
+
+	/**
+	 * Returns name of the region.
+	 */
+	default Metadata getMetadata() {
+<span class="nc" id="L260">		return Metadata.of(&quot;region&quot;, &quot;default&quot;);</span>
+	}
+
+	/**
+	 * List of options that will be added to the metadata.
+	 */
+	default List&lt;Option&gt; getOptions() {
+<span class="nc" id="L267">		return List.of();</span>
+	}
+
+	/**
+	 * Return the module that should be used for configuring custom guice bindings. May also be parametrized.
+	 *
+	 * @param id     task id
+	 * @param params parameters to use, will be null for the base case.
+	 * @return module with additional bindings, or null if not needed
+	 */
+	@Nullable
+	default Module getBindings(int id, @Nullable T params) {
+<span class="nc" id="L279">		return null;</span>
+	}
+
+	/**
+	 * Provide a base case without any parametrization.
+	 */
+	@Nullable
+	default Config baseCase(int id) {
+<span class="fc" id="L287">		return null;</span>
+	}
+
+	/**
+	 * Prepare a config using the given parameters that will be used for this batch run.
+	 * Any other defined config is replaced.
+	 *
+	 * @param id     task id
+	 * @param params parameters to use
+	 * @return initialized config
+	 */
+	@Nullable
+	Config prepareConfig(int id, T params);
+
+	/**
+	 * Return classes of {@link OutputAnalysis} that should be executed on each individual run.
+	 */
+	default Collection&lt;OutputAnalysis&gt; postProcessing() {
+<span class="nc" id="L305">		return List.of(new RValuesFromEvents().withArgs());</span>
+	}
+
+	/**
+	 * Write additionally needed files to {@code directory}, if any are needed.
+	 * Don't write the config!
+	 */
+	default void writeAuxiliaryFiles(Path directory, Config config) throws IOException {
+<span class="nc" id="L313">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="nc bnc" id="L314" title="All 2 branches missed.">		if (episimConfig.getPolicyConfig() != null)</span>
+<span class="nc" id="L315">			Files.writeString(directory.resolve(episimConfig.getPolicyConfig()), episimConfig.getPolicy().root().render());</span>
+
+<span class="nc bnc" id="L317" title="All 2 branches missed.">		if (!episimConfig.getProgressionConfig().isEmpty())</span>
+<span class="nc" id="L318">			Files.writeString(directory.resolve(episimConfig.getProgressionConfigName()), episimConfig.getProgressionConfig().root().render());</span>
+<span class="nc" id="L319">	}</span>
+
+	/**
+	 * This declares a field as parameter for a batch run.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface Parameter {
+		/**
+		 * All values this parameter should attain.
+		 */
+		double[] value();
+	}
+
+	/**
+	 * Declares parameter as dates. Receiver must be {@link LocalDate} and named {@code startDate}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface StartDates {
+		/**
+		 * Desired start dates in the form yyyy-mm-dd.
+		 */
+		String[] value();
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface IntParameter {
+		int[] value();
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface LongParameter {
+		long[] value();
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface StringParameter {
+		String[] value();
+	}
+
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface EnumParameter {
+		/**
+		 * Desired enum class, by default all values will be used.
+		 */
+		Class&lt;? extends Enum&lt;?&gt;&gt; value();
+		String[] ignore() default {};
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface ClassParameter {
+		/**
+		 * List of classes to use as parameters.
+		 */
+		Class&lt;?&gt;[] value();
+	}
+
+	/**
+	 * Generates desired number of seeds by using a different random number generator.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface GenerateSeeds {
+		/**
+		 * Number of seeds to generate.
+		 */
+		int value();
+
+		/**
+		 * The first seed, which is fixed and not generated.
+		 */
+		long first() default 4711L;
+
+		/**
+		 * Starting seed to feed into the first rng.
+		 */
+		int seed() default 1;
+	}
+
+
+	/**
+	 * Describes one option group of parameters with multiple measures.
+	 */
+	final class Option {
+
+		public final String heading;
+		public final String subheading;
+		public final int day;
+
+		/**
+		 * Tuples of (title, paramName).
+		 */
+<span class="nc" id="L433">		public final List&lt;Pair&lt;String, String&gt;&gt; measures = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L435">		private Option(String heading, String subheading, int day) {</span>
+<span class="nc" id="L436">			this.heading = heading;</span>
+<span class="nc" id="L437">			this.subheading = subheading;</span>
+<span class="nc" id="L438">			this.day = day;</span>
+<span class="nc" id="L439">		}</span>
+
+		/**
+		 * Creates a new option group.
+		 *
+		 * @param heading    header shown in ui
+		 * @param subheading description shown ui
+		 * @param day        day when it will be in effect
+		 */
+		public static Option of(String heading, String subheading, int day) {
+<span class="nc" id="L449">			return new Option(heading, subheading, day);</span>
+		}
+
+		/**
+		 * See {@link #of(String, String, int)}.
+		 */
+		public static Option of(String heading, int day) {
+<span class="nc" id="L456">			return new Option(heading, &quot;&quot;, day);</span>
+		}
+
+		/**
+		 * See {@link #of(String, String, int)}.
+		 */
+		public static Option of(String heading) {
+<span class="nc" id="L463">			return new Option(heading, &quot;&quot;, -1);</span>
+		}
+
+		/**
+		 * Adds an measure to this option.
+		 *
+		 * @param title title shown in ui
+		 * @param param name of the parameter in code
+		 */
+		public Option measure(String title, String param) {
+<span class="nc" id="L473">			measures.add(Pair.of(title, param));</span>
+<span class="nc" id="L474">			return this;</span>
+		}
+	}
+
+	/**
+	 * Contains the metadata of a batch run.
+	 */
+	final class Metadata {
+
+		public final String region;
+		public final String name;
+
+		/**
+		 * End date for the ui.
+		 */
+<span class="nc" id="L489">		String endDate = null;</span>
+
+<span class="nc" id="L491">		public Metadata(String region, String name) {</span>
+<span class="nc" id="L492">			this.region = region;</span>
+<span class="nc" id="L493">			this.name = name;</span>
+<span class="nc" id="L494">		}</span>
+
+		/**
+		 * Creates new metadata instance.
+		 */
+		public static Metadata of(String region, String name) {
+<span class="nc" id="L500">			return new Metadata(region, name);</span>
+		}
+
+		/**
+		 * Sets the end date and returns the same instance.
+		 */
+		public Metadata withEndDate(String date) {
+<span class="nc" id="L507">			this.endDate = date;</span>
+<span class="nc" id="L508">			return this;</span>
+		}
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

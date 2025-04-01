@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimContainer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">EpisimContainer.java</span></div><h1>EpisimContainer.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import it.unimi.dsi.fastutil.ints.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
+
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import static org.matsim.episim.EpisimUtils.*;
+
+/**
+ * Wrapper class for a specific location that keeps track of currently contained agents and entering times.
+ *
+ * @param &lt;T&gt; the type where the agents are located in, e.g {@link org.matsim.vehicles.Vehicle} or {@link org.matsim.facilities.Facility}.
+ */
+public class EpisimContainer&lt;T&gt; {
+	private final Id&lt;T&gt; containerId;
+
+<span class="fc" id="L47">	private static final Logger log = LogManager.getLogger(EpisimContainer.class);</span>
+
+	/**
+	 * Persons currently in this container. Stored only as Ids.
+	 */
+<span class="fc" id="L52">	private final IntSet persons = new IntOpenHashSet(4);</span>
+
+	/**
+	 * Person list needed to draw random persons within container.
+	 */
+<span class="fc" id="L57">	private final List&lt;EpisimPerson&gt; personsAsList = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L59">	private final Int2DoubleMap containerEnterTimes = new Int2DoubleOpenHashMap(4);</span>
+
+	/**
+	 * Activities of persons in the container.
+	 */
+<span class="fc" id="L64">	private final Int2ObjectMap&lt;EpisimPerson.PerformedActivity&gt; personActivities = new Int2ObjectArrayMap&lt;&gt;(4);</span>
+
+	/**
+	 * The maximum number of persons simultaneously in this container. Negative if unknown.
+	 * Already scaled with sampleSize.
+	 */
+<span class="fc" id="L70">	private int maxGroupSize = -1;</span>
+
+	/**
+	 * The number of persons using this container over all days.
+	 */
+<span class="fc" id="L75">	private int totalUsers = -1;</span>
+
+	/**
+	 * Typical number of persons that can fit into this container.
+	 */
+<span class="fc" id="L80">	private int typicalCapacity = -1;</span>
+
+	/**
+	 * Number of distinct spaces in this facility. May be relevant for certain contact models.
+	 */
+<span class="fc" id="L85">	private double numSpaces = 1;</span>
+
+	/**
+	 * The id of the ReplayEventTask that handles the events for this container
+	 */
+<span class="fc" id="L90">	private int taskId = 0;</span>
+
+	/**
+	 * This counts the number of persons in this container
+	 * which have the DiseaseStatus contagious or showingSymptoms. 	
+	 */
+<span class="fc" id="L96"> 	private int contagiousCounter = 0;</span>
+
+<span class="fc" id="L98">	EpisimContainer(Id&lt;T&gt; containerId) {</span>
+<span class="fc" id="L99">		this.containerId = containerId;</span>
+<span class="fc" id="L100">	}</span>
+
+	/**
+	 * Reads containers state from stream.
+	 */
+	void read(ObjectInput in, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons) throws IOException {
+
+<span class="fc" id="L107">		this.persons.clear();</span>
+<span class="fc" id="L108">		this.personsAsList.clear();</span>
+<span class="fc" id="L109">		this.containerEnterTimes.clear();</span>
+
+<span class="fc" id="L111">		int n = in.readInt();</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L113">			Id&lt;Person&gt; id = Id.create(readChars(in), Person.class);</span>
+<span class="fc" id="L114">			this.persons.add(id.index());</span>
+<span class="fc" id="L115">			personsAsList.add(persons.get(id));</span>
+<span class="fc" id="L116">			containerEnterTimes.put(id.index(), in.readDouble());</span>
+		}
+<span class="fc" id="L118">	}</span>
+
+	/**
+	 * Writes state to stream.
+	 */
+	void write(ObjectOutput out) throws IOException {
+
+<span class="fc" id="L125">		out.writeInt(containerEnterTimes.size());</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">		for (EpisimPerson p : personsAsList) {</span>
+<span class="fc" id="L127">			writeChars(out, p.getPersonId().toString());</span>
+<span class="fc" id="L128">			out.writeDouble(containerEnterTimes.get(p.getPersonId().index()));</span>
+<span class="fc" id="L129">		}</span>
+<span class="fc" id="L130">	}</span>
+
+	boolean containsPerson(EpisimPerson person) {
+<span class="fc" id="L133">		final int index = person.getPersonId().index();</span>
+<span class="fc" id="L134">		return persons.contains(index);</span>
+	}
+
+	void addPerson(EpisimPerson person, double now, EpisimPerson.PerformedActivity act) {
+<span class="fc" id="L138">		final int index = person.getPersonId().index();</span>
+
+		//assert !persons.contains(index) : &quot;Person already contained in this container.&quot;;
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">		assert !persons.contains(index) : String.format(&quot;Person %s was already in container %s&quot;, person.getPersonId(), containerId);</span>
+
+<span class="fc" id="L143">		persons.add(index);</span>
+<span class="fc" id="L144">		personsAsList.add(person);</span>
+<span class="fc" id="L145">		containerEnterTimes.put(index, now);</span>
+<span class="fc" id="L146">		personActivities.put(index, act);</span>
+<span class="fc" id="L147">	}</span>
+
+	/**
+	 * Removes a person from this container.
+	 *
+	 * @throws RuntimeException if the person was not in the container.
+	 */
+	void removePerson(EpisimPerson person) {
+<span class="fc" id="L155">		int index = person.getPersonId().index();</span>
+
+<span class="fc" id="L157">		containerEnterTimes.remove(index);</span>
+<span class="fc" id="L158">		personActivities.remove(index);</span>
+<span class="fc" id="L159">		persons.remove(index);</span>
+<span class="fc" id="L160">		boolean wasRemoved = personsAsList.remove(person);</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">		if (!wasRemoved)</span>
+<span class="nc" id="L162">			log.warn( &quot;Person {} was not in container {}&quot;, person.getPersonId(), containerId);</span>
+
+<span class="fc bfc" id="L164" title="All 2 branches covered.">		if (person.infectedButNotSerious())</span>
+<span class="fc" id="L165">			contagiousCounter -= 1;</span>
+<span class="fc" id="L166">	}</span>
+
+	/**
+	 * Remove person using the iterator from {@link #getPersons()}.
+	 * This allows to remove persons while iterating through them.
+	 */
+	void removePerson(EpisimPerson person, Iterator&lt;EpisimPerson&gt; it) {
+<span class="fc" id="L173">		int index = person.getPersonId().index();</span>
+
+<span class="fc" id="L175">		containerEnterTimes.remove(index);</span>
+<span class="fc" id="L176">		personActivities.remove(index);</span>
+<span class="fc" id="L177">		persons.remove(index);</span>
+<span class="fc" id="L178">		it.remove();</span>
+<span class="fc" id="L179">	}</span>
+
+	public Id&lt;T&gt; getContainerId() {
+<span class="fc" id="L182">		return containerId;</span>
+	}
+
+	/**
+	 * @return maximum group size in container.
+	 */
+	public int getMaxGroupSize() {
+<span class="fc" id="L189">		return maxGroupSize;</span>
+	}
+
+	/**
+	 * @return number of people using container.  May be larger than {@link #getMaxGroupSize()}.
+	 */
+	public int getTotalUsers() {
+<span class="nc" id="L196">		return totalUsers;</span>
+	}
+
+	public int getTypicalCapacity() {
+<span class="fc" id="L200">		return typicalCapacity;</span>
+	}
+
+	public double getNumSpaces() {
+<span class="fc" id="L204">		return numSpaces;</span>
+	}
+
+	/**
+	 * Sets the max group size this container has during a day.
+	 *
+	 * @param num number of persons
+	 */
+	void setMaxGroupSize(int num) {
+<span class="fc" id="L213">		maxGroupSize = num;</span>
+<span class="fc" id="L214">	}</span>
+
+	/**
+	 * Sets the total number of persons using this container.
+	 *
+	 * @param num number of persons
+	 */
+	void setTotalUsers(int num) {
+<span class="fc" id="L222">		totalUsers = num;</span>
+<span class="fc" id="L223">	}</span>
+
+	void setTypicalCapacity(int typicalCapacity) {
+<span class="fc" id="L226">		this.typicalCapacity = typicalCapacity;</span>
+<span class="fc" id="L227">	}</span>
+
+	public void setNumSpaces(double numSpaces) {
+<span class="fc" id="L230">		this.numSpaces = numSpaces;</span>
+<span class="fc" id="L231">	}</span>
+
+	public void setTaskId(int taskId) {
+<span class="fc" id="L234">		this.taskId = taskId;</span>
+<span class="fc" id="L235">	}</span>
+
+	public int getTaskId() {
+<span class="fc" id="L238">		return taskId;</span>
+	}
+
+	
+	void clearPersons() {
+<span class="fc" id="L243">		this.persons.clear();</span>
+<span class="fc" id="L244">		this.personsAsList.clear();</span>
+<span class="fc" id="L245">		this.containerEnterTimes.clear();</span>
+<span class="fc" id="L246">	}</span>
+
+	/**
+	 * Returns the time the person entered the container, or {@link Double#NEGATIVE_INFINITY} if it never entered.
+	 */
+	public double getContainerEnteringTime(Id&lt;Person&gt; personId) {
+<span class="fc" id="L252">		return containerEnterTimes.getOrDefault(personId.index(), Double.NEGATIVE_INFINITY);</span>
+	}
+
+	/**
+	 * Return the activity that a person is performing in this container.
+	 */
+	public EpisimPerson.PerformedActivity getPerformedActivity(Id&lt;Person&gt; personId) {
+<span class="fc" id="L259">		return personActivities.get(personId.index());</span>
+	}
+
+	public List&lt;EpisimPerson&gt; getPersons() {
+		// Using Collections.unmodifiableList(...) puts huge pressure on the GC if its called hundred thousand times per second
+<span class="fc" id="L264">		return personsAsList;</span>
+	}
+
+
+	public void countContagious(int add) {
+<span class="fc" id="L269">		contagiousCounter += add;</span>
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">		assert contagiousCounter &gt;= 0 : &quot;We can not have a negative number of contagious persons&quot;; </span>
+<span class="fc" id="L271">	}</span>
+
+	public void resetContagiousCounter() {
+<span class="fc" id="L274">		contagiousCounter = 0;</span>
+<span class="fc" id="L275">	}</span>
+	
+	public boolean containsContagious() {
+<span class="nc bnc" id="L278" title="All 2 branches missed.">		return contagiousCounter &gt; 0;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GuiceUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">GuiceUtils.java</span></div><h1>GuiceUtils.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.inject.Module;
+import com.google.inject.*;
+import com.google.inject.internal.AbstractBindingBuilder;
+import com.google.inject.internal.BindingBuilder;
+import com.google.inject.internal.BindingImpl;
+import com.google.inject.internal.SingletonScope;
+import com.google.inject.spi.BindingScopingVisitor;
+import com.google.inject.util.Modules;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * By design Guice does not allow child injectors to override bindings with a different scope:
+ * &quot;The reason overriding a binding in a child injector isn't supported is
+ * because it can lead a developer towards writing code that can work in either a parent &amp; child injector, but have different behavior in each.&quot;
+ * (https://groups.google.com/g/google-guice/c/naqT-fOrOTw)
+ * &lt;p&gt;
+ * Unfortunately, that is exactly what is needed.
+ * This class provides util method to create a copy of an injector to provide similar functionality.
+ */
+@SuppressWarnings(&quot;unchecked, rawtypes&quot;)
+<span class="nc" id="L31">public class GuiceUtils {</span>
+
+<span class="fc" id="L33">	private static final Logger log = LogManager.getLogger(GuiceUtils.class);</span>
+
+	/**
+	 * Create a injector similar to a &quot;child injector&quot;.
+	 * This new injector has the same singletons as the parent injectors, unless they have been overwritten.
+	 * &lt;p&gt;
+	 * Note: Accessing types in the child before they are bound in the parent may lead to unexpected behaviour.
+	 *
+	 * @param parent     the parent injector to copy
+	 * @param modules    modules with overriding binding
+	 * @param localScope binding that are not copied into this injector, but instead recreated in the local scope.
+	 */
+	public static Injector createCopiedInjector(Injector parent, Iterable&lt;Module&gt; modules, Class&lt;?&gt;... localScope) {
+<span class="fc" id="L46">		return Guice.createInjector(Modules.override(new CopyModule(parent, localScope)).with(modules));</span>
+	}
+
+
+	private static class CopyModule extends AbstractModule {
+		private final Injector parent;
+		private final List&lt;String&gt; localScope;
+
+<span class="fc" id="L54">		private CopyModule(Injector parent, Class&lt;?&gt;[] localScope) {</span>
+<span class="fc" id="L55">			this.parent = parent;</span>
+<span class="fc" id="L56">			this.localScope = Arrays.stream(localScope).map(Class::getCanonicalName).collect(Collectors.toList());</span>
+<span class="fc" id="L57">		}</span>
+
+		@Override
+		protected void configure() {
+
+<span class="fc" id="L62">			binder().requireExplicitBindings();</span>
+
+<span class="fc bfc" id="L64" title="All 2 branches covered.">			for (Map.Entry&lt;Key&lt;?&gt;, Binding&lt;?&gt;&gt; e : parent.getAllBindings().entrySet()) {</span>
+
+<span class="fc" id="L66">				Key key = e.getKey();</span>
+
+				// internal guice types are not bound
+<span class="fc" id="L69">				String type = key.getTypeLiteral().toString();</span>
+<span class="fc bfc" id="L70" title="All 4 branches covered.">				if (type.contains(&quot;com.google.inject&quot;) || type.contains(&quot;java.util.logging&quot;))</span>
+<span class="fc" id="L71">					continue;</span>
+
+<span class="fc" id="L73">				Binding&lt;?&gt; binding = e.getValue();</span>
+<span class="fc" id="L74">				Boolean singleton = binding.acceptScopingVisitor(new IsSingleTonVisitor());</span>
+
+<span class="fc bfc" id="L76" title="All 4 branches covered.">				if (singleton &amp;&amp; !localScope.contains(type)) {</span>
+<span class="fc" id="L77">					Object instance = parent.getInstance(key);</span>
+<span class="fc" id="L78">					bind(key).toInstance(instance);</span>
+<span class="fc" id="L79">				} else {</span>
+
+<span class="fc" id="L81">					BindingBuilder binder = (BindingBuilder) bind(key);</span>
+					try {
+<span class="fc" id="L83">						GuiceUtils.bind(binder, binding);</span>
+<span class="nc" id="L84">					} catch (ReflectiveOperationException exc) {</span>
+<span class="nc" id="L85">						throw new RuntimeException(exc);</span>
+<span class="fc" id="L86">					}</span>
+				}
+
+<span class="fc" id="L89">			}</span>
+<span class="fc" id="L90">		}</span>
+	}
+
+	/**
+	 * Internal method to copy a binding.
+	 */
+	private static void bind(BindingBuilder binder, Binding binding) throws ReflectiveOperationException {
+<span class="fc" id="L97">		Method method = AbstractBindingBuilder.class.getDeclaredMethod(&quot;setBinding&quot;, BindingImpl.class);</span>
+<span class="fc" id="L98">		method.setAccessible(true);</span>
+<span class="fc" id="L99">		method.invoke(binder, binding);</span>
+<span class="fc" id="L100">	}</span>
+
+	/**
+	 * Returns true if scope is singleton.
+	 */
+	private static class IsSingleTonVisitor implements BindingScopingVisitor&lt;Boolean&gt; {
+		@Override
+		public Boolean visitEagerSingleton() {
+<span class="fc" id="L108">			return true;</span>
+		}
+
+		@Override
+		public Boolean visitScope(Scope scope) {
+<span class="fc" id="L113">			return scope instanceof SingletonScope;</span>
+		}
+
+		@Override
+		public Boolean visitScopeAnnotation(Class&lt;? extends Annotation&gt; scopeAnnotation) {
+<span class="nc bnc" id="L118" title="All 2 branches missed.">			return scopeAnnotation == Singleton.class;</span>
+		}
+
+		@Override
+		public Boolean visitNoScoping() {
+<span class="fc" id="L123">			return false;</span>
+		}
+	}
+
+	;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
