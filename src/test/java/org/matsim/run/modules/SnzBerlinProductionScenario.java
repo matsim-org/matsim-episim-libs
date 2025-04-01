@@ -286,9 +286,9 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
 
 
-				Map<String, Path> subdistrictInputs = new HashMap<>();
+				Map<String, String> subdistrictInputs = new HashMap<>();
 				for (String subdistrict : subdistricts) {
-					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
+					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv").toString());
 				}
 
 				((CreateRestrictionsFromCSV) activityParticipation).setDistrictInputs(subdistrictInputs);

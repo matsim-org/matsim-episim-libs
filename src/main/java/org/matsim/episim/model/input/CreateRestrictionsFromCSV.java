@@ -5,6 +5,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.FixedPolicy;
@@ -24,30 +25,37 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	// create method without damage.
 
 	private final EpisimConfigGroup episimConfig;
-	private Path input;
+	private String input;
 	private double alpha = 1.;
 	private double scale = 1.;
 	private boolean leisureAsNightly = false;
 	private double nightlyScale = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
-	private Map<String, Path> subdistrictInput;
+	private Map<String, String> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
 	}
 
+	/**
+	 * Sets the input path for the CSV file, can be a URL or a local file.
+	 */
+	public CreateRestrictionsFromCSV setInput(String input) {
+		this.input = input;
+		return this;
+	}
 
 	@Override
 	public CreateRestrictionsFromCSV setInput(Path input) {
 		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
-		this.input = input;
+		this.input = input.toString();
 		return this;
 	}
 
 	/**
 	 * Sets the paths for each subdistrict CSV
 	 */
-	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, Path> subdistrictInput) {
+	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, String> subdistrictInput) {
 		this.subdistrictInput = subdistrictInput;
 		return this;
 	}
@@ -86,9 +94,9 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		return extrapolation;
 	}
 
-	static Map<LocalDate, Double> readInput(Path input, String column, double alpha, double scale) throws IOException {
+	static Map<LocalDate, Double> readInput(String input, String column, double alpha, double scale) throws IOException {
 
-		try (BufferedReader in = Files.newBufferedReader(input)) {
+		try (BufferedReader in = IOUtils.getBufferedReader(input)) {
 
 			CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -152,7 +160,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
 		if (locationBasedRfActive) {
-			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
+			for (Map.Entry<String, String> entry : subdistrictInput.entrySet()) {
 				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), column, alpha, scale));
 			}
 		}
