@@ -13,7 +13,7 @@ MATSim Episim,org.matsim.episim.events,EpisimTracingEvent,30,0,0,0,10,0,5,0,5,0
 MATSim Episim,org.matsim.episim.events,EpisimInfectionEvent,13,179,2,8,3,43,3,16,1,13
 MATSim Episim,org.matsim.episim.events,EpisimInitialInfectionEvent,9,78,0,0,2,16,2,5,2,5
 MATSim Episim,org.matsim.episim.events,InitialImmunizationHandler,7,168,2,10,2,37,4,10,2,6
-MATSim Episim,org.matsim.episim.model.input,CreateRestrictionsFromCSV,277,248,21,15,47,51,24,11,10,7
+MATSim Episim,org.matsim.episim.model.input,CreateRestrictionsFromCSV,282,249,21,15,49,51,25,11,11,7
 MATSim Episim,org.matsim.episim.model.input,CreateRestrictionsFromCSV.Exponential,52,0,0,0,4,0,3,0,3,0
 MATSim Episim,org.matsim.episim.model.input,RestrictionInput,297,109,34,16,53,23,21,8,2,2
 MATSim Episim,org.matsim.episim.policy,AdjustedPolicy.ConfigBuilder,6,80,1,1,1,14,1,8,0,8
