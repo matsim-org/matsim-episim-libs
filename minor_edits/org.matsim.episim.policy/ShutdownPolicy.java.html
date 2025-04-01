@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShutdownPolicy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.policy</a> &gt; <span class="el_source">ShutdownPolicy.java</span></div><h1>ShutdownPolicy.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim.policy;
+
+import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigRenderOptions;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.episim.EpisimReporting;
+
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+
+
+/**
+ * Abstract base class for policies which are supposed to modify {@link Restriction}s at the end of each day.
+ */
+public abstract class ShutdownPolicy {
+
+	/**
+	 * Magic number to indicate this entry should be replaced based on hospital numbers.
+	 */
+<span class="fc" id="L44">	public static final Double REG_HOSPITAL = -200d;</span>
+
+<span class="fc" id="L46">	private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);</span>
+
+	protected final Config config;
+
+	/**
+	 * Constructor from config.
+	 */
+<span class="fc" id="L53">	protected ShutdownPolicy(Config config) {</span>
+<span class="fc" id="L54">		this.config = config;</span>
+		//log.info(&quot;Using policy {} with config: {}&quot;, getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
+<span class="fc" id="L56">	}</span>
+
+
+	/**
+	 * Initialized the policies at start of simulation.
+	 * @param start simulation start date
+	 * @param restrictions unrestricted and uninitialized restrictions
+	 */
+	public abstract void init(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions);
+
+	/**
+	 * Called when the policy is restored from snapshot.
+	 * @param start restored date
+	 * @param restrictions restrictions from snapshot
+	 */
+<span class="fc" id="L71">	public void restore(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions) {}</span>
+
+	/**
+	 * Update the restrictions at the start of the day based on the report.
+	 * The map is immutable, use setters of {@link Restriction}.
+	 *
+	 * @param report       infections statistics of the day
+	 * @param restrictions restrictions in place during the day
+	 */
+	public abstract void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap&lt;String, Restriction&gt; restrictions);
+
+
+	/**
+	 * Helper base class for config builders.
+	 */
+	public static class ConfigBuilder&lt;T&gt; {
+
+		/**
+		 * Maps activities to config objects.
+		 */
+<span class="fc" id="L91">		protected Map&lt;String, T&gt; params = new HashMap&lt;&gt;();</span>
+
+		/**
+		 * Public inheritance is forbidden.
+		 */
+<span class="fc" id="L96">		ConfigBuilder() {</span>
+<span class="fc" id="L97">		}</span>
+
+		public Config build() {
+<span class="fc" id="L100">			return ConfigFactory.parseMap(params);</span>
+		}
+
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultContactModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">DefaultContactModel.java</span></div><h1>DefaultContactModel.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Scenario;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SplittableRandom;
+
+import static org.matsim.episim.EpisimPerson.DiseaseStatus;
+
+/**
+ * Default contact model executed, when a person ends his activity.
+ * Infections probabilities calculations are delegated to a {@link InfectionModel}.
+ */
+public final class DefaultContactModel extends AbstractContactModel {
+
+<span class="fc" id="L43">	private static final Logger log = LogManager.getLogger(DefaultContactModel.class);</span>
+
+	/**
+	 * Flag to enable tracking, which is considerably slower.
+	 */
+	private final int trackingAfterDay;
+
+	/**
+	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
+	 */
+<span class="fc" id="L53">	List&lt;EpisimPerson&gt; otherPersonsInContainer = new ArrayList&lt;&gt;();</span>
+
+	/**
+	 * This buffer is used to store the infection type.
+	 */
+<span class="fc" id="L58">	private final StringBuilder buffer = new StringBuilder();</span>
+
+	@Inject
+	/* package */
+	DefaultContactModel(SplittableRandom rnd, Config config,
+						EpisimReporting reporting, InfectionModel infectionModel, Scenario scenario) {
+		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
+<span class="fc" id="L65">		super(rnd, config, infectionModel, reporting, scenario);</span>
+<span class="fc" id="L66">		this.trackingAfterDay = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getPutTraceablePersonsInQuarantineAfterDay();</span>
+<span class="fc" id="L67">	}</span>
+
+	DefaultContactModel(SplittableRandom rnd, Config config,
+						EpisimReporting reporting, InfectionModel infectionModel) {
+<span class="fc" id="L71">		this(rnd, config, reporting, infectionModel, null);</span>
+<span class="fc" id="L72">	}</span>
+
+	@Override
+	public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
+<span class="fc" id="L76">		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);</span>
+<span class="fc" id="L77">	}</span>
+
+	@Override
+	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now) {
+<span class="fc" id="L81">		infectionDynamicsGeneralized(personLeavingFacility, facility, now);</span>
+<span class="fc" id="L82">	}</span>
+
+	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer&lt;?&gt; container, double now) {
+
+		// no infection possible if there is only one person
+<span class="pc bpc" id="L87" title="1 of 4 branches missed.">		if (iteration == 0 || container.getPersons().size() == 1) {</span>
+<span class="fc" id="L88">			return;</span>
+		}
+
+<span class="fc bfc" id="L91" title="All 2 branches covered.">		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, container, getRestrictions(), rnd)) {</span>
+<span class="fc" id="L92">			return;</span>
+		}
+
+		// start tracking late as possible because of computational costs
+<span class="fc bfc" id="L96" title="All 2 branches covered.">		boolean trackingEnabled = iteration &gt;= trackingAfterDay;</span>
+
+<span class="fc" id="L98">		otherPersonsInContainer.addAll(container.getPersons());</span>
+<span class="fc" id="L99">		otherPersonsInContainer.remove(personLeavingContainer);</span>
+
+		// For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
+		// shuffle, those are 10 different persons every day.
+
+		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
+//		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+<span class="fc" id="L106">		int contactWith = Math.min(otherPersonsInContainer.size(), (int)episimConfig.getMaxContacts());</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">		for (int ii = 0; ii &lt; contactWith; ii++) {</span>
+
+			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
+			// already left the container were treated then.  In consequence, we have some &quot;circle of persons around us&quot; (yyyy which should
+			//  depend on the density), and then a probability of infection in either direction.
+
+			// Draw the contact person and remove it -&gt; we don't want to draw it multiple times
+<span class="fc" id="L114">			EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));</span>
+
+
+<span class="fc bfc" id="L117" title="All 2 branches covered.">			if (!personRelevantForTrackingOrInfectionDynamics(now, contactPerson, container, getRestrictions(), rnd)) {</span>
+<span class="fc" id="L118">				continue;</span>
+			}
+
+			// we have thrown the random numbers, so we can bail out in some cases if we are not tracking:
+<span class="fc bfc" id="L122" title="All 2 branches covered.">			if (!trackingEnabled) {</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">				if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.infectedButNotContagious) {</span>
+<span class="fc" id="L124">					continue;</span>
+				}
+<span class="fc bfc" id="L126" title="All 2 branches covered.">				if (contactPerson.getDiseaseStatus() == DiseaseStatus.infectedButNotContagious) {</span>
+<span class="fc" id="L127">					continue;</span>
+				}
+<span class="fc bfc" id="L129" title="All 2 branches covered.">				if (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus()) {</span>
+<span class="fc" id="L130">					continue;</span>
+				}
+			}
+
+			// activity params of the contact person and leaving person
+<span class="fc" id="L135">			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer,  container.getPerformedActivity(personLeavingContainer.getPersonId()));</span>
+<span class="fc" id="L136">			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson,  container.getPerformedActivity(contactPerson.getPersonId()));</span>
+
+<span class="fc bfc" id="L138" title="All 2 branches covered.">			String leavingPersonsActivity = leavingParams == qhParams ? &quot;home&quot; : leavingParams.getContainerName();</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">			String otherPersonsActivity = contactParams == qhParams ? &quot;home&quot; : contactParams.getContainerName();</span>
+
+<span class="fc" id="L141">			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);</span>
+
+<span class="fc" id="L143">			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());</span>
+<span class="fc" id="L144">			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());</span>
+<span class="fc" id="L145">			double jointTimeInContainer = calculateJointTimeInContainer(now, leavingParams, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);</span>
+
+			//forbid certain cross-activity interactions, keep track of contacts
+<span class="fc bfc" id="L148" title="All 2 branches covered.">			if (container instanceof InfectionEventHandler.EpisimFacility) {</span>
+				//home can only interact with home, leisure or work
+<span class="fc bfc" id="L150" title="All 6 branches covered.">				if (infectionType.indexOf(&quot;home&quot;) &gt;= 0 &amp;&amp; infectionType.indexOf(&quot;leis&quot;) == -1 &amp;&amp; infectionType.indexOf(&quot;work&quot;) == -1</span>
+<span class="pc bpc" id="L151" title="1 of 4 branches missed.">						&amp;&amp; !(leavingPersonsActivity.startsWith(&quot;home&quot;) &amp;&amp; otherPersonsActivity.startsWith(&quot;home&quot;))) {</span>
+<span class="nc" id="L152">					continue;</span>
+<span class="pc bpc" id="L153" title="4 of 8 branches missed.">				} else if (infectionType.indexOf(&quot;edu&quot;) &gt;= 0 &amp;&amp; infectionType.indexOf(&quot;work&quot;) == -1 &amp;&amp; !(leavingPersonsActivity.startsWith(&quot;edu&quot;) &amp;&amp; otherPersonsActivity.startsWith(&quot;edu&quot;))) {</span>
+					//edu can only interact with work or edu
+<span class="nc" id="L155">					continue;</span>
+				}
+<span class="fc bfc" id="L157" title="All 2 branches covered.">				if (trackingEnabled) {</span>
+<span class="fc" id="L158">					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer, infectionType);</span>
+				}
+
+				// Only a subset of contacts are reported at the moment
+				// tracking has to be enabled to report more contacts
+<span class="fc" id="L163">				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);</span>
+			}
+
+<span class="fc bfc" id="L166" title="All 2 branches covered.">			if (!AbstractContactModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {</span>
+<span class="fc" id="L167">				continue;</span>
+			}
+
+			// person can only infect others 4 days after being contagious
+<span class="fc bfc" id="L171" title="All 2 branches covered.">			if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &amp;&amp;</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">					personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) &gt; episimConfig.getDaysInfectious())</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">					|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &amp;&amp;</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">					contactPerson.daysSince(DiseaseStatus.contagious, iteration) &gt; episimConfig.getDaysInfectious()))</span>
+<span class="fc" id="L175">				continue;</span>
+
+			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
+			// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
+<span class="pc bpc" id="L179" title="3 of 4 branches missed.">			if (containerEnterTimeOfPersonLeaving &lt; 0 &amp;&amp; containerEnterTimeOfOtherPerson &lt; 0) {</span>
+<span class="nc" id="L180">				throw new IllegalStateException(&quot;should not happen&quot;);</span>
+				// should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
+				// can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
+				// container from the beginning.  ????  kai, mar'20
+			}
+
+<span class="pc bpc" id="L186" title="2 of 4 branches missed.">			if (jointTimeInContainer &lt; 0 || jointTimeInContainer &gt; 86400 * 7) {</span>
+<span class="nc" id="L187">				log.warn(containerEnterTimeOfPersonLeaving);</span>
+<span class="nc" id="L188">				log.warn(containerEnterTimeOfOtherPerson);</span>
+<span class="nc" id="L189">				log.warn(now);</span>
+<span class="nc" id="L190">				throw new IllegalStateException(&quot;joint time in container is not plausible for personLeavingContainer=&quot; + personLeavingContainer.getPersonId() + &quot; and contactPerson=&quot; + contactPerson.getPersonId() + &quot;. Joint time is=&quot; + jointTimeInContainer);</span>
+			}
+
+<span class="fc" id="L193">			double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());</span>
+
+			// need to differentiate which person might be the infector
+<span class="fc bfc" id="L196" title="All 2 branches covered.">			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {</span>
+
+<span class="fc" id="L198">				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),</span>
+						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
+<span class="fc bfc" id="L200" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; prob)</span>
+<span class="fc" id="L201">					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);</span>
+
+<span class="fc" id="L203">			} else {</span>
+<span class="fc" id="L204">				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),</span>
+						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+
+<span class="fc bfc" id="L207" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; prob)</span>
+<span class="fc" id="L208">					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);</span>
+			}
+		}
+
+		// Clear cached container
+<span class="fc" id="L213">		otherPersonsInContainer.clear();</span>
+<span class="fc" id="L214">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

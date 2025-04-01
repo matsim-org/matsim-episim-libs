@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TrajectoryHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">TrajectoryHandler.java</span></div><h1>TrajectoryHandler.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
+import org.matsim.api.core.v01.events.ActivityStartEvent;
+import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
+import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.policy.Restriction;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.vehicles.Vehicle;
+
+import javax.inject.Named;
+import java.time.DayOfWeek;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.SplittableRandom;
+import java.util.function.Predicate;
+
+/**
+ * Executes trajectory of a person using the events.
+ */
+final class TrajectoryHandler {
+
+<span class="fc" id="L30">	private static final Logger log = LogManager.getLogger(TrajectoryHandler.class);</span>
+
+	private final EpisimConfigGroup episimConfig;
+	private final EpisimReporting reporting;
+	private final ContactModel contactModel;
+	private final Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; personMap;
+	private final Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicleMap;
+	private final Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; pseudoFacilityMap;
+
+	/**
+	 * The &quot;local&quot; random instance, used for all submodels.
+	 */
+	private final SplittableRandom rnd;
+
+<span class="fc" id="L44">	private int iteration = 0;</span>
+	private DayOfWeek day;
+
+	@Inject
+	public TrajectoryHandler(EpisimConfigGroup episimConfig, EpisimReporting reporting, ContactModel model, SplittableRandom rnd,
+	                         @Named(&quot;personMap&quot;) Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; personMap,
+	                         @Named(&quot;vehicleMap&quot;) Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicleMap,
+<span class="fc" id="L51">	                         @Named(&quot;pseudoFacilityMap&quot;) Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; pseudoFacilityMap) {</span>
+<span class="fc" id="L52">		this.rnd = rnd;</span>
+<span class="fc" id="L53">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L54">		this.reporting = reporting;</span>
+<span class="fc" id="L55">		this.contactModel = model;</span>
+<span class="fc" id="L56">		this.personMap = personMap;</span>
+<span class="fc" id="L57">		this.vehicleMap = vehicleMap;</span>
+<span class="fc" id="L58">		this.pseudoFacilityMap = pseudoFacilityMap;</span>
+<span class="fc" id="L59">	}</span>
+
+	SplittableRandom getRnd() {
+<span class="fc" id="L62">		return rnd;</span>
+	}
+
+	void setRestrictionsForIteration(int iteration, ImmutableMap&lt;String, Restriction&gt; im) {
+<span class="fc" id="L66">		this.iteration = iteration;</span>
+<span class="fc" id="L67">		this.day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
+<span class="fc" id="L68">		contactModel.setRestrictionsForIteration(iteration, im);</span>
+<span class="fc" id="L69">	}</span>
+
+	/**
+	 * @see ContactModel#getNumContacts()
+	 */
+	int getNumContacts() {
+<span class="fc" id="L75">		return contactModel.getNumContacts();</span>
+	}
+
+	/**
+	 * Handle plans with &quot;holes&quot; in their trajectory.
+	 * &lt;p&gt;
+	 * In the data, activity start events at the beginning can be missing.
+	 * Likewise, activity end events at the end of a day might be missing.
+	 * This leads to implicitly given first and last containers of the day.
+	 *
+	 * @param day         day that is about to start
+	 * @param responsible used for partitioning of trajectory handlers
+	 */
+	@Deprecated
+	void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day, Predicate&lt;Id&lt;?&gt;&gt; responsible) {
+
+<span class="nc" id="L91">		Id&lt;ActivityFacility&gt; lastFacilityId = person.getLastFacilityId(day.minus(1));</span>
+<span class="nc" id="L92">		Id&lt;ActivityFacility&gt; firstFacilityId = person.getFirstFacilityId(day);</span>
+
+		// now is the start of current day, when this is called iteration still has the value of the last day
+<span class="nc" id="L95">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration + 1);</span>
+
+		// TODO: are unclosed trajectories with PT possible?
+
+<span class="nc bnc" id="L99" title="All 2 branches missed.">		if (!lastFacilityId.equals(firstFacilityId)) {</span>
+<span class="nc" id="L100">			InfectionEventHandler.EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);</span>
+
+			// index of last activity at previous day
+<span class="nc" id="L103">			String actType = person.getActivity(day.minus(1), 24 * 3600.).actType();</span>
+<span class="nc" id="L104">			double timeSpent = now - lastFacility.getContainerEnteringTime(person.getPersonId());</span>
+<span class="nc" id="L105">			person.addSpentTime(actType, timeSpent);</span>
+
+<span class="nc bnc" id="L107" title="All 6 branches missed.">			if (iteration &gt; 1 &amp;&amp; timeSpent &gt; 86400 &amp;&amp; !actType.equals(&quot;home&quot;)) {</span>
+				// there might be some implausible trajectories
+<span class="nc" id="L109">				log.trace(&quot;{} spent {} outside home&quot;, person, timeSpent);</span>
+			}
+
+<span class="nc bnc" id="L112" title="All 2 branches missed.">			if (responsible.test(lastFacilityId)) {</span>
+<span class="nc" id="L113">				contactModel.infectionDynamicsFacility(person, lastFacility, now);</span>
+<span class="nc" id="L114">				lastFacility.removePerson(person);</span>
+			}
+
+<span class="nc bnc" id="L117" title="All 2 branches missed.">			if (responsible.test(firstFacilityId)) {</span>
+<span class="nc" id="L118">				InfectionEventHandler.EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);</span>
+<span class="nc" id="L119">				firstFacility.addPerson(person, now, person.getFirstActivity(day));</span>
+
+<span class="nc" id="L121">				contactModel.notifyEnterFacility(person, firstFacility, now);</span>
+			}
+
+
+<span class="nc" id="L125">		} else {</span>
+			// TODO: check if still needed
+<span class="nc" id="L127">			InfectionEventHandler.EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);</span>
+
+<span class="nc bnc" id="L129" title="All 2 branches missed.">			if (responsible.test(firstFacility.getContainerId())) {</span>
+<span class="nc" id="L130">				firstFacility.addPerson(person, now, person.getFirstActivity(day));</span>
+<span class="nc" id="L131">				contactModel.notifyEnterFacility(person, firstFacility, now);</span>
+			}
+		}
+<span class="nc" id="L134">	}</span>
+
+	/**
+	 * Called of start of day before any handleEvent method.
+	 *
+	 * @param responsible predicate for checking if the handler is responsible for a certain facility
+	 */
+	public void onStartDay(Predicate&lt;Id&lt;ActivityFacility&gt;&gt; responsibleFacility,
+	                       Predicate&lt;Id&lt;Vehicle&gt;&gt; responsibleVehicle) {
+
+<span class="fc" id="L144">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);</span>
+<span class="fc" id="L145">		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
+
+		// need to use previous as in config
+<span class="fc" id="L148">		DayOfWeek prevDay = EpisimUtils.getDayOfWeek(episimConfig, iteration - 1);</span>
+
+<span class="fc bfc" id="L150" title="All 2 branches covered.">		for (InfectionEventHandler.EpisimFacility facility : pseudoFacilityMap.values()) {</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">			if (!responsibleFacility.test(facility.getContainerId()))</span>
+<span class="fc" id="L152">				continue;</span>
+
+<span class="fc" id="L154">			facility.resetContagiousCounter();</span>
+
+<span class="fc" id="L156">			Iterator&lt;EpisimPerson&gt; it = facility.getPersons().iterator();</span>
+
+<span class="fc bfc" id="L158" title="All 2 branches covered.">			while (it.hasNext()) {</span>
+
+<span class="fc" id="L160">				EpisimPerson person = it.next();</span>
+
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">				assert facility.getContainerId().equals(person.getLastFacilityId(prevDay)) :</span>
+<span class="nc" id="L163">						String.format(&quot;Person %s needs to be in its last facility (%s) at the end of the day, but is in %s&quot;,</span>
+<span class="nc" id="L164">								person.getPersonId(), person.getLastFacilityId(prevDay), facility.getContainerId());</span>
+
+				// person needs to be at a different container and is removed here
+<span class="pc bpc" id="L167" title="1 of 4 branches missed.">				if (person.getStaysInContainer(prevDay) &amp;&amp; !person.getLastFacilityId(prevDay).equals(person.getFirstFacilityId(day))) {</span>
+
+<span class="fc" id="L169">					EpisimPerson.PerformedActivity lastActivity = facility.getPerformedActivity(person.getPersonId());</span>
+
+<span class="fc" id="L171">					double timeSpent = now - facility.getContainerEnteringTime(person.getPersonId());</span>
+<span class="fc" id="L172">					person.addSpentTime(lastActivity.actType(), timeSpent);</span>
+
+<span class="fc" id="L174">					contactModel.infectionDynamicsFacility(person, facility, now);</span>
+<span class="fc" id="L175">					facility.removePerson(person, it);</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">				} else if (person.infectedButNotSerious())</span>
+<span class="fc" id="L177">					facility.countContagious(1);</span>
+<span class="fc" id="L178">			}</span>
+<span class="fc" id="L179">		}</span>
+
+		// all persons still in vehicles are removed at the end of the day
+<span class="fc bfc" id="L182" title="All 2 branches covered.">		for (InfectionEventHandler.EpisimVehicle vehicle : vehicleMap.values()) {</span>
+<span class="fc bfc" id="L183" title="All 2 branches covered.">			if (!responsibleVehicle.test(vehicle.getContainerId()))</span>
+<span class="fc" id="L184">				continue;</span>
+
+<span class="fc" id="L186">			Iterator&lt;EpisimPerson&gt; it = vehicle.getPersons().iterator();</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">			while (it.hasNext()) {</span>
+<span class="fc" id="L188">				EpisimPerson person = it.next();</span>
+<span class="fc" id="L189">				contactModel.infectionDynamicsVehicle(person, vehicle, now);</span>
+<span class="fc" id="L190">				vehicle.removePerson(person, it);</span>
+<span class="fc" id="L191">			}</span>
+<span class="fc" id="L192">		}</span>
+
+
+<span class="fc bfc" id="L195" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
+
+<span class="fc" id="L197">			Id&lt;ActivityFacility&gt; firstFacilityId = person.getFirstFacilityId(day);</span>
+<span class="fc" id="L198">			InfectionEventHandler.EpisimFacility firstFacility = pseudoFacilityMap.get(firstFacilityId);</span>
+
+<span class="fc bfc" id="L200" title="All 2 branches covered.">			if (!responsibleFacility.test(firstFacilityId))</span>
+<span class="fc" id="L201">				continue;</span>
+
+<span class="fc bfc" id="L203" title="All 2 branches covered.">			if (!person.checkFirstActivity(day, 0))</span>
+<span class="fc" id="L204">				continue;</span>
+
+<span class="fc bfc" id="L206" title="All 4 branches covered.">			if (!person.getStaysInContainer(prevDay) || !person.getLastFacilityId(prevDay).equals(firstFacilityId)) {</span>
+<span class="fc" id="L207">				firstFacility.addPerson(person, now, person.getFirstActivity(day));</span>
+<span class="fc" id="L208">				contactModel.notifyEnterFacility(person, firstFacility, now);</span>
+			}
+<span class="fc" id="L210">		}</span>
+<span class="fc" id="L211">	}</span>
+
+	/**
+	 * Checks whether this person does perform the activity at {@code time}
+	 */
+	private boolean checkParticipation(EpisimPerson person, double time) {
+<span class="fc bfc" id="L217" title="All 2 branches covered.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)</span>
+<span class="fc" id="L218">			return true;</span>
+
+<span class="fc" id="L220">		return person.checkActivity(day, time);</span>
+	}
+
+	private boolean checkVehicleUsage(EpisimPerson person, double time) {
+<span class="fc bfc" id="L224" title="All 2 branches covered.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)</span>
+<span class="fc" id="L225">			return true;</span>
+
+<span class="fc bfc" id="L227" title="All 4 branches covered.">		return person.checkActivity(day, time) &amp;&amp; person.checkNextActivity(day, time);</span>
+	}
+
+	public void handleEvent(ActivityStartEvent activityStartEvent) {
+//		double now = activityStartEvent.getTime();
+<span class="fc" id="L232">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);</span>
+
+		// find the person:
+<span class="fc" id="L235">		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());</span>
+
+<span class="fc bfc" id="L237" title="All 2 branches covered.">		if (!checkParticipation(episimPerson, activityStartEvent.getTime()))</span>
+<span class="fc" id="L238">			return;</span>
+
+<span class="fc" id="L240">		reporting.handleEvent(activityStartEvent);</span>
+
+		// create pseudo facility id that includes the activity type:
+<span class="fc" id="L243">		Id&lt;ActivityFacility&gt; episimFacilityId = activityStartEvent.getFacilityId();</span>
+
+		// find the facility
+<span class="fc" id="L246">		InfectionEventHandler.EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);</span>
+
+		// add person to facility
+<span class="fc" id="L249">		episimFacility.addPerson(episimPerson, now, episimPerson.getActivity(day, activityStartEvent.getTime()));</span>
+
+<span class="fc" id="L251">		contactModel.notifyEnterFacility(episimPerson, episimFacility, now);</span>
+<span class="fc" id="L252">	}</span>
+
+	public void handleEvent(ActivityEndEvent activityEndEvent) {
+//		double now = activityEndEvent.getTime();
+<span class="fc" id="L256">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);</span>
+
+<span class="fc" id="L258">		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());</span>
+
+		// create pseudo facility id that includes the activity type:
+<span class="fc" id="L261">		Id&lt;ActivityFacility&gt; episimFacilityId = activityEndEvent.getFacilityId();</span>
+
+		// find the facility
+<span class="fc" id="L264">		InfectionEventHandler.EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);</span>
+
+		// person did not perform this activity
+<span class="fc bfc" id="L267" title="All 4 branches covered.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.startOfDay &amp;&amp; !episimFacility.containsPerson(episimPerson))</span>
+<span class="fc" id="L268">			return;</span>
+
+<span class="fc" id="L270">		reporting.handleEvent(activityEndEvent);</span>
+
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.no ||</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">				episimFacility.containsContagious()) {</span>
+<span class="fc" id="L274">			contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);</span>
+		}
+
+<span class="pc bpc" id="L277" title="1 of 2 branches missed.">		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.yes) {</span>
+<span class="nc" id="L278">			double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());</span>
+<span class="nc" id="L279">			episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);</span>
+		}
+
+<span class="fc" id="L282">		episimFacility.removePerson(episimPerson);</span>
+<span class="fc" id="L283">	}</span>
+
+	public void handleEvent(PersonEntersVehicleEvent entersVehicleEvent) {
+//		double now = entersVehicleEvent.getTime();
+<span class="fc" id="L287">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);</span>
+
+		// find the person:
+<span class="fc" id="L290">		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());</span>
+
+<span class="fc bfc" id="L292" title="All 2 branches covered.">		if (!checkVehicleUsage(episimPerson, entersVehicleEvent.getTime()))</span>
+<span class="fc" id="L293">			return;</span>
+
+<span class="fc" id="L295">		reporting.handleEvent(entersVehicleEvent);</span>
+
+		// find the vehicle:
+<span class="fc" id="L298">		InfectionEventHandler.EpisimVehicle episimVehicle = this.vehicleMap.get(entersVehicleEvent.getVehicleId());</span>
+
+		// add person to vehicle and memorize entering time:
+<span class="fc" id="L301">		episimVehicle.addPerson(episimPerson, now, EpisimPerson.UNSPECIFIC_ACTIVITY);</span>
+
+<span class="fc" id="L303">		contactModel.notifyEnterVehicle(episimPerson, episimVehicle, now);</span>
+<span class="fc" id="L304">	}</span>
+
+	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
+//		double now = leavesVehicleEvent.getTime();
+<span class="fc" id="L308">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);</span>
+
+		// find vehicle:
+<span class="fc" id="L311">		InfectionEventHandler.EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());</span>
+
+<span class="fc" id="L313">		EpisimPerson episimPerson = this.personMap.get(leavesVehicleEvent.getPersonId());</span>
+
+		// person did not enter the vehicle
+<span class="fc bfc" id="L316" title="All 4 branches covered.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.startOfDay &amp;&amp; !episimVehicle.containsPerson(episimPerson))</span>
+<span class="fc" id="L317">			return;</span>
+
+<span class="fc" id="L319">		reporting.handleEvent(leavesVehicleEvent);</span>
+
+<span class="pc bpc" id="L321" title="1 of 2 branches missed.">		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.no ||</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">				episimVehicle.containsContagious()) {</span>
+<span class="fc" id="L323">			contactModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);</span>
+		}
+
+
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.yes) {</span>
+<span class="nc" id="L328">			double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());</span>
+
+<span class="nc" id="L330">			episimPerson.addSpentTime(&quot;pt&quot;, timeSpent);</span>
+		}
+
+		// remove person from vehicle:
+<span class="fc" id="L334">		episimVehicle.removePerson(episimPerson);</span>
+<span class="fc" id="L335">	}</span>
+
+	public void reportCpuTime(String what, int taskId) {
+<span class="fc" id="L338">		reporting.reportCpuTime(iteration, &quot;TrajectoryHandler&quot;, what, taskId);</span>
+<span class="fc" id="L339">	}</span>
+
+	public InfectionEventHandler.EpisimFacility getEpisimFacility(Id&lt;ActivityFacility&gt; id) {
+<span class="fc" id="L342">		return this.pseudoFacilityMap.get(id);</span>
+	}
+
+	public InfectionEventHandler.EpisimVehicle getEpisimVehicle(Id&lt;Vehicle&gt; id) {
+<span class="fc" id="L346">		return this.vehicleMap.get(id);</span>
+	}
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

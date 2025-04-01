@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AllParticipationModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.activity</a> &gt; <span class="el_source">AllParticipationModel.java</span></div><h1>AllParticipationModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.activity;
+
+import com.google.common.collect.ImmutableMap;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.policy.Restriction;
+
+import java.util.BitSet;
+import java.util.List;
+
+/**
+ * The original default model that does not restrict activities in any way.
+ */
+<span class="fc" id="L13">public final class AllParticipationModel implements ActivityParticipationModel {</span>
+
+	@Override
+	public void setRestrictionsForIteration(int iteration, ImmutableMap&lt;String, Restriction&gt; im) {
+
+<span class="fc" id="L18">	}</span>
+
+	@Override
+	public void updateParticipation(EpisimPerson person, BitSet trajectory, int index,
+									List&lt;EpisimPerson.PerformedActivity&gt; activities) {
+
+<span class="fc" id="L24">	}</span>
+
+	@Override
+	public void applyQuarantine(EpisimPerson person, BitSet trajectory, int offset, List&lt;EpisimPerson.PerformedActivity&gt; activities) {
+		// Nothing to do
+<span class="fc" id="L29">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
