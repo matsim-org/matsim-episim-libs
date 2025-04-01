@@ -1,10 +1,9 @@
 # MATSim Episim
 
-![Build Status](https://github.com/matsim-org/matsim-episim-libs/workflows/build/badge.svg?branch=master)
-![license](https://img.shields.io/github/license/matsim-org/matsim-episim.svg)
+[![build](https://github.com/matsim-org/matsim-episim-libs/actions/workflows/build.yaml/badge.svg)](https://github.com/matsim-org/matsim-episim-libs/actions/workflows/build.yaml)
+![license](https://img.shields.io/github/license/matsim-org/matsim-episim-libs.svg)
 ![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
-[![Join the chat at https://gitter.im/matsim-episim-libs/community](https://badges.gitter.im/matsim-episim-libs/community.svg)](https://gitter.im/matsim-episim-libs/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Coverage](https://img.shields.io/badge/Coverage-View-blue)](https://matsim-org.github.io/matsim-episim-libs/split_repo_into_scenarios_core/index.html)
+[![Coverage](https://img.shields.io/badge/Coverage-View-blue)](https://matsim-org.github.io/matsim-episim-libs/develop/index.html)
 
 
 
@@ -14,7 +13,7 @@ This repository contains an epidemic simulation based on MATSim, provided by the
 
 Dissemination of some scenarios and results produced with the methods in this repository can be found at https://matsim-vsp.github.io/covid-sim/.
 
-<a rel="TU Berlin" href="https://www.vsp.tu-berlin.de"><img src="https://svn.vsp.tu-berlin.de/repos/public-svn/ueber_uns/logo/TUB_Logo.png" width="15%" height="15%"/></a>
+<a rel="TU Berlin" href="https://www.vsp.tu-berlin.de"><img src="https://svn.vsp.tu-berlin.de/repos/public-svn/ueber_uns/logo/TU_BERLIN_Logo_Lang_RGB_SR_rot.svg" width="25%"/></a>
 
 ### How to use Episim
 
