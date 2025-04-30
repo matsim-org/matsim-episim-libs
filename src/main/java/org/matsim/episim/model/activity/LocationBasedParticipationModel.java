@@ -6,9 +6,11 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
 
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -19,26 +21,33 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
 	private ImmutableMap<String, Restriction> im;
+	private int iteration;
+	private LocalDate date;
+
 
 	/**
 	 * Map of each ActivityFacility with the corresponding subdistrict
 	 */
 	private final Map<String, String> subdistrictFacilities;
 
+
 	@Inject
-	public LocationBasedParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, Scenario scenario) {
+	public LocationBasedParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, Scenario scenario,VaccinationConfigGroup vaccinationConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
+		this.vaccinationConfig = vaccinationConfig;
 
 		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)
 			throw new IllegalStateException("Participation model can only be used with activityHandling startOfDay");
 
-		if (episimConfig.getDistrictLevelRestrictions() != EpisimConfigGroup.DistrictLevelRestrictions.yes) {
+		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.no) {
 			throw new IllegalStateException("LocationBasedParticipationModel can only be used if location based restrictions are used");
 		}
 
 		subdistrictFacilities = new HashMap<>();
+		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation || episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation)) {
 		if (scenario != null && !scenario.getActivityFacilities().getFacilities().isEmpty()) {
 			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
 				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
@@ -48,39 +57,91 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 				}
 			}
 		}
+		}
 	}
 
 	@Override
 	public void setRestrictionsForIteration(int iteration, ImmutableMap<String, Restriction> im) {
 		this.im = im;
+		this.iteration = iteration;
+		this.date = episimConfig.getStartDate().plusDays(iteration - 1);
 	}
 
 	@Override
 	public void updateParticipation(EpisimPerson person, BitSet trajectory, int offset, List<EpisimPerson.PerformedActivity> activities) {
 		for (int i = 0; i < activities.size(); i++) {
-			String context = activities.get(i).params.getContainerName();
+//			String context = activities.get(i).params.getContainerName();
 			Id<ActivityFacility> facilityId = activities.get(i).getFacilityId();
 
-			Restriction restriction = im.get(context);
-			double remainingFraction = restriction.getRemainingFraction();
+			Restriction context = im.get(activities.get(i).params.getContainerName());
+			double r = context.getRemainingFraction();
 
+//			Restriction restriction = im.get(context);
+//			double remainingFraction = restriction.getRemainingFraction();
+			Double rLocal = null;
 			// Replaces global remaining fraction with local one, if applicable
-			if (facilityId != null) {
-				if (subdistrictFacilities.containsKey(facilityId.toString())) {
-					String subdistrict = subdistrictFacilities.get(facilityId.toString());
-					if (restriction.getLocationBasedRf().containsKey(subdistrict)) {
-						remainingFraction = restriction.getLocationBasedRf().get(subdistrict);
+			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)) {
+				rLocal = getLocalRfForActivityLocation(facilityId, context);
+			} else if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)) {
+				rLocal = getLocalRfForHomeLocation(person, context);
+			} else if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeAndActivityLocation)) {
+				// compare restriction at home location to restriction at activity location. Choose more restrictive one.
+				Double rLocalActivity = getLocalRfForActivityLocation(facilityId, context);
+				Double rLocalHome = getLocalRfForHomeLocation(person, context);
+				if (rLocalHome == null) {
+					rLocal = rLocalActivity;
+				} else if (rLocalActivity == null) {
+					rLocal = rLocalHome;
+				} else {
+					rLocal = Math.min(rLocalActivity, rLocalHome);
+				}
+			}
+
+			if (rLocal != null) {
+				r = rLocal;
+			}
+
+			// reduce fraction for persons that are not vaccinated
+			if (context.getSusceptibleRf() != null && context.getSusceptibleRf() != 1d) {
+				if (!vaccinationConfig.hasGreenPass(person, iteration, date))
+					r *= context.getSusceptibleRf();
+			}
+
+			if (context.getVaccinatedRf() != null && context.getVaccinatedRf() != 1d) {
+				if (vaccinationConfig.hasGreenPass(person, iteration, date))
+					r *= context.getVaccinatedRf();
+			}
+
+			if (r == 1.0)
+				trajectory.set(offset + i, true);
+			else if (r == 0.0)
+				trajectory.set(offset + i, false);
+			else
+				trajectory.set(offset + i, rnd.nextDouble() < r);
+
+		}
+	}
+
+	private Double getLocalRfForHomeLocation(EpisimPerson person, Restriction context) {
+		if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
+			String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
+			if (context.getLocationBasedRf().containsKey(subdistrict)) {
+				return context.getLocationBasedRf().get(subdistrict);
+			}
+		}
+		return null;
+	}
+
+	private Double getLocalRfForActivityLocation(Id<ActivityFacility> facilityId, Restriction context) {
+		if (facilityId != null) {
+			if (subdistrictFacilities.containsKey(facilityId.toString())) {
+				String subdistrict = subdistrictFacilities.get(facilityId.toString());
+					if (context.getLocationBasedRf().containsKey(subdistrict)) {
+						return context.getLocationBasedRf().get(subdistrict);
 					}
 				}
 			}
 
-			if (remainingFraction == 1.0)
-				trajectory.set(offset + i, true);
-			else if (remainingFraction == 0.0)
-				trajectory.set(offset + i, false);
-			else
-				trajectory.set(offset + i, rnd.nextDouble() < remainingFraction);
-
-		}
+		return null;
 	}
 }

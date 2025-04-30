@@ -6,71 +6,6 @@
 library(data.table)
 
 
-# Functions:
-# read_and_process_episim_infections <- function(directory, facilities_to_district_map) {
-#   fac_to_district_map <- read_delim(facilities_to_district_map,
-#                                     ";", escape_double = FALSE, col_names = FALSE,
-#                                     trim_ws = TRUE) %>%
-#     rename("facility" = "X1") %>%
-#     rename("district" = "X2")
-#
-#   fac_to_district_map[is.na(fac_to_district_map)] <- "not_berlin"
-#
-#   info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
-#
-#   # gathers column names that should be included in final dataframe
-#   col_names <- colnames(info_df)
-#   relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
-#
-#   episim_df_all_runs <- data.frame()
-#
-#   for (row in seq_len(nrow(info_df))) {
-#
-#     runId <- info_df$RunId[row]
-#     seed <- info_df$seed[row]
-#
-#     file_name <- paste0(directory, runId, ".infectionEvents.txt")
-#
-#     if (!file.exists(file_name)) {
-#       warning(paste0(file_name, " does not exist"))
-#       next
-#     }
-#
-#     df_for_run <- read_delim(file = file_name,
-#                              "\t", escape_double = FALSE, trim_ws = TRUE) %>%
-#       select(date, facility)
-#
-#     # adds important variables concerning run to df, so that individual runs can be filtered in later steps
-#     for (var in relevant_cols) {
-#       df_for_run[var] <- info_df[row, var]
-#     }
-#
-#     episim_df_all_runs <- rbind(episim_df_all_runs, df_for_run)
-#
-#   }
-#
-#   episim_df2 <- episim_df_all_runs %>% filter(!grepl("^tr_", facility))
-#
-#   merged <- episim_df2 %>%
-#     left_join(fac_to_district_map, by = c("facility"), keep = TRUE)
-#
-#   na_facs <- merged %>%
-#     filter(is.na(district)) %>%
-#     pull(facility.x)
-#   length(unique(na_facs))
-#
-#   episim_final <- merged %>%
-#     filter(!is.na(district)) %>%
-#     filter(district != "not_berlin") %>%
-#     select(!starts_with("facility")) %>%
-#     group_by_all() %>%
-#     count() %>%
-#     group_by(across(c(-n, -seed))) %>%
-#     summarise(infections = mean(n))
-#
-#   return(episim_final)
-# }
-
 convert_infections_into_incidence <- function(directory, infections_raw, aggregate_seeds) {
   run_params <- get_run_parameters(directory)
   infections <- infections_raw %>%
@@ -176,6 +111,7 @@ read_combine_episim_output <- function(directory, file_root, allow_missing_files
 
   info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
 
+
   # gathers column names that should be included in final dataframe
   col_names <- colnames(info_df)
   relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
@@ -185,16 +121,23 @@ read_combine_episim_output <- function(directory, file_root, allow_missing_files
 
     runId <- info_df$RunId[row]
 
-    file_name <- paste0(directory, runId, ".", file_root)
-
-    if (!file.exists(file_name) & allow_missing_files) {
-      warning(paste0(file_name, " does not exist"))
+    zip_file <-  paste0("summaries/",runId, ".zip")
+    file_name <- paste0(runId, ".", file_root)
+    
+    
+    # browser()
+    if (!file.exists(zip_file) & allow_missing_files) {
+      warning(paste0(zip_file, " does not exist"))
       next
     }
 
-
-    df_for_run <- read_delim(file = file_name, "\t", escape_double = FALSE, trim_ws = TRUE)
-
+    df_for_run <- read_delim(unz(zip_file, file_name), "\t", escape_double = FALSE, trim_ws = TRUE)
+  
+    if("district" %in% colnames(df_for_run)){
+      df_for_run <- df_for_run %>% rename("district_ODE" = "district")
+    }
+    
+    browser()
     if (dim(df_for_run)[1] == 0) {
       warning(paste0(file_name, " is empty"))
       next

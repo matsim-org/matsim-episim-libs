@@ -2,6 +2,7 @@ package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -11,6 +12,7 @@ import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
 import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.model.SymmetricContactModelWithOdeCoupling;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;

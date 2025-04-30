@@ -50,6 +50,12 @@ import java.util.stream.Collectors;
  */
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
+	private static final String ODE_COUPLING_FACTOR = "odeCouplingFactor";
+	private static final String ODE_INF_TARGET_DISTRICT = "odeCouplingDistrict";
+
+	private static final String ODE_INCIDENCE_FILE = "odeIncidenceFile";
+
+	private static final String ODE_DISTRICTS = "odeDistricts";
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
@@ -77,6 +83,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
+	private static final String DISTRICTS = "districts";
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 	private static final String SINGLE_EVENT_FILE = "singleEventFile";
@@ -84,6 +91,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
+
+	private static final String FACILITIES_PATH = "facilitiesPath";
+
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
 
@@ -111,7 +121,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private final Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 
-	/**
+	private double odeCouplingFactor = 0.0;
+
+	private String odeInfTargetDistrict = null;
+
+	private String odeIncidenceFile = null;
+
+	private List<String> odeDistricts = new ArrayList<>();
+
+
+    /**
 	 * Which events to write in the output.
 	 */
 	private WriteEvents writeEvents = WriteEvents.episim;
@@ -162,11 +181,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
+	private List<String> districts = new ArrayList<>();
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
 	private SingleEventFile singleEventFile = SingleEventFile.yes;
 	private boolean endEarly = false;
 	private int threads = 2;
+	private String facilitiesPath = null;
 
 
 	/**
@@ -180,6 +201,59 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public EpisimConfigGroup() {
 		super(GROUPNAME);
 	}
+
+
+	@StringGetter(ODE_COUPLING_FACTOR)
+	public double getOdeCouplingFactor() {
+		return odeCouplingFactor;
+	}
+
+	@StringSetter(ODE_COUPLING_FACTOR)
+	public void setOdeCouplingFactor(double odeCouplingFactor) {
+		this.odeCouplingFactor = odeCouplingFactor;
+	}
+
+	@StringGetter(ODE_INF_TARGET_DISTRICT)
+	public String getOdeInfTargetDistrict() {
+		return odeInfTargetDistrict;
+	}
+	@StringSetter(ODE_INF_TARGET_DISTRICT)
+	public void setOdeInfTargetDistrict(String odeInfTargetDistrict) {
+		this.odeInfTargetDistrict = odeInfTargetDistrict;
+	}
+	@StringSetter(ODE_INCIDENCE_FILE)
+	public void setOdeIncidenceFile(String odeIncidenceFile) {
+		this.odeIncidenceFile = odeIncidenceFile;
+	}
+
+	@StringGetter(ODE_INCIDENCE_FILE)
+	public String getOdeIncidenceFile() {
+		return odeIncidenceFile;
+	}
+
+
+	//
+	public void setOdeDistricts(List<String> odeDistricts) {
+		this.odeDistricts = odeDistricts;
+	}
+
+	public List<String> getOdeDistricts() {
+		return this.odeDistricts;
+
+	}
+
+	@StringSetter(ODE_DISTRICTS)
+	void setOdeDistricts(String odeDistricts) {
+		this.odeDistricts = Splitter.on(";").splitToList(odeDistricts);
+	}
+
+	@StringGetter(ODE_DISTRICTS)
+	String getOdeDistrictsString() {
+		return Joiner.on(";").join(this.odeDistricts);
+	}
+
+	//
+
 
 	public String getInputEventsFile() {
 		List<EventFileParams> list = Lists.newArrayList(getInputEventsFiles());
@@ -672,6 +746,24 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
 
+	public void setDistricts(List<String> districts) {
+		this.districts = districts;
+	}
+
+	public List<String> getDistricts() {
+		return this.districts;
+
+	}
+
+	@StringSetter(DISTRICTS)
+	void setDistricts(String districts) {
+		this.districts = Splitter.on(";").splitToList(districts);
+	}
+
+	@StringGetter(DISTRICTS)
+	String getDistrictsString() {
+		return Joiner.on(";").join(this.districts);
+	}
 	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
 	public ContagiousOptimization getContagiousOptimization() {
 		return this.contagiousContainerOptimization;
@@ -702,6 +794,15 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.reportTimeUse = reportTimeUse;
 	}
 
+	@StringSetter(FACILITIES_PATH)
+	public void setFacilitiesFile(final String facilitiesPath){
+		this.facilitiesPath = facilitiesPath;
+	}
+
+	@StringGetter(FACILITIES_PATH)
+	public String getFacilitiesFile() {
+		return facilitiesPath;
+	}
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
@@ -809,7 +910,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void clearInputEventsFiles() {
 		clearParameterSetsForType(EventFileParams.SET_TYPE);
 	}
-
 	/**
 	 * Get a copy of container params. Don't use this heavily, it is slow because a new map is created every time.
 	 */
@@ -941,7 +1041,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public enum ActivityHandling {
 
 		/**
-		 * Activity participation is randdom during each contact.
+		 * Activity participation is random during each contact.
 		 */
 		duringContact,
 
@@ -957,7 +1057,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Decides whether location based restrictions should be implemented
 	 */
 	public enum DistrictLevelRestrictions {
-		yes,
+		yesForActivityLocation,
+		yesForHomeLocation,
+		yesForHomeAndActivityLocation,
 		no
 	}
 

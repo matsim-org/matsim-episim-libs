@@ -37,6 +37,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
+import org.matsim.run.modules.OpenBerlinScenario;
 import picocli.CommandLine;
 
 import java.lang.reflect.Constructor;
@@ -70,7 +71,7 @@ import java.util.concurrent.Callable;
 		footerHeading = "\n",
 		usageHelpWidth = 120,
 		usageHelpAutoWidth = true, showDefaultValues = true, mixinStandardHelpOptions = true, abbreviateSynopsis = true,
-		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class, AnalysisCommand.class}
+		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class, ScenarioCreation.class, AnalysisCommand.class}
 )
 public final class RunEpisim implements Callable<Integer> {
 
@@ -223,7 +224,8 @@ public final class RunEpisim implements Callable<Integer> {
 		}
 
 		if (modules.isEmpty()) {
-			throw new IllegalArgumentException("No module specificied ");
+			log.info("Using default OpenBerlinScenario");
+			modules.add(new OpenBerlinScenario());
 		}
 
 		log.info("Starting with modules: {}", modules);

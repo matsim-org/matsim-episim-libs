@@ -498,7 +498,7 @@ public class DefaultContactModelTest {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
 		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
 		// Add activity facilities to scenario
@@ -523,8 +523,8 @@ public class DefaultContactModelTest {
 		Map<String, Double> nycBoroughs = new HashMap<>();
 		nycBoroughs.put("Bronx", 0.0);
 		nycBoroughs.put("Queens", 0.5);
-		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.ofLocationBasedRf(nycBoroughs)));
 		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.of(1.0)));
+		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.ofLocationBasedRf(nycBoroughs)));
 
 		// These 2 lines are necessary repeats from setup(); TODO: a more elegant solution
 		model = new DefaultContactModel(rnd, config, reporting, infectionModel, scenario);

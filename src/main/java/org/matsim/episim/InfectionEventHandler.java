@@ -20,11 +20,13 @@
  */
 package org.matsim.episim;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.objects.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,9 +44,11 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationModel;
+import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
@@ -57,7 +61,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.*;
 
@@ -186,6 +189,9 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Set of additional vaccination strategies.
 	 */
 	private Set<VaccinationModel> vaccinations;
+
+	@Inject
+	ContactModel contactModel;
 
 	@Inject
 	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
@@ -766,7 +772,15 @@ public final class InfectionEventHandler implements Externalizable {
 		// Sum of antibodies
 		Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
+		boolean fakeAgentsPossible = contactModel instanceof SymmetricContactModelWithOdeCoupling;
+
 		for (EpisimPerson person : personMap.values()) {
+
+			if (fakeAgentsPossible && person.getPersonId().toString().startsWith("fake_")) {
+				progressionModel.removeAgent(person.getPersonId());
+			}
+
+
 			progressionModel.updateState(person, iteration);
 			antibodyModel.updateAntibodies(person, iteration);
 
@@ -824,7 +838,30 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
+		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
+		// if the districtLevelAttribute is "district, we don't need an extra report; the default report will suffice.
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("") && !districtLevelAttribute.equals("district")) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			reporting.writeInfections(reportsLocal, districtLevelAttribute);
+		}
+
+		if (policy instanceof AdaptivePolicy && policy.getConfig().getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			((AdaptivePolicy) policy).updateRestrictions(reportsLocal, im);
+		} else {
 		policy.updateRestrictions(report, im);
+		}
+
+
+		if (policy instanceof AdaptivePolicy) {
+			Map<String, Map<String, AdaptivePolicy.RestrictionStatus>> restrictionStatus = ((AdaptivePolicy) policy).getRestrictionStatus();
+			for (String location : restrictionStatus.keySet()) {
+				Map<String, AdaptivePolicy.RestrictionStatus> stringRestrictionStatusMap = restrictionStatus.get(location);
+				for (String activity : stringRestrictionStatusMap.keySet()) {
+					reporting.reportAdaptiveRestrictions(iteration, date.toString(), location, activity, stringRestrictionStatusMap.get(activity).toString());
+				}
+			}
+		}
 
 		reporting.reportCpuTime(iteration, "TestingModel", "start", -1);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
@@ -843,6 +880,8 @@ public final class InfectionEventHandler implements Externalizable {
 			activityParticipationModel.applyQuarantine(person, person.getActivityParticipation(), person.getStartOfDay(day), person.getActivities(day));
 
 		}
+
+
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
 		handlers.forEach(h -> {
@@ -998,6 +1037,17 @@ public final class InfectionEventHandler implements Externalizable {
 			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
 		}
 
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
+
+		if (contactModel instanceof SymmetricContactModelWithOdeCoupling) {
+			long odeImport = ((SymmetricContactModelWithOdeCoupling) contactModel).getOdeDiseaseImportCount();
+			reporting.reportDiseaseImportOde((int) odeImport, iteration, date.toString());
+			((SymmetricContactModelWithOdeCoupling) contactModel).resetOdeDiseaseImportCount();
+
+			log.warn("Size of Fake pool: " + SymmetricContactModelWithOdeCoupling.personCounter);
+
+		}
+
 	}
 
 
@@ -1031,7 +1081,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Container that is a facility and occurred during an activity.
 	 */
 	public static final class EpisimFacility extends EpisimContainer<ActivityFacility> {
-		EpisimFacility(Id<ActivityFacility> facilityId) {
+		public EpisimFacility(Id<ActivityFacility> facilityId) {
 			super(facilityId);
 		}
 	}

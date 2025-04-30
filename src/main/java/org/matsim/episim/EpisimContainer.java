@@ -21,18 +21,18 @@
 package org.matsim.episim;
 
 import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.policy.Restriction;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.*;
 
@@ -91,9 +91,16 @@ public class EpisimContainer<T> {
 
 	/**
 	 * This counts the number of persons in this container
-	 * which have the DiseaseStatus contagious or showingSymptoms. 	
+	 * which have the DiseaseStatus contagious or showingSymptoms.
 	 */
  	private int contagiousCounter = 0;
+
+	public enum InOdeRegion{yes, no, unknown}
+
+	private InOdeRegion inOdeRegion = InOdeRegion.unknown;
+
+	private Object2DoubleMap<String> actToOdeContacts = null;
+
 
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
@@ -134,7 +141,7 @@ public class EpisimContainer<T> {
 		return persons.contains(index);
 	}
 
-	void addPerson(EpisimPerson person, double now, EpisimPerson.PerformedActivity act) {
+	public void addPerson(EpisimPerson person, double now, EpisimPerson.PerformedActivity act) {
 		final int index = person.getPersonId().index();
 
 		//assert !persons.contains(index) : "Person already contained in this container.";
@@ -209,7 +216,7 @@ public class EpisimContainer<T> {
 	 *
 	 * @param num number of persons
 	 */
-	void setMaxGroupSize(int num) {
+	public void setMaxGroupSize(int num) {
 		maxGroupSize = num;
 	}
 
@@ -238,7 +245,23 @@ public class EpisimContainer<T> {
 		return taskId;
 	}
 
-	
+
+	public void setInOdeRegion(InOdeRegion inOdeRegion) {
+		this.inOdeRegion = inOdeRegion;
+	}
+
+	public InOdeRegion getInOdeRegion() {
+		return inOdeRegion;
+	}
+
+	public Object2DoubleMap<String> getActToOdeContacts() {
+		return actToOdeContacts;
+	}
+
+	public void setActToOdeContacts(Object2DoubleMap<String> actToOdeContacts) {
+		this.actToOdeContacts = actToOdeContacts;
+	}
+
 	void clearPersons() {
 		this.persons.clear();
 		this.personsAsList.clear();
@@ -267,13 +290,13 @@ public class EpisimContainer<T> {
 
 	public void countContagious(int add) {
 		contagiousCounter += add;
-		assert contagiousCounter >= 0 : "We can not have a negative number of contagious persons"; 
+		assert contagiousCounter >= 0 : "We can not have a negative number of contagious persons";
 	}
 
 	public void resetContagiousCounter() {
 		contagiousCounter = 0;
 	}
-	
+
 	public boolean containsContagious() {
 		return contagiousCounter > 0;
 	}

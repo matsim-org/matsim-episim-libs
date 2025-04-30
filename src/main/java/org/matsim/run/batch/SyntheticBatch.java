@@ -1,4 +1,4 @@
-package org.matsim.episim;
+package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
 import org.apache.commons.csv.CSVFormat;
@@ -8,7 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.BatchRun;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.run.modules.SyntheticScenario;
 
 import javax.annotation.Nullable;
 import java.nio.file.Files;

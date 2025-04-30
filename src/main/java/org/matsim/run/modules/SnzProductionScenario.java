@@ -15,9 +15,13 @@ import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationByAge;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
+
+import static org.matsim.episim.model.Transition.to;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -25,8 +29,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.matsim.episim.model.Transition.to;
 
 /**
  * Abstract class and utility class for most recent Senozo scenarios.
@@ -524,6 +526,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	public enum AdjustRestrictions {yes, no}
 
+	public enum OdeCoupling {yes, no}
+
 	public enum EasterModel {yes, no}
 
 	public enum LocationBasedRestrictions {yes, no}
@@ -537,6 +541,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		DiseaseImport diseaseImport = DiseaseImport.yes;
 		Restrictions restrictions = Restrictions.yes;
 		AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
+
+		OdeCoupling odeCoupling = OdeCoupling.no;
 		Masks masks = Masks.yes;
 		Tracing tracing = Tracing.yes;
 		Vaccinations vaccinations = Vaccinations.yes;
@@ -595,6 +601,11 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		public Builder<T> setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
 			this.adjustRestrictions = adjustRestrictions;
+			return this;
+		}
+
+		public Builder<T> setOdeCoupling(OdeCoupling odeCoupling) {
+			this.odeCoupling = odeCoupling;
 			return this;
 		}
 

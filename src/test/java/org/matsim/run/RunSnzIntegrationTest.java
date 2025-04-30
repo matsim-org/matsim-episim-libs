@@ -22,6 +22,7 @@ import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.util.Arrays;
@@ -29,12 +30,11 @@ import java.util.List;
 
 import static org.matsim.run.RunEpisimIntegrationTest.assertSimulationOutput;
 
-
 @RunWith(Parameterized.class)
 public class RunSnzIntegrationTest {
 
 	private static final int ITERATIONS = 80;
-	static final String INPUT = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/openDataModel/berlin/input/";
+	static final Path INPUT = EpisimUtils.resolveInputPath("../public-svn/matsim/scenarios/countries/de/episim/openDataModel/input");
 
 	@Rule
 	public MatsimTestUtils utils = new MatsimTestUtils();
@@ -60,8 +60,8 @@ public class RunSnzIntegrationTest {
 		OutputDirectoryLogging.catchLogEntries();
 
 		// Run only if input is present
-//		Assume.assumeTrue(false);
-//		skipped = true;
+		Assume.assumeTrue(Files.exists(INPUT) && Files.isDirectory(INPUT));
+		skipped = false;
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzTestScenario(utils, r)));
 
@@ -140,27 +140,26 @@ public class RunSnzIntegrationTest {
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 			episimConfig.clearInputEventsFiles();
-			episimConfig.addInputEventsFile(INPUT + "samples/be_2020-week_snz_episim_events_wt_1pt_split.xml.gz")
-				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+			episimConfig.addInputEventsFile(INPUT.resolve("sample/be_2020-week_snz_episim_events_wt_1pt_split.xml.gz").toString())
+					.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-			episimConfig.addInputEventsFile(INPUT + "samples/be_2020-week_snz_episim_events_sa_1pt_split.xml.gz")
-				.addDays(DayOfWeek.SATURDAY);
+			episimConfig.addInputEventsFile(INPUT.resolve("sample/be_2020-week_snz_episim_events_sa_1pt_split.xml.gz").toString())
+					.addDays(DayOfWeek.SATURDAY);
 
-			episimConfig.addInputEventsFile(INPUT + "samples/be_2020-week_snz_episim_events_so_1pt_split.xml.gz")
+			episimConfig.addInputEventsFile(INPUT.resolve("sample/be_2020-week_snz_episim_events_so_1pt_split.xml.gz").toString())
 					.addDays(DayOfWeek.SUNDAY);
 
-			config.plans().setInputFile(INPUT +
-				"samples/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_1pt_split.xml.gz");
+			config.plans().setInputFile(INPUT.resolve(
+					"sample/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_1pt_split.xml.gz").toString());
 
-			config.vehicles().setVehiclesFile(INPUT +
-				"be_2020-vehicles.xml.gz");
+			config.vehicles().setVehiclesFile(INPUT.resolve(
+					"be_2020-vehicles.xml.gz").toString());
 
 			episimConfig.setCalibrationParameter(1.7E-5 * 25);
 			episimConfig.setStartDate("2020-02-16");
 			episimConfig.setSampleSize(0.01);
 			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 			episimConfig.setThreads(2);
-
 
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
 

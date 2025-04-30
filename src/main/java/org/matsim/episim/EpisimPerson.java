@@ -222,6 +222,20 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	private double immuneResponseMultiplier = 1.0;
 
+
+	/**
+	 * If true, progression model won't update state. This is useful for fake agents in SymmetricContactModelWithOdeCoupling.
+	 */
+	private boolean excludeFromDiseaseStateProgression = false;
+
+	public boolean isExcludeFromDiseaseStateProgression() {
+		return excludeFromDiseaseStateProgression;
+	}
+
+	public void setExcludeFromDiseaseStateProgression(boolean excludeFromDiseaseStateProgression) {
+		this.excludeFromDiseaseStateProgression = excludeFromDiseaseStateProgression;
+	}
+
 	/**
 	 * Lookup age from attributes.
 	 */
