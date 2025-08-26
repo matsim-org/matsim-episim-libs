@@ -75,11 +75,9 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 	private EpisimContainer<ActivityFacility> containerFake;
 
-	private Map<Id<Person>, EpisimPerson> fakePersonPool;
+	private static final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
+	public static final AtomicInteger personCounter = new AtomicInteger(0);  // Thread-safe counter
 	private Long odeDiseaseImportCount;
-
-//	private Long unknownCnt;
-
 
 	private final List<String> odeDistricts;
 
@@ -92,8 +90,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 										 EpisimConfigGroup episimConfigGroup, Scenario scenario) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting, scenario);
-
-		fakePersonPool = new LinkedHashMap<>();
 
 		this.episimConfigGroup = episimConfigGroup;
 		this.progressionModel = progressionModel;
@@ -121,10 +117,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		this.odeInfTargetDistrictActive = episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("");
 
 	}
-
-	private static final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
-	public static final AtomicInteger personCounter = new AtomicInteger(0);  // Thread-safe counter
-
 
 
 

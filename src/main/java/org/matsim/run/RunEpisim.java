@@ -71,7 +71,7 @@ import java.util.concurrent.Callable;
 		footerHeading = "\n",
 		usageHelpWidth = 120,
 		usageHelpAutoWidth = true, showDefaultValues = true, mixinStandardHelpOptions = true, abbreviateSynopsis = true,
-		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class, ScenarioCreation.class, AnalysisCommand.class}
+		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class,  AnalysisCommand.class}
 )
 public final class RunEpisim implements Callable<Integer> {
 
