@@ -11,7 +11,7 @@ import java.util.SplittableRandom;
 
 public class DefaultAntibodyModel implements AntibodyModel {
 
-	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?
+	public final double halfLifeDays; // todo: would 40 work better?
 
 	// optimistic: 46
 	//
@@ -26,7 +26,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
 		this.antibodyConfig = antibodyConfig;
 		this.episimConfig = episimConfigGroup;
-		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
+		this.localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
+		this.halfLifeDays = antibodyConfig.getHalfLifeDays();
 
 
 	}
@@ -101,7 +102,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 		}
 
-		double halflifeDays = HALF_LIFE_DAYS;
+		double halflifeDays = halfLifeDays;
 
 		if ((person.getNumInfections() > 0 && person.getNumVaccinations() > 0)
 			|| person.getNumInfections() > 4

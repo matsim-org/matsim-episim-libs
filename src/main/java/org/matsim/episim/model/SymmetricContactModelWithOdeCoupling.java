@@ -376,7 +376,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 //				log.warn("containerId={}; typical capacity={}; maxPersonsInContainer={}" , container.getContainerId(), container.getTypicalCapacity(), maxPersonsInContainer );
 			}
 
-			// it may happen that persons enter and leave an container at the same time
+			// it may happen that persons enter and leave a container at the same time
 			// effectively they have a joint time of 0 and will not count towards maximum group size
 			// still the size of the list of persons in the container may be larger than max group size
 			if (maxPersonsInContainer <= 1) {

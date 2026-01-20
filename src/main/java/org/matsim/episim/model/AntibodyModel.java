@@ -53,6 +53,7 @@ public interface AntibodyModel {
 		private double immuneReponseSigma = 0.;
 
 		double hlMultiForInfected = 1.0;
+		private double halfLifeDays = 60.;
 
 		public Config() {
 
@@ -220,6 +221,13 @@ public interface AntibodyModel {
 			this.immuneReponseSigma = immuneReponseSigma;
 		}
 
+		public void setHalfLifeDays(double halfLifeDays) {
+			this.halfLifeDays = halfLifeDays;
+		}
+
+		public double getHalfLifeDays() {
+			return this.halfLifeDays;
+		}
 	}
 
 }
