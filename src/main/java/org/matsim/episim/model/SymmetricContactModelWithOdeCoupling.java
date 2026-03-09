@@ -70,10 +70,9 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 	private final ActivityFacilities facilities;
 
 	private final ProgressionModel progressionModel;
-	private final EpisimConfigGroup episimConfigGroup;
-	private Int2DoubleMap dayToInfectionShareMap;
+	private final Int2DoubleMap dayToInfectionShareMap;
 
-	private EpisimContainer<ActivityFacility> containerFake;
+	private final EpisimContainer<ActivityFacility> containerFake;
 
 	private static final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
 	public static final AtomicInteger personCounter = new AtomicInteger(0);  // Thread-safe counter
@@ -91,7 +90,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting, scenario);
 
-		this.episimConfigGroup = episimConfigGroup;
 		this.progressionModel = progressionModel;
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();
@@ -115,6 +113,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		}
 
 		this.odeInfTargetDistrictActive = episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("");
+
 
 	}
 
@@ -278,25 +277,29 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		if (actInOdeRegion) {
 
 
+			// This is mainly for debugging - it specifies that ODE infections only applies to a single district.
 			if (odeInfTargetDistrictActive) {
 				if (!personLeavingContainer.getAttributes().getAttribute("district").equals(episimConfig.getOdeInfTargetDistrict())) {
 					return;
 				}
 			}
 
-			// we are only interested in susceptible commuters being infected by berliners. At this point, there is no 'Rückkopplung' from ABM to ODE
+			// we are only interested in susceptible ABM agents being infected by ODE agents. At this point, there is no 'Rückkopplung' from ABM to ODE
 			if (!personLeavingContainer.getDiseaseStatus().equals(DiseaseStatus.susceptible)) {
 				return;
 			}
+
+			// we initialize a container for interactions to take place in; this container is essentially a copy of the real container that the agent is leaving
 			int taskId = containerReal.getTaskId();
 
 			containerFake.setNumSpaces(containerReal.getNumSpaces());
 			containerFake.setTaskId(taskId);
 
 
+
+			// share of ODE agents infectious but not yet showing symptoms - scaled by the coupling factor
 			double infShare = dayToInfectionShareMap.getOrDefault(iteration, 0) * episimConfig.getOdeCouplingFactor();
 
-			//share of berlin agents infectious but not yet showing symptoms
 
 			int maxGroupSize = 0;
 
@@ -326,35 +329,33 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 				for (int i = 0; i < capacity; i++) {
 					maxGroupSize++;
+					// if we roll the dice, and they are infectious, then we borrow an EpiSim person out of our pool (an exposure agent), and
+					// initialize them with the same age as the susceptible agent. We then place this exposure agent into the container starting
+					// from midnight. So that they have a chance to infect the susceptible ABM agent.
 					if (rnd.nextDouble() < infShare) {
 
-						//place infected fake berliner agent in container w/ susceptible brandenburger agent
-						// assumption: all contact agents have same age as brandenburger agent. // todo: should we put a distribution on this
-
-
-
-
-//						Id<Person> personId = Id.createPersonId("fake_task" + taskId + "_" + i);
-						EpisimPerson person = borrowPerson(sharedAttributes, reporting, now, dayCounter);
-//
-//						EpisimPerson person = new EpisimPerson(personId, sharedAttributes, reporting);
-
-						containerFake.addPerson(person, 0, new EpisimPerson.PerformedActivity(0, episimConfig.getOrAddContainerParams(actType), null));
+						EpisimPerson exposureAgent = borrowPerson(sharedAttributes, reporting, now, dayCounter);
+						containerFake.addPerson(exposureAgent, 0, new EpisimPerson.PerformedActivity(0, episimConfig.getOrAddContainerParams(actType), null));
 					}
 				}
 			}
-			//todo: check personLeavingContainer.getActivity(day, now) is correct
+			// finally, we add the susceptible ABM agent to the container,
+			//personLeavingContainer.getActivity(day, now) is the same as containerReal.personActivities.get(((Id.IdImpl) personLeavingContainer.getPersonId()).index)
+//			assert (containerReal.personActivities.get(((Id.IdImpl) personLeavingContainer.getPersonId()).index).equals(personLeavingContainer.getActivity(day, now)));
+
 			containerFake.addPerson(personLeavingContainer, containerReal.getContainerEnteringTime(personLeavingContainer.getPersonId()), personLeavingContainer.getActivity(day, now));
 			//todo we assume everyone is there at the same time, meaning the max group size is all the people.
 			double scale = 1 / episimConfig.getSampleSize();
+			// todo: I don't think maxGroupSize should be scaled up, seeing that it is generated using the full capacity
 			int maxGroupSizeScaled = (int) (maxGroupSize * scale / containerFake.getNumSpaces());
 			containerFake.setMaxGroupSize(maxGroupSizeScaled);
 			container = containerFake;
 
 		} else {
+			// if we are not in the ODE region
 			container = containerReal;
 		}
-
+		// now we loop thru
 		for (EpisimPerson contactPerson : container.getPersons()) {
 
 			// no contact with self, especially no tracing
@@ -561,15 +562,15 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		// this doesn't include home facilities that only show up in the population file and not in the events files...
 		if (activityFacility == null) {
 			if (idString.startsWith("home_")) {
-				idString = idString.replaceFirst("home_", "");
-				idString = idString.replaceFirst("_split\\d*", "");
-				activityFacility = facilities.getFacilities().get(Id.create(idString, ActivityFacility.class));
+				String idStringMod = idString.replaceFirst("home_", "").replaceFirst("_split\\d*", "");
+				activityFacility = facilities.getFacilities().get(Id.create(idStringMod, ActivityFacility.class));
 				if (activityFacility == null) {
+					log.warn("we have a home facility that is not found in facilities file:" + idString);
 //					throw new RuntimeException("we have a home facility that is not found in facilities file:" + idString );
 				}
 			} else {
 				if (!idString.startsWith("tr_")) {
-//					throw new RuntimeException("we have a unidentifiable facility that is not a train");
+					throw new RuntimeException("we have a unidentifiable facility that is not a train");
 				}
 			}
 		}
