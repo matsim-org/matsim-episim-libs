@@ -22,8 +22,10 @@ package org.matsim.episim.analysis;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.geotools.data.FeatureReader;
-import org.geotools.data.FileDataStoreFactorySpi;
+import org.geotools.api.data.FeatureReader;
+import org.geotools.api.data.FileDataStoreFactorySpi;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.locationtech.jts.geom.Coordinate;
@@ -36,8 +38,6 @@ import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import picocli.CommandLine;
 
 import java.io.File;
