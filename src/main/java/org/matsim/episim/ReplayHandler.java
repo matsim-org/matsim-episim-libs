@@ -85,6 +85,26 @@ public final class ReplayHandler {
 	}
 
 	/**
+	 * Whether {@code event} should be handled.
+	 *
+	 * @param actType activity type
+	 */
+	public static boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
+		// ignore drt and stage activities
+		return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
+			&& !TripStructureUtils.isStageActivityType(actType);
+	}
+
+	/**
+	 * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
+	 */
+	public static boolean shouldHandlePersonEvent(HasPersonId event) {
+		// ignore pt drivers and drt
+		String id = event.getPersonId().toString();
+		return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
+	}
+
+	/**
 	 * Replays event add modifies attributes based on current iteration.
 	 */
 	public void replayEvents(final InfectionEventHandler infectionHandler, DayOfWeek day) {
@@ -96,6 +116,16 @@ public final class ReplayHandler {
 	 */
 	public Map<DayOfWeek, List<Event>> getEvents() {
 		return new EnumMap<>(events);
+	}
+
+	/**
+	 * Replaces all stored events
+	 *
+	 * @param events new events to store
+	 */
+	void setEvents(Map<DayOfWeek, List<Event>> events) {
+		this.events.clear();
+		this.events.putAll(events);
 	}
 
 	/**
@@ -114,7 +144,7 @@ public final class ReplayHandler {
 			manager.finishProcessing();
 
 			log.info("Read in {} events for {}, with time range {} - {}", eventsForDay.size(), input.getDays(), eventsForDay.get(0).getTime(),
-					eventsForDay.get(eventsForDay.size() - 1).getTime());
+				eventsForDay.get(eventsForDay.size() - 1).getTime());
 
 			for (DayOfWeek day : input.getDays()) {
 				if (map.containsKey(day))
@@ -127,14 +157,27 @@ public final class ReplayHandler {
 		return map;
 	}
 
-	/**
-	 * Replaces all stored events
-	 *
-	 * @param events new events to store
-	 */
-	void setEvents(Map<DayOfWeek, List<Event>> events) {
-		this.events.clear();
-		this.events.putAll(events);
+	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
+		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
+			Id<ActivityFacility> id = event.getFacilityId();
+			if (id == null)
+				throw new IllegalStateException("No facility id present. Please switch to episimConfig.setFacilitiesHandling( EpisimConfigGroup.FacilitiesHandling.bln ) ");
+
+			return id;
+		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
+			if (event instanceof ActivityStartEvent) {
+				ActivityStartEvent theEvent = (ActivityStartEvent) event;
+				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
+			} else if (event instanceof ActivityEndEvent) {
+				ActivityEndEvent theEvent = (ActivityEndEvent) event;
+				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
+			} else {
+				throw new IllegalStateException("unexpected event type=" + ((Event) event).getEventType());
+			}
+		} else {
+			throw new NotImplementedException(Gbl.NOT_IMPLEMENTED);
+		}
+
 	}
 
 	/**
@@ -166,8 +209,8 @@ public final class ReplayHandler {
 				}
 
 				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(),
-						createEpisimFacilityId(e),
-						e.getActType().intern(), coord);
+					createEpisimFacilityId(e),
+					e.getActType().intern(), coord);
 			} else if (event instanceof ActivityEndEvent) {
 				ActivityEndEvent e = (ActivityEndEvent) event;
 
@@ -178,8 +221,8 @@ public final class ReplayHandler {
 				String actType = e.getActType().intern();
 				double time = e.getTime();
 				event = new ActivityEndEvent(time, e.getPersonId(), e.getLinkId(),
-						createEpisimFacilityId(e),
-						actType);
+					createEpisimFacilityId(e),
+					actType);
 			} else if (event instanceof PersonEntersVehicleEvent) {
 				if (!shouldHandlePersonEvent((PersonEntersVehicleEvent) event)) {
 					return;
@@ -193,49 +236,6 @@ public final class ReplayHandler {
 			events.add(event);
 		}
 
-
-	}
-
-	/**
-	 * Whether {@code event} should be handled.
-	 *
-	 * @param actType activity type
-	 */
-	public static boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
-		// ignore drt and stage activities
-		return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
-				&& !TripStructureUtils.isStageActivityType(actType);
-	}
-
-	/**
-	 * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
-	 */
-	public static boolean shouldHandlePersonEvent(HasPersonId event) {
-		// ignore pt drivers and drt
-		String id = event.getPersonId().toString();
-		return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
-	}
-
-	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
-		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
-			Id<ActivityFacility> id = event.getFacilityId();
-			if (id == null)
-				throw new IllegalStateException("No facility id present. Please switch to episimConfig.setFacilitiesHandling( EpisimConfigGroup.FacilitiesHandling.bln ) ");
-
-			return id;
-		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
-			if (event instanceof ActivityStartEvent) {
-				ActivityStartEvent theEvent = (ActivityStartEvent) event;
-				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
-			} else if (event instanceof ActivityEndEvent) {
-				ActivityEndEvent theEvent = (ActivityEndEvent) event;
-				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
-			} else {
-				throw new IllegalStateException("unexpected event type=" + ((Event) event).getEventType());
-			}
-		} else {
-			throw new NotImplementedException(Gbl.NOT_IMPLEMENTED);
-		}
 
 	}
 }
