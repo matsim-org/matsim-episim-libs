@@ -75,7 +75,7 @@ public class GuiceUtils {
 
 				// internal guice types are not bound
 				String type = key.getTypeLiteral().toString();
-				if (type.contains("com.google.inject") || type.contains("java.util.logging"))
+				if (type.contains("com.google.inject") || type.contains("jakarta.inject.Provider") || type.contains("java.util.logging"))
 					continue;
 
 				Binding<?> binding = e.getValue();
