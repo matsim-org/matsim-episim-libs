@@ -47,8 +47,8 @@ public class EpisimEventsReader extends MatsimXmlParser {
 	 * EventsReader for EpisimEvents.
 	 */
 	public EpisimEventsReader(EventsManager events) {
+		super(ValidationType.NO_VALIDATION);
 		delegate = new EventsReaderXMLv1(events);
-		this.setValidating(false);
 		delegate.addCustomEventMapper(EpisimInfectionEvent.EVENT_TYPE, getEpisimInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimPotentialInfectionEvent.EVENT_TYPE, getEpisimPotentialInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimInitialInfectionEvent.EVENT_TYPE, getEpisimInitialInfectionEventMapper());
