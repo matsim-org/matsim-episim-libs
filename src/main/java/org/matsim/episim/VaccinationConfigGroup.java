@@ -790,7 +790,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Holds the temporal progression of certain value for each virus strains.
 	 */
-	public static final class Parameter {
+	public static final class VaccinationConfigGroupParameter {
 
 		private static final Splitter.MapSplitter SPLITTER = Splitter.on("|").withKeyValueSeparator(">");
 		private static final Joiner.MapJoiner JOINER = Joiner.on("|").withKeyValueSeparator(">");
