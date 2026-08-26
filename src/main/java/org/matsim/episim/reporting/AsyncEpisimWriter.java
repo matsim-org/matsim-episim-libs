@@ -70,6 +70,12 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	}
 
 	@Override
+	public void close() throws IOException {
+		log.info("Shutting down...");
+		disruptor.shutdown();
+	}
+
+	@Override
 	public void onEvent(LogEvent event, long sequence, boolean endOfBatch) throws Exception {
 
 		if (event.close) {
@@ -94,12 +100,6 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 		} catch (IOException e) {
 			log.error("Could not append event");
 		}
-	}
-
-	@Override
-	public void close() throws IOException {
-		log.info("Shutting down...");
-		disruptor.shutdown();
 	}
 
 	protected static class LogEvent {
