@@ -486,7 +486,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
 		 */
-		private Map<VirusStrain, Parameter> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(4, 0)
 						.atDay(5, 0.45)
@@ -496,7 +496,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-		private Map<VirusStrain, Parameter> infectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> infectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(0, 1)
 						.atFullEffect(1.0)
@@ -505,12 +505,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness after booster shot.
 		 */
-		private Map<VirusStrain, Parameter> boostEffectiveness = new EnumMap<>(VirusStrain.class);
+		private Map<VirusStrain, VaccinationConfigGroupParameter> boostEffectiveness = new EnumMap<>(VirusStrain.class);
 
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-		private Map<VirusStrain, Parameter> boostInfectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> boostInfectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(0, 1)
 						.atFullEffect(1.0)
@@ -519,7 +519,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, Parameter> factorShowingSymptoms = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorShowingSymptoms = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(5, 0.5)
 		));
@@ -527,7 +527,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, Parameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(5, 0.5)
 		));
@@ -535,7 +535,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, Parameter> factorCritical = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorCritical = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(0, 1)
 		));
@@ -576,8 +576,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return boostWaitPeriod;
 		}
 
-		private VaccinationParams setParamsInternal(Map<VirusStrain, Parameter> map, Parameter[] params) {
-			for (Parameter p : params) {
+		private VaccinationParams setParamsInternal(Map<VirusStrain, VaccinationConfigGroupParameter> map, VaccinationConfigGroupParameter[] params) {
+			for (VaccinationConfigGroupParameter p : params) {
 				for (VirusStrain s : p.strain) {
 					p.setDaysBeforeFullEffect(getDaysBeforeFullEffect());
 					map.put(s, p);
@@ -594,36 +594,36 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * @param day    days since vaccination
 		 * @return interpolated factor
 		 */
-		private double getParamsInternal(Map<VirusStrain, Parameter> map, VirusStrain strain, int day) {
-			Parameter p = map.getOrDefault(strain, map.get(VirusStrain.SARS_CoV_2));
+		private double getParamsInternal(Map<VirusStrain, VaccinationConfigGroupParameter> map, VirusStrain strain, int day) {
+			VaccinationConfigGroupParameter p = map.getOrDefault(strain, map.get(VirusStrain.SARS_CoV_2));
 			return p.get(day);
 		}
 
-		public VaccinationParams setEffectiveness(Parameter... parameters) {
+		public VaccinationParams setEffectiveness(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(effectiveness, parameters);
 		}
 
-		public VaccinationParams setInfectivity(Parameter... parameters) {
+		public VaccinationParams setInfectivity(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(infectivity, parameters);
 		}
 
-		public VaccinationParams setBoostEffectiveness(Parameter... parameters) {
+		public VaccinationParams setBoostEffectiveness(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(boostEffectiveness, parameters);
 		}
 
-		public VaccinationParams setBoostInfectivity(Parameter... parameters) {
+		public VaccinationParams setBoostInfectivity(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(boostInfectivity, parameters);
 		}
 
-		public VaccinationParams setFactorShowingSymptoms(Parameter... parameters) {
+		public VaccinationParams setFactorShowingSymptoms(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(factorShowingSymptoms, parameters);
 		}
 
-		public VaccinationParams setFactorSeriouslySick(Parameter... parameters) {
+		public VaccinationParams setFactorSeriouslySick(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(factorSeriouslySick, parameters);
 		}
 
-		public VaccinationParams setFactorCritical(Parameter... parameters) {
+		public VaccinationParams setFactorCritical(VaccinationConfigGroupParameter... parameters) {
 			return setParamsInternal(factorCritical, parameters);
 		}
 
@@ -658,17 +658,17 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Load serialized parameters
 		 */
-		private void setParamsInternal(Map<VirusStrain, Parameter> map, String value) {
+		private void setParamsInternal(Map<VirusStrain, VaccinationConfigGroupParameter> map, String value) {
 			map.clear();
 			if (value.isBlank()) return;
 
 			map.clear();
 			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-				map.put(VirusStrain.valueOf(e.getKey()), Parameter.parse(e.getValue()));
+				map.put(VirusStrain.valueOf(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
 			}
 		}
 
-		private String getParamsInternal(Map<VirusStrain, Parameter> map) {
+		private String getParamsInternal(Map<VirusStrain, VaccinationConfigGroupParameter> map) {
 
 			Map<VirusStrain, String> result = map.entrySet().stream().collect(Collectors.toMap(
 					Map.Entry::getKey,
@@ -761,21 +761,21 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Return effectiveness against base variant.
 		 *
-		 * @deprecated use {@link #setEffectiveness(Parameter...)}
+		 * @deprecated use {@link #setEffectiveness(VaccinationConfigGroupParameter...)}
 		 */
 		@Deprecated
 		public void setEffectiveness(double effectiveness) {
-			throw new UnsupportedOperationException("Use .setEffectiveness(Parameter...)");
+			throw new UnsupportedOperationException("Use .setEffectiveness(VaccinationConfigGroupParameter ...)");
 		}
 
 		@Deprecated
 		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
-			throw new UnsupportedOperationException("Use .setFactorSeriouslySick(Parameter...)");
+			throw new UnsupportedOperationException("Use .setFactorSeriouslySick(VaccinationConfigGroupParameter ...)");
 		}
 
 		@Deprecated
 		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
-			throw new UnsupportedOperationException("Use .setFactorShowingSymptoms(Parameter...)");
+			throw new UnsupportedOperationException("Use .setFactorShowingSymptoms(VaccinationConfigGroupParameter ...)");
 		}
 
 	}
@@ -783,8 +783,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Creates an empty {@link Parameter} progression for one or multiple strain.
 	 */
-	public static Parameter forStrain(VirusStrain... strain) {
-		return new Parameter(strain);
+	public static VaccinationConfigGroupParameter forStrain(VirusStrain... strain) {
+		return new VaccinationConfigGroupParameter(strain);
 	}
 
 	/**
@@ -798,11 +798,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private final VirusStrain[] strain;
 		private final NavigableMap<Integer, Double> map = new TreeMap<>();
 
-		private Parameter(VirusStrain[] strain) {
+		private VaccinationConfigGroupParameter(VirusStrain[] strain) {
 			this.strain = strain;
 		}
 
-		private Parameter(Map<String, String> map) {
+		private VaccinationConfigGroupParameter(Map<String, String> map) {
 			this.strain = new VirusStrain[0];
 			for (Map.Entry<String, String> e : map.entrySet()) {
 				this.map.put(Integer.parseInt(e.getKey()), Double.parseDouble(e.getValue()));
@@ -813,7 +813,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Sets the value for a parameter at a specific day.
 		 */
-		public Parameter atDay(int day, double value) {
+		public VaccinationConfigGroupParameter atDay(int day, double value) {
 			map.put(day, value);
 			return this;
 		}
@@ -823,7 +823,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * Sets the value for parameter for the day of full effect.
 		 * {@link VaccinationParams#setDaysBeforeFullEffect(int)} has to be set before calling this method!
 		 */
-		public Parameter atFullEffect(double value) {
+		public VaccinationConfigGroupParameter atFullEffect(double value) {
 			map.put(Integer.MAX_VALUE, value);
 			return this;
 		}
@@ -863,9 +863,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return JOINER.join(map);
 		}
 
-		private static Parameter parse(String value) {
+		private static VaccinationConfigGroupParameter parse(String value) {
 			Map<String, String> m = SPLITTER.split(value);
-			return new Parameter(m);
+			return new VaccinationConfigGroupParameter(m);
 		}
 	}
 
