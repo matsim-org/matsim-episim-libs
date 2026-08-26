@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 /**
  * Config option specific to vaccination and measures performed in {@link VaccinationModel}.
  */
+@SuppressWarnings("checkstyle:MethodName")
 public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
