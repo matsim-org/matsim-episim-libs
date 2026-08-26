@@ -56,65 +56,90 @@ import static org.matsim.episim.EpisimUtils.*;
  */
 public final class EpisimPerson implements Immunizable, Attributable {
 
+	/**
+	 * Not further specified activity that is used during initialization.
+	 */
+	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 	private final Id<Person> personId;
 	private final EpisimReporting reporting;
 	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
-
 	/**
 	 * Whole trajectory over all days of the week.
 	 * Entries contain the starting time of activities and the performed activity.
 	 */
 	private final List<PerformedActivity> trajectory = new ArrayList<>();
-
 	/**
 	 * The position in the trajectory at the start for each day of the week.
 	 */
 	private final int[] startOfDay = new int[7];
-
 	/**
 	 * The position in the trajectory for the end of the day.
 	 */
 	private final int[] endOfDay = new int[7];
-
 	/**
 	 * The first visited {@link org.matsim.facilities.ActivityFacility} for each day.
 	 * Can be null if person does not start in a container.
 	 */
 	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
-
+	// Fields above are initialized from the sim and not persisted
 	/**
 	 * The last visited {@link org.matsim.facilities.ActivityFacility} for each day.
 	 * This is null if a person does not end its day in a container.
 	 */
 	private final Id<ActivityFacility>[] lastFacilityId = new Id[7];
-	// Fields above are initialized from the sim and not persisted
-
 	/**
 	 * Whether person stays in container at the end of a day.
 	 */
 	private final boolean[] staysInContainer = new boolean[7];
-
 	/**
 	 * Traced contacts with other persons.
 	 */
 	private final Object2DoubleMap<EpisimPerson> traceableContactPersons = new Object2DoubleLinkedOpenHashMap<>(4);
-
 	/**
 	 * Stores first time of status changes to specific type.
 	 */
 	private final EnumMap<DiseaseStatus, Double> statusChanges = new EnumMap<>(DiseaseStatus.class);
-
 	/**
 	 * Total spent time during activities.
 	 */
 	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
-
+	/**
+	 * List of all potential infection that happened during the day.
+	 */
+	private final List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
+	/**
+	 * Age of the person in years.
+	 */
+	private final int age;
+	/**
+	 * Types of received vaccination. Index 0 is the first received.
+	 */
+	private final List<VaccinationType> vaccinations = new ArrayList<>();
+	/**
+	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
+	 */
+	private final IntList vaccinationDates = new IntArrayList();
+	/**
+	 * Second at which a person is infected (divide by 24*60*60 to get iteration/day).
+	 */
+	private final DoubleList infectionDates = new DoubleArrayList();
+	/**
+	 * Strain of the virus the person was infected with.
+	 */
+	private final List<VirusStrain> virusStrains = new ArrayList<>();
+	/**
+	 * Antibody level for each virus strain.
+	 */
+	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
+	/**
+	 * Maximal antibody level reached by agent w/ respect to each strain.
+	 */
+	private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 	/**
 	 * Activity participation of the current day. Same length as {@link #trajectory}
 	 */
 	private BitSet activityParticipation;
-
 	/**
 	 * In the parallel version of the {@link ReplayHandler}, the infections
 	 * are not happen in a chronically order. The earliestInfections
@@ -122,22 +147,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * infection
 	 */
 	private EpisimInfectionEvent earliestInfection = null;
-
-	/**
-	 * List of all potential infection that happened during the day.
-	 */
-	private final List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
-
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
 	 */
 	private Id<ActivityFacility> infectionContainer = null;
-
 	/**
 	 * The infection type when the person got infected. Can be null if person was initially infected.
 	 */
 	private String infectionType = null;
-
 	/**
 	 * Current {@link DiseaseStatus}.
 	 */
@@ -146,81 +163,53 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Current {@link QuarantineStatus}.
 	 */
 	private QuarantineStatus quarantineStatus = QuarantineStatus.no;
-
 	/**
 	 * Current {@link TestStatus}.
 	 */
 	private TestStatus testStatus = TestStatus.untested;
-
 	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
 	private int quarantineDate = Integer.MIN_VALUE;
-
 	/**
 	 * Iteration when this person was tested. Negative if person was never tested.
 	 */
 	private int testDate = -1;
-
-	/**
-	 * Age of the person in years.
-	 */
-	private final int age;
-
 	/**
 	 * Whether this person can be traced.
 	 */
 	private boolean traceable;
-
 	/**
 	 * Whether this person can be vaccinated.
 	 */
 	private boolean vaccinable = true;
-
 	/**
 	 * Individual susceptibility of a person.
 	 */
 	private double susceptibility = 1;
-
-	/**
-	 * Types of received vaccination. Index 0 is the first received.
-	 */
-	private final List<VaccinationType> vaccinations = new ArrayList<>();
-
-	/**
-	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
-	 */
-	private final IntList vaccinationDates = new IntArrayList();
-
-	/**
-	 * Second at which a person is infected (divide by 24*60*60 to get iteration/day).
-	 */
-	private final DoubleList infectionDates = new DoubleArrayList();
-
-	/**
-	 * Strain of the virus the person was infected with.
-	 */
-	private final List<VirusStrain> virusStrains = new ArrayList<>();
-
-	/**
-	 * Antibody level for each virus strain.
-	 */
-	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
-
-	/**
-	 * Maximal antibody level reached by agent w/ respect to each strain.
-	 */
-	private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
-
 	/**
 	 * Antibody level at last infection.
 	 */
 	private double antibodyLevelAtInfection = 0.;
-
 	/**
 	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event.
 	 */
 	private double immuneResponseMultiplier = 1.0;
+
+	/**
+	 * Creates a traceable Episim person.
+	 */
+	public EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
+		this(personId, attrs, true, reporting);
+	}
+
+	EpisimPerson(Id<Person> personId, Attributes attrs, boolean traceable, EpisimReporting reporting) {
+		this.personId = personId;
+		this.attributes = attrs;
+		this.traceable = traceable;
+		this.age = getAge(attrs);
+		this.reporting = reporting;
+	}
 
 	/**
 	 * Lookup age from attributes.
@@ -240,21 +229,6 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 	public List<PerformedActivity> getTrajectory() {
 		return trajectory;
-	}
-
-	/**
-	 * Creates a traceable Episim person.
-	 */
-	public EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
-		this(personId, attrs, true, reporting);
-	}
-
-	EpisimPerson(Id<Person> personId, Attributes attrs, boolean traceable, EpisimReporting reporting) {
-		this.personId = personId;
-		this.attributes = attrs;
-		this.traceable = traceable;
-		this.age = getAge(attrs);
-		this.reporting = reporting;
 	}
 
 	/**
@@ -430,7 +404,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public void setInitialInfection(double now, VirusStrain strain) {
 
-		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain),getNumInfections()));
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain), getNumInfections()));
 
 		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
@@ -512,6 +486,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 	/**
 	 * Virus strain of infection.
+	 *
 	 * @param idx index of infection starting at 0
 	 */
 	public VirusStrain getVirusStrain(int idx) {
@@ -521,7 +496,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * List of dates (in second format) on which agent was infected.
 	 */
-	public DoubleList getInfectionDates(){
+	public DoubleList getInfectionDates() {
 		return infectionDates;
 	}
 
@@ -581,12 +556,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		this.testDate = iteration;
 	}
 
-	public void setSusceptibility(double susceptibility) {
-		this.susceptibility = susceptibility;
-	}
-
 	public double getSusceptibility() {
 		return susceptibility;
+	}
+
+	public void setSusceptibility(double susceptibility) {
+		this.susceptibility = susceptibility;
 	}
 
 	/**
@@ -664,6 +639,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return currentDay - (int) day;
 
 	}
+
 	/**
 	 * Return days since status, or default value if this status was not attained.
 	 */
@@ -778,10 +754,10 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	public synchronized List<EpisimPerson> getTraceableContactPersons(double after) {
 		// needs to be sorted or results will be non deterministic with multithreading
 		return traceableContactPersons.object2DoubleEntrySet()
-				.stream().filter(p -> p.getDoubleValue() >= after)
-				.map(Map.Entry::getKey)
-				.sorted(Comparator.comparing(EpisimPerson::getPersonId))
-				.collect(Collectors.toList());
+			.stream().filter(p -> p.getDoubleValue() >= after)
+			.map(Map.Entry::getKey)
+			.sorted(Comparator.comparing(EpisimPerson::getPersonId))
+			.collect(Collectors.toList());
 
 		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
 		// would argue that it is not a problem to have a person in there multiple times.  kai, may'20
@@ -827,7 +803,6 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		trajectory.add(act);
 		return act;
 	}
-
 
 	void setStartOfDay(DayOfWeek day) {
 		startOfDay[day.getValue() - 1] = trajectory.size();
@@ -993,6 +968,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 	/**
 	 * Getter for immune response multiplier, which is used to scale the antibody increase due to an immunity event.
+	 *
 	 * @return
 	 */
 	public double getImmuneResponseMultiplier() {
@@ -1001,6 +977,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 	/**
 	 * Setter for immune response multiplier, which is used to scale the antibody increase due to an immunity event.
+	 *
 	 * @param immuneResponseMultiplier new immune response multiplier
 	 */
 	public void setImmuneResponseMultiplier(double immuneResponseMultiplier) {
@@ -1010,8 +987,8 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	@Override
 	public String toString() {
 		return "EpisimPerson{" +
-				"personId=" + personId +
-				'}';
+			"personId=" + personId +
+			'}';
 	}
 
 	private int findActivity(DayOfWeek day, double time) {
@@ -1061,7 +1038,6 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return trajectory.subList(offset, getEndOfDay(day));
 	}
 
-
 	/**
 	 * Return the first activity of a person for specific day.
 	 */
@@ -1099,6 +1075,18 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return null;
 	}
 
+	/**
+	 * If the ContagiousOptimization is enabled, containers count how many
+	 * persons satisfy this predicate to call the infectionsDynamics methods
+	 * only in the case that at least one person in the container
+	 * can infect another (or in the infectedButNotContagious case,
+	 * inform other persons later thanks to tracking).
+	 */
+	public boolean infectedButNotSerious() {
+		return (status == DiseaseStatus.infectedButNotContagious ||
+			status == DiseaseStatus.contagious ||
+			status == DiseaseStatus.showingSymptoms);
+	}
 
 	/**
 	 * Disease status of a person.
@@ -1168,27 +1156,9 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		@Override
 		public String toString() {
 			return "PerformedActivity{" +
-					"time=" + time +
-					", params=" + params +
-					'}';
+				"time=" + time +
+				", params=" + params +
+				'}';
 		}
-	}
-
-	/**
-	 * Not further specified activity that is used during initialization.
-	 */
-	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
-
-	/**
-	 * If the ContagiousOptimization is enabled, containers count how many
-	 * persons satisfy this predicate to call the infectionsDynamics methods
-     * only in the case that at least one person in the container
-	 * can infect another (or in the infectedButNotContagious case,
-	 * inform other persons later thanks to tracking).
-	 */
-	public boolean infectedButNotSerious() {
-		return (status == DiseaseStatus.infectedButNotContagious ||
-				status == DiseaseStatus.contagious ||
-				status == DiseaseStatus.showingSymptoms);
 	}
 }
