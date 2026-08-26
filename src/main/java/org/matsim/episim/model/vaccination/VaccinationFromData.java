@@ -90,7 +90,7 @@ public class VaccinationFromData extends VaccinationByAge {
 		ageGroups.add(new VaccinationFromData.AgeGroup(18, 59));
 		ageGroups.add(new VaccinationFromData.AgeGroup(60, MAX_AGE - 1));
 
-		try {
+
 			Table rkiData = Table.read().usingOptions(CsvReadOptions.builder(vaccinationConfig.getFromFile())
 					.tableName("rkidata")
 					.columnTypes(types));
@@ -130,9 +130,6 @@ public class VaccinationFromData extends VaccinationByAge {
 			mergeData(filtered, refresher, endDate, "60+", config.groups.getDouble("60+"), 3);
 
 
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
 
 		// collect population sizes
 		for (EpisimPerson p : persons.values()) {
