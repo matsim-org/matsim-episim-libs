@@ -443,6 +443,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				case yes:
 					report.nVaccinated++;
 					district.nVaccinated++;
+					break;
 				case no:
 					break;
 				default:
@@ -453,6 +454,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				case yes:
 					report.nReVaccinated++;
 					district.nReVaccinated++;
+					break;
 				case no:
 					break;
 				default:
