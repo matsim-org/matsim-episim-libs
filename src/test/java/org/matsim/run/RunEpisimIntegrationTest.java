@@ -221,7 +221,7 @@ public class RunEpisimIntegrationTest {
 			episimConfig.setThreads(2);
 			episimConfig.setEndEarly(true);
 
-			config.controler().setOutputDirectory(utils.getOutputDirectory());
+			config.controller().setOutputDirectory(utils.getOutputDirectory());
 
 			OpenBerlinScenario.addDefaultParams(episimConfig);
 

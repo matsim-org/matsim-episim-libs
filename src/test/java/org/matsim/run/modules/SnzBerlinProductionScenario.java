@@ -410,7 +410,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		episimConfig.setPolicy(builder.build());
 
-		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
+		config.controller().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		return config;
 	}

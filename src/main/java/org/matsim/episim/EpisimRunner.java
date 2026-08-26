@@ -97,7 +97,7 @@ public final class EpisimRunner {
 
 		handler.init(replay.getEvents());
 
-		Path output = Path.of(config.controler().getOutputDirectory());
+		Path output = Path.of(config.controller().getOutputDirectory());
 
 		int iteration = 1;
 		if (episimConfig.getStartFromSnapshot() != null && episimConfig.getStartFromImmunization() != null) {
@@ -228,7 +228,7 @@ public final class EpisimRunner {
 					.createArchiveOutputStream("zip", out);
 
 			// Copy whole output to the snapshot
-			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controler().getRunId(), archive);
+			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controller().getRunId(), archive);
 
 			archive.putArchiveEntry(new ZipArchiveEntry("iteration"));
 			ObjectOutputStream oos = new ObjectOutputStream(archive);

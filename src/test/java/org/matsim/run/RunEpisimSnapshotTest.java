@@ -104,7 +104,7 @@ public class RunEpisimSnapshotTest {
 		// run 2: start from snapshot (save to /fromSnapshot)
 		String fromSnapshot = utils.getOutputDirectory().replace(utils.getMethodName(), "fromSnapshot");
 		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + snapshotName());
-		config.controler().setOutputDirectory(fromSnapshot);
+		config.controller().setOutputDirectory(fromSnapshot);
 
 		runner.run(30);
 

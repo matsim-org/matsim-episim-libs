@@ -130,8 +130,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 				Files.createDirectories(input);
 
-				run.config.controler().setOutputDirectory(outputPath);
-				run.config.controler().setRunId(runName + run.id);
+				run.config.controller().setOutputDirectory(outputPath);
+				run.config.controller().setRunId(runName + run.id);
 
 				prepare.setup.writeAuxiliaryFiles(dir, run.config);
 				ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());

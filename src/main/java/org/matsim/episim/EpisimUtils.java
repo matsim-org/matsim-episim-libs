@@ -123,7 +123,7 @@ public final class EpisimUtils {
 				outdir.append("ci").append(infectionParams.getContactIntensity());
 			}
 		}
-		config.controler().setOutputDirectory(outdir.toString());
+		config.controller().setOutputDirectory(outdir.toString());
 	}
 
 	/**

@@ -180,11 +180,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	@Inject
 	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {
-		outDir = config.controler().getOutputDirectory();
+		outDir = config.controller().getOutputDirectory();
 
 		// file names depend on the run name
-		if (config.controler().getRunId() != null) {
-			base = outDir + "/" + config.controler().getRunId() + ".";
+		if (config.controller().getRunId() != null) {
+			base = outDir + "/" + config.controller().getRunId() + ".";
 		} else if (!outDir.endsWith("/")) {
 			base = outDir + "/";
 		} else

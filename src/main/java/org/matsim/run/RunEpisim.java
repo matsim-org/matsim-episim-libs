@@ -247,7 +247,7 @@ public final class RunEpisim implements Callable<Integer> {
 		// yyyy We now have two command line utils on top of each other.  I can see that it makes sense to use an external library rather than
 		// something self-written.  But could you please defend the design decision to use both of them on top of each other?  kai, apr'20
 
-		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
+		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controller().getOutputDirectory());
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(maxIterations);
