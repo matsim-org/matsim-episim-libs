@@ -46,6 +46,14 @@ public class GuiceUtils {
 		return Guice.createInjector(Modules.override(new CopyModule(parent, localScope)).with(modules));
 	}
 
+	/**
+	 * Internal method to copy a binding.
+	 */
+	private static void bind(BindingBuilder binder, Binding binding) throws ReflectiveOperationException {
+		Method method = AbstractBindingBuilder.class.getDeclaredMethod("setBinding", BindingImpl.class);
+		method.setAccessible(true);
+		method.invoke(binder, binding);
+	}
 
 	private static class CopyModule extends AbstractModule {
 		private final Injector parent;
@@ -88,15 +96,6 @@ public class GuiceUtils {
 
 			}
 		}
-	}
-
-	/**
-	 * Internal method to copy a binding.
-	 */
-	private static void bind(BindingBuilder binder, Binding binding) throws ReflectiveOperationException {
-		Method method = AbstractBindingBuilder.class.getDeclaredMethod("setBinding", BindingImpl.class);
-		method.setAccessible(true);
-		method.invoke(binder, binding);
 	}
 
 	/**
