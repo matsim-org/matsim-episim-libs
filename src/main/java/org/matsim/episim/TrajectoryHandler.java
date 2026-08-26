@@ -2,6 +2,7 @@ package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import jakarta.inject.Named;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -15,7 +16,7 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
-import javax.inject.Named;
+
 import java.time.DayOfWeek;
 import java.util.Iterator;
 import java.util.Map;

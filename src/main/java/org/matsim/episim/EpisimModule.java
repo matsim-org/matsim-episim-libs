@@ -44,7 +44,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.reporting.EpisimWriter;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 import java.util.SplittableRandom;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

@@ -41,7 +41,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;

@@ -10,7 +10,7 @@ import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;

@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
 
 import javax.annotation.Nullable;
-import javax.inject.Named;
+import jakarta.inject.Named;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
