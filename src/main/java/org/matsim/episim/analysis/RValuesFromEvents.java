@@ -54,8 +54,8 @@ import java.util.stream.Collectors;
  * Output is written to rValues.txt in the working directory
  */
 @CommandLine.Command(
-		name = "calculateRValues",
-		description = "Calculate R values summaries"
+	name = "calculateRValues",
+	description = "Calculate R values summaries"
 )
 public class RValuesFromEvents implements OutputAnalysis {
 
@@ -65,7 +65,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 	 * Activity types used by this analysis.
 	 */
 	private static final List<String> ACTIVITY_TYPES = List.of(
-			"home", "leisure", "leisPrivate", "leisPublic", "schools", "day care", "university", "work&business", "pt", "other"
+		"home", "leisure", "leisPrivate", "leisPublic", "schools", "day care", "university", "work&business", "pt", "other"
 	);
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
@@ -77,6 +77,31 @@ public class RValuesFromEvents implements OutputAnalysis {
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new RValuesFromEvents()).execute(args));
+	}
+
+	/**
+	 * Compute group of infection type.
+	 */
+	private static String getActivityType(String infectionType) {
+
+		String activityType;
+//			if (infectionType.endsWith("educ_higher")) infectionType = "edu_higher";
+//			else if (infectionType.endsWith("educ_other")) infectionType = "edu_other";
+//			else if (infectionType.endsWith("educ_kiga")) infectionType = "edu_kiga";
+//			else if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary")) infectionType = "edu_school";
+		if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other"))
+			activityType = "schools";
+		else if (infectionType.endsWith("educ_higher")) activityType = "university";
+		else if (infectionType.endsWith("educ_kiga")) activityType = "day care";
+		else if (infectionType.endsWith("leisure")) activityType = "leisure";
+		else if (infectionType.endsWith("leisPublic")) activityType = "leisPublic";
+		else if (infectionType.endsWith("leisPrivate")) activityType = "leisPrivate";
+		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
+		else if (infectionType.endsWith("home")) activityType = "home";
+		else if (infectionType.startsWith("pt")) activityType = "pt";
+		else activityType = "other";
+
+		return activityType;
 	}
 
 	@Override
@@ -167,13 +192,13 @@ public class RValuesFromEvents implements OutputAnalysis {
 			double r = noOfInfectors == 0 ? 0 : (double) noOfInfected.getInt("total") / noOfInfectors;
 
 			String join = "\n" + AnalysisCommand.TSV.join(
-					i, startDate.plusDays(i).toString(), r, noOfInfectors, output.getFileName()
+				i, startDate.plusDays(i).toString(), r, noOfInfectors, output.getFileName()
 			) + "\t";
 
 			int finalNoOfInfectors = noOfInfectors;
 			join += AnalysisCommand.TSV.join(ACTIVITY_TYPES.stream()
-					.map(k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
-					.collect(Collectors.toList())
+				.map(k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
+				.collect(Collectors.toList())
 			);
 
 			bw.write(join);
@@ -262,37 +287,12 @@ public class RValuesFromEvents implements OutputAnalysis {
 			int day = (int) event.getTime() / 86400;
 
 			infectionsPerActivity.computeIfAbsent("total", k -> new Int2IntOpenHashMap())
-					.merge(day, 1, Integer::sum);
+				.merge(day, 1, Integer::sum);
 
 			infectionsPerActivity.computeIfAbsent(infectionType, k -> new Int2IntOpenHashMap())
-					.merge(day, 1, Integer::sum);
+				.merge(day, 1, Integer::sum);
 
 		}
-	}
-
-	/**
-	 * Compute group of infection type.
-	 */
-	private static String getActivityType(String infectionType) {
-
-		String activityType;
-//			if (infectionType.endsWith("educ_higher")) infectionType = "edu_higher";
-//			else if (infectionType.endsWith("educ_other")) infectionType = "edu_other";
-//			else if (infectionType.endsWith("educ_kiga")) infectionType = "edu_kiga";
-//			else if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary")) infectionType = "edu_school";
-		if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other"))
-			activityType = "schools";
-		else if (infectionType.endsWith("educ_higher")) activityType = "university";
-		else if (infectionType.endsWith("educ_kiga")) activityType = "day care";
-		else if (infectionType.endsWith("leisure")) activityType = "leisure";
-		else if (infectionType.endsWith("leisPublic")) activityType = "leisPublic";
-		else if (infectionType.endsWith("leisPrivate")) activityType = "leisPrivate";
-		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
-		else if (infectionType.endsWith("home")) activityType = "home";
-		else if (infectionType.startsWith("pt")) activityType = "pt";
-		else activityType = "other";
-
-		return activityType;
 	}
 
 }
