@@ -31,6 +31,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.controler.ControllerUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
@@ -93,7 +94,7 @@ public final class EpisimRunner {
 		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
 			manager.addHandler(reporting);
 
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
+		ControllerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
 		handler.init(replay.getEvents());
 
