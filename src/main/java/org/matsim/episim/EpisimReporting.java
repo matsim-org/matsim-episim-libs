@@ -68,89 +68,63 @@ import static org.matsim.episim.EpisimUtils.writeChars;
 public final class EpisimReporting implements BasicEventHandler, Closeable, Externalizable {
 
 
-	/**
-	 * Age groups used for various outputs. AgeGroup -> minimum age of age group.
-	 * Important: age groups must be in descending order
-	 */
-	public enum AgeGroup {
-		age_60_plus(60),
-		age_18_59(18),
-		age_12_17(12),
-		age_0_11(0);
-
-		public final int lowerBoundAge;
-
-		AgeGroup(int lowerBoundAge) {
-			this.lowerBoundAge = lowerBoundAge;
-		}
-	}
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
-
+	/**
+	 * Number of daily infections per virus strain.
+	 */
+	public final Object2IntMap<VirusStrain> strains = new Object2IntOpenHashMap<>();
+	/**
+	 * Number of daily given vaccinations per type.
+	 */
+	public final Object2IntMap<VaccinationType> vaccinations = new Object2IntOpenHashMap<>();
+	/**
+	 * Map of (VaccinationType, nth Vaccination) -> Number per day
+	 */
+	public final Object2IntMap<ObjectIntPair<VaccinationType>> vaccinationStats = new Object2IntOpenHashMap<>();
 	private final EpisimWriter writer;
 	private final EventsManager manager;
-
 	private final String base;
 	private final String outDir;
-
 	/**
 	 * Base path for event files.
 	 */
 	private final Path eventPath;
 	private final EpisimConfigGroup.WriteEvents writeEvents;
-
 	/**
 	 * Aggregated cumulative cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
 	 */
 	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCases = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
-
 	/**
 	 * Aggregated cumulative vaccinated cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
 	 */
 	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinated = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
-
-	/**
-	 * Number of daily infections per virus strain.
-	 */
-	public final Object2IntMap<VirusStrain> strains = new Object2IntOpenHashMap<>();
-
-	/**
-	 * Number of daily given vaccinations per type.
-	 */
-	public final Object2IntMap<VaccinationType> vaccinations = new Object2IntOpenHashMap<>();
-
-	/**
-	 * Map of (VaccinationType, nth Vaccination) -> Number per day
-	 */
-	public final Object2IntMap<ObjectIntPair<VaccinationType>> vaccinationStats = new Object2IntOpenHashMap<>();
-
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
-
-	private int totalContacts;
-
 	/**
 	 * Whether all events are written into one file.
 	 */
 	private final boolean singleEvents;
-
-	/**
-	 * Zip output stream, when single events is true.
-	 */
-	private TarArchiveOutputStream zipOut;
-
 	/**
 	 * Output for event files.
 	 */
 	private final ByteArrayOutputStream os;
-
-
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
+	private final Map<String, BufferedWriter> externalWriters = new HashMap<>();
+	/**
+	 * flag to ensure only one threads writes certain outputs.
+	 */
+	private final AtomicBoolean writeFlag = new AtomicBoolean(false);
+	private int totalContacts;
+	/**
+	 * Zip output stream, when single events is true.
+	 */
+	private TarArchiveOutputStream zipOut;
 	/**
 	 * Current day / iteration.
 	 */
@@ -167,16 +141,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter antibodiesPerPerson;
 	private BufferedWriter vaccinationsPerType;
 	private BufferedWriter vaccinationsPerTypeAndNumber;
-
-	private final Map<String, BufferedWriter> externalWriters = new HashMap<>();
-
 	private String memorizedDate = null;
-
-	/**
-	 * flag to ensure only one threads writes certain outputs.
-	 */
-	private final AtomicBoolean writeFlag = new AtomicBoolean(false);
-
 
 	@Inject
 	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {
@@ -221,9 +186,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
-				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
+			"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
-				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
+			"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "strain", "n");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
@@ -258,18 +223,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private void writeConfigFiles() {
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
-					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
-							.setFormatted(true)
-							.setComments(false)
-							.setOriginComments(false)
-							.setJson(false)));
+				episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
+					.setFormatted(true)
+					.setComments(false)
+					.setOriginComments(false)
+					.setJson(false)));
 
 			Files.writeString(Paths.get(base + "progression.conf"),
-					episimConfig.getProgressionConfig().root().render(ConfigRenderOptions.defaults()
-							.setFormatted(true)
-							.setComments(false)
-							.setOriginComments(false)
-							.setJson(false)));
+				episimConfig.getProgressionConfig().root().render(ConfigRenderOptions.defaults()
+					.setFormatted(true)
+					.setComments(false)
+					.setOriginComments(false)
+					.setJson(false)));
 
 		} catch (IOException e) {
 			log.error("Could not write policy config", e);
@@ -286,7 +251,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-					"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv", "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar")) {
+				"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv", "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -375,7 +340,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			// Also aggregate by district
 			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
-					: districtName, name -> new InfectionReport(name, report.time, report.date, report.day));
+				: districtName, name -> new InfectionReport(name, report.time, report.date, report.day));
 			switch (person.getDiseaseStatus()) {
 				case susceptible:
 					report.nSusceptible++;
@@ -717,13 +682,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
-					actType.toString(), duration, container.getPersons().size()));
+				actType.toString(), duration, container.getPersons().size()));
 		}
 
 	}
 
 	/**
 	 * Set number of total contacts.
+	 *
 	 * @param totalContacts
 	 */
 	public void reportTotalContacts(int totalContacts) {
@@ -789,8 +755,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		EpisimPerson.DiseaseStatus newStatus = event.getDiseaseStatus();
 
 		if (newStatus == EpisimPerson.DiseaseStatus.infectedButNotContagious || newStatus == EpisimPerson.DiseaseStatus.seriouslySick ||
-				newStatus == EpisimPerson.DiseaseStatus.contagious || newStatus == EpisimPerson.DiseaseStatus.showingSymptoms ||
-				newStatus == EpisimPerson.DiseaseStatus.critical || newStatus == EpisimPerson.DiseaseStatus.recovered) {
+			newStatus == EpisimPerson.DiseaseStatus.contagious || newStatus == EpisimPerson.DiseaseStatus.showingSymptoms ||
+			newStatus == EpisimPerson.DiseaseStatus.critical || newStatus == EpisimPerson.DiseaseStatus.recovered) {
 			String districtName = (String) person.getAttributes().getAttribute("district");
 			cumulativeCases.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
 
@@ -812,7 +778,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, n));
 	}
 
-
 	/**
 	 * Write container statistic to file.
 	 */
@@ -826,10 +791,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			double scale = 1 / episimConfig.getSampleSize();
 
 			this.writer.append(out, new String[]{
-					kv.getKey().getContainerId().toString(),
-					String.valueOf(activityUsage.get(kv.getKey())),
-					String.valueOf((int) (totalUsers.getInt(kv.getKey()) * scale)),
-					String.valueOf((int) (kv.getIntValue() * scale))
+				kv.getKey().getContainerId().toString(),
+				String.valueOf(activityUsage.get(kv.getKey())),
+				String.valueOf((int) (totalUsers.getInt(kv.getKey()) * scale)),
+				String.valueOf((int) (kv.getIntValue() * scale))
 			});
 		}
 
@@ -928,10 +893,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
 		writer.append(cpuTime, new String[]{String.valueOf(iteration),
-				where,
-				what,
-				String.valueOf(System.currentTimeMillis()),
-				String.valueOf(taskId)});
+			where,
+			what,
+			String.valueOf(System.currentTimeMillis()),
+			String.valueOf(taskId)});
 	}
 
 	void reportStart(LocalDate startDate, String startFromImmunization) {
@@ -978,9 +943,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Crucial episim events are always written, others only if enabled
 		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent
-				|| event instanceof EpisimInitialInfectionEvent || event instanceof EpisimStartEvent
-				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
-				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
+			|| event instanceof EpisimInitialInfectionEvent || event instanceof EpisimStartEvent
+			|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
+			|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 
 			writer.append(events, event);
 
@@ -988,7 +953,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			// All non-epism events need a corrected timestamp
 			writer.append(events, event,
-					EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), event.getTime(), iteration));
+				EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), event.getTime(), iteration));
 
 		}
 
@@ -1013,7 +978,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
 	}
-
 
 	/**
 	 * Flush written events.
@@ -1041,7 +1005,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			}
 		}
 	}
-
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
@@ -1102,6 +1065,23 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		for (VirusStrain value : VirusStrain.values()) {
 			strains.put(value, in.readInt());
+		}
+	}
+
+	/**
+	 * Age groups used for various outputs. AgeGroup -> minimum age of age group.
+	 * Important: age groups must be in descending order
+	 */
+	public enum AgeGroup {
+		age_60_plus(60),
+		age_18_59(18),
+		age_12_17(12),
+		age_0_11(0);
+
+		public final int lowerBoundAge;
+
+		AgeGroup(int lowerBoundAge) {
+			this.lowerBoundAge = lowerBoundAge;
 		}
 	}
 
