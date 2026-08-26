@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 /**
  * Main config for episim.
  */
+@SuppressWarnings("checkstyle:MethodName")
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
