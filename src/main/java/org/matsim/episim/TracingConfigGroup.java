@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 /**
  * Config option specific to contact tracing and measures performed in {@link org.matsim.episim.model.ProgressionModel}.
  */
+@SuppressWarnings("checkstyle:MethodName")
 public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
