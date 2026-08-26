@@ -47,6 +47,7 @@ import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.utils.objectattributes.attributable.AttributesImpl;
 import org.matsim.vehicles.Vehicle;
 
 import java.io.*;
@@ -672,7 +673,7 @@ public final class InfectionEventHandler implements Externalizable {
 		if (person != null) {
 			attrs = person.getAttributes();
 		} else {
-			attrs = new Attributes();
+			attrs = new AttributesImpl();
 		}
 
 		boolean traceable = localRnd.nextDouble() < tracingConfig.getEquipmentRate();

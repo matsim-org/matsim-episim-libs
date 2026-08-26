@@ -8,6 +8,7 @@ import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.utils.objectattributes.attributable.AttributesImpl;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -124,7 +125,7 @@ public class EpisimTestUtils {
 	 * Create a person and add to container.
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new AttributesImpl(), reporting);
 
 		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
 		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct),null);
@@ -143,7 +144,7 @@ public class EpisimTestUtils {
 	 */
 	public static EpisimPerson createPerson(String... activities) {
 
-		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new AttributesImpl(), reporting);
 
 		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
 
@@ -163,7 +164,7 @@ public class EpisimTestUtils {
 	 * Create a person with specific reporting.
 	 */
 	public static EpisimPerson createPerson(EpisimReporting reporting) {
-		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new AttributesImpl(), reporting);
 	}
 
 
@@ -171,14 +172,14 @@ public class EpisimTestUtils {
 	 * Create uninitialized person without trajectory.
 	 */
 	public static EpisimPerson createPerson() {
-		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new AttributesImpl(), reporting);
 	}
 
 	/**
 	 * Create person with vaccinable status.
 	 */
 	public static EpisimPerson createPerson(boolean vaccinable, int age) {
-		Attributes attr = new Attributes();
+		Attributes attr = new AttributesImpl();
 		attr.putAttribute("age", age);
 
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), attr, reporting);
