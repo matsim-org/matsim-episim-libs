@@ -61,6 +61,7 @@ public final class EpisimUtils {
 	/**
 	 * Seconds in one day.
 	 */
+
 	public static final double DAY = 24. * 3600;
 
 	private EpisimUtils() {
