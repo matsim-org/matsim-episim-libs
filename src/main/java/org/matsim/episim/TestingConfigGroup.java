@@ -37,306 +37,34 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String ACTIVITY_CAPACITIES = "activityCapacities";
 
 	private static final String GROUPNAME = "episimTesting";
-
-	/**
-	 * Percentage of (fixed) households that are tested.
-	 */
-	private double householdCompliance = 1.0;
-
-	/**
-	 * Testing and containment strategy.
-	 */
-	private Strategy strategy = Strategy.NONE;
-
-	/**
-	 * Test all persons after this date
-	 */
-	private LocalDate testAllPersonsAfter = null;
-
-	/**
-	 * Stop testing persons with booster vaccine after some date.
-	 */
-	private LocalDate stopTestBoosterAfter = null;
-
 	/**
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
 	 */
 	private final Set<String> activities = new HashSet<>();
-
-	/**
-	 * Path to csv file for individual activity capacities.
-	 */
-	private String activityCapacities;
-
 	/**
 	 * Holds all testing params.
 	 */
 	private final Map<TestType, TestingParams> types = new EnumMap<>(TestType.class);
-
 	/**
-	 * Holds testing specific options
+	 * Percentage of (fixed) households that are tested.
 	 */
-	public static final class TestingParams extends ReflectiveConfigGroup {
-
-		static final String SET_TYPE = "testingParams";
-
-		/**
-		 * Type of test
-		 */
-		private TestType type;
-
-		/**
-		 * Amount of tests per day.
-		 */
-		private final Map<LocalDate, Integer> testingCapacity = new TreeMap<>();
-
-		/**
-		 * Probability that a not infected person is reported as positive.
-		 */
-		private double falsePositiveRate = 0.03;
-
-		/**
-		 * Probability that an infected person is not identified.
-		 */
-		private double falseNegativeRate = 0.1;
-
-		/**
-		 * Share of people that are tested (if applicable for a test)
-		 */
-		private double testingRate = 1.0;
-
-		/**
-		 * Separate testing rates for individual activities.
-		 */
-		private final Map<String, NavigableMap<LocalDate, Double>> ratePerActivity = new HashMap<>();
-
-		/**
-		 * Separate testing rates for vaccinated persons.
-		 */
-		private final Map<String, NavigableMap<LocalDate, Double>> ratePerActivityVaccinated = new HashMap<>();
-
-		/**
-		 * Days on which a person is tested.
-		 */
-		private final Set<DayOfWeek> testDays = new HashSet<>(Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY));
-
-
-		public TestingParams() {
-			super(SET_TYPE);
-		}
-
-		@StringSetter(TYPE)
-		public void setType(TestType type) {
-			this.type = type;
-		}
-
-		@StringGetter(TYPE)
-		public TestType getType() {
-			return type;
-		}
-
-		/**
-		 * Sets the tracing capacity for the whole simulation period.
-		 *
-		 * @param capacity number of persons to trace per day.
-		 * @see #setTestingCapacity_pers_per_day(int) (Map)
-		 */
-		public void setTestingCapacity_pers_per_day(int capacity) {
-			setTestingCapacity_pers_per_day(Map.of(LocalDate.of(1970, 1, 1), capacity));
-		}
-
-		/**
-		 * Sets the tracing capacity for individual days. If a day has no entry the previous will be still valid.
-		 *
-		 * @param capacity map of dates to changes in capacity.
-		 */
-		public void setTestingCapacity_pers_per_day(Map<LocalDate, Integer> capacity) {
-			testingCapacity.clear();
-			testingCapacity.putAll(capacity);
-		}
-
-		public Map<LocalDate, Integer> getTestingCapacity() {
-			return testingCapacity;
-		}
-
-		@StringSetter(CAPACITY)
-		void setTestingCapacity(String capacity) {
-
-			Map<String, String> map = SPLITTER.split(capacity);
-			setTestingCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
-					e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
-			)));
-		}
-
-		@StringGetter(CAPACITY)
-		String getTracingCapacityString() {
-			return JOINER.join(testingCapacity);
-		}
-
-		@StringGetter(RATE)
-		public double getTestingRate() {
-			return testingRate;
-		}
-
-		@StringSetter(RATE)
-		public void setTestingRate(double testingRate) {
-			this.testingRate = testingRate;
-		}
-
-		public Set<DayOfWeek> getTestDays() {
-			return testDays;
-		}
-
-		public void setTestDays(Collection<DayOfWeek> days) {
-			this.testDays.clear();
-			this.testDays.addAll(days);
-		}
-
-
-		@StringGetter(DAYS)
-		String getTestDaysString() {
-			return Joiner.on(",").join(testDays);
-		}
-
-		@StringSetter(DAYS)
-		void setTestDays(String days) {
-			setTestDays(Arrays.stream(days.split(",")).map(DayOfWeek::valueOf)
-					.collect(Collectors.toSet()));
-		}
-
-		/**
-		 * Set testing rate for activities individually for certain dates.
-		 */
-		public void setTestingRatePerActivityAndDate(Map<String, Map<LocalDate, Double>> rates) {
-			this.ratePerActivity.clear();
-			for (Map.Entry<String, Map<LocalDate, Double>> e : rates.entrySet()) {
-				ratePerActivity.put(e.getKey(), new TreeMap<>(e.getValue()));
-			}
-		}
-
-		@StringSetter(RATE_PER_ACTIVITY)
-		void setRatePerActivity(String rates) {
-
-			Map<String, String> rate = Splitter.on("|").withKeyValueSeparator(">").split(rates);
-			this.ratePerActivity.clear();
-
-			for (Map.Entry<String, String> v : rate.entrySet()) {
-				Map<String, String> map = SPLITTER.split(v.getValue());
-				ratePerActivity.put(v.getKey(), new TreeMap<>(map.entrySet().stream().collect(Collectors.toMap(
-						e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
-				))));
-			}
-		}
-
-		@StringGetter(RATE_PER_ACTIVITY)
-		String getRatesPerActivity() {
-
-			Map<String, String> collect =
-					ratePerActivity.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
-
-			return Joiner.on("|").withKeyValueSeparator(">").join(collect);
-		}
-
-		public void setTestingRatePerActivityAndDateVaccinated(Map<String, Map<LocalDate, Double>> rates) {
-			this.ratePerActivityVaccinated.clear();
-			for (Map.Entry<String, Map<LocalDate, Double>> e : rates.entrySet()) {
-				ratePerActivityVaccinated.put(e.getKey(), new TreeMap<>(e.getValue()));
-			}
-		}
-
-		@StringSetter(RATE_PER_ACTIVITY_VAC)
-		void setRatePerActivityVac(String rates) {
-
-			Map<String, String> rate = Splitter.on("|").withKeyValueSeparator(">").split(rates);
-			this.ratePerActivityVaccinated.clear();
-
-			for (Map.Entry<String, String> v : rate.entrySet()) {
-				Map<String, String> map = SPLITTER.split(v.getValue());
-				ratePerActivityVaccinated.put(v.getKey(), new TreeMap<>(map.entrySet().stream().collect(Collectors.toMap(
-						e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
-				))));
-			}
-		}
-
-		@StringGetter(RATE_PER_ACTIVITY_VAC)
-		String getRatesPerActivityVac() {
-
-			Map<String, String> collect =
-					ratePerActivityVaccinated.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
-
-			return Joiner.on("|").withKeyValueSeparator(">").join(collect);
-		}
-
-		/**
-		 * Return the testing rate for configured activities for a specific date.
-		 */
-		public Object2DoubleMap<String> getDailyTestingRateForActivities(LocalDate date) {
-
-			Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<>();
-			for (Map.Entry<String, NavigableMap<LocalDate, Double>> e : ratePerActivity.entrySet()) {
-				map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));
-			}
-
-			return map;
-		}
-
-		/**
-		 * Daily testing rate for vaccinated persons. If not configured same value as for uncaccinated is used.
-		 * @see #getDailyTestingRateForActivities(LocalDate)
-		 */
-		public Object2DoubleMap<String> getDailyTestingRateForActivitiesVaccinated(LocalDate date) {
-
-			if (ratePerActivityVaccinated.isEmpty())
-				return getDailyTestingRateForActivities(date);
-
-			Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<>();
-			for (Map.Entry<String, NavigableMap<LocalDate, Double>> e : ratePerActivityVaccinated.entrySet()) {
-				map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));
-			}
-
-			return map;
-		}
-
-		/**
-		 * testing rate for configured activities
-		 * @return
-		 */
-		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivities() {
-			return ratePerActivity;
-		}
-
-		/**
-		 * testing rate for vaccinated persons.
-		 * @see #getDailyTestingRateForActivities(LocalDate)
-		 * @return
-		 */
-		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivitiesVaccinated() {
-			return ratePerActivityVaccinated;
-		}
-
-
-		@StringGetter(FALSE_POSITIVE_RATE)
-		public double getFalsePositiveRate() {
-			return falsePositiveRate;
-		}
-
-		@StringSetter(FALSE_POSITIVE_RATE)
-		public void setFalsePositiveRate(double falsePositiveRate) {
-			this.falsePositiveRate = falsePositiveRate;
-		}
-
-		@StringGetter(FALSE_NEGATIVE_RATE)
-		public double getFalseNegativeRate() {
-			return falseNegativeRate;
-		}
-
-		@StringSetter(FALSE_NEGATIVE_RATE)
-		public void setFalseNegativeRate(double falseNegativeRate) {
-			this.falseNegativeRate = falseNegativeRate;
-		}
-
-	}
-
+	private double householdCompliance = 1.0;
+	/**
+	 * Testing and containment strategy.
+	 */
+	private Strategy strategy = Strategy.NONE;
+	/**
+	 * Test all persons after this date
+	 */
+	private LocalDate testAllPersonsAfter = null;
+	/**
+	 * Stop testing persons with booster vaccine after some date.
+	 */
+	private LocalDate stopTestBoosterAfter = null;
+	/**
+	 * Path to csv file for individual activity capacities.
+	 */
+	private String activityCapacities;
 
 	/**
 	 * Default constructor.
@@ -397,14 +125,14 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 			throw new IllegalStateException("Unknown set type " + set.getName());
 	}
 
-	@StringSetter(HOUSEHOLD_COMPLIANCE)
-	public void setHouseholdCompliance(double householdCompliance) {
-		this.householdCompliance = householdCompliance;
-	}
-
 	@StringGetter(HOUSEHOLD_COMPLIANCE)
 	public double getHouseholdCompliance() {
 		return householdCompliance;
+	}
+
+	@StringSetter(HOUSEHOLD_COMPLIANCE)
+	public void setHouseholdCompliance(double householdCompliance) {
+		this.householdCompliance = householdCompliance;
 	}
 
 	@StringGetter(STRATEGY)
@@ -417,6 +145,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.strategy = strategy;
 	}
 
+	@StringGetter(TEST_ALL_PERSONS_AFTER)
+	public LocalDate getTestAllPersonsAfter() {
+		return testAllPersonsAfter;
+	}
+
 	@StringSetter(TEST_ALL_PERSONS_AFTER)
 	void setTestAllPersonsAfter(String testAllPersonsAfter) {
 		this.testAllPersonsAfter = LocalDate.parse(testAllPersonsAfter);
@@ -426,9 +159,9 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.testAllPersonsAfter = testAllPersonsAfter;
 	}
 
-	@StringGetter(TEST_ALL_PERSONS_AFTER)
-	public LocalDate getTestAllPersonsAfter() {
-		return testAllPersonsAfter;
+	@StringGetter(STOP_TEST_BOOSTER_AFTER)
+	public LocalDate getStopTestBoosterAfter() {
+		return stopTestBoosterAfter;
 	}
 
 	@StringSetter(STOP_TEST_BOOSTER_AFTER)
@@ -438,11 +171,6 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 
 	public void setStopTestBoosterAfter(LocalDate stopTestBoosterAfter) {
 		this.stopTestBoosterAfter = stopTestBoosterAfter;
-	}
-
-	@StringGetter(STOP_TEST_BOOSTER_AFTER)
-	public LocalDate getStopTestBoosterAfter() {
-		return stopTestBoosterAfter;
 	}
 
 	@StringGetter(ACTIVITY_CAPACITIES)
@@ -455,23 +183,23 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.activityCapacities = activityCapacities;
 	}
 
+	public Set<String> getActivities() {
+		return activities;
+	}
+
 	public void setActivities(List<String> activities) {
 		this.activities.clear();
 		this.activities.addAll(activities);
 	}
 
-	public Set<String> getActivities() {
-		return activities;
+	@StringGetter(ACTIVITIES)
+	String getActivitiesString() {
+		return Joiner.on(",").join(activities);
 	}
 
 	@StringSetter(ACTIVITIES)
 	void setActivitiesString(String activitiesString) {
 		setActivities(Splitter.on(",").splitToList(activitiesString));
-	}
-
-	@StringGetter(ACTIVITIES)
-	String getActivitiesString() {
-		return Joiner.on(",").join(activities);
 	}
 
 	/**
@@ -518,5 +246,263 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 * Test persons at fixed days, if they have certain activity.
 		 */
 		FIXED_ACTIVITIES,
+	}
+
+	/**
+	 * Holds testing specific options
+	 */
+	public static final class TestingParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = "testingParams";
+		/**
+		 * Amount of tests per day.
+		 */
+		private final Map<LocalDate, Integer> testingCapacity = new TreeMap<>();
+		/**
+		 * Separate testing rates for individual activities.
+		 */
+		private final Map<String, NavigableMap<LocalDate, Double>> ratePerActivity = new HashMap<>();
+		/**
+		 * Separate testing rates for vaccinated persons.
+		 */
+		private final Map<String, NavigableMap<LocalDate, Double>> ratePerActivityVaccinated = new HashMap<>();
+		/**
+		 * Days on which a person is tested.
+		 */
+		private final Set<DayOfWeek> testDays = new HashSet<>(Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY));
+		/**
+		 * Type of test
+		 */
+		private TestType type;
+		/**
+		 * Probability that a not infected person is reported as positive.
+		 */
+		private double falsePositiveRate = 0.03;
+		/**
+		 * Probability that an infected person is not identified.
+		 */
+		private double falseNegativeRate = 0.1;
+		/**
+		 * Share of people that are tested (if applicable for a test)
+		 */
+		private double testingRate = 1.0;
+
+
+		public TestingParams() {
+			super(SET_TYPE);
+		}
+
+		@StringGetter(TYPE)
+		public TestType getType() {
+			return type;
+		}
+
+		@StringSetter(TYPE)
+		public void setType(TestType type) {
+			this.type = type;
+		}
+
+		/**
+		 * Sets the tracing capacity for the whole simulation period.
+		 *
+		 * @param capacity number of persons to trace per day.
+		 * @see #setTestingCapacity_pers_per_day(int) (Map)
+		 */
+		public void setTestingCapacity_pers_per_day(int capacity) {
+			setTestingCapacity_pers_per_day(Map.of(LocalDate.of(1970, 1, 1), capacity));
+		}
+
+		/**
+		 * Sets the tracing capacity for individual days. If a day has no entry the previous will be still valid.
+		 *
+		 * @param capacity map of dates to changes in capacity.
+		 */
+		public void setTestingCapacity_pers_per_day(Map<LocalDate, Integer> capacity) {
+			testingCapacity.clear();
+			testingCapacity.putAll(capacity);
+		}
+
+		public Map<LocalDate, Integer> getTestingCapacity() {
+			return testingCapacity;
+		}
+
+		@StringSetter(CAPACITY)
+		void setTestingCapacity(String capacity) {
+
+			Map<String, String> map = SPLITTER.split(capacity);
+			setTestingCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+			)));
+		}
+
+		@StringGetter(CAPACITY)
+		String getTracingCapacityString() {
+			return JOINER.join(testingCapacity);
+		}
+
+		@StringGetter(RATE)
+		public double getTestingRate() {
+			return testingRate;
+		}
+
+		@StringSetter(RATE)
+		public void setTestingRate(double testingRate) {
+			this.testingRate = testingRate;
+		}
+
+		public Set<DayOfWeek> getTestDays() {
+			return testDays;
+		}
+
+		public void setTestDays(Collection<DayOfWeek> days) {
+			this.testDays.clear();
+			this.testDays.addAll(days);
+		}
+
+		@StringSetter(DAYS)
+		void setTestDays(String days) {
+			setTestDays(Arrays.stream(days.split(",")).map(DayOfWeek::valueOf)
+				.collect(Collectors.toSet()));
+		}
+
+		@StringGetter(DAYS)
+		String getTestDaysString() {
+			return Joiner.on(",").join(testDays);
+		}
+
+		/**
+		 * Set testing rate for activities individually for certain dates.
+		 */
+		public void setTestingRatePerActivityAndDate(Map<String, Map<LocalDate, Double>> rates) {
+			this.ratePerActivity.clear();
+			for (Map.Entry<String, Map<LocalDate, Double>> e : rates.entrySet()) {
+				ratePerActivity.put(e.getKey(), new TreeMap<>(e.getValue()));
+			}
+		}
+
+		@StringSetter(RATE_PER_ACTIVITY)
+		void setRatePerActivity(String rates) {
+
+			Map<String, String> rate = Splitter.on("|").withKeyValueSeparator(">").split(rates);
+			this.ratePerActivity.clear();
+
+			for (Map.Entry<String, String> v : rate.entrySet()) {
+				Map<String, String> map = SPLITTER.split(v.getValue());
+				ratePerActivity.put(v.getKey(), new TreeMap<>(map.entrySet().stream().collect(Collectors.toMap(
+					e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+				))));
+			}
+		}
+
+		@StringGetter(RATE_PER_ACTIVITY)
+		String getRatesPerActivity() {
+
+			Map<String, String> collect =
+				ratePerActivity.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+			return Joiner.on("|").withKeyValueSeparator(">").join(collect);
+		}
+
+		public void setTestingRatePerActivityAndDateVaccinated(Map<String, Map<LocalDate, Double>> rates) {
+			this.ratePerActivityVaccinated.clear();
+			for (Map.Entry<String, Map<LocalDate, Double>> e : rates.entrySet()) {
+				ratePerActivityVaccinated.put(e.getKey(), new TreeMap<>(e.getValue()));
+			}
+		}
+
+		@StringSetter(RATE_PER_ACTIVITY_VAC)
+		void setRatePerActivityVac(String rates) {
+
+			Map<String, String> rate = Splitter.on("|").withKeyValueSeparator(">").split(rates);
+			this.ratePerActivityVaccinated.clear();
+
+			for (Map.Entry<String, String> v : rate.entrySet()) {
+				Map<String, String> map = SPLITTER.split(v.getValue());
+				ratePerActivityVaccinated.put(v.getKey(), new TreeMap<>(map.entrySet().stream().collect(Collectors.toMap(
+					e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+				))));
+			}
+		}
+
+		@StringGetter(RATE_PER_ACTIVITY_VAC)
+		String getRatesPerActivityVac() {
+
+			Map<String, String> collect =
+				ratePerActivityVaccinated.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+			return Joiner.on("|").withKeyValueSeparator(">").join(collect);
+		}
+
+		/**
+		 * Return the testing rate for configured activities for a specific date.
+		 */
+		public Object2DoubleMap<String> getDailyTestingRateForActivities(LocalDate date) {
+
+			Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<>();
+			for (Map.Entry<String, NavigableMap<LocalDate, Double>> e : ratePerActivity.entrySet()) {
+				map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));
+			}
+
+			return map;
+		}
+
+		/**
+		 * Daily testing rate for vaccinated persons. If not configured same value as for uncaccinated is used.
+		 *
+		 * @see #getDailyTestingRateForActivities(LocalDate)
+		 */
+		public Object2DoubleMap<String> getDailyTestingRateForActivitiesVaccinated(LocalDate date) {
+
+			if (ratePerActivityVaccinated.isEmpty())
+				return getDailyTestingRateForActivities(date);
+
+			Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<>();
+			for (Map.Entry<String, NavigableMap<LocalDate, Double>> e : ratePerActivityVaccinated.entrySet()) {
+				map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));
+			}
+
+			return map;
+		}
+
+		/**
+		 * testing rate for configured activities
+		 *
+		 * @return
+		 */
+		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivities() {
+			return ratePerActivity;
+		}
+
+		/**
+		 * testing rate for vaccinated persons.
+		 *
+		 * @return
+		 * @see #getDailyTestingRateForActivities(LocalDate)
+		 */
+		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivitiesVaccinated() {
+			return ratePerActivityVaccinated;
+		}
+
+
+		@StringGetter(FALSE_POSITIVE_RATE)
+		public double getFalsePositiveRate() {
+			return falsePositiveRate;
+		}
+
+		@StringSetter(FALSE_POSITIVE_RATE)
+		public void setFalsePositiveRate(double falsePositiveRate) {
+			this.falsePositiveRate = falsePositiveRate;
+		}
+
+		@StringGetter(FALSE_NEGATIVE_RATE)
+		public double getFalseNegativeRate() {
+			return falseNegativeRate;
+		}
+
+		@StringSetter(FALSE_NEGATIVE_RATE)
+		public void setFalseNegativeRate(double falseNegativeRate) {
+			this.falseNegativeRate = falseNegativeRate;
+		}
+
 	}
 }
