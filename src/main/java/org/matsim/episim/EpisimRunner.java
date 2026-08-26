@@ -245,7 +245,7 @@ public final class EpisimRunner {
 			archive.finish();
 			archive.close();
 
-		} catch (IOException | ArchiveException e) {
+		} catch (IOException e) {
 			log.error("Could not write snapshot", e);
 		}
 
@@ -312,7 +312,7 @@ public final class EpisimRunner {
 
 			return iteration;
 
-		} catch (IOException | ArchiveException | ClassNotFoundException e) {
+		} catch (IOException  | ClassNotFoundException e) {
 			throw new IllegalStateException("Could not read snapshot", e);
 		}
 
