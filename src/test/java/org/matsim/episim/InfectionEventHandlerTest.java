@@ -6,9 +6,9 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.model.SimulationListener;
 import org.matsim.run.RunEpisimIntegrationTest;
@@ -18,11 +18,11 @@ import java.time.LocalDate;
 
 public class InfectionEventHandlerTest {
 
-	@Rule
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	private EpisimRunner runner;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule())

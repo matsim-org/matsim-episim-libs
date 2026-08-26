@@ -3,12 +3,13 @@ package org.matsim.run;
 import com.google.common.collect.Lists;
 import com.google.inject.*;
 import com.google.inject.util.Modules;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
@@ -31,15 +32,16 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "it{0}")
+@MethodSource("parameters")
 public class RunEpisimIntegrationTest {
 
-	@Rule
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	/**
 	 * Iterations
 	 */
-	@Parameterized.Parameter
+	@Parameter
 	public int it;
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
@@ -47,7 +49,6 @@ public class RunEpisimIntegrationTest {
 	private TestingConfigGroup testingConfig;
 	private EpisimRunner runner;
 
-	@Parameterized.Parameters(name = "it{0}")
 	public static Iterable<Integer> parameters() {
 		return Arrays.asList(10, 100);
 	}
@@ -64,7 +65,7 @@ public class RunEpisimIntegrationTest {
 		}
 	}
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils, it)));
@@ -76,7 +77,7 @@ public class RunEpisimIntegrationTest {
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		assertSimulationOutput(utils);
 	}

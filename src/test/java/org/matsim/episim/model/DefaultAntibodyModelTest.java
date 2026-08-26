@@ -7,10 +7,17 @@ import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 
-import org.apache.log4j.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.assertj.core.data.Offset;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
@@ -35,14 +42,14 @@ import java.util.*;
 
 import static com.google.common.math.Quantiles.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultAntibodyModelTest {
 
-	private static final Logger log = Logger.getLogger(DefaultAntibodyModel.class);
+	private static final Logger log = LogManager.getLogger(DefaultAntibodyModelTest.class);
 
 
-	@Rule
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 
 	private final List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
@@ -52,7 +59,7 @@ public class DefaultAntibodyModelTest {
 	;
 
 
-	@Before
+	@BeforeEach
 	public void setup() {
 
 		antibodyConfig = AntibodyModel.newConfig();
@@ -1116,7 +1123,7 @@ public class DefaultAntibodyModelTest {
 	}
 
 	@Test
-	@Ignore
+	@Disabled
 	public void roesslerEtAlOlderPaper() {
 		// https://www.nejm.org/doi/full/10.1056/NEJMc2119236 Fig.1
 
