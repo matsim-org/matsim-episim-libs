@@ -9,7 +9,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.matsim.episim.model.Transition.to;
@@ -22,7 +22,7 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 
 	@Before
 	public void setUp() throws Exception {
-		SplittableRandom rnd = new SplittableRandom(0);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(0);
 		Config config = EpisimTestUtils.createTestConfig();
 
 		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class)

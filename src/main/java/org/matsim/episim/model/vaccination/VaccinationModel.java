@@ -8,7 +8,7 @@ import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Vaccination model executed every iteration.
@@ -60,7 +60,7 @@ public interface VaccinationModel extends SimulationListener {
 	/**
 	 * For the first vaccination, chose the {@link VaccinationType} a person is getting.
 	 */
-	static VaccinationType chooseVaccinationType(Map<VaccinationType, Double> prob, SplittableRandom rnd) {
+	static VaccinationType chooseVaccinationType(Map<VaccinationType, Double> prob, EpisimSplittableRandom rnd) {
 		double p = rnd.nextDouble();
 		for (Map.Entry<VaccinationType, Double> e : prob.entrySet()) {
 			if (p < e.getValue())

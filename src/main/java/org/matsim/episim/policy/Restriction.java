@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.poi.util.Beta;
 import org.matsim.api.core.v01.Id;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 
 import javax.annotation.Nullable;
@@ -361,7 +362,7 @@ public final class Restriction {
 	/**
 	 * Determines / Randomly draws which mask a persons wears while this restriction is in place.
 	 */
-	public FaceMask determineMask(SplittableRandom rnd) {
+	public FaceMask determineMask(EpisimSplittableRandom rnd) {
 
 		if (maskUsage.isEmpty()) return FaceMask.NONE;
 

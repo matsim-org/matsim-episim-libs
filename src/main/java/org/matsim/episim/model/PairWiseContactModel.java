@@ -25,6 +25,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.util.*;
 
@@ -62,8 +63,8 @@ public final class PairWiseContactModel extends AbstractContactModel {
 	private final Map<EpisimContainer<?>, Set<EpisimPerson>> contacts = new IdentityHashMap<>();
 
 	@Inject
-		/*package*/ PairWiseContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-										 EpisimReporting reporting, InfectionModel infectionModel) {
+		/*package*/ PairWiseContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+		                                 EpisimReporting reporting, InfectionModel infectionModel) {
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();

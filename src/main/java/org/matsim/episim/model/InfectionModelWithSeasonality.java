@@ -9,7 +9,7 @@ import org.matsim.episim.policy.Restriction;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.matsim.episim.model.DefaultInfectionModel.*;
 
@@ -19,7 +19,7 @@ import static org.matsim.episim.model.DefaultInfectionModel.*;
 public final class InfectionModelWithSeasonality implements InfectionModel {
 
 	private final FaceMaskModel maskModel;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
 	private final VaccinationConfigGroup vaccinationConfig;
@@ -29,7 +29,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private int iteration;
 
 	@Inject
-	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, SplittableRandom rnd, Config config, EpisimReporting reporting) {
+	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, EpisimSplittableRandom rnd, Config config, EpisimReporting reporting) {
 		this.maskModel = faceMaskModel;
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -79,7 +79,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		return EpisimUtils.interpolateEntry((NavigableMap<LocalDate, ? extends Number>) episimConfig.getLeisureOutdoorFraction(), date);
 	}
 
-	static double getIndoorOutdoorFactor(double outdoorFraction, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+	static double getIndoorOutdoorFactor(double outdoorFraction, EpisimSplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
 
 		if (act1.getSeasonality() == 0.0 && act2.getSeasonality() == 0.0) {
 			return 1.;

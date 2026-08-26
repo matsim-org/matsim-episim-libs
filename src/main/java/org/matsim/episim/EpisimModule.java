@@ -45,7 +45,8 @@ import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import jakarta.inject.Named;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -153,8 +154,8 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	public SplittableRandom splittableRandom(Config config) {
-		return new SplittableRandom(config.global().getRandomSeed());
+	public EpisimSplittableRandom splittableRandom(Config config) {
+		return new EpisimSplittableRandom(config.global().getRandomSeed());
 	}
 
 	@Provides

@@ -4,10 +4,10 @@ import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.*;
 
 /**
  * Testing model that uses guice injection to implement testing logic.
@@ -18,8 +18,8 @@ public class FlexibleTestingModel extends DefaultTestingModel {
 	private final TestPolicy policy;
 
 	@Inject
-	public FlexibleTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, TestRate rate, TestPolicy policy,
-		VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
+	public FlexibleTestingModel(EpisimSplittableRandom rnd, Config config, TestingConfigGroup testingConfig, TestRate rate, TestPolicy policy,
+	                            VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
 		super(rnd, config, testingConfig, vaccinationConfig, episimConfig);
 		this.rate = rate;
 		this.policy = policy;

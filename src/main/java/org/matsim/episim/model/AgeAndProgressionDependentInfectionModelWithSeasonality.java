@@ -10,7 +10,8 @@ import org.matsim.episim.policy.Restriction;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.matsim.episim.model.DefaultInfectionModel.*;
 
@@ -23,7 +24,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	private final ProgressionModel progression;
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
@@ -42,7 +43,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 	@Inject
 	AgeAndProgressionDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ProgressionModel progression,
-															Config config, EpisimReporting reporting, SplittableRandom rnd) {
+															Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.progression = progression;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);

@@ -4,12 +4,12 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.SplittableRandom;
 
 /**
  * Listener to interact with the simulation before starting.
@@ -24,16 +24,16 @@ public interface SimulationListener {
 	 * @param facilities all facilities
 	 * @param vehicles   all vehicles
 	 */
-	default void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	default void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 	}
 
 	/**
 	 * Called after a snapshot has been loaded.
 	 *
 	 * @param iteration restored iteration
-	 * @see #init(SplittableRandom, Map, Map, Map)
+	 * @see #init(EpisimSplittableRandom, Map, Map, Map)
 	 */
-	default void onSnapshotLoaded(int iteration, SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	default void onSnapshotLoaded(int iteration, EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 	}
 
 	/**

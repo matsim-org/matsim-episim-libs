@@ -13,6 +13,7 @@ import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.File;
@@ -20,7 +21,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,7 +71,7 @@ public class FixedPolicyTest {
 
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
 		assertThat(r.get("work").getCiCorrection()).isEqualTo(1);
-		assertThat(r.get("work").determineMask(new SplittableRandom(1))).isEqualTo(FaceMask.CLOTH);
+		assertThat(r.get("work").determineMask(new EpisimSplittableRandom(1))).isEqualTo(FaceMask.CLOTH);
 
 		policy.updateRestrictions(EpisimTestUtils.createReport("--", 2), r);
 
@@ -115,7 +115,7 @@ public class FixedPolicyTest {
 
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-03-31", -1), r);
 		assertThat(r.get("work").getCiCorrection()).isEqualTo(1);
-		assertThat(r.get("work").determineMask(new SplittableRandom(1))).isEqualTo(FaceMask.CLOTH);
+		assertThat(r.get("work").determineMask(new EpisimSplittableRandom(1))).isEqualTo(FaceMask.CLOTH);
 
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-04-10", -1), r);
 		assertThat(r.get("work").getRemainingFraction()).isCloseTo(1, OFFSET);

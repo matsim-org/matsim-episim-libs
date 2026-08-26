@@ -12,7 +12,8 @@ import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.matsim.episim.model.Transition.to;
@@ -65,7 +66,7 @@ public class ConfigurableProgressionModelTest {
 		vaccinationConfig = new VaccinationConfigGroup();
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, vaccinationConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
 		model.setIteration(1);
 	}
@@ -318,7 +319,7 @@ public class ConfigurableProgressionModelTest {
 						to(DiseaseStatus.susceptible, Transition.fixed(40)))
 				.build());
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
 
 		List<Double> recoveredDays = new ArrayList<>();

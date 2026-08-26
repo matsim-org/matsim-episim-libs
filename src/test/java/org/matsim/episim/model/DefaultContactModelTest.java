@@ -16,6 +16,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.RestrictionTest;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacilitiesFactory;
 import org.matsim.facilities.ActivityFacility;
 import org.mockito.Mockito;
@@ -39,14 +40,14 @@ public class DefaultContactModelTest {
 	private InfectionModel infectionModel;
 	private Map<String, Restriction> restrictions;
 	private EpisimReporting reporting;
-	private SplittableRandom rnd;
+	private EpisimSplittableRandom rnd;
 
 
 	@Before
 	public void setup() {
 		// No verification, since it results in oom error
 		reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
-		rnd = new SplittableRandom(1);
+		rnd = new EpisimSplittableRandom(1);
 
 		config = EpisimTestUtils.createTestConfig();
 		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -396,7 +397,7 @@ public class DefaultContactModelTest {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 		tracingConfig.setMinContactDuration_sec(0);
-		model = new DefaultContactModel(new SplittableRandom(1), config, rNoTracking, infectionModel);
+		model = new DefaultContactModel(new EpisimSplittableRandom(1), config, rNoTracking, infectionModel);
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
@@ -405,7 +406,7 @@ public class DefaultContactModelTest {
 		EpisimReporting rTracking = mock(EpisimReporting.class);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		tracingConfig.setMinContactDuration_sec(0);
-		model = new DefaultContactModel(new SplittableRandom(1), config, rTracking, infectionModel);
+		model = new DefaultContactModel(new EpisimSplittableRandom(1), config, rTracking, infectionModel);
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);

@@ -6,20 +6,20 @@ import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Default disease-status transition model.
  */
 public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransitionModel {
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup strainConfig;
 
 	@Inject
-	public DefaultDiseaseStatusTransitionModel(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
-		VirusStrainConfigGroup strainConfigGroup) {
+	public DefaultDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+	                                           VirusStrainConfigGroup strainConfigGroup) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;

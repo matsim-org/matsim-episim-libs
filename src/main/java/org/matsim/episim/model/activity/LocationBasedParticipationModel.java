@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 
 import java.util.*;
@@ -17,7 +18,7 @@ import java.util.*;
  */
 public class LocationBasedParticipationModel implements ActivityParticipationModel {
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private ImmutableMap<String, Restriction> im;
 
@@ -27,7 +28,7 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 	private final Map<String, String> subdistrictFacilities;
 
 	@Inject
-	public LocationBasedParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, Scenario scenario) {
+	public LocationBasedParticipationModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, Scenario scenario) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 

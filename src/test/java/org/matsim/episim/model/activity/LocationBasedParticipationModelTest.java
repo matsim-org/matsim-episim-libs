@@ -14,6 +14,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacilitiesFactory;
 import org.matsim.facilities.ActivityFacility;
 
@@ -25,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class LocationBasedParticipationModelTest {
 
 	private Config config;
-	private SplittableRandom rnd;
+	private EpisimSplittableRandom rnd;
 	private EpisimConfigGroup episimConfig;
 
 	private final double POPULATION_SIZE = 10000.;
@@ -35,7 +36,7 @@ public class LocationBasedParticipationModelTest {
 	@Before
 	public void setup() {
 
-		rnd = new SplittableRandom(1);
+		rnd = new EpisimSplittableRandom(1);
 
 		config = EpisimTestUtils.createTestConfig();
 		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);

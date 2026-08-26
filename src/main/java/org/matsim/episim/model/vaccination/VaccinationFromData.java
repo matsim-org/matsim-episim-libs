@@ -14,6 +14,7 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 import tech.tablesaw.api.*;
@@ -21,8 +22,6 @@ import tech.tablesaw.io.csv.CsvReadOptions;
 import tech.tablesaw.selection.Selection;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -67,14 +66,14 @@ public class VaccinationFromData extends VaccinationByAge {
 	private final RandomVaccination random;
 
 	@Inject
-	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, org.matsim.episim.model.vaccination.VaccinationFromData.Config config) {
+	public VaccinationFromData(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, org.matsim.episim.model.vaccination.VaccinationFromData.Config config) {
 		super(rnd, vaccinationConfig);
 		this.config = config;
 		this.random = new RandomVaccination(rnd, vaccinationConfig);
 	}
 
 	@Override
-	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	public void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 		if (vaccinationConfig.getFromFile() == null)
 			throw new IllegalArgumentException("Vaccination file must be set, but was null");
 

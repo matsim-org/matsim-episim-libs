@@ -20,7 +20,7 @@ import org.matsim.vehicles.Vehicle;
 import java.time.DayOfWeek;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import java.util.function.Predicate;
 
 /**
@@ -40,13 +40,13 @@ final class TrajectoryHandler {
 	/**
 	 * The "local" random instance, used for all submodels.
 	 */
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 
 	private int iteration = 0;
 	private DayOfWeek day;
 
 	@Inject
-	public TrajectoryHandler(EpisimConfigGroup episimConfig, EpisimReporting reporting, ContactModel model, SplittableRandom rnd,
+	public TrajectoryHandler(EpisimConfigGroup episimConfig, EpisimReporting reporting, ContactModel model, EpisimSplittableRandom rnd,
 		@Named("personMap") Map<Id<Person>, EpisimPerson> personMap,
 		@Named("vehicleMap") Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicleMap,
 		@Named("pseudoFacilityMap") Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> pseudoFacilityMap) {
@@ -59,7 +59,7 @@ final class TrajectoryHandler {
 		this.pseudoFacilityMap = pseudoFacilityMap;
 	}
 
-	SplittableRandom getRnd() {
+	EpisimSplittableRandom getRnd() {
 		return rnd;
 	}
 

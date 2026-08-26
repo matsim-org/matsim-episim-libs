@@ -19,7 +19,8 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,7 +57,7 @@ public class VaccinationFromDataTest {
 		VaccinationConfigGroup config = new VaccinationConfigGroup();
 		config.setFromFile(input.toString());
 
-		SplittableRandom rnd = new SplittableRandom(0);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(0);
 
 		persons = new HashMap<>();
 

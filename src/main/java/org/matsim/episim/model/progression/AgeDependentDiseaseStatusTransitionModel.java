@@ -25,7 +25,7 @@ import org.matsim.episim.*;
 import com.google.inject.Inject;
 import org.matsim.episim.model.ConfigurableProgressionModel;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
@@ -35,8 +35,8 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	private final EpisimConfigGroup episimConfig;
 
 	@Inject
-	public AgeDependentDiseaseStatusTransitionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
-		VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
+	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
+	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
 		super(rnd, vaccinationConfig, strainConfigGroup);
 		this.episimConfig = episimConfig;
 	}

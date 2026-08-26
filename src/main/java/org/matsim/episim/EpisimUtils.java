@@ -38,9 +38,9 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -146,29 +146,17 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Extracts the current state of a {@link SplittableRandom} instance.
+	 * Extracts the current state of a {@link EpisimSplittableRandom} instance.
 	 */
-	public static long getSeed(SplittableRandom rnd) {
-		try {
-			Field field = rnd.getClass().getDeclaredField("seed");
-			field.setAccessible(true);
-			return (long) field.get(rnd);
-		} catch (ReflectiveOperationException e) {
-			throw new IllegalStateException("Could not extract seed", e);
-		}
+	public static long getSeed(EpisimSplittableRandom rnd) {
+		return rnd.getSeed();
 	}
 
 	/**
-	 * Sets current seed of {@link SplittableRandom} instance.
+	 * Sets current seed of {@link EpisimSplittableRandom} instance.
 	 */
-	public static void setSeed(SplittableRandom rnd, long seed) {
-		try {
-			Field field = rnd.getClass().getDeclaredField("seed");
-			field.setAccessible(true);
-			field.set(rnd, seed);
-		} catch (ReflectiveOperationException e) {
-			throw new IllegalStateException("Could not extract seed", e);
-		}
+	public static void setSeed(EpisimSplittableRandom rnd, long seed) {
+		rnd.setSeed(seed);
 	}
 
 	/**
@@ -304,7 +292,7 @@ public final class EpisimUtils {
 	 * @param rnd splittable random instance
 	 * @see BitsStreamGenerator#nextGaussian()
 	 */
-	public static double nextGaussian(SplittableRandom rnd) {
+	public static double nextGaussian(EpisimSplittableRandom rnd) {
 		// Normally this allows to generate two numbers, but one is thrown away because this function is stateless
 		// generate a new pair of gaussian numbers
 		final double x = rnd.nextDouble();
@@ -322,7 +310,7 @@ public final class EpisimUtils {
 	 * @param mu    mu ( median exp mu)
 	 * @param sigma sigma
 	 */
-	public static double nextLogNormal(SplittableRandom rnd, double mu, double sigma) {
+	public static double nextLogNormal(EpisimSplittableRandom rnd, double mu, double sigma) {
 		if (sigma == 0)
 			return Math.exp(mu);
 
@@ -332,7 +320,7 @@ public final class EpisimUtils {
 	/**
 	 * Draws a log-normal value using the distribution mean and sigma.
 	 */
-	public static double nextLogNormalFromMeanAndSigma(SplittableRandom rnd, double mean, double sigma) {
+	public static double nextLogNormalFromMeanAndSigma(EpisimSplittableRandom rnd, double mean, double sigma) {
 		double mu = Math.log(mean) - sigma * sigma / 2;
 		return nextLogNormal(rnd, mu, sigma);
 	}

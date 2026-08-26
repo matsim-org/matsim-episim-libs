@@ -40,6 +40,7 @@
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+ import org.matsim.episim.util.EpisimSplittableRandom;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
 
@@ -426,7 +427,7 @@
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
 
-			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
 
 //			 try {
 //				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));

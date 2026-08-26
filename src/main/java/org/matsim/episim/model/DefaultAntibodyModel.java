@@ -7,7 +7,8 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
 import java.util.Collection;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Default implementation of the antibody model.
@@ -20,7 +21,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	//
 
 	private final AntibodyModel.Config antibodyConfig;
-	private final SplittableRandom localRnd;
+	private final EpisimSplittableRandom localRnd;
 
 	private final EpisimConfigGroup episimConfig;
 
@@ -29,7 +30,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
 		this.antibodyConfig = antibodyConfig;
 		this.episimConfig = episimConfigGroup;
-		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
+		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 
 
 	}

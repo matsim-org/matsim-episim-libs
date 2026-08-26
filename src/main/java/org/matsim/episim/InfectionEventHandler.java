@@ -44,6 +44,7 @@ import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -162,12 +163,12 @@ public final class InfectionEventHandler implements Externalizable {
 	private final TracingConfigGroup tracingConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final EpisimReporting reporting;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 
 	/**
 	 * Local random, e.g. used for person initialization.
 	 */
-	private final SplittableRandom localRnd;
+	private final EpisimSplittableRandom localRnd;
 
 	private boolean init = false;
 	private int iteration = 0;
@@ -188,7 +189,7 @@ public final class InfectionEventHandler implements Externalizable {
 	private Set<VaccinationModel> vaccinations;
 
 	@Inject
-	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
+	public InfectionEventHandler(Injector injector, EpisimSplittableRandom rnd) {
 		this.injector = injector;
 		this.rnd = rnd;
 
@@ -200,7 +201,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
-		this.localRnd = new SplittableRandom(65536); // fixed seed, because it should not change between snapshots
+		this.localRnd = new EpisimSplittableRandom(65536); // fixed seed, because it should not change between snapshots
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
 		this.antibodyModel = injector.getInstance(AntibodyModel.class);
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
@@ -639,7 +640,7 @@ public final class InfectionEventHandler implements Externalizable {
 				@Override
 				protected void configure() {
 					// the seed state is set later by this class
-					bind(SplittableRandom.class).toInstance(new SplittableRandom(rnd.nextLong()));
+					bind(EpisimSplittableRandom.class).toInstance(new EpisimSplittableRandom(rnd.nextLong()));
 					bind(TrajectoryHandler.class);
 
 					TypeLiteral<Map<Id<Person>, EpisimPerson>> pMap = new TypeLiteral<>() {

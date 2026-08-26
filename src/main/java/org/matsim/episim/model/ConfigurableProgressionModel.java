@@ -13,6 +13,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimPerson.TestStatus;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
@@ -137,8 +138,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private long prevShowingSymptoms;
 
 	@Inject
-	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-		VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
+	public ConfigurableProgressionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	                                    VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
 		super(rnd, episimConfig, statusTransitionModel);
 		this.tracingConfig = tracingConfig;
 		this.vaccinationConfig = vaccinationConfig;

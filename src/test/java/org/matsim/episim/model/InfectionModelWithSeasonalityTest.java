@@ -6,11 +6,11 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,7 +24,7 @@ public class InfectionModelWithSeasonalityTest {
 	@Before
 	public void setUp() throws Exception {
 
-		SplittableRandom rnd = new SplittableRandom(0);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(0);
 		Config config = EpisimTestUtils.createTestConfig();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
