@@ -365,7 +365,7 @@ public final class EpisimUtils {
 	 */
 	public static NavigableMap<LocalDate, Double> readCSV(Path csv, CSVFormat format, String dateColumn, String valueColumn) {
 
-		TreeMap<LocalDate, Double> map = new TreeMap<>();
+		NavigableMap<LocalDate, Double> map = new TreeMap<>();
 
 		try (BufferedReader in = Files.newBufferedReader(csv)) {
 
@@ -482,8 +482,8 @@ public final class EpisimUtils {
 
 		in = new FileReader(avgWeatherCSV);
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
-		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+		Map<String, Double> tmaxPerDay = new HashMap<String, Double>();
+		Map<String, Double> prcpPerDay = new HashMap<String, Double>();
 
 		for (CSVRecord record : records) {
 			String monthDay = record.get("monthDay");
@@ -538,8 +538,8 @@ public final class EpisimUtils {
 
 		in = new FileReader(avgWeatherCSV);
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
-		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+		Map<String, Double> tmaxPerDay = new HashMap<>();
+		Map<String, Double> prcpPerDay = new HashMap<>();
 
 		for (CSVRecord record : records) {
 			String monthDay = record.get("monthDay");
@@ -600,8 +600,8 @@ public final class EpisimUtils {
 
 		in = new FileReader(avgWeatherCSV);
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
-		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+		Map<String, Double> tmaxPerDay = new HashMap<>();
+		Map<String, Double> prcpPerDay = new HashMap<>();
 
 		for (CSVRecord record : records) {
 			String monthDay = record.get("monthDay");
