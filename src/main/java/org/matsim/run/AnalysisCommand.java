@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.EventHandler;
-import org.matsim.core.utils.io.UncheckedIOException;
+import java.io.UncheckedIOException;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.events.EpisimEventsReader;
 import picocli.AutoComplete;

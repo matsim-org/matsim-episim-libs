@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.logging.log4j.util.TriConsumer;
-import org.matsim.core.utils.io.UncheckedIOException;
+import java.io.UncheckedIOException;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.ShutdownPolicy;
 
