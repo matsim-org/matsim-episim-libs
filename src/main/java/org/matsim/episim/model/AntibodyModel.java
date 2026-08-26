@@ -128,6 +128,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1 / mutEscBa5);
 
 			//BA.1
+			@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 			double mRNABA1 = mRNADelta / mutEscBa1;
 			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, mRNABA1);
 			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, mRNABA1 * 4./20.); //???
@@ -141,6 +142,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha / mutEscBa5);
 
 			//BA.2
+			@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 			double mRNABA2 = mRNABA1;
 			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, mRNABA2);
 			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA2, mRNABA2 * 4./20.);

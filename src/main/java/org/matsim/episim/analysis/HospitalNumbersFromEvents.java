@@ -91,7 +91,9 @@
 	 );
 	 // ICU: so far, we assume no difference between strains
 	 private static final double factorICU = 1.; // TODO : Check literature for reasonable values
+	 @SuppressWarnings("checkstyle:MemberName")
 	 private final String DATE = "date";
+	 @SuppressWarnings("checkstyle:MemberName")
 	 private final String DAY = "day";
 	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-27/events_hosp")
 //	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/matsim-episim/2023-10-06/1/output/")

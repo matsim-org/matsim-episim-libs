@@ -69,6 +69,7 @@ public class AnalysisCommand implements Runnable {
 	/**
 	 * Separator for TSV.
 	 */
+	@SuppressWarnings("checkstyle:StaticVariableName")
 	public static Joiner TSV = Joiner.on("\t");
 
 	@CommandLine.Spec
@@ -283,6 +284,7 @@ public class AnalysisCommand implements Runnable {
 	/**
 	 * This stream will not close the underlying stream.
 	 */
+	@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 	private static final class NonClosingGZIPStream extends GZIPInputStream {
 
 		public NonClosingGZIPStream(InputStream in) throws IOException {

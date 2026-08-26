@@ -221,6 +221,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@Deprecated
+	@SuppressWarnings("checkstyle:MethodName")
 	public void setTestingCapacity_pers_per_day(Map<LocalDate, Integer> capacity) {
 		getParams(TestType.RAPID_TEST).setTestingCapacity_pers_per_day(capacity);
 	}
@@ -314,6 +315,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 * @param capacity number of persons to trace per day.
 		 * @see #setTestingCapacity_pers_per_day(int) (Map)
 		 */
+		@SuppressWarnings("checkstyle:MethodName")
 		public void setTestingCapacity_pers_per_day(int capacity) {
 			setTestingCapacity_pers_per_day(Map.of(LocalDate.of(1970, 1, 1), capacity));
 		}
@@ -323,6 +325,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 *
 		 * @param capacity map of dates to changes in capacity.
 		 */
+		@SuppressWarnings("checkstyle:MethodName")
 		public void setTestingCapacity_pers_per_day(Map<LocalDate, Integer> capacity) {
 			testingCapacity.clear();
 			testingCapacity.putAll(capacity);

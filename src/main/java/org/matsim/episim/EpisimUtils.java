@@ -456,6 +456,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	public static Map<LocalDate, Double> getOutdoorFractions2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
@@ -506,6 +507,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 		//																																	// 18.5						25				18.5			18.5 -> move to 15?
 		Reader in = new FileReader(weatherCSV);
@@ -565,6 +567,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2Fall2022Override(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double TmidFall2022, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
@@ -626,6 +629,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	private static double getOutDoorFractionFromDateAndTemp(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold, double alpha) {
 
 		double tMid;
@@ -684,6 +688,7 @@ public final class EpisimUtils {
 		return alpha * outDoorFractionFromTemperature + (1 - alpha) * outDoorFractionFromDate;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
 
 		double tMid;
