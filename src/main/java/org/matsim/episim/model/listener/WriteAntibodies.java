@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Writes antibody leven into a matrix
+ * Writes antibody levels into a matrix.
  */
 public class WriteAntibodies implements SimulationListener {
 

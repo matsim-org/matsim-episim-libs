@@ -135,10 +135,13 @@ public interface RestrictionInput {
 		return start;
 	}
 
+	/**
+	 * Resamples average weekday values by subdistrict.
+	 */
 	static LocalDate resampleAvgWeekdayBySubdistrict(Map<LocalDate, Double> daysGlobal,
-	                                                 Map<String, Map<LocalDate, Double>> daysPerDistrict,
-	                                                 LocalDate start,
-	                                                 TriConsumer<LocalDate, Double, Map<String, Double>> f) {
+		Map<String, Map<LocalDate, Double>> daysPerDistrict,
+		LocalDate start,
+		TriConsumer<LocalDate, Double, Map<String, Double>> f) {
 
 		Set<LocalDate> ignored;
 		try {

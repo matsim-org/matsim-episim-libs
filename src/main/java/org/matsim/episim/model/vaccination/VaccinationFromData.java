@@ -173,7 +173,7 @@ public class VaccinationFromData extends VaccinationByAge {
 	}
 
 	/**
-	 * Vaccinate all persons with the nth vaccination
+	 * Vaccinate all persons with the nth vaccination.
 	 * @param vaccinationN the nth vaccination
 	 */
 	private int vaccinate(Map<Id<Person>, EpisimPerson> persons, TreeMap<LocalDate, DoubleList> entries, int vaccinationN, LocalDate date, int iteration, double now) {
@@ -333,6 +333,9 @@ public class VaccinationFromData extends VaccinationByAge {
 		final String locationId;
 		final Object2DoubleMap<String> groups = new Object2DoubleLinkedOpenHashMap<>();
 
+		/**
+		 * Creates a vaccination configuration for the given location.
+		 */
 		public Config(String locationId) {
 			this.locationId = locationId;
 		}

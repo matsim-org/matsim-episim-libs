@@ -58,7 +58,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.*;
 
@@ -226,6 +225,9 @@ public final class InfectionEventHandler implements Externalizable {
 		return iteration > 0 && !progressionModel.canProgress(report);
 	}
 
+	/**
+	 * Shuts down the event-processing executor.
+	 */
 	public void finish() {
 		executor.shutdown();
 	}
@@ -283,7 +285,7 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Update events data and internal person data structure.
 	 *
-	 * @param events
+	 * @param events events grouped by day of week
 	 */
 	void updateEvents(Map<DayOfWeek, List<Event>> events) {
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
@@ -577,7 +579,7 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, by setting
 	 * the taskId attribute of the containers to values between 0 and episimConfig.getThreds() - 1,
-	 * so that the sum of numUsers * maxGroupSize has an even distribution
+	 * so that the sum of numUsers * maxGroupSize has an even distribution.
 	 */
 	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		// We need the containers sorted by the load, with the highest load first.
@@ -614,7 +616,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, using
-	 * the hashCode of the containerId (the original distribution schema)
+	 * the hashCode of the containerId (the original distribution schema).
 	 */
 	private void balanceContainersByHash(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
@@ -625,7 +627,7 @@ public final class InfectionEventHandler implements Externalizable {
 	}
 
 	/**
-	 * Create handlers for executing th
+	 * Create handlers for executing the simulation.
 	 */
 	protected void createTrajectoryHandlers() {
 
@@ -744,6 +746,9 @@ public final class InfectionEventHandler implements Externalizable {
 		log.info("Inserted {} stationary agents, total = {}", inserted, personMap.size());
 	}
 
+	/**
+	 * Resets the handler for the given iteration.
+	 */
 	public void reset(int iteration) {
 
 		// safety checks
@@ -1037,4 +1042,3 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 	}
 }
-

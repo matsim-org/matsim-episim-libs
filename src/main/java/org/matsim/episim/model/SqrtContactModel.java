@@ -24,12 +24,10 @@ import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
 
 import java.util.SplittableRandom;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
  * Default interaction model executed, when a person ends his activity.

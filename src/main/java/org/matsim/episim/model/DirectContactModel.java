@@ -21,7 +21,6 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -29,7 +28,6 @@ import org.matsim.episim.*;
 
 import java.util.*;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 

@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import jakarta.validation.constraints.NotNull;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.magnos.trie.Trie;
@@ -234,7 +233,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Is multiplied with probability to transition to seriously sick in age dependent progression model
+	 * Is multiplied with probability to transition to seriously sick in age dependent progression model.
 	 */
 	@StringGetter(HOSPITAL_FACTOR)
 	public double getHospitalFactor() {
@@ -252,6 +251,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Sets the initial number of infections.
+	 *
 	 * @param initialInfections -- number of initial infections to start the dynamics.  These will be distributed over several days.
 	 * @see #setInfections_pers_per_day(Map)
 	 */
@@ -285,6 +286,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Sets the number of infections per day for the base strain.
+	 *
 	 * @param infectionsPerDay -- From each given date, this will be the number of infections.  Until {@link #setInitialInfections(int)} are used up.
 	 */
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
@@ -652,7 +655,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * District level restrictions for location based restrictions;
+	 * District level restrictions for location based restrictions.
 	 */
 	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
 	public DistrictLevelRestrictions getDistrictLevelRestrictions() {
@@ -956,7 +959,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 
 	/**
-	 * Decides whether location based restrictions should be implemented
+	 * Decides whether location based restrictions should be implemented.
 	 */
 	public enum DistrictLevelRestrictions {
 		yes,
@@ -964,9 +967,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 
-    /**
-     * In the case that this optimization is enabled, the infectionDynamics
-     * methods are only called, if a contagious person is in the container
+	/**
+	 * In the case that this optimization is enabled, the infectionDynamics
+	 * methods are only called, if a contagious person is in the container.
      */
 	public enum ContagiousOptimization {
 		yes,
@@ -975,7 +978,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * The used time tracking costs a lot of CPU cycles, so this
-     * can be disabled with
+	 * can be disabled.
      */
 	public enum ReportTimeUse {
 		yes,
@@ -1111,7 +1114,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
-		 * The extent of an activity's seasonal effects
+		 * The extent of an activity's seasonal effects.
 		 */
 		@StringGetter(SEASONALITY)
 		public double getSeasonality() {

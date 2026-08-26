@@ -12,7 +12,7 @@ import org.matsim.episim.policy.Restriction;
 import java.util.Map;
 
 /**
- * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
+ * This infection model calculates the joint time two persons have been at the same place and calculates an infection probability.
  * <pre>
  *      1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * ci_correction)
  * </pre>
@@ -41,8 +41,8 @@ public final class DefaultInfectionModel implements InfectionModel {
 
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
-	                                       EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
-	                                       double contactIntensity, double jointTimeInContainer) {
+		EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+		double contactIntensity, double jointTimeInContainer) {
 
 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());

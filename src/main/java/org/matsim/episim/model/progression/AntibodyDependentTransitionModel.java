@@ -10,6 +10,9 @@ import org.matsim.episim.model.VirusStrain;
 
 import java.util.SplittableRandom;
 
+/**
+ * Disease-status transition model that accounts for antibody levels.
+ */
 public class AntibodyDependentTransitionModel implements DiseaseStatusTransitionModel {
 
 	private final SplittableRandom rnd;
@@ -18,7 +21,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 	@Inject
 	public AntibodyDependentTransitionModel(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
-	                                           VirusStrainConfigGroup strainConfigGroup) {
+		VirusStrainConfigGroup strainConfigGroup) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;

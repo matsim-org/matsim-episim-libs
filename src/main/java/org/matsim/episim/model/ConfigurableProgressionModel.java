@@ -79,7 +79,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	/**
 	 * Definition of state transitions from x -> y
-	 * Indices are the ordinal values of {@link DiseaseStatus} (as 2d matrix form)
+	 * Indices are the ordinal values of {@link DiseaseStatus} (as 2d matrix form).
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
@@ -138,7 +138,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	@Inject
 	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-	                                    VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
+		VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
 		super(rnd, episimConfig, statusTransitionModel);
 		this.tracingConfig = tracingConfig;
 		this.vaccinationConfig = vaccinationConfig;
@@ -208,7 +208,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		int tracingDistance = tracingConfig.getTracingDayDistance();
 		// clear tracing if not relevant anymore
 		persons.values().parallelStream().forEach(person ->
-		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));
+			person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));
 	}
 
 

@@ -445,8 +445,14 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		return Joiner.on(";").join(ignoredActivities);
 	}
 
+	/**
+	 * Unit used to express tracing capacity.
+	 */
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}
 
+	/**
+	 * Available contact-tracing strategies.
+	 */
 	public enum Strategy {
 
 		/**

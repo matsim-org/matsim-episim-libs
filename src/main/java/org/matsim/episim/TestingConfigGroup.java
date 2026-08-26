@@ -54,7 +54,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private Strategy strategy = Strategy.NONE;
 	/**
-	 * Test all persons after this date
+	 * Test all persons after this date.
 	 */
 	private LocalDate testAllPersonsAfter = null;
 	/**
@@ -225,6 +225,9 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		getParams(TestType.RAPID_TEST).setTestingCapacity_pers_per_day(capacity);
 	}
 
+	/**
+	 * Available testing strategies.
+	 */
 	public enum Strategy {
 
 		/**
@@ -249,7 +252,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Holds testing specific options
+	 * Holds testing specific options.
 	 */
 	public static final class TestingParams extends ReflectiveConfigGroup {
 
@@ -271,7 +274,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private final Set<DayOfWeek> testDays = new HashSet<>(Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY));
 		/**
-		 * Type of test
+		 * Type of test.
 		 */
 		private TestType type;
 		/**
@@ -283,11 +286,14 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private double falseNegativeRate = 0.1;
 		/**
-		 * Share of people that are tested (if applicable for a test)
+		 * Share of people that are tested (if applicable for a test).
 		 */
 		private double testingRate = 1.0;
 
 
+		/**
+		 * Creates a testing parameter set.
+		 */
 		public TestingParams() {
 			super(SET_TYPE);
 		}
@@ -465,9 +471,9 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
-		 * testing rate for configured activities
+		 * Testing rate for configured activities.
 		 *
-		 * @return
+		 * @return testing rates for vaccinated people by activity and date
 		 */
 		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivities() {
 			return ratePerActivity;
@@ -476,7 +482,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * testing rate for vaccinated persons.
 		 *
-		 * @return
+		 * @return testing rates for vaccinated people by activity and date
 		 * @see #getDailyTestingRateForActivities(LocalDate)
 		 */
 		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivitiesVaccinated() {

@@ -7,7 +7,6 @@ import org.matsim.api.core.v01.events.HasPersonId;
 
 import java.util.Map;
 
-import static org.matsim.api.core.v01.events.ActivityEndEvent.ATTRIBUTE_ACTTYPE;
 
 
 /**

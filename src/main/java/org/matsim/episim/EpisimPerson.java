@@ -193,7 +193,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	private final IntList vaccinationDates = new IntArrayList();
 
 	/**
-	 * Second at which a person is infected (divide by 24*60*60 to get iteration/day)
+	 * Second at which a person is infected (divide by 24*60*60 to get iteration/day).
 	 */
 	private final DoubleList infectionDates = new DoubleArrayList();
 
@@ -208,7 +208,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
 	/**
-	 * Maximal antibody level reached by agent w/ respect to each strain
+	 * Maximal antibody level reached by agent w/ respect to each strain.
 	 */
 	private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 
@@ -218,7 +218,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	private double antibodyLevelAtInfection = 0.;
 
 	/**
-	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event
+	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event.
 	 */
 	private double immuneResponseMultiplier = 1.0;
 
@@ -242,6 +242,9 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return trajectory;
 	}
 
+	/**
+	 * Creates a traceable Episim person.
+	 */
 	public EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
 	}
@@ -516,14 +519,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * List of dates (in second format) on which agent was infected
+	 * List of dates (in second format) on which agent was infected.
 	 */
 	public DoubleList getInfectionDates(){
 		return infectionDates;
 	}
 
 	/**
-	 * Number of received vaccinations
+	 * Number of received vaccinations.
 	 */
 	public int getNumVaccinations() {
 		return vaccinations.size();
@@ -534,7 +537,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * Use {@link #getVaccinationType(int)}
+	 * Use {@link #getVaccinationType(int)}.
 	 */
 	@Deprecated
 	public VaccinationType getVaccinationType() {
@@ -546,14 +549,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * List of days that agent was infected on
+	 * List of days that agent was infected on.
 	 */
 	public IntList getVaccinationDates() {
 		return vaccinationDates;
 	}
 
 	/**
-	 * Use {@link #getNumVaccinations()}
+	 * Use {@link #getNumVaccinations()}.
 	 */
 	@Deprecated
 	public VaccinationStatus getReVaccinationStatus() {
@@ -594,14 +597,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * get map with max antibodies reached per strain (before current infection)
+	 * Get map with max antibodies reached per strain (before current infection).
 	 */
 	public Object2DoubleMap<VirusStrain> getMaxAntibodies() {
 		return maxAntibodies;
 	}
 
 	/**
-	 * Get max antibodies reached for a particular strain (before current infection)
+	 * Get max antibodies reached for a particular strain (before current infection).
 	 */
 	public double getMaxAntibodies(VirusStrain virusStrain) {
 		return maxAntibodies.getDouble(virusStrain);
@@ -609,7 +612,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 	/**
 	 * Updates maximum antibodies agent has had versus a particular strain (only if maxAb is in fact higher
-	 * than previous maximum)
+	 * than previous maximum).
 	 */
 	public void updateMaxAntibodies(VirusStrain strain, double maxAb) {
 
@@ -666,7 +669,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public int daysSinceOrElse(DiseaseStatus status, int currentDay, int defaultValue) {
 		if (!hadDiseaseStatus(status)) return defaultValue;
-		return  daysSince(status, currentDay);
+		return daysSince(status, currentDay);
 	}
 
 	/**
@@ -724,7 +727,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * Days since the nth vaccination (starting at 0)
+	 * Days since the nth vaccination (starting at 0).
 	 */
 	public int daysSinceVaccination(int idx, int currentDay) {
 		if (vaccinations.size() <= idx) throw new IllegalStateException("Person did not receive vaccination with index " + idx);
@@ -911,7 +914,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * Reset all trajectory information
+	 * Reset all trajectory information.
 	 */
 	void resetTrajectory() {
 		trajectory.clear();
@@ -989,7 +992,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * Getter for immune response multiplier, which is used to scale the antibody increase due to an immunity event
+	 * Getter for immune response multiplier, which is used to scale the antibody increase due to an immunity event.
 	 * @return
 	 */
 	public double getImmuneResponseMultiplier() {
@@ -997,8 +1000,8 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	/**
-	 * Setter for immune response multiplier, which is used to scale the antibody increase due to an immunity event
-	 * @param immuneResponseMultiplier
+	 * Setter for immune response multiplier, which is used to scale the antibody increase due to an immunity event.
+	 * @param immuneResponseMultiplier new immune response multiplier
 	 */
 	public void setImmuneResponseMultiplier(double immuneResponseMultiplier) {
 		this.immuneResponseMultiplier = immuneResponseMultiplier;
@@ -1130,6 +1133,9 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		public final Id<ActivityFacility> facilityId;
 
 
+		/**
+		 * Creates a performed activity record.
+		 */
 		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params, Id<ActivityFacility> facilityId) {
 			this.time = time;
 			this.params = params;
@@ -1152,7 +1158,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		}
 
 		/**
-		 * Facility Id for performed activity
+		 * Facility Id for performed activity.
 		 */
 		public Id<ActivityFacility> getFacilityId() {
 			return this.facilityId;
@@ -1173,7 +1179,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
-    /**
+	/**
 	 * If the ContagiousOptimization is enabled, containers count how many
 	 * persons satisfy this predicate to call the infectionsDynamics methods
      * only in the case that at least one person in the container

@@ -47,9 +47,9 @@ final class TrajectoryHandler {
 
 	@Inject
 	public TrajectoryHandler(EpisimConfigGroup episimConfig, EpisimReporting reporting, ContactModel model, SplittableRandom rnd,
-	                         @Named("personMap") Map<Id<Person>, EpisimPerson> personMap,
-	                         @Named("vehicleMap") Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicleMap,
-	                         @Named("pseudoFacilityMap") Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> pseudoFacilityMap) {
+		@Named("personMap") Map<Id<Person>, EpisimPerson> personMap,
+		@Named("vehicleMap") Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicleMap,
+		@Named("pseudoFacilityMap") Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> pseudoFacilityMap) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.reporting = reporting;
@@ -70,6 +70,8 @@ final class TrajectoryHandler {
 	}
 
 	/**
+	 * Returns the current number of contacts.
+	 *
 	 * @see ContactModel#getNumContacts()
 	 */
 	int getNumContacts() {
@@ -140,7 +142,7 @@ final class TrajectoryHandler {
 	 * @param responsible predicate for checking if the handler is responsible for a certain facility
 	 */
 	public void onStartDay(Predicate<Id<ActivityFacility>> responsibleFacility,
-	                       Predicate<Id<Vehicle>> responsibleVehicle) {
+		Predicate<Id<Vehicle>> responsibleVehicle) {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
@@ -212,7 +214,7 @@ final class TrajectoryHandler {
 	}
 
 	/**
-	 * Checks whether this person does perform the activity at {@code time}
+	 * Checks whether this person does perform the activity at {@code time}.
 	 */
 	private boolean checkParticipation(EpisimPerson person, double time) {
 		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)
@@ -347,4 +349,3 @@ final class TrajectoryHandler {
 		return this.vehicleMap.get(id);
 	}
 }
-

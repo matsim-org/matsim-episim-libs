@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 /**
- * Vaccinate people starting with the oldest first
+ * Vaccinate people starting with the oldest first.
  */
 public class VaccinationByAge implements VaccinationModel {
 
@@ -29,7 +29,7 @@ public class VaccinationByAge implements VaccinationModel {
 	}
 
 	/**
-	 * Return an array where we have for each age (in years) an ArrayList of Persons that are qualified for a vaccination
+	 * Return an array where we have for each age (in years) an ArrayList of Persons that are qualified for a vaccination.
 	 */
 	List<EpisimPerson>[] collectPerAge(Map<Id<Person>, EpisimPerson> persons, int iteration, boolean reVaccination) {
 		final List<EpisimPerson>[] perAge = new List[MAX_AGE];

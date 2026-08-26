@@ -1,6 +1,5 @@
 package org.matsim.episim.model;
 
-import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.EpisimPerson;
 
 import java.util.Collection;
@@ -35,12 +34,15 @@ public interface AntibodyModel {
 	}
 
 	/**
-	 * Initialize antibody model
-	 * @param persons
-	 * @param iteration
+	 * Initialize antibody model.
+	 * @param persons persons whose antibodies are initialized
+	 * @param iteration current simulation iteration
 	 */
 	void init(Collection<EpisimPerson> persons, int iteration);
 
+	/**
+	 * Recalculates antibody levels after loading a snapshot.
+	 */
 	void recalculateAntibodiesAfterSnapshot(Collection<EpisimPerson> persons, int iteration);
 
 	/**
@@ -158,15 +160,15 @@ public interface AntibodyModel {
 			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA5, mRNABa5 * 4./20.);
 			initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6./20.);
 			initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6./20.);
-			initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA5,  mRNABa5 * 8./20.);
-			initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA5,  64.0 / 300. / mutEscBa5);// todo: do we need 1.4?
+			initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 8./20.);
+			initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / mutEscBa5);// todo: do we need 1.4?
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);
 			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha / mutEscBa5);
 			initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha);
-            Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
+			Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 
-            for (VaccinationType immunityType : VaccinationType.values()) {
+			for (VaccinationType immunityType : VaccinationType.values()) {
 				antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 
@@ -174,14 +176,11 @@ public interface AntibodyModel {
 						antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 					} else if (immunityType == VaccinationType.vector) {
 						antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
-						}
-						else if (immunityType == VaccinationType.ba1Update) {
+						} else if (immunityType == VaccinationType.ba1Update) {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
-						}
-						else if (immunityType == VaccinationType.ba5Update) {
+						} else if (immunityType == VaccinationType.ba5Update) {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
-						}
-						else {
+						} else {
 						antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);
 					}
 

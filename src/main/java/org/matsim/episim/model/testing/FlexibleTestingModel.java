@@ -19,7 +19,7 @@ public class FlexibleTestingModel extends DefaultTestingModel {
 
 	@Inject
 	public FlexibleTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, TestRate rate, TestPolicy policy,
-	                            VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
+		VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
 		super(rnd, config, testingConfig, vaccinationConfig, episimConfig);
 		this.rate = rate;
 		this.policy = policy;
@@ -82,16 +82,22 @@ public class FlexibleTestingModel extends DefaultTestingModel {
 
 	}
 
+	/**
+	 * Determines which configured testing rate applies to a person.
+	 */
 	@FunctionalInterface
 	public interface TestRate {
 
 		/**
 		 * Decide whether this person is tested according to the fully vaccinated rate or the normal rate in the config.
 		 */
-		boolean useFullyVaccinatedTestRate(EpisimPerson person, int day,  DayOfWeek dow, LocalDate date, TestingConfigGroup test, VaccinationConfigGroup vac);
+		boolean useFullyVaccinatedTestRate(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, TestingConfigGroup test, VaccinationConfigGroup vac);
 
 	}
 
+	/**
+	 * Determines whether a person may perform a test.
+	 */
 	@FunctionalInterface
 	public interface TestPolicy {
 

@@ -59,7 +59,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	 */
 	protected final EpisimConfigGroup.InfectionParams qhParams;
 	/**
-	 * See {@link TracingConfigGroup#getMinDuration()}
+	 * See {@link TracingConfigGroup#getMinDuration()}.
 	 */
 	protected final double trackingMinDuration;
 
@@ -83,7 +83,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	private double curfewCompliance;
 
 	/**
-	 * Map of each ActivityFacility with the corresponding subdistrict
+	 * Map of each ActivityFacility with the corresponding subdistrict.
 	 */
 	private final Map<String, String> subdistrictFacilities;
 
@@ -189,6 +189,9 @@ public abstract class AbstractContactModel implements ContactModel {
 
 	}
 
+	/**
+	 * Tracks a contact between two persons when tracing is applicable.
+	 */
 	protected void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, double jointTimeInContainer,
 									  StringBuilder infectionType) {
 
@@ -298,6 +301,9 @@ public abstract class AbstractContactModel implements ContactModel {
 		return personHasRelevantStatus(person) && checkPersonInContainer(time, person, container, restrictions, rnd);
 	}
 
+	/**
+	 * Checks whether the person's status is relevant for infection dynamics.
+	 */
 	protected final boolean personHasRelevantStatus(EpisimPerson person) {
 		// Infected but not contagious persons are considered additionally
 		return hasDiseaseStatusRelevantForInfectionDynamics(person) ||
@@ -408,8 +414,11 @@ public abstract class AbstractContactModel implements ContactModel {
 
 	}
 
+	/**
+	 * Reports a potential infection for later evaluation.
+	 */
 	protected void potentialInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
-	                                  double prob, EpisimContainer<?> container, double probUnVac, double rnd) {
+		double prob, EpisimContainer<?> container, double probUnVac, double rnd) {
 
 		// for now, only filter vaccinated persons
 		if (personWrapper.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)

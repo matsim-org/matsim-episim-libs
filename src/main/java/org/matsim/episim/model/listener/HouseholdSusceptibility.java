@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 
+/**
+ * Assigns susceptibility values at household level.
+ */
 public class HouseholdSusceptibility implements SimulationListener {
 
 	private static final Logger log = LogManager.getLogger(HouseholdSusceptibility.class);

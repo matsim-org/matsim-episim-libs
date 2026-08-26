@@ -21,6 +21,9 @@ public class EpisimVaccinationEvent extends Event implements HasPersonId {
 	private final VaccinationType type;
 	private final int n;
 
+	/**
+	 * Creates a vaccination event.
+	 */
 	public EpisimVaccinationEvent(double time, Id<Person> personId, VaccinationType type, int n) {
 		super(time);
 		this.personId = personId;

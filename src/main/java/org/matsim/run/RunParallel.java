@@ -127,7 +127,7 @@ public class RunParallel<T> implements Callable<Integer> {
 	private boolean writeMetadata;
 
 	/**
-	 * Prepared batch run
+	 * Prepared batch run.
 	 */
 	private PreparedRun prepare;
 
@@ -138,6 +138,9 @@ public class RunParallel<T> implements Callable<Integer> {
 		this.prepare = prepare;
 	}
 
+	/**
+	 * Creates a parallel-run command.
+	 */
 	public RunParallel() {
 	}
 

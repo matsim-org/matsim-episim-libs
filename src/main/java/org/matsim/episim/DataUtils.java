@@ -50,7 +50,7 @@ public final class DataUtils {
 	}
 
 	/**
-	 * Read
+	 * Reads strain data.
 	 *
 	 * @return percentage of strain for each date.
 	 */

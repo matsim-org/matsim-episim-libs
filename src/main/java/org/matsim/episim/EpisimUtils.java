@@ -329,6 +329,9 @@ public final class EpisimUtils {
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
 	}
 
+	/**
+	 * Draws a log-normal value using the distribution mean and sigma.
+	 */
 	public static double nextLogNormalFromMeanAndSigma(SplittableRandom rnd, double mean, double sigma) {
 		double mu = Math.log(mean) - sigma * sigma / 2;
 		return nextLogNormal(rnd, mu, sigma);
@@ -353,7 +356,7 @@ public final class EpisimUtils {
 	 */
 	@Deprecated
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
-	                                                                   Extrapolation extrapolate) throws IOException {
+		Extrapolation extrapolate) throws IOException {
 		return new CreateRestrictionsFromCSV(episimConfig).setInput(input.toPath()).setAlpha(alpha).setExtrapolation(extrapolate).createPolicy();
 	}
 
@@ -407,7 +410,7 @@ public final class EpisimUtils {
 	}
 
 	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(File weatherCSV, double rainThreshold,
-	                                                                        Double temperatureIn, Double temperatureOut) throws IOException {
+		Double temperatureIn, Double temperatureOut) throws IOException {
 		if ((temperatureIn == null && temperatureOut != null) || (temperatureIn != null && temperatureOut == null)) {
 			throw new RuntimeException("one temperature is null, the other one is given; don't know how to interpret that; aborting ...");
 		}
@@ -727,6 +730,9 @@ public final class EpisimUtils {
 
 		private final ParametricUnivariateFunction f;
 
+		/**
+		 * Creates a fitter for the given parametric function.
+		 */
 		public FuncFitter(ParametricUnivariateFunction f) {
 			this.f = f;
 		}

@@ -49,9 +49,10 @@ import java.util.stream.Collectors;
 
 
 /**
+ * Calculates R values for all runs in the given directory, dated on the day of switching to contagious.
+ * Output is written to rValues.txt in the working directory.
+ *
  * @author smueller
- * Calculates R values for all runs in given directory, dated on day of switching to contagious
- * Output is written to rValues.txt in the working directory
  */
 @CommandLine.Command(
 	name = "calculateRValues",
@@ -296,7 +297,6 @@ public class RValuesFromEvents implements OutputAnalysis {
 	}
 
 }
-
 
 
 

@@ -9,6 +9,9 @@ import org.matsim.episim.EpisimUtils;
 import java.util.Collection;
 import java.util.SplittableRandom;
 
+/**
+ * Default implementation of the antibody model.
+ */
 public class DefaultAntibodyModel implements AntibodyModel {
 
 	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?

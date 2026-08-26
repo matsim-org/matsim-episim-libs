@@ -119,7 +119,7 @@ public final class ReplayHandler {
 	}
 
 	/**
-	 * Replaces all stored events
+	 * Replaces all stored events.
 	 *
 	 * @param events new events to store
 	 */

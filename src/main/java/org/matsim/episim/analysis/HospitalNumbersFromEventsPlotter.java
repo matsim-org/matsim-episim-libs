@@ -5,7 +5,6 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
-import org.matsim.episim.model.VirusStrain;
 import org.matsim.run.AnalysisCommand;
 import tech.tablesaw.api.*;
 import tech.tablesaw.plotly.components.Axis;
@@ -29,6 +28,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Produces plots and aggregate tables for hospital-number analyses.
+ */
 public class HospitalNumbersFromEventsPlotter {
 	private static final String DATE = "date";
 	private static final String DAY = "day";
@@ -400,7 +402,6 @@ public class HospitalNumbersFromEventsPlotter {
 		}
 
 		// PLOT 1: People admitted to hospital
-		{
 			IntColumn records = IntColumn.create("day");
 			DateColumn recordsDate = DateColumn.create("date");
 			DoubleColumn values = DoubleColumn.create("hospitalizations");
@@ -487,9 +488,6 @@ public class HospitalNumbersFromEventsPlotter {
 
 
 			producePlot(recordsDate, values, groupings, "", "7-Tage Hospitalisierungsinzidenz", "HospIncidence" + outputAppendix + ".html", output);
-		}
-
-
 		// PLOT 2: People taking up beds in hospital (regular and ICU)
 //		{
 //			IntColumn records = IntColumn.create("day");

@@ -21,7 +21,14 @@ package org.matsim.episim.events;
 
 import org.matsim.core.events.handler.EventHandler;
 
+
+/**
+ * Handles Episim vaccination events.
+ */
 public interface EpisimVaccinationEventHandler extends EventHandler {
+	/**
+	 * Handles a vaccination event.
+	 */
 	void handleEvent(EpisimVaccinationEvent event);
 
 }

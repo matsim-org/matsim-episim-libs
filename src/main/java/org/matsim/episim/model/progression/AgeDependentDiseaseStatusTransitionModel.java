@@ -36,14 +36,14 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 
 	@Inject
 	public AgeDependentDiseaseStatusTransitionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
-	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
+		VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
 		super(rnd, vaccinationConfig, strainConfigGroup);
 		this.episimConfig = episimConfig;
 	}
 
 
 	@Override
-	protected double getProbaOfTransitioningToShowingSymptoms (EpisimPerson person) {
+	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
 
 		double proba = 0.8;
 

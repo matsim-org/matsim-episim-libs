@@ -132,8 +132,8 @@ public final class DefaultContactModel extends AbstractContactModel {
 			}
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer,  container.getPerformedActivity(personLeavingContainer.getPersonId()));
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson,  container.getPerformedActivity(contactPerson.getPersonId()));
+			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, container.getPerformedActivity(personLeavingContainer.getPersonId()));
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, container.getPerformedActivity(contactPerson.getPersonId()));
 
 			String leavingPersonsActivity = leavingParams == qhParams ? "home" : leavingParams.getContainerName();
 			String otherPersonsActivity = contactParams == qhParams ? "home" : contactParams.getContainerName();

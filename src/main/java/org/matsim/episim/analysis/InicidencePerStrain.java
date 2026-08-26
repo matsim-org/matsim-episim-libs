@@ -48,9 +48,9 @@ import java.util.concurrent.Callable;
 
 
 /**
+ * Calculates incidence per strain for all runs in the given directory.
+ *
  * @author smueller
- * Calculates R values for all runs in given directory, dated on day of switching to contagious
- * Output is written to rValues.txt in the working directory
  */
 @CommandLine.Command(
 		name = "vacEff",
@@ -118,7 +118,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 		String id = AnalysisCommand.getScenarioPrefix(scenario);
 
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "vaccineEff.txt"));
-		bw.write("vacDate" + "\t" + "date" + "\t" + "period" + "\t" +  "vaccinatedInfected" + "\t" + "vaccinatedNotInfected" + "\t" + "controlGroupInfected" + "\t" + "controlGroupNotInfected" + "\t" + "efficacy" );
+		bw.write("vacDate" + "\t" + "date" + "\t" + "period" + "\t" + "vaccinatedInfected" + "\t" + "vaccinatedNotInfected" + "\t" + "controlGroupInfected" + "\t" + "controlGroupNotInfected" + "\t" + "efficacy" );
 		bw.flush();
 
 		Map<String, Map<LocalDate, Integer>> symptoms = new HashMap<>();
@@ -151,8 +151,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 				if (symptoms.get(strain).containsKey(date)) {
 					int cases = symptoms.get(strain).get(date);
 					System.out.print(cases / (persons / 100_000.0));
-				}
-				else {
+				} else {
 					System.out.print("0.0");
 				}
 			}
@@ -246,12 +245,10 @@ public class InicidencePerStrain implements Callable<Integer> {
 					if (symptoms.get(strain).containsKey(date)) {
 						int oldValue = symptoms.get(strain).get(date);
 						symptoms.get(strain).replace(date, oldValue+1);
-					}
-					else {
+					} else {
 						symptoms.get(strain).put(date, 1);
 					}
-				}
-				else {
+				} else {
 					Map<LocalDate, Integer> map = new HashMap<>();
 					map.put(date, 1);
 					symptoms.put(strain, map);
@@ -262,12 +259,10 @@ public class InicidencePerStrain implements Callable<Integer> {
 					if (seriouslySick.get(strain).containsKey(date)) {
 						int oldValue = seriouslySick.get(strain).get(date);
 						seriouslySick.get(strain).replace(date, oldValue+1);
-					}
-					else {
+					} else {
 						seriouslySick.get(strain).put(date, 1);
 					}
-				}
-				else {
+				} else {
 					Map<LocalDate, Integer> map = new HashMap<>();
 					map.put(date, 1);
 					seriouslySick.put(strain, map);
@@ -288,7 +283,4 @@ public class InicidencePerStrain implements Callable<Integer> {
 
 
 }
-
-
-
 

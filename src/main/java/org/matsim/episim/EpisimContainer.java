@@ -85,7 +85,7 @@ public class EpisimContainer<T> {
 	private double numSpaces = 1;
 
 	/**
-	 * The id of the ReplayEventTask that handles the events for this container
+	 * The id of the ReplayEventTask that handles the events for this container.
 	 */
 	private int taskId = 0;
 
@@ -183,6 +183,8 @@ public class EpisimContainer<T> {
 	}
 
 	/**
+	 * Returns the maximum group size.
+	 *
 	 * @return maximum group size in container.
 	 */
 	public int getMaxGroupSize() {
@@ -190,6 +192,8 @@ public class EpisimContainer<T> {
 	}
 
 	/**
+	 * Returns the number of people using the container.
+	 *
 	 * @return number of people using container.  May be larger than {@link #getMaxGroupSize()}.
 	 */
 	public int getTotalUsers() {
@@ -259,21 +263,33 @@ public class EpisimContainer<T> {
 		return personActivities.get(personId.index());
 	}
 
+	/**
+	 * Returns the persons currently contained in this container.
+	 */
 	public List<EpisimPerson> getPersons() {
 		// Using Collections.unmodifiableList(...) puts huge pressure on the GC if its called hundred thousand times per second
 		return personsAsList;
 	}
 
 
+	/**
+	 * Adjusts the number of contagious persons by the given amount.
+	 */
 	public void countContagious(int add) {
 		contagiousCounter += add;
 		assert contagiousCounter >= 0 : "We can not have a negative number of contagious persons"; 
 	}
 
+	/**
+	 * Resets the contagious-person counter.
+	 */
 	public void resetContagiousCounter() {
 		contagiousCounter = 0;
 	}
 	
+	/**
+	 * Returns whether the container currently contains a contagious person.
+	 */
 	public boolean containsContagious() {
 		return contagiousCounter > 0;
 	}

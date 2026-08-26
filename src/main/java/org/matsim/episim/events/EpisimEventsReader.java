@@ -39,6 +39,9 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Stack;
 
+/**
+ * Reads Episim-specific events from MATSim event files.
+ */
 public class EpisimEventsReader extends MatsimXmlParser {
 
 	private EventsReaderXMLv1 delegate;
@@ -58,6 +61,9 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		delegate.addCustomEventMapper(EpisimStartEvent.EVENT_TYPE, getEpisimStartEventMapper());
 	}
 
+	/**
+	 * Delegates character data to the underlying MATSim event reader.
+	 */
 	public void characters(char[] ch, int start, int length) throws SAXException {
 		delegate.characters(ch, start, length);
 	}

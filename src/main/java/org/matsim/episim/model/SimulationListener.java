@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
- * Listener to interact with the simulation before starting
+ * Listener to interact with the simulation before starting.
  */
 public interface SimulationListener {
 

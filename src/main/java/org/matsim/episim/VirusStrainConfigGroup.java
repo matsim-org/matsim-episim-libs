@@ -113,7 +113,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		private double infectiousness = 1.0;
 
 		/**
-		 * Factor for probability
+		 * Factor for probability.
 		 */
 		private double factorSeriouslySick = 1.0;
 
@@ -123,7 +123,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		private double factorCritical = 1.0;
 
 		/**
-		 * Factor for probability when person is vaccinated
+		 * Factor for probability when person is vaccinated.
 		 */
 		private double factorSeriouslySickVaccinated = 1.0;
 

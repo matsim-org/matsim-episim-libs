@@ -36,7 +36,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 	 * Constructor.
 	 */
 	public EpisimPotentialInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double antibodies, double rnd) {
+		int groupSize, VirusStrain strain, double probability, double unVacProbability, double antibodies, double rnd) {
 
 		super(time);
 

@@ -79,7 +79,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	public final Object2IntMap<VaccinationType> vaccinations = new Object2IntOpenHashMap<>();
 	/**
-	 * Map of (VaccinationType, nth Vaccination) -> Number per day
+	 * Map of (VaccinationType, nth Vaccination) -> Number per day.
 	 */
 	public final Object2IntMap<ObjectIntPair<VaccinationType>> vaccinationStats = new Object2IntOpenHashMap<>();
 	private final EpisimWriter writer;
@@ -522,7 +522,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Writes the infection report to csv.
 	 *
-	 * @param date
+	 * @param date reporting date
 	 */
 	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 
@@ -680,7 +680,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @see EpisimContactEvent
 	 */
 	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-	                                       StringBuilder actType, double duration) {
+		StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
@@ -692,7 +692,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Set number of total contacts.
 	 *
-	 * @param totalContacts
+	 * @param totalContacts total number of contacts
 	 */
 	public void reportTotalContacts(int totalContacts) {
 		this.totalContacts = totalContacts;
@@ -784,7 +784,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Write container statistic to file.
 	 */
 	void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
-	                          Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
+		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
 
 		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "totalUsers", "maxGroupSize");
 

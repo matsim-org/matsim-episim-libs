@@ -22,7 +22,7 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 	private ImmutableMap<String, Restriction> im;
 
 	/**
-	 * Map of each ActivityFacility with the corresponding subdistrict
+	 * Map of each ActivityFacility with the corresponding subdistrict.
 	 */
 	private final Map<String, String> subdistrictFacilities;
 

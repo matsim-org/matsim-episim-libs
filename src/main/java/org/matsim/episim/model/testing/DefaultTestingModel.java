@@ -36,7 +36,7 @@ public class DefaultTestingModel implements TestingModel {
 	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
 
 	/**
-	 * Current date
+	 * Current date.
 	 */
 	protected LocalDate date;
 

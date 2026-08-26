@@ -1,15 +1,12 @@
 package org.matsim.episim.events;
 
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
 import java.util.Map;
 
 /**
- * Notifies begin of episim simulation
+ * Notifies the beginning of an Episim simulation.
  */
 public class EpisimStartEvent extends Event {
 
@@ -20,6 +17,9 @@ public class EpisimStartEvent extends Event {
 	private final LocalDate startDate;
 	private final String immunization;
 
+	/**
+	 * Creates an Episim start event.
+	 */
 	public EpisimStartEvent(LocalDate startDate, String immunization) {
 		super(0);
 		this.startDate = startDate;

@@ -84,7 +84,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 	}
 
 	/**
-	 * Init restrictions that are before simulation start
+	 * Init restrictions that are before simulation start.
 	 */
 	static void initRestrictions(LocalDate start, ImmutableMap<String, Restriction> restrictions, Config config) {
 		for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
@@ -294,6 +294,9 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
 		}
 
+		/**
+		 * Adds a dated restriction with district-specific values.
+		 */
 		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double> districtSpecificValue, double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
 			restriction.setLocationBasedRf(districtSpecificValue);
@@ -327,6 +330,9 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict("day-" + day, restriction, activities);
 		}
 
+		/**
+		 * Adds a day-based restriction with district-specific values.
+		 */
 		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double> locationBasedRf, double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
 			restriction.setLocationBasedRf(locationBasedRf);

@@ -24,12 +24,12 @@ public interface Immunizable extends HasPersonId {
 	int getNumInfections();
 
 	/**
-	 * Getter for the virus strain of the most recent infection
+	 * Getter for the virus strain of the most recent infection.
 	 */
 	VirusStrain getVirusStrain();
 
 	/**
-	 * Getter for list of iterations on which agent was vaccinated (in descending order)
+	 * Getter for list of iterations on which agent was vaccinated (in descending order).
 	 */
 	IntList getVaccinationDates();
 
@@ -49,7 +49,7 @@ public interface Immunizable extends HasPersonId {
 	double getAntibodyLevelAtInfection();
 
 	/**
-	 * Returns highest antibody level that agent has had in their past for all strains
+	 * Returns highest antibody level that agent has had in their past for all strains.
 	 */
 	Object2DoubleMap<VirusStrain> getMaxAntibodies();
 
@@ -63,15 +63,16 @@ public interface Immunizable extends HasPersonId {
 	 */
 	void updateMaxAntibodies(VirusStrain strain, double maxAb);
 	/**
-	 * Returns whether agent has experienced given disease status at any time in the course of the simulation
+	 * Returns whether agent has experienced given disease status at any time in the course of the simulation.
 	 */
 	boolean hadDiseaseStatus(EpisimPerson.DiseaseStatus status);
 
 	/**
+	 * Returns the number of days since the given disease status was reached.
 	 *
 	 * @param status DiseaseStatus (i.e. recovered)
 	 * @param day iteration number from which to count backwards from to specified DiseaseStatus
-	 * @return
+	 * @return number of days since the status was reached
 	 */
 	int daysSince(EpisimPerson.DiseaseStatus status, int day);
 

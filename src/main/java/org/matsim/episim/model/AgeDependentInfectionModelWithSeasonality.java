@@ -43,7 +43,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	}
 
 	/**
-	 *  Pre-compute interpolated age dependent entries
+	 * Pre-compute interpolated age dependent entries.
 	 */
 	static void preComputeAgeDependency(Map<VirusStrain, double[]> susceptibility, Map<VirusStrain, double[]> infectivity, VirusStrainConfigGroup virusStrainConfig) {
 

@@ -52,7 +52,7 @@
 
 
  /**
-  * Calculate hospital numbers from events
+  * Calculate hospital numbers from events.
   */
  @CommandLine.Command(
 	 name = "hospitalNumbers",
@@ -197,7 +197,7 @@
 	  * This method configures the episim config, vaccination config, and strain config to the extent
 	  * necessary for post processing.
 	  *
-	  * @param
+	  * @param seriouslySickFactorModifier factor modifiers by virus strain
 	  */
 	 private static ConfigHolder configure(Map<VirusStrain, Double> seriouslySickFactorModifier) {
 
@@ -300,7 +300,7 @@
 	  *
 	  * @param pathToScenario path to the directory containing the output events file
 	  * @param tsvPath        filename for the hospitalization output produced by this method
-	  * @throws IOException
+	  * @throws IOException if the output cannot be written
 	  */
 	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath) throws IOException {
 		 // open new buffered writer for hospitalization output and write the header row.
@@ -383,6 +383,9 @@
 		 bw.close();
 	 }
 
+	 /**
+	  * Collects infection events used to derive hospital statistics.
+	  */
 	 public static final class Handler implements EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler {
 		 final Map<Id<Person>, ImmunizablePerson> data;
 		 final Int2IntSortedMap postProcessHospitalAdmissions;
@@ -595,7 +598,7 @@
 		 }
 
 		 /**
-		  * calculates the probability that agent goes to into critical care (ICU) given hospitalization
+		  * calculates the probability that agent goes to into critical care (ICU) given hospitalization.
 		  */
 		 private boolean goToICU(ImmunizablePerson person, int day) {
 
@@ -611,7 +614,7 @@
 
 
 		 /**
-		  * Data holder for attributes
+		  * Data holder for attributes.
 		  */
 		 static final class ImmunizablePerson implements Immunizable {
 
@@ -627,16 +630,16 @@
 			 private final IntList vaccinationDates = new IntArrayList();
 
 			 /**
-			  * Second at which a person is infected (divide by 24*60*60 to get iteration/day)
+			  * Second at which a person is infected (divide by 24*60*60 to get iteration/day).
 			  */
 			 private final DoubleList infectionDates = new DoubleArrayList();
 			 /**
-			  * Maximal antibody level reached by agent w/ respect to each strain
+			  * Maximal antibody level reached by agent w/ respect to each strain.
 			  */
 			 private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 			 private final int age;
 			 /**
-			  * Virus strain of most recent (or current) infection
+			  * Virus strain of most recent (or current) infection.
 			  */
 			 private VirusStrain strain;
 			 /**
@@ -756,4 +759,3 @@
 		 }
 	 }
  }
-

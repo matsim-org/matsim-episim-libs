@@ -28,7 +28,6 @@ import org.matsim.episim.*;
 
 import java.util.SplittableRandom;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
  * Variant of the {@link DefaultContactModel} with symmetric interactions.

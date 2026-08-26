@@ -111,14 +111,14 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	}
 
 	/**
-	 * Maximum antibodies ever reached by agent with respect to infecting strain
+	 * Maximum antibodies ever reached by agent with respect to infecting strain.
 	 */
 	public double getMaxAntibodies() {
 		return maxAntibodies;
 	}
 
 	/**
-	 * Number of vaccinations agent has received at time of infection
+	 * Number of vaccinations agent has received at time of infection.
 	 */
 	public int getNumVaccinations(){
 		return numVaccinations;

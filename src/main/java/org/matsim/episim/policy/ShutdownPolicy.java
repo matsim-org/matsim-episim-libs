@@ -23,7 +23,6 @@ package org.matsim.episim.policy;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
@@ -96,6 +95,9 @@ public abstract class ShutdownPolicy {
 		ConfigBuilder() {
 		}
 
+		/**
+		 * Builds the shutdown-policy configuration.
+		 */
 		public Config build() {
 			return ConfigFactory.parseMap(params);
 		}

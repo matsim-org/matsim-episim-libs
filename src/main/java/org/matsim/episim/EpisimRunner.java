@@ -30,7 +30,6 @@ import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.ControllerUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
@@ -156,7 +155,7 @@ public final class EpisimRunner {
 	/**
 	 * Update events data and internal person data structure.
 	 *
-	 * @param events
+	 * @param events events grouped by day of week
 	 */
 	public void updateEvents(Map<DayOfWeek, List<Event>> events) {
 
@@ -255,7 +254,7 @@ public final class EpisimRunner {
 	}
 
 	/**
-	 * Read snapshot from disk and initialize simulation state
+	 * Read snapshot from disk and initialize simulation state.
 	 *
 	 * @param path path to snapshot archive
 	 * @return starting iteration
@@ -313,14 +312,14 @@ public final class EpisimRunner {
 
 			return iteration;
 
-		} catch (IOException  | ClassNotFoundException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			throw new IllegalStateException("Could not read snapshot", e);
 		}
 
 	}
 
 	/**
-	 * Helper method to write object into archive,
+	 * Helper method to write object into archive.
 	 */
 	private void writeObject(Externalizable obj, String name, ArchiveOutputStream archive) throws IOException {
 		archive.putArchiveEntry(new ZipArchiveEntry(name));
