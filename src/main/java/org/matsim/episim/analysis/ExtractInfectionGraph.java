@@ -30,8 +30,8 @@ import java.util.function.Function;
  * Runnable class, see command description.
  */
 @CommandLine.Command(
-		name = "extractInfectionsGraph",
-		description = "Extracts graph of all infections."
+	name = "extractInfectionsGraph",
+	description = "Extracts graph of all infections."
 )
 public class ExtractInfectionGraph implements Callable<Integer> {
 
@@ -132,14 +132,14 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 		exporter.setEdgeWeightAttributeName("probability");
 
 		exporter.setGraphAttributeProvider(() -> Map.of(
-				"runId", new DefaultAttribute<>(id, AttributeType.STRING),
-				"name", new DefaultAttribute<>(scenario.getFileName().toString(), AttributeType.STRING),
-				"from", new DefaultAttribute<>(from == null ? "" : from.toString(), AttributeType.STRING),
-				"to", new DefaultAttribute<>(to == null ? "" : to.toString(), AttributeType.STRING)
+			"runId", new DefaultAttribute<>(id, AttributeType.STRING),
+			"name", new DefaultAttribute<>(scenario.getFileName().toString(), AttributeType.STRING),
+			"from", new DefaultAttribute<>(from == null ? "" : from.toString(), AttributeType.STRING),
+			"to", new DefaultAttribute<>(to == null ? "" : to.toString(), AttributeType.STRING)
 		));
 
 		exporter.setVertexAttributeProvider(v -> Map.of(
-				"source", new DefaultAttribute<>(infectionType.getOrDefault(v, "initial"), AttributeType.STRING)
+			"source", new DefaultAttribute<>(infectionType.getOrDefault(v, "initial"), AttributeType.STRING)
 		));
 
 		exporter.setEdgeAttributeProvider(r -> Map.of(
@@ -149,7 +149,7 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 				"date", new DefaultAttribute<>(r.get("date"), AttributeType.STRING),
 				"virusStrain", new DefaultAttribute<>(hasStrain ? r.get("virusStrain") : "NA", AttributeType.STRING),
 				"probability", new DefaultAttribute<>(hasProb ? Double.parseDouble(r.get("probability")) : -1, AttributeType.DOUBLE)
-				)
+			)
 		);
 
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "post.infections.graphml"));
