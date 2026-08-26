@@ -233,7 +233,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 			}
 
 			String strain = (String) attr.getAttribute("strain");
-			if (strain == "") {
+			if (strain.equals("")) {
 				System.out.println(status);
 				return;
 			}
