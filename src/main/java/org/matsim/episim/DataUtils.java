@@ -33,7 +33,7 @@ public final class DataUtils {
 
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
 
-			TreeMap<LocalDate, Double> result = new TreeMap<>();
+			NavigableMap<LocalDate, Double> result = new TreeMap<>();
 
 			for (CSVRecord record : csv) {
 
@@ -58,7 +58,7 @@ public final class DataUtils {
 
 		try (CSVParser csv = new CSVParser(Files.newBufferedReader(path), CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#'))) {
 
-			TreeMap<LocalDate, Map<VirusStrain, Double>> result = new TreeMap<>();
+			NavigableMap<LocalDate, Map<VirusStrain, Double>> result = new TreeMap<>();
 
 
 			for (CSVRecord record : csv) {
