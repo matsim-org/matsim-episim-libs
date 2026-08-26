@@ -934,7 +934,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Overwrite the rng state with a new seed taken from config.
 		 */
-		reseed,
+		reseed
 	}
 
 	/**
