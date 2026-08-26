@@ -7,6 +7,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.controler.ControllerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
@@ -459,7 +460,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
+		ControllerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
 
 		final Scenario scenario = ScenarioUtils.loadScenario(config);
 
