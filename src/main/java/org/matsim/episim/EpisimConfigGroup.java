@@ -1171,9 +1171,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			this.days.addAll(Arrays.asList(days));
 		}
 
-		@StringGetter(DAYS)
+
 		public Set<DayOfWeek> getDays() {
 			return days;
+		}
+
+		@StringGetter(DAYS)
+		public String getDaysString() {
+			return days.stream()
+				.map(DayOfWeek::name)
+				.collect(Collectors.joining(", "));
 		}
 
 		@StringSetter(DAYS)
