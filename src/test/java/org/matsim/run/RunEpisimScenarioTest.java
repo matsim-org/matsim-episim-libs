@@ -30,7 +30,7 @@ public class RunEpisimScenarioTest {
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	private EpisimRunner runner;
 
-	@Parameter
+	@Parameter(0)
 	public String scenario;
 
 	public static Iterable<String> parameters() {

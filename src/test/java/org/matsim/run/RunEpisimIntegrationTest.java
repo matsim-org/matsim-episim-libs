@@ -3,6 +3,8 @@ package org.matsim.run;
 import com.google.common.collect.Lists;
 import com.google.inject.*;
 import com.google.inject.util.Modules;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @MethodSource("parameters")
 public class RunEpisimIntegrationTest {
 
+	private static final Logger log = LogManager.getLogger(RunEpisimIntegrationTest.class);
+
 	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	/**
@@ -57,11 +61,28 @@ public class RunEpisimIntegrationTest {
 	 * Checks whether output of simulation matches expectation.
 	 */
 	static void assertSimulationOutput(MatsimTestUtils utils) {
+		assertSimulationOutput(utils, Path.of(utils.getInputDirectory()));
+	}
+
+	static void assertSimulationOutput(MatsimTestUtils utils, int iterations) {
+		assertSimulationOutput(utils, parameterizedInputDirectory(utils, utils.getMethodName(), iterations));
+	}
+
+	private static Path parameterizedInputDirectory(MatsimTestUtils utils, String methodName, int iterations) {
+		return Path.of(utils.getClassInputDirectory(), methodName + "[it" + iterations + "]");
+	}
+
+	private static void assertSimulationOutput(MatsimTestUtils utils, Path inputDirectory) {
 		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
-			File input = new File(utils.getInputDirectory(), name);
+			File input = inputDirectory.resolve(name).toFile();
+			log.info("Input folder is {} ", input);
 			// events will be ignored if not existent
-			if (input.exists() || !name.equals("infectionEvents.txt"))
-				assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
+			if (input.exists() || !name.equals("infectionEvents.txt")) {
+				File actualFile = new File(utils.getOutputDirectory(), name);
+				log.info("Folder to comparison {} ", actualFile);
+				assertThat(actualFile).hasSameTextualContentAs(input);
+			}
+
 		}
 	}
 
@@ -79,7 +100,7 @@ public class RunEpisimIntegrationTest {
 
 	@AfterEach
 	public void tearDown() {
-		assertSimulationOutput(utils);
+		assertSimulationOutput(utils, it);
 	}
 
 	@Test
@@ -101,7 +122,11 @@ public class RunEpisimIntegrationTest {
 		runner.run(it);
 
 		// the input of the base case
-		Path baseCase = Path.of(utils.getClassInputDirectory(), utils.getMethodName().replace("Tracing", "BaseCase"));
+		Path baseCase = parameterizedInputDirectory(
+				utils,
+				utils.getMethodName().replace("Tracing", "BaseCase"),
+				it
+		);
 
 		List<String> baseLines = Files.readAllLines(baseCase.resolve("infections.txt"));
 		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));
@@ -128,7 +153,7 @@ public class RunEpisimIntegrationTest {
 		);
 
 		runner.run(it);
-		assertSimulationOutput(utils);
+		assertSimulationOutput(utils, it);
 
 
 		// re-test with fixed date config, which should be the same result
@@ -167,7 +192,11 @@ public class RunEpisimIntegrationTest {
 
 		runner.run(it);
 
-		Path baseCase = Path.of(utils.getClassInputDirectory(), utils.getMethodName().replace("Vaccination", "BaseCase"));
+		Path baseCase = parameterizedInputDirectory(
+				utils,
+				utils.getMethodName().replace("Vaccination", "BaseCase"),
+				it
+		);
 		List<String> baseLines = Files.readAllLines(baseCase.resolve("infections.txt"));
 
 		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));

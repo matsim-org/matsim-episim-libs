@@ -40,7 +40,7 @@ public class RunEpisimSnapshotTest {
 	private EpisimConfigGroup episimConfig;
 	private EpisimRunner runner;
 
-	@Parameter
+	@Parameter(0)
 	public TracingConfigGroup.Strategy strategy;
 
 	@Parameter(1)

@@ -44,7 +44,7 @@ public class RunSnzIntegrationTest {
 	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 
-	@Parameter
+	@Parameter(0)
 	public SnzBerlinProductionScenario.Restrictions r;
 
 	private EpisimRunner runner;
