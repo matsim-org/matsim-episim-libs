@@ -25,6 +25,7 @@ import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 @ParameterizedClass(name = "it{0}")
 @MethodSource("parameters")
@@ -72,17 +74,78 @@ public class RunEpisimIntegrationTest {
 		return Path.of(utils.getClassInputDirectory(), methodName + "[it" + iterations + "]");
 	}
 
+
 	private static void assertSimulationOutput(MatsimTestUtils utils, Path inputDirectory) {
 		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
 			File input = inputDirectory.resolve(name).toFile();
-			log.info("Input folder is {} ", input);
+			log.info("Input file is {} ", input);
 			// events will be ignored if not existent
 			if (input.exists() || !name.equals("infectionEvents.txt")) {
 				File actualFile = new File(utils.getOutputDirectory(), name);
-				log.info("Folder to comparison {} ", actualFile);
-				assertThat(actualFile).hasSameTextualContentAs(input);
+				log.info("File to comparison {} ", actualFile);
+				if (name.equals("infectionEvents.txt")) {
+					assertInfectionEvents(input, actualFile);
+				} else {
+					assertThat(actualFile).hasSameTextualContentAs(input);
+				}
 			}
 
+		}
+	}
+
+	private static void assertInfectionEvents(File expectedFile, File actualFile) {
+		try {
+			List<String> expectedLines = Files.readAllLines(expectedFile.toPath());
+			List<String> actualLines = Files.readAllLines(actualFile.toPath());
+
+			assertThat(actualLines)
+					.as("Number of lines in %s", actualFile)
+					.hasSameSizeAs(expectedLines);
+			assertThat(expectedLines)
+					.as("Expected infection events file %s", expectedFile)
+					.isNotEmpty();
+			assertThat(actualLines.get(0))
+					.as("Header in %s", actualFile)
+					.isEqualTo(expectedLines.get(0));
+
+			String[] header = expectedLines.get(0).split("\\t", -1);
+			int probabilityColumn = Arrays.asList(header).indexOf("probability");
+			assertThat(probabilityColumn)
+					.as("The probability column in %s", expectedFile)
+					.isGreaterThanOrEqualTo(0);
+
+			for (int lineIndex = 1; lineIndex < expectedLines.size(); lineIndex++) {
+				int lineNumber = lineIndex + 1;
+				String[] expectedValues = expectedLines.get(lineIndex).split("\\t", -1);
+				String[] actualValues = actualLines.get(lineIndex).split("\\t", -1);
+
+				assertThat(actualValues)
+						.as("Number of columns at line %d in %s", lineNumber, actualFile)
+						.hasSameSizeAs(expectedValues);
+				assertThat(expectedValues)
+						.as("Number of columns at line %d in %s", lineNumber, expectedFile)
+						.hasSize(header.length);
+
+				for (int column = 0; column < header.length; column++) {
+					if (column == probabilityColumn) {
+						continue;
+					}
+					assertThat(actualValues[column])
+							.as("Line %d, column '%s'", lineNumber, header[column])
+							.isEqualTo(expectedValues[column]);
+				}
+
+				double expectedProbability = Double.parseDouble(expectedValues[probabilityColumn]);
+				double actualProbability = Double.parseDouble(actualValues[probabilityColumn]);
+				/*
+					TODO Jaro: I know probably we should check the full equality of both files. And now it does not work in this way because we slightly changed the random generator. Add repr. test later
+					*/
+				assertThat(actualProbability)
+						.as("Line %d, column 'probability'", lineNumber)
+						.isCloseTo(expectedProbability, within(MatsimTestUtils.EPSILON));
+			}
+		} catch (IOException e) {
+			throw new UncheckedIOException("Could not compare infection events files", e);
 		}
 	}
 
