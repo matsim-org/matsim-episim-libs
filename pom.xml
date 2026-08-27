@@ -423,7 +423,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <executable>java</executable>
+                    <executable>${java.home}/bin/java</executable>
                     <arguments>
                         <argument>-Dpicocli.autocomplete.systemExitOnError</argument>
                         <argument>-cp</argument>
