@@ -147,11 +147,22 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringGetter(STRAIN)
+		public String getStrainName(){
+			return strain==null?null:strain.toString();
+		}
+
 		public VirusStrain getStrain() {
 			return strain;
 		}
 
 		@StringSetter(STRAIN)
+		public void setStrain(String strain){
+			if(strain == null){
+				this.strain = null;
+			} else {
+				this.strain = new VirusStrain(strain);
+			}
+		}
 		public void setStrain(VirusStrain strain) {
 			this.strain = strain;
 		}

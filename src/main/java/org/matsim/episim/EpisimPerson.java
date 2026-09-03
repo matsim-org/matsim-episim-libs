@@ -46,6 +46,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -136,6 +137,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Maximal antibody level reached by agent w/ respect to each strain.
 	 */
 	private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
+
+	/**
+	 * Prevent us from creating more object that we need.
+	 */
+	private final Map<String, VirusStrain> strainClassesNames = new ConcurrentHashMap<>(20);
+
 	/**
 	 * Activity participation of the current day. Same length as {@link #trajectory}
 	 */
@@ -240,6 +247,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		int n = in.readInt();
 		traceableContactPersons.clear();
+
 		for (int i = 0; i < n; i++) {
 			Id<Person> id = Id.create(readChars(in), Person.class);
 			traceableContactPersons.put(persons.get(id), in.readDouble());
@@ -276,19 +284,23 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		n = in.readInt();
 		for (int i = 0; i < n; i++) {
 			infectionDates.add(in.readDouble());
-			virusStrains.add(VirusStrain.values()[in.readInt()]);
+			String virusStrainName = in.readUTF();
+			VirusStrain virusStrain = getStrainFromName(virusStrainName);
+			virusStrains.add(virusStrain);
 		}
 
 		n = in.readInt();
 		for (int i = 0; i < n; i++) {
-			VirusStrain strain = VirusStrain.values()[in.readInt()];
+			String virusStrainName = in.readUTF();
+			VirusStrain strain = getStrainFromName(virusStrainName);
 			antibodies.put(strain, in.readDouble());
 		}
 
 		n = in.readInt();
 		for (int i = 0; i < n; i++) {
-			VirusStrain strain = VirusStrain.values()[in.readInt()];
-			maxAntibodies.put(strain, in.readDouble());
+			String virusStrainName = in.readUTF();
+			VirusStrain virusStrain = getStrainFromName(virusStrainName);
+			maxAntibodies.put(virusStrain, in.readDouble());
 		}
 
 		status = DiseaseStatus.values()[in.readInt()];
@@ -305,6 +317,11 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		antibodyLevelAtInfection = in.readDouble();
 		immuneResponseMultiplier = in.readDouble();
 
+	}
+
+	private VirusStrain getStrainFromName(String name){
+
+		return strainClassesNames.putIfAbsent(name, new VirusStrain(name));
 	}
 
 	/**
@@ -349,18 +366,19 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		out.writeInt(infectionDates.size());
 		for (int i = 0; i < infectionDates.size(); i++) {
 			out.writeDouble(infectionDates.getDouble(i));
-			out.writeInt(virusStrains.get(i).ordinal());
+			VirusStrain virusStrain = virusStrains.get(i);
+			out.writeUTF(virusStrain.toString());
 		}
 
 		out.writeInt(antibodies.size());
 		for (Object2DoubleMap.Entry<VirusStrain> kv : antibodies.object2DoubleEntrySet()) {
-			out.writeInt(kv.getKey().ordinal());
+			out.writeUTF(kv.toString());
 			out.writeDouble(kv.getDoubleValue());
 		}
 
 		out.writeInt(maxAntibodies.size());
 		for (Object2DoubleMap.Entry<VirusStrain> kv : maxAntibodies.object2DoubleEntrySet()) {
-			out.writeInt(kv.getKey().ordinal());
+			out.writeUTF(kv.toString());
 			out.writeDouble(kv.getDoubleValue());
 		}
 

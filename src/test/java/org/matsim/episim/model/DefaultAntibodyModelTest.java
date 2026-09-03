@@ -162,14 +162,14 @@ public class DefaultAntibodyModelTest {
 		// update antibodies on day 0; antibody map should be filled with strains but ak values should equal 0.0
 		model.updateAntibodies(person, 0);
 
-		for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			assertThat(person.getAntibodies(strain)).isEqualTo(0.0);
 		}
 
 		// at higher iterations, antibody levels should remain at 0.0 if there is no vaccination or infection
 		for (int day = 0; day <= 100; day++) {
 			model.updateAntibodies(person, day);
-			for (VirusStrain strain : VirusStrain.values()) {
+			for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 				assertThat(person.getAntibodies(strain)).isEqualTo(0.0);
 			}
 		}
@@ -968,22 +968,22 @@ public class DefaultAntibodyModelTest {
 
 
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
-				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
+				log.warn("double vaccination against " + strain.getVirusStrainName()+ "=" + abLevels.get(100).get(strain));
 
 				strain = VirusStrain.DELTA;
-				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
+				log.warn("double vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(100).get(strain));
 
 				strain = VirusStrain.OMICRON_BA1;
-				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
+				log.warn("double vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(100).get(strain));
 
 				immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
 				immunityEventDays = IntList.of(0, 200);
 				abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 300, EpisimTestUtils.createPerson());
 
 				strain = VirusStrain.DELTA;
-				log.warn("triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain));
+				log.warn("triple vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(300).get(strain));
 				strain = VirusStrain.OMICRON_BA1;
-				log.warn("triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain));
+				log.warn("triple vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(300).get(strain));
 			}
 
 

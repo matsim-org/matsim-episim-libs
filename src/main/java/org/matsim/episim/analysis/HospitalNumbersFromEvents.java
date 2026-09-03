@@ -119,7 +119,7 @@
 	 private static Object2IntAVLTreeMap<VirusStrain> setLagBetweenInfectionAndHospitalisation() {
 		 Object2IntAVLTreeMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>();
 
-		 for (VirusStrain strain : VirusStrain.values()) {
+		 for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			 lagBetweenInfectionAndHospitalisation.put(strain, 14);
 		 }
 
@@ -129,7 +129,7 @@
 	 private static Object2IntAVLTreeMap<VirusStrain> setLagBetweenHospitalizationAndICU() {
 		 Object2IntAVLTreeMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>();
 
-		 for (VirusStrain strain : VirusStrain.values()) {
+		 for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			 lagBetweenHospitalizationAndICU.put(strain, 6);
 		 }
 
@@ -139,7 +139,7 @@
 
 	 private static Object2IntAVLTreeMap<VirusStrain> setDaysInHospitalGivenNoICU() {
 		 Object2IntAVLTreeMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>();
-		 for (VirusStrain strain : VirusStrain.values()) {
+		 for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			 daysInHospitalGivenNoICU.put(strain, 7);
 		 }
 
@@ -159,7 +159,7 @@
 	 private static Object2IntAVLTreeMap<VirusStrain> setDaysInICU() {
 		 Object2IntAVLTreeMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>();
 
-		 for (VirusStrain strain : VirusStrain.values()) {
+		 for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			 daysInICU.put(strain, 10);
 		 }
 
@@ -173,7 +173,7 @@
 	 private static Object2IntAVLTreeMap<VirusStrain> setDaysInHospitalGivenICU() {
 		 Object2IntAVLTreeMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>();
 
-		 for (VirusStrain strain : VirusStrain.values()) {
+		 for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			 daysInHospitalGivenICU.put(strain, 60);
 		 }
 
@@ -213,7 +213,7 @@
 		 // configure strainConfig: add factorSeriouslySick for each strain
 		 VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		 for (VirusStrain strain : VirusStrain.values()) {
+		 for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			 double seriouslySickFactorParent = 1.0;
 			 if (strain.parent != null) {
 				 seriouslySickFactorParent = strainConfig.getParams(strain.parent).getFactorSeriouslySick();

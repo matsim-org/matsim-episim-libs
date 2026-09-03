@@ -62,8 +62,8 @@ public interface AntibodyModel {
 			Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 
 			for (VaccinationType immunityType : VaccinationType.values()) {
-				initialAntibodies.put(immunityType, new EnumMap<>(VirusStrain.class));
-				for (VirusStrain virusStrain : VirusStrain.values()) {
+				initialAntibodies.put(immunityType, new HashMap<>());
+				for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {
 
 					if (immunityType == VaccinationType.mRNA) {
 						initialAntibodies.get(immunityType).put(virusStrain, 29.2); //10.0
@@ -75,10 +75,10 @@ public interface AntibodyModel {
 				}
 			}
 
-			for (VirusStrain immunityType : VirusStrain.values()) {
-				initialAntibodies.put(immunityType, new EnumMap<>(VirusStrain.class));
-				for (VirusStrain virusStrain : VirusStrain.values()) {
-					initialAntibodies.get(immunityType).put(virusStrain, 5.0);
+			for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {
+				initialAntibodies.put(immunityType, new HashMap<>());
+				for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {
+					initialAntibodies.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, 5.0);
 				}
 			}
 
@@ -171,27 +171,27 @@ public interface AntibodyModel {
 			Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 
 			for (VaccinationType immunityType : VaccinationType.values()) {
-				antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
-				for (VirusStrain virusStrain : VirusStrain.values()) {
+				antibodyRefreshFactors.put(immunityType, new HashMap<>());
+				for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {
 
 					if (immunityType == VaccinationType.mRNA) {
-						antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+						antibodyRefreshFactors.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, 15.0);
 					} else if (immunityType == VaccinationType.vector) {
-						antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
+						antibodyRefreshFactors.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, 5.0);
 						} else if (immunityType == VaccinationType.ba1Update) {
-							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+							antibodyRefreshFactors.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, 15.0);
 						} else if (immunityType == VaccinationType.ba5Update) {
-							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+							antibodyRefreshFactors.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, 15.0);
 						} else {
-						antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);
+						antibodyRefreshFactors.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, Double.NaN);
 					}
 
 				}
 			}
 
-			for (VirusStrain immunityType : VirusStrain.values()) {
-				antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
-				for (VirusStrain virusStrain : VirusStrain.values()) {
+			for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {
+				antibodyRefreshFactors.put(immunityType, new HashMap<>());
+				for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {
 					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 				}
 			}

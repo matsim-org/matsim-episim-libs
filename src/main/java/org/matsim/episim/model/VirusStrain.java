@@ -1,9 +1,13 @@
 package org.matsim.episim.model;
 
+import org.jspecify.annotations.NonNull;
+
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 
-public class VirusStrain implements ImmunityEvent {
+public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 
 	public static final VirusStrain SARS_CoV_2 = new VirusStrain("SARS_CoV_2");
 	public static final VirusStrain ALPHA = new VirusStrain("ALPHA", SARS_CoV_2);
@@ -59,6 +63,62 @@ public class VirusStrain implements ImmunityEvent {
 	public static final VirusStrain B_19 = new VirusStrain("B_19");
 	public static final VirusStrain B_20 = new VirusStrain("B_20");
 
+	private static final List<VirusStrain> STANDARD_OPTIONS = List.of(
+		SARS_CoV_2,
+		ALPHA,
+		B1351,
+		DELTA,
+		OMICRON_BA1,
+		OMICRON_BA2,
+		OMICRON_BA5,
+		XBB_15,
+		XBB_19,
+		BQ,
+		EG,
+		STRAIN_A,
+		STRAIN_B,
+		A_1,
+		A_2,
+		A_3,
+		A_4,
+		A_5,
+		A_6,
+		A_7,
+		A_8,
+		A_9,
+		A_10,
+		A_11,
+		A_12,
+		A_13,
+		A_14,
+		A_15,
+		A_16,
+		A_17,
+		A_18,
+		A_19,
+		A_20,
+		B_1,
+		B_2,
+		B_3,
+		B_4,
+		B_5,
+		B_6,
+		B_7,
+		B_8,
+		B_9,
+		B_10,
+		B_11,
+		B_12,
+		B_13,
+		B_14,
+		B_15,
+		B_16,
+		B_17,
+		B_18,
+		B_19,
+		B_20
+	);
+
 	private final String virusStrainName;
 	public final VirusStrain parent;
 
@@ -72,7 +132,7 @@ public class VirusStrain implements ImmunityEvent {
 	}
 
 	public static Collection<VirusStrain> getAllStandardOptions() {
-		return null;
+		return STANDARD_OPTIONS;
 	}
 
 
@@ -95,5 +155,11 @@ public class VirusStrain implements ImmunityEvent {
 	@Override
 	public String toString() {
 		return virusStrainName;
+	}
+
+	@Override
+	public int compareTo(@NonNull VirusStrain o) {
+		return Comparator.nullsFirst(String::compareTo)
+			.compare(virusStrainName, o.virusStrainName);
 	}
 }

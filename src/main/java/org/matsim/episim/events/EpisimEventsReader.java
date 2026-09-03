@@ -98,8 +98,11 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 			VirusStrain virusStrain = null;
 			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);
-			if (attr != null)
-				virusStrain = localVirusStrainMap.putIfAbsent(attr, new VirusStrain(attr));
+			if (attr != null) {
+				VirusStrain strain = new VirusStrain(attr);
+				localVirusStrainMap.putIfAbsent(attr, strain);
+				virusStrain = strain;
+			}
 
 			double antibodies = -1;
 			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
