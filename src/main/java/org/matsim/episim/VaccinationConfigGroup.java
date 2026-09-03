@@ -9,10 +9,7 @@ import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 
 import java.time.LocalDate;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -497,7 +494,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> effectiveness = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(4, 0)
 				.atDay(5, 0.45)
@@ -507,7 +504,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> infectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> infectivity = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(0, 1)
 				.atFullEffect(1.0)
@@ -516,12 +513,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness after booster shot.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> boostEffectiveness = new EnumMap<>(VirusStrain.class);
+		private Map<VirusStrain, VaccinationConfigGroupParameter> boostEffectiveness = new HashMap<>();
 
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> boostInfectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> boostInfectivity = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(0, 1)
 				.atFullEffect(1.0)
@@ -530,7 +527,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> factorShowingSymptoms = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorShowingSymptoms = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(5, 0.5)
 		));
@@ -538,7 +535,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorSeriouslySick = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(5, 0.5)
 		));
@@ -546,7 +543,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> factorCritical = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorCritical = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(0, 1)
 		));
@@ -606,7 +603,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 			map.clear();
 			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-				map.put(VirusStrain.valueOf(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
+				map.put(new VirusStrain(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
 			}
 		}
 

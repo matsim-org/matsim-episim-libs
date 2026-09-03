@@ -38,6 +38,7 @@ import org.xml.sax.SAXException;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Reads Episim-specific events from MATSim event files.
@@ -45,6 +46,9 @@ import java.util.Stack;
 public class EpisimEventsReader extends MatsimXmlParser {
 
 	private EventsReaderXMLv1 delegate;
+
+	private Map<String, VirusStrain> localVirusStrainMap = new ConcurrentHashMap<>(20); // We do not know config in this place.
+	// Equality of strains will based on equals and hashcode. The maximum number of strains is hundreds. So It is easier to create new ones.
 
 	/**
 	 * EventsReader for EpisimEvents.
@@ -67,6 +71,8 @@ public class EpisimEventsReader extends MatsimXmlParser {
 	public void characters(char[] ch, int start, int length) throws SAXException {
 		delegate.characters(ch, start, length);
 	}
+
+
 
 	private MatsimEventsReader.CustomEventMapper getEpisimInfectionEventMapper() {
 		return event -> {
@@ -93,7 +99,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			VirusStrain virusStrain = null;
 			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);
 			if (attr != null)
-				virusStrain = VirusStrain.valueOf(attr);
+				virusStrain = localVirusStrainMap.putIfAbsent(attr, new VirusStrain(attr));
 
 			double antibodies = -1;
 			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
@@ -129,7 +135,8 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			double unVacProb = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.UNVAC_PROBABILITY));
 
 			int groupSize = Integer.parseInt(attributes.get(EpisimInfectionEvent.GROUP_SIZE));
-			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+			String attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);
+			VirusStrain virusStrain = localVirusStrainMap.putIfAbsent(attr, new VirusStrain(attr));
 			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));
 
 			double antibodies = -1;
@@ -149,7 +156,8 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
 			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
-			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+			String attrStr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);
+			VirusStrain virusStrain = localVirusStrainMap.putIfAbsent(attrStr, new VirusStrain(attrStr));
 			double antibodies = -1;
 			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
 				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));

@@ -191,9 +191,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "strain", "n");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
-		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
+		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", episimConfig.getVirusStrains());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
-		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", (Object[]) VirusStrain.values());
+		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", episimConfig.getVirusStrains());
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 
@@ -545,11 +545,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		log.warn("100 persons={} agents", sampleSize * 100);
 		log.warn("===============================");
 
-		String[] strainOut = new String[VirusStrain.values().length + 2];
+		List<VirusStrain> listOfVirusStrains = new ArrayList<>(episimConfig.getVirusStrains());
+		String[] strainOut = new String[listOfVirusStrains.size() + 2];
 		strainOut[0] = String.valueOf(iteration);
 		strainOut[1] = date;
-		for (int i = 0; i < VirusStrain.values().length; i++) {
-			strainOut[i + 2] = String.valueOf(strains.getOrDefault(VirusStrain.values()[i], 0) * (1 / sampleSize));
+		for (int i = 0; i < listOfVirusStrains.size(); i++) {
+			strainOut[i + 2] = String.valueOf(strains.getOrDefault(listOfVirusStrains.get(i), 0) * (1 / sampleSize));
 		}
 		writer.append(virusStrains, strainOut);
 		strains.clear();
@@ -822,13 +823,13 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	void reportAntibodyLevel(Object2DoubleMap<VirusStrain> antibodies, int n, int iteration) {
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
-
-		String[] out = new String[VirusStrain.values().length + 2];
+		List<VirusStrain> listOfVirusStrains = new ArrayList<>(episimConfig.getVirusStrains());
+		String[] out = new String[listOfVirusStrains.size() + 2];
 		out[0] = String.valueOf(iteration);
 		out[1] = date;
 
-		for (int i = 0; i < VirusStrain.values().length; i++) {
-			out[i + 2] = String.valueOf(antibodies.getDouble(VirusStrain.values()[i]) / n);
+		for (int i = 0; i < listOfVirusStrains.size(); i++) {
+			out[i + 2] = String.valueOf(antibodies.getDouble(listOfVirusStrains.get(i)) / n);
 		}
 
 		writer.append(antibodiesPerPerson, out);
@@ -846,8 +847,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			csv.print("nVaccinations");
 			csv.print("nInfections");
 			csv.print("immuneResponseMultiplier");
-
-			for (VirusStrain strain : VirusStrain.values()) {
+			List<VirusStrain> listOfVirusStrains = new ArrayList<>(episimConfig.getVirusStrains());
+			for (VirusStrain strain : listOfVirusStrains) {
 				csv.print(strain.toString());
 			}
 			csv.println();
@@ -859,7 +860,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				csv.print(person.getNumInfections());
 				csv.print(person.getImmuneResponseMultiplier());
 
-				for (VirusStrain strain : VirusStrain.values()) {
+				for (VirusStrain strain : listOfVirusStrains) {
 					csv.print(person.getAntibodies(strain));
 				}
 				csv.println();
@@ -1036,8 +1037,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				out.writeInt(kv.getIntValue());
 			}
 		}
+		List<VirusStrain> listOfVirusStrains = new ArrayList<>(episimConfig.getVirusStrains());
 
-		for (VirusStrain value : VirusStrain.values()) {
+		for (VirusStrain value : listOfVirusStrains) {
 			out.writeInt(strains.getInt(value));
 		}
 	}
@@ -1064,8 +1066,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				cumulativeCasesVaccinated.get(state).put(key, in.readInt());
 			}
 		}
+		List<VirusStrain> listOfVirusStrains = new ArrayList<>(episimConfig.getVirusStrains());
 
-		for (VirusStrain value : VirusStrain.values()) {
+		for (VirusStrain value : listOfVirusStrains) {
 			strains.put(value, in.readInt());
 		}
 	}

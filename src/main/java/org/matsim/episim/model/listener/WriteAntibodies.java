@@ -3,6 +3,7 @@ package org.matsim.episim.model.listener;
 import com.google.inject.Inject;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.InfectionEventHandler;
@@ -27,6 +28,8 @@ public class WriteAntibodies implements SimulationListener {
 	private Map<Id<Person>, EpisimPerson> persons;
 	@Inject
 	private EpisimReporting reporting;
+	@Inject
+	private EpisimConfigGroup episimConfig;
 
 	@Override
 	public void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
@@ -42,7 +45,7 @@ public class WriteAntibodies implements SimulationListener {
 
 		reporting.writeAsync(writer, header);
 
-		for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : episimConfig.getVirusStrains()) {
 
 			// Rolling mean per age group
 			int[] n = new int[120];
@@ -56,7 +59,7 @@ public class WriteAntibodies implements SimulationListener {
 
 			}
 
-			String row = strain.name() + "\t" + Arrays.stream(values).mapToObj(String::valueOf).collect(Collectors.joining("\t")) + "\n";
+			String row = strain.getVirusStrainName()+ "\t" + Arrays.stream(values).mapToObj(String::valueOf).collect(Collectors.joining("\t")) + "\n";
 
 			reporting.writeAsync(writer, row);
 		}

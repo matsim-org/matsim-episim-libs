@@ -6,8 +6,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -25,8 +24,8 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
-	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
-	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> susceptibility; //= new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity; //= new EnumMap<>(VirusStrain.class);
 
 	private double outdoorFactor;
 	private int iteration;
@@ -39,16 +38,17 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
-
-		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+		this.susceptibility = new HashMap<>();
+		this.infectivity = new HashMap<>();
+		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, episimConfig.getVirusStrains());
 	}
 
 	/**
 	 * Pre-compute interpolated age dependent entries.
 	 */
-	static void preComputeAgeDependency(Map<VirusStrain, double[]> susceptibility, Map<VirusStrain, double[]> infectivity, VirusStrainConfigGroup virusStrainConfig) {
+	static void preComputeAgeDependency(Map<VirusStrain, double[]> susceptibility, Map<VirusStrain, double[]> infectivity, VirusStrainConfigGroup virusStrainConfig, Collection<VirusStrain> virusStrains) {
 
-		for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : virusStrains) {
 
 			if (!virusStrainConfig.hasParams(strain))
 				continue;

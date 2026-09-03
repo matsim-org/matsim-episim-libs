@@ -92,7 +92,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Number of initial infections per day.
 	 * Default is 1 infection per day for {@link VirusStrain#SARS_CoV_2}.
 	 */
-	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
+	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
 
 	/**
 	 * Leisure outdoor fractions per day.
@@ -322,12 +322,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		for (Map.Entry<String, String> v : cap.entrySet()) {
 
 			if (v.getValue().isBlank()) {
-				setInfections_pers_per_day(VirusStrain.valueOf(v.getKey()), new TreeMap<>());
+				setInfections_pers_per_day(new VirusStrain(v.getKey()), new TreeMap<>());
 				continue;
 			}
 
 			Map<String, String> map = SPLITTER.split(v.getValue());
-			setInfections_pers_per_day(VirusStrain.valueOf(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(
+			setInfections_pers_per_day(new VirusStrain(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(
 					e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
 			)));
 		}
@@ -1206,4 +1206,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			return Objects.hash(path, days);
 		}
 	}
+
+	public Collection<VirusStrain> getVirusStrains() {
+		return new ArrayList<>(VirusStrain.getAllStandardOptions());//It is only for rewrite the code.
+		// We should remove it later
+
+	}
+
 }

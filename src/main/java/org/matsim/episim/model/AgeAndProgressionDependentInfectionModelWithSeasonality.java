@@ -9,6 +9,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
@@ -28,8 +29,8 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
-	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
-	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> susceptibility;// = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity;// = new EnumMap<>(VirusStrain.class);
 	private final RealDistribution distribution;
 
 	/**
@@ -51,8 +52,11 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
+		this.susceptibility = new HashMap<>();
+		this.infectivity = new HashMap<>();
 
-		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+
+		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, episimConfig.getVirusStrains());
 
 		// based on https://arxiv.org/abs/2007.06602
 		distribution = new NormalDistribution(0.5, 2.6);

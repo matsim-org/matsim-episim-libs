@@ -6,10 +6,7 @@ import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VirusStrain;
 
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -25,7 +22,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Holds all virus strains params.
 	 */
-	private final Map<VirusStrain, StrainParams> strains = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, StrainParams> strains = new HashMap<>();
 
 	/**
 	 * Default constructor.

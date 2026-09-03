@@ -24,12 +24,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	private final EpisimSplittableRandom localRnd;
 
 	private final EpisimConfigGroup episimConfig;
+	private final Collection<VirusStrain> virusStrains;
 
 
 	@Inject
 	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
 		this.antibodyConfig = antibodyConfig;
 		this.episimConfig = episimConfigGroup;
+		this.virusStrains = episimConfig.getVirusStrains();
 		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 
 
@@ -61,7 +63,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		for (EpisimPerson person : persons) {
 
 			// reset to 0.0
-			for (VirusStrain strain : VirusStrain.values()) {
+			for (VirusStrain strain : virusStrains) {
 				person.setAntibodies(strain, 0.0);
 			}
 
@@ -111,7 +113,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		}
 
 		// if no immunity event: exponential decay, day by day:
-		for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : virusStrains) {
 			double oldAntibodyLevel = person.getAntibodies(strain);
 			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halflifeDays));
 		}
@@ -124,7 +126,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		// 1st immunization:
 		if (firstImmunization) {
 
-			for (VirusStrain strain2 : VirusStrain.values()) {
+			for (VirusStrain strain2 : virusStrains) {
 				double antibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2);
 
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
@@ -138,7 +140,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 
 		} else {
-			for (VirusStrain strain2 : VirusStrain.values()) {
+			for (VirusStrain strain2 : virusStrains) {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(immunityEventType).get(strain2);
 
 				// antibodies before refresh

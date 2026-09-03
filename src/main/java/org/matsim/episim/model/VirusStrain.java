@@ -1,140 +1,99 @@
 package org.matsim.episim.model;
 
-/**
- * Definition of virus strains with different characteristics.
- */
-public enum VirusStrain implements ImmunityEvent {
+import java.util.Collection;
+import java.util.Objects;
 
-	/**
-	 * This describes the base virus strain.
-	 */
-	SARS_CoV_2(null),
+public class VirusStrain implements ImmunityEvent {
 
-	/**
-	 * More "infectious" variant B.1.1.7 that has been prevalent in the UK, starting during end of 2020.
-	 * Also known as VOC-202012/01.
-	 */
-//	B117,
-	ALPHA(SARS_CoV_2),
+	public static final VirusStrain SARS_CoV_2 = new VirusStrain("SARS_CoV_2");
+	public static final VirusStrain ALPHA = new VirusStrain("ALPHA", SARS_CoV_2);
+	public static final VirusStrain B1351 = new VirusStrain("B1351", SARS_CoV_2);
+	public static final VirusStrain DELTA = new VirusStrain("DELTA", ALPHA);
+	public static final VirusStrain OMICRON_BA1 = new VirusStrain("OMICRON_BA1", DELTA);
+	public static final VirusStrain OMICRON_BA2 = new VirusStrain("OMICRON_BA2", OMICRON_BA1);
+	public static final VirusStrain OMICRON_BA5 = new VirusStrain("OMICRON_BA5", OMICRON_BA2);
+	public static final VirusStrain XBB_15 = new VirusStrain("XBB_15", OMICRON_BA2);
+	public static final VirusStrain XBB_19 = new VirusStrain("XBB_19", OMICRON_BA2);
+	public static final VirusStrain BQ = new VirusStrain("BQ", OMICRON_BA5);
+	public static final VirusStrain EG = new VirusStrain("EG", XBB_19);
+	public static final VirusStrain STRAIN_A = new VirusStrain("STRAIN_A", OMICRON_BA5);
+	public static final VirusStrain STRAIN_B = new VirusStrain("STRAIN_B", OMICRON_BA5);
+	public static final VirusStrain A_1 = new VirusStrain("A_1", EG);
+	public static final VirusStrain A_2 = new VirusStrain("A_2", A_1);
+	public static final VirusStrain A_3 = new VirusStrain("A_3", A_2);
+	public static final VirusStrain A_4 = new VirusStrain("A_4", A_3);
+	public static final VirusStrain A_5 = new VirusStrain("A_5", A_4);
+	public static final VirusStrain A_6 = new VirusStrain("A_6", A_5);
+	public static final VirusStrain A_7 = new VirusStrain("A_7", A_6);
+	public static final VirusStrain A_8 = new VirusStrain("A_8", A_7);
+	public static final VirusStrain A_9 = new VirusStrain("A_9", A_8);
+	public static final VirusStrain A_10 = new VirusStrain("A_10", A_9);
+	public static final VirusStrain A_11 = new VirusStrain("A_11", A_10);
+	public static final VirusStrain A_12 = new VirusStrain("A_12", A_11);
+	public static final VirusStrain A_13 = new VirusStrain("A_13", A_12);
+	public static final VirusStrain A_14 = new VirusStrain("A_14", A_13);
+	public static final VirusStrain A_15 = new VirusStrain("A_15", A_14);
+	public static final VirusStrain A_16 = new VirusStrain("A_16", A_15);
+	public static final VirusStrain A_17 = new VirusStrain("A_17", A_16);
+	public static final VirusStrain A_18 = new VirusStrain("A_18", A_17);
+	public static final VirusStrain A_19 = new VirusStrain("A_19", A_18);
+	public static final VirusStrain A_20 = new VirusStrain("A_20", A_19);
+	public static final VirusStrain B_1 = new VirusStrain("B_1");
+	public static final VirusStrain B_2 = new VirusStrain("B_2");
+	public static final VirusStrain B_3 = new VirusStrain("B_3");
+	public static final VirusStrain B_4 = new VirusStrain("B_4");
+	public static final VirusStrain B_5 = new VirusStrain("B_5");
+	public static final VirusStrain B_6 = new VirusStrain("B_6");
+	public static final VirusStrain B_7 = new VirusStrain("B_7");
+	public static final VirusStrain B_8 = new VirusStrain("B_8");
+	public static final VirusStrain B_9 = new VirusStrain("B_9");
+	public static final VirusStrain B_10 = new VirusStrain("B_10");
+	public static final VirusStrain B_11 = new VirusStrain("B_11");
+	public static final VirusStrain B_12 = new VirusStrain("B_12");
+	public static final VirusStrain B_13 = new VirusStrain("B_13");
+	public static final VirusStrain B_14 = new VirusStrain("B_14");
+	public static final VirusStrain B_15 = new VirusStrain("B_15");
+	public static final VirusStrain B_16 = new VirusStrain("B_16");
+	public static final VirusStrain B_17 = new VirusStrain("B_17");
+	public static final VirusStrain B_18 = new VirusStrain("B_18");
+	public static final VirusStrain B_19 = new VirusStrain("B_19");
+	public static final VirusStrain B_20 = new VirusStrain("B_20");
 
-	/**
-	 * South-african variant also known as auch 501Y.V2.
-	 */
-	B1351(SARS_CoV_2), //todo?
-
-	/**
-	 * Unknown mutation.
-	 */
-//	MUTB,
-	DELTA(ALPHA),
-
-	/**
-	 * VoC B.1.1.529, first reported to WHO from South Africa on 24 November 2021.
-	 */
-//	OMICRON,
-	OMICRON_BA1(DELTA),
-
-	OMICRON_BA2(OMICRON_BA1),
-
-	OMICRON_BA5(OMICRON_BA2),
-
-	XBB_15(OMICRON_BA2),
-
-	XBB_19(OMICRON_BA2),
-
-	BQ(OMICRON_BA5),
-
-	EG(XBB_19),
-
-	STRAIN_A(OMICRON_BA5),
-
-	STRAIN_B(OMICRON_BA5),
-
-	A_1(EG),
-
-	A_2(A_1),
-
-	A_3(A_2),
-
-	A_4(A_3),
-
-	A_5(A_4),
-
-	A_6(A_5),
-
-	A_7(A_6),
-
-	A_8(A_7),
-
-	A_9(A_8),
-
-	A_10(A_9),
-
-	A_11(A_10),
-
-	A_12(A_11),
-
-	A_13(A_12),
-
-	A_14(A_13),
-
-	A_15(A_14),
-
-	A_16(A_15),
-
-	A_17(A_16),
-
-	A_18(A_17),
-
-	A_19(A_18),
-
-	A_20(A_19),
-
-	B_1(null),
-
-	B_2(null),
-
-	B_3(null),
-
-	B_4(null),
-
-	B_5(null),
-
-	B_6(null),
-
-	B_7(null),
-
-	B_8(null),
-
-	B_9(null),
-
-	B_10(null),
-
-	B_11(null),
-
-	B_12(null),
-
-	B_13(null),
-
-	B_14(null),
-
-	B_15(null),
-
-	B_16(null),
-
-	B_17(null),
-
-	B_18(null),
-
-	B_19(null),
-
-	B_20(null);
-
+	private final String virusStrainName;
 	public final VirusStrain parent;
 
-	VirusStrain(VirusStrain parent) {
+	public VirusStrain(String virusStrainName) {
+		this(virusStrainName, null);
+	}
+
+	public VirusStrain(String virusStrainName, VirusStrain parent) {
+		this.virusStrainName = virusStrainName;
 		this.parent = parent;
 	}
 
+	public static Collection<VirusStrain> getAllStandardOptions() {
+		return null;
+	}
 
+
+	public String getVirusStrainName() {
+		return virusStrainName;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		VirusStrain that = (VirusStrain) o;
+		return Objects.equals(virusStrainName, that.virusStrainName);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hashCode(virusStrainName);
+	}
+
+	@Override
+	public String toString() {
+		return virusStrainName;
+	}
 }
