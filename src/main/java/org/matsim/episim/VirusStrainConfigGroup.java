@@ -160,7 +160,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 			if(strain == null){
 				this.strain = null;
 			} else {
-				this.strain = new VirusStrain(strain);
+				this.strain = VirusStrain.of(strain);
 			}
 		}
 		public void setStrain(VirusStrain strain) {

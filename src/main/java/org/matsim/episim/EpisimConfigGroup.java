@@ -322,12 +322,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		for (Map.Entry<String, String> v : cap.entrySet()) {
 
 			if (v.getValue().isBlank()) {
-				setInfections_pers_per_day(new VirusStrain(v.getKey()), new TreeMap<>());
+				setInfections_pers_per_day(VirusStrain.of(v.getKey()), new TreeMap<>());
 				continue;
 			}
 
 			Map<String, String> map = SPLITTER.split(v.getValue());
-			setInfections_pers_per_day(new VirusStrain(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(
+			setInfections_pers_per_day(VirusStrain.of(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(
 					e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
 			)));
 		}

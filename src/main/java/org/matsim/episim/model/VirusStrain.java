@@ -5,7 +5,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 
@@ -118,6 +120,13 @@ public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 		B_19,
 		B_20
 	);
+	private static final Map<String, VirusStrain> STRAINS_BY_NAME = new ConcurrentHashMap<>();
+
+	static {
+		for (VirusStrain strain : STANDARD_OPTIONS) {
+			STRAINS_BY_NAME.put(strain.virusStrainName, strain);
+		}
+	}
 
 	private final String virusStrainName;
 	public final VirusStrain parent;
@@ -135,6 +144,13 @@ public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 		return STANDARD_OPTIONS;
 	}
 
+	/**
+	 * Returns the canonical strain instance for the given name.
+	 */
+	public static VirusStrain of(String name) {
+		Objects.requireNonNull(name, "Virus strain name must not be null");
+		return STRAINS_BY_NAME.computeIfAbsent(name, VirusStrain::new);
+	}
 
 	public String getVirusStrainName() {
 		return virusStrainName;

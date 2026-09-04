@@ -603,7 +603,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 			map.clear();
 			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-				map.put(new VirusStrain(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
+				map.put(VirusStrain.of(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
 			}
 		}
 

@@ -78,7 +78,7 @@ public interface AntibodyModel {
 			for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {
 				initialAntibodies.put(immunityType, new HashMap<>());
 				for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {
-					initialAntibodies.putIfAbsent(immunityType, new HashMap<>()).put(virusStrain, 5.0);
+					initialAntibodies.get(immunityType).put(virusStrain, 5.0);
 				}
 			}
 

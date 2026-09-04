@@ -8,10 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -103,7 +100,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 				int lastInfectionWithStrain = 0;
 				for (int ii = 0; ii < target.getNumInfections(); ii++) {
-					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {
+					if (Objects.equals(target.getVirusStrain(ii),infector.getVirusStrain())) {
 						lastInfectionWithStrain = ii;
 					}
 				}
