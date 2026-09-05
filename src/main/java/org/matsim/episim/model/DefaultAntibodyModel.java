@@ -2,9 +2,9 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
-import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.VirusStrainConfigGroup;
 
 import java.util.Collection;
 
@@ -23,15 +23,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	private final AntibodyModel.Config antibodyConfig;
 	private final EpisimSplittableRandom localRnd;
 
-	private final EpisimConfigGroup episimConfig;
 	private final Collection<VirusStrain> virusStrains;
 
 
 	@Inject
-	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
+	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {
 		this.antibodyConfig = antibodyConfig;
-		this.episimConfig = episimConfigGroup;
-		this.virusStrains = episimConfig.getVirusStrains();
+		this.virusStrains = virusStrainConfig.getVirusStrains();
 		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 
 

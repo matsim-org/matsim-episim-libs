@@ -51,7 +51,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		this.susceptibility = new HashMap<>();
 		this.infectivity = new HashMap<>();
 
-		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, episimConfig.getVirusStrains());
+		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, virusStrainConfig.getVirusStrains());
 
 		// based on https://arxiv.org/abs/2007.06602
 		distribution = new NormalDistribution(0.5, 2.6);
@@ -133,11 +133,11 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 			if (vaccinationConfig.getUseIgA()) {
 
-				for (VirusStrain str : episimConfig.getVirusStrains()) {
+				for (VirusStrain str : virusStrainConfig.getVirusStrains()) {
 					if (str.toString().startsWith("A_"))
 						strainsLineA.add(str);
 				}
-				for (VirusStrain str : episimConfig.getVirusStrains()) {
+				for (VirusStrain str : virusStrainConfig.getVirusStrains()) {
 					if (str.toString().startsWith("B_"))
 						strainsLineB.add(str);
 				}

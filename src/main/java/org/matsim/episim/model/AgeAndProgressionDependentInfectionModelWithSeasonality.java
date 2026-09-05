@@ -56,7 +56,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		this.infectivity = new HashMap<>();
 
 
-		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, episimConfig.getVirusStrains());
+		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, virusStrainConfig.getVirusStrains());
 
 		// based on https://arxiv.org/abs/2007.06602
 		distribution = new NormalDistribution(0.5, 2.6);

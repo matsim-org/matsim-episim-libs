@@ -22,7 +22,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Holds all virus strains params.
 	 */
-	private final Map<VirusStrain, StrainParams> strains = new HashMap<>();
+	private final Map<VirusStrain, StrainParams> strains = new LinkedHashMap<>();
 
 	/**
 	 * Default constructor.
@@ -63,6 +63,15 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public boolean hasParams(VirusStrain strain) {
 		return strains.containsKey(strain);
+	}
+
+	/**
+	 * Returns the standard virus strains followed by strains added through this configuration.
+	 */
+	public Collection<VirusStrain> getVirusStrains() {
+		Set<VirusStrain> result = new LinkedHashSet<>(VirusStrain.getAllStandardOptions());
+		result.addAll(strains.keySet());
+		return Collections.unmodifiableSet(result);
 	}
 
 	@Override

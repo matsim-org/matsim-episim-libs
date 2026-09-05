@@ -3,10 +3,10 @@ package org.matsim.episim.model.listener;
 import com.google.inject.Inject;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.InfectionEventHandler;
+import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.SimulationListener;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.util.EpisimSplittableRandom;
@@ -29,7 +29,7 @@ public class WriteAntibodies implements SimulationListener {
 	@Inject
 	private EpisimReporting reporting;
 	@Inject
-	private EpisimConfigGroup episimConfig;
+	private VirusStrainConfigGroup virusStrainConfig;
 
 	@Override
 	public void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
@@ -45,7 +45,7 @@ public class WriteAntibodies implements SimulationListener {
 
 		reporting.writeAsync(writer, header);
 
-		for (VirusStrain strain : episimConfig.getVirusStrains()) {
+		for (VirusStrain strain : virusStrainConfig.getVirusStrains()) {
 
 			// Rolling mean per age group
 			int[] n = new int[120];

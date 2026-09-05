@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
-import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.testcases.MatsimTestUtils;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
@@ -63,7 +63,7 @@ public class DefaultAntibodyModelTest {
 	public void setup() {
 
 		antibodyConfig = AntibodyModel.newConfig();
-		model = new DefaultAntibodyModel(antibodyConfig,new EpisimConfigGroup());
+		model = new DefaultAntibodyModel(antibodyConfig, new VirusStrainConfigGroup());
 
 	}
 

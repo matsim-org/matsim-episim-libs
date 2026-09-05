@@ -16,6 +16,8 @@ public class VirusStrainConfigGroupTest {
 	public void config() throws IOException {
 
 		VirusStrainConfigGroup group = new VirusStrainConfigGroup();
+		assertThat(group.getVirusStrains())
+			.containsExactlyElementsOf(VirusStrain.getAllStandardOptions());
 
 		Config config = ConfigUtils.createConfig(group);
 
@@ -25,14 +27,22 @@ public class VirusStrainConfigGroupTest {
 
 		group.getOrAddParams(VirusStrain.ALPHA)
 				.setInfectiousness(0.5);
+		VirusStrain custom = VirusStrain.of("CUSTOM_CONFIG_STRAIN");
+		group.getOrAddParams(custom).setInfectiousness(1.25);
 
 		ConfigUtils.writeConfig(config, tmp.toString());
 
 		VirusStrainConfigGroup copyGroup = new VirusStrainConfigGroup();
-		Config copyConfig = ConfigUtils.loadConfig(tmp.toString(), copyGroup);
+		ConfigUtils.loadConfig(tmp.toString(), copyGroup);
 
-		assertThat(group.getParams(VirusStrain.ALPHA).getInfectiousness())
+		assertThat(copyGroup.getParams(VirusStrain.ALPHA).getInfectiousness())
 				.isEqualTo(0.5);
+		assertThat(copyGroup.getParams(custom).getInfectiousness())
+			.isEqualTo(1.25);
+		assertThat(copyGroup.getVirusStrains())
+			.containsAll(VirusStrain.getAllStandardOptions())
+			.contains(custom)
+			.hasSize(VirusStrain.getAllStandardOptions().size() + 1);
 
 	}
 }

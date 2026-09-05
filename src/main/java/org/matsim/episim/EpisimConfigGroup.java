@@ -1207,10 +1207,4 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
-	public Collection<VirusStrain> getVirusStrains() {
-		return new ArrayList<>(VirusStrain.getAllStandardOptions());//It is only for rewrite the code.
-		// We should remove it later
-
-	}
-
 }

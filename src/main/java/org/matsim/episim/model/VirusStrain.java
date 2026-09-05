@@ -9,9 +9,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
+/** A named variant of a {@link Pathogen}, optionally derived from a parent strain. */
+public final class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 
-	public static final VirusStrain SARS_CoV_2 = new VirusStrain("SARS_CoV_2");
+	public static final VirusStrain SARS_CoV_2 = new VirusStrain(Pathogen.SARS_COV_2, "SARS_CoV_2");
 	public static final VirusStrain ALPHA = new VirusStrain("ALPHA", SARS_CoV_2);
 	public static final VirusStrain B1351 = new VirusStrain("B1351", SARS_CoV_2);
 	public static final VirusStrain DELTA = new VirusStrain("DELTA", ALPHA);
@@ -129,14 +130,24 @@ public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 	}
 
 	private final String virusStrainName;
+	private final Pathogen pathogen;
 	public final VirusStrain parent;
 
-	public VirusStrain(String virusStrainName) {
-		this(virusStrainName, null);
+	private VirusStrain(String virusStrainName) {
+		this(Pathogen.SARS_COV_2, virusStrainName, null);
 	}
 
-	public VirusStrain(String virusStrainName, VirusStrain parent) {
-		this.virusStrainName = virusStrainName;
+	private VirusStrain(String virusStrainName, VirusStrain parent) {
+		this(parent == null ? Pathogen.SARS_COV_2 : parent.pathogen, virusStrainName, parent);
+	}
+
+	private VirusStrain(Pathogen pathogen, String virusStrainName) {
+		this(pathogen, virusStrainName, null);
+	}
+
+	private VirusStrain(Pathogen pathogen, String virusStrainName, VirusStrain parent) {
+		this.pathogen = Objects.requireNonNull(pathogen, "Pathogen must not be null");
+		this.virusStrainName = Objects.requireNonNull(virusStrainName, "Virus strain name must not be null");
 		this.parent = parent;
 	}
 
@@ -152,8 +163,59 @@ public class VirusStrain implements ImmunityEvent, Comparable<VirusStrain> {
 		return STRAINS_BY_NAME.computeIfAbsent(name, VirusStrain::new);
 	}
 
+	/**
+	 * Returns the canonical strain instance and registers its pathogen when the name is first seen.
+	 * A strain name cannot be associated with more than one pathogen.
+	 */
+	public static VirusStrain of(Pathogen pathogen, String name) {
+		Objects.requireNonNull(pathogen, "Pathogen must not be null");
+		Objects.requireNonNull(name, "Virus strain name must not be null");
+
+		return STRAINS_BY_NAME.compute(name, (strainName, existing) -> {
+			if (existing == null) {
+				return new VirusStrain(pathogen, strainName);
+			}
+			if (!existing.pathogen.equals(pathogen)) {
+				throw new IllegalArgumentException("Virus strain name '" + strainName
+					+ "' is already registered for pathogen '" + existing.pathogen
+					+ "' and cannot be registered for pathogen '" + pathogen + "'");
+			}
+			return existing;
+		});
+	}
+
+	/**
+	 * Returns the canonical child strain instance, inheriting the pathogen from its parent.
+	 * A strain name cannot be associated with a different parent after registration.
+	 */
+	public static VirusStrain of(String name, VirusStrain parent) {
+		Objects.requireNonNull(name, "Virus strain name must not be null");
+		Objects.requireNonNull(parent, "Parent strain must not be null");
+
+		return STRAINS_BY_NAME.compute(name, (strainName, existing) -> {
+			if (existing == null) {
+				return new VirusStrain(strainName, parent);
+			}
+			if (!existing.pathogen.equals(parent.pathogen)) {
+				throw new IllegalArgumentException("Virus strain name '" + strainName
+					+ "' is already registered for pathogen '" + existing.pathogen
+					+ "' and cannot inherit from pathogen '" + parent.pathogen + "'");
+			}
+			if (existing.parent != parent) {
+				throw new IllegalArgumentException("Virus strain name '" + strainName
+					+ "' is already registered with parent '" + existing.parent
+					+ "' and cannot be registered with parent '" + parent + "'");
+			}
+			return existing;
+		});
+	}
+
 	public String getVirusStrainName() {
 		return virusStrainName;
+	}
+
+	public Pathogen getPathogen() {
+		return pathogen;
 	}
 
 	@Override

@@ -40,7 +40,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.rnd = rnd;
 		this.susceptibility = new HashMap<>();
 		this.infectivity = new HashMap<>();
-		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, episimConfig.getVirusStrains());
+		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, virusStrainConfig.getVirusStrains());
 	}
 
 	/**
