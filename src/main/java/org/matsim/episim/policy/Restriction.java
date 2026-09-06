@@ -59,7 +59,7 @@ public final class Restriction {
 	/**
 	 * Maps mask type to percentage of persons wearing it.
 	 */
-	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
+	private Map<FaceMask, Double> maskUsage = new LinkedHashMap<>();
 
 	/**
 	 * Maps location-based remainingFraction to district name.
@@ -123,7 +123,7 @@ public final class Restriction {
 			double sum = 1 - total;
 			this.maskUsage.put(FaceMask.NONE, sum);
 
-			for (FaceMask m : FaceMask.values()) {
+			for (FaceMask m : FaceMask.getAllStandardOptions()) {
 				if (maskUsage.containsKey(m)) {
 					sum += maskUsage.get(m);
 					if (Double.isNaN(sum))
@@ -305,7 +305,7 @@ public final class Restriction {
 		// Could be integer or double
 		Map<String, Number> nameMap = (Map<String, Number>) config.getValue("masks").unwrapped();
 
-		Map<FaceMask, Double> enumMap = new EnumMap<>(FaceMask.class);
+		Map<FaceMask, Double> enumMap = new HashMap<>();
 
 		Map<String, Double> locationBasedRf = new HashMap<>();
 
@@ -318,7 +318,7 @@ public final class Restriction {
 
 
 		if (nameMap != null)
-			nameMap.forEach((k, v) -> enumMap.put(FaceMask.valueOf(k), v.doubleValue()));
+			nameMap.forEach((k, v) -> enumMap.put(FaceMask.of(k), v.doubleValue()));
 
 		return new Restriction(
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
@@ -514,9 +514,9 @@ public final class Restriction {
 		Double otherVRf = (Double) restriction.get("vaccinatedRf");
 		ClosingHours otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
-		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
+		Map<FaceMask, Double> otherMasks = new HashMap<>();
 		((Map<String, Double>) restriction.get("masks"))
-				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
+				.forEach((k, v) -> otherMasks.put(FaceMask.of(k), v));
 
 		Map<String, Double> otherLocationBasedRf = new HashMap<>();
 		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
@@ -658,7 +658,7 @@ public final class Restriction {
 
 		// Must be converted to map with strings
 		Map<String, Double> nameMap = new LinkedHashMap<>();
-		maskUsage.forEach((k, v) -> nameMap.put(k.name(), v));
+		maskUsage.forEach((k, v) -> nameMap.put(k.name, v));
 		map.put("masks", nameMap);
 
 		if (closingHours != null) {
