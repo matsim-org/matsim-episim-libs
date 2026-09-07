@@ -133,6 +133,15 @@ public class EpisimModule extends AbstractModule {
 		return ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 	}
 
+	/** Provides the contact-transmission configuration. */
+	@Provides
+	@Singleton
+	public ContactTransmissionConfigGroup contactTransmissionConfigGroup(Config config) {
+		ContactTransmissionConfigGroup group = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
+		group.setContext(config.getContext());
+		return group;
+	}
+
 	@Provides
 	@Singleton
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
