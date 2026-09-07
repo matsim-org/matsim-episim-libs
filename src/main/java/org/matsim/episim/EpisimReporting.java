@@ -193,9 +193,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "strain", "n");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
-		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", virusStrainConfig.getVirusStrains());
+		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", virusStrainConfig.getVirusStrains().toArray());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
-		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", virusStrainConfig.getVirusStrains());
+		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", virusStrainConfig.getVirusStrains().toArray());
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 

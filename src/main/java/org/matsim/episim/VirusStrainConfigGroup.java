@@ -4,6 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.VirusStrain;
 
 import java.util.*;
@@ -50,7 +51,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	public StrainParams getOrAddParams(VirusStrain strain) {
 		if (!strains.containsKey(strain)) {
 			StrainParams p = new StrainParams();
-			p.strain = strain;
+			p.setStrain(strain);
 			addParameterSet(p);
 			return p;
 		}
@@ -86,7 +87,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	public void addParameterSet(final ConfigGroup set) {
 		if (StrainParams.SET_TYPE.equals(set.getName())) {
 			StrainParams p = (StrainParams) set;
-			strains.put(p.strain, p);
+			strains.put(p.getStrain(), p);
 			super.addParameterSet(set);
 
 		} else
@@ -101,6 +102,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		static final String SET_TYPE = "strainParams";
 
 		private static final String STRAIN = "strain";
+		private static final String PATHOGEN = "pathogen";
 		private static final String INFECTIOUSNESS = "infectiousness";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 		private static final String FACTOR_CRITICAL = "factorCritical";
@@ -111,6 +113,8 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Type of the strain.
 		 */
+		private String strainName;
+		private Pathogen pathogen = Pathogen.SARS_COV_2;
 		private VirusStrain strain;
 
 		/**
@@ -157,23 +161,46 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 
 		@StringGetter(STRAIN)
 		public String getStrainName(){
-			return strain==null?null:strain.toString();
+			return strainName;
 		}
 
 		public VirusStrain getStrain() {
+			if (strain == null && strainName != null) {
+				strain = VirusStrain.of(pathogen, strainName);
+				pathogen = strain.getPathogen();
+			}
 			return strain;
 		}
 
 		@StringSetter(STRAIN)
 		public void setStrain(String strain){
-			if(strain == null){
-				this.strain = null;
-			} else {
-				this.strain = VirusStrain.of(strain);
-			}
+			this.strainName = strain;
+			this.strain = null;
 		}
+
 		public void setStrain(VirusStrain strain) {
 			this.strain = strain;
+			this.strainName = strain == null ? null : strain.getVirusStrainName();
+			this.pathogen = strain == null ? Pathogen.SARS_COV_2 : strain.getPathogen();
+		}
+
+		@StringGetter(PATHOGEN)
+		public String getPathogenName() {
+			return pathogen.getName();
+		}
+
+		public Pathogen getPathogen() {
+			return pathogen;
+		}
+
+		@StringSetter(PATHOGEN)
+		public void setPathogen(String pathogen) {
+			setPathogen(new Pathogen(pathogen));
+		}
+
+		public void setPathogen(Pathogen pathogen) {
+			this.pathogen = Objects.requireNonNull(pathogen, "Pathogen must not be null");
+			this.strain = null;
 		}
 
 		@StringGetter(INFECTIOUSNESS)
