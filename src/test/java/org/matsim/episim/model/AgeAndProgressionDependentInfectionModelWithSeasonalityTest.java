@@ -45,7 +45,8 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 				ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class),
 				new DefaultDiseaseStatusTransitionModel(rnd,
 						ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class),
-						ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class)
+						ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class),
+						ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class)
 				)
 		);
 		reporting = EpisimTestUtils.getReporting();

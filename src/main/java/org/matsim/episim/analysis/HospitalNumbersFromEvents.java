@@ -227,7 +227,10 @@
 		 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		 vaccinationConfig.setBeta(beta);
 
-		 return new ConfigHolder(episimConfig, vaccinationConfig, strainConfig);
+		 // pathogen config: SARS-CoV-2 defaults are added automatically
+		 PathogenConfigGroup pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
+
+		 return new ConfigHolder(episimConfig, vaccinationConfig, strainConfig, pathogenConfig);
 	 }
 
 	 @Override
@@ -427,7 +430,7 @@
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
 
-			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig, holder.pathogenConfig);
 
 //			 try {
 //				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
@@ -753,12 +756,15 @@
 		 private final EpisimConfigGroup episimConfig;
 		 private final VaccinationConfigGroup vaccinationConfig;
 		 private final VirusStrainConfigGroup strainConfig;
+		 private final PathogenConfigGroup pathogenConfig;
 
 
-		 ConfigHolder(EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfig) {
+		 ConfigHolder(EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfig,
+		              PathogenConfigGroup pathogenConfig) {
 			 this.episimConfig = episimConfig;
 			 this.vaccinationConfig = vaccinationConfig;
 			 this.strainConfig = strainConfig;
+			 this.pathogenConfig = pathogenConfig;
 		 }
 	 }
  }

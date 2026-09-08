@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.Immunizable;
+import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.VirusStrain;
@@ -18,13 +19,41 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup strainConfig;
+	private final PathogenConfigGroup pathogenConfig;
 
 	@Inject
 	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
-	                                        VirusStrainConfigGroup strainConfigGroup) {
+	                                        VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;
+		this.pathogenConfig = pathogenConfig;
+	}
+
+	/**
+	 * Whether this model reads the age-dependent pathogen configuration. Subclasses with age-dependent
+	 * transitions override this to {@code true}.
+	 */
+	protected boolean isAgeDependentTransition() {
+		return false;
+	}
+
+	/**
+	 * Base disease-progression probabilities of the pathogen the person is currently infected with.
+	 */
+	protected final PathogenConfigGroup.PathogenParams pathogenParams(Immunizable person) {
+		return pathogenConfig.getParams(person.getVirusStrain().getPathogen(), isAgeDependentTransition());
+	}
+
+	/**
+	 * Age used for the probability lookup. The age-dependent variant requires a real age (as it always did);
+	 * the age-independent variant ignores the age, so a missing age falls back to {@code 0}.
+	 */
+	private int lookupAge(Immunizable person) {
+		if (isAgeDependentTransition())
+			return person.getAge();
+
+		return person instanceof EpisimPerson ? ((EpisimPerson) person).getAgeOrDefault(0) : person.getAge();
 	}
 
 	@Override
@@ -92,18 +121,18 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
-		return 0.05625;
+		return pathogenParams(person).getSeriouslySickProbability(lookupAge(person));
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
 	 */
 	public double getProbaOfTransitioningToCritical(Immunizable person) {
-		return 0.25;
+		return pathogenParams(person).getCriticalProbability(lookupAge(person));
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-		return 0.8;
+		return pathogenParams(person).getShowingSymptomsProbability(lookupAge(person));
 	}
 
 	@Override
@@ -179,7 +208,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-		return 0.0;
+		return pathogenParams(person).getDeathProbability(lookupAge(person));
 	}
 
 
