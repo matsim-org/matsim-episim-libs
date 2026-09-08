@@ -7,8 +7,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.ContactTransmissionConfigGroup.ContactPairParams;
 import org.matsim.episim.ContactTransmissionConfigGroup.Resolver;
-import org.matsim.episim.ContactTransmissionConfigGroup.TransmissionWeights;
 import org.matsim.episim.model.ContactTransmissionType;
+import org.matsim.episim.model.TransmissionWeights;
 
 import java.io.File;
 import java.io.IOException;
