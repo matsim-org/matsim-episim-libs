@@ -265,10 +265,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.14.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <release>25</release>
                     <showWarnings>false</showWarnings>
                     <showDeprecation>false</showDeprecation>
                     <encoding>UTF-8</encoding>
@@ -276,10 +275,12 @@
                     <fork>true</fork>
                     <meminitial>128m</meminitial>
                     <maxmem>512m</maxmem>
-                    <compilerArguments>
-                        <Xmaxwarns>4000</Xmaxwarns>
-                        <Xmaxerrs>100</Xmaxerrs>
-                    </compilerArguments>
+                    <compilerArgs>
+                        <arg>-Xmaxwarns</arg>
+                        <arg>4000</arg>
+                        <arg>-Xmaxerrs</arg>
+                        <arg>100</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
