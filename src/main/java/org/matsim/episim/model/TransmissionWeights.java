@@ -22,7 +22,7 @@ public final class TransmissionWeights {
 
 	/** All-zero transmission weights. */
 	public static final TransmissionWeights ZERO = new TransmissionWeights(new double[ContactTransmissionType.values().length]);
-
+	public static final TransmissionWeights RESPIRATORY_ONLY = new TransmissionWeights(new double[]{1,0,0});
 	private static final double SUM_TOLERANCE = 1e-9;
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");

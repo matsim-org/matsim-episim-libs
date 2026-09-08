@@ -46,10 +46,12 @@ public class InfectionModelWithSeasonalityTest {
 
 		model.setIteration(1);
 		double prob = model.calcInfectionProbability(target, infector, restrictions, act, act,
+				TransmissionWeights.RESPIRATORY_ONLY,
 				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		model.setIteration(7);
 		double prob2 = model.calcInfectionProbability(target, infector, restrictions, act, act,
+			TransmissionWeights.RESPIRATORY_ONLY,
 				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob2)
@@ -57,6 +59,7 @@ public class InfectionModelWithSeasonalityTest {
 
 		model.setIteration(40);
 		double prob3 = model.calcInfectionProbability(target, infector, restrictions, act, act,
+			TransmissionWeights.RESPIRATORY_ONLY,
 				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob3)
@@ -64,6 +67,7 @@ public class InfectionModelWithSeasonalityTest {
 
 		model.setIteration(45);
 		double prob4 = model.calcInfectionProbability(target, infector, restrictions, act, act,
+			TransmissionWeights.RESPIRATORY_ONLY,
 				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob4)

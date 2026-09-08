@@ -37,6 +37,7 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   TransmissionWeights transmissionWeights,
 										   double contactIntensity, double jointTimeInContainer) {
 
 		// ci corr can not be null, because sim is initialized with non null value

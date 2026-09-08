@@ -76,6 +76,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   TransmissionWeights transmissionWeights,
 										   double contactIntensity, double jointTimeInContainer) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value

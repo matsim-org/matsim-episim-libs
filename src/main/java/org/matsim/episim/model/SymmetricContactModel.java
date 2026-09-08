@@ -210,11 +210,15 @@ public final class SymmetricContactModel extends AbstractContactModel {
 					contactParams.getContactIntensity() / (maxPersonsInContainer / nSpacesPerFacility)
 			);
 
+			// transmission-route weights for this activity/age pair (symmetric in person order)
+			TransmissionWeights transmissionWeights = contactTransmission.resolve(leavingPersonsActivity, otherPersonsActivity,
+					personLeavingContainer.getAgeOrDefault(0), contactPerson.getAgeOrDefault(0));
+
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
+						leavingParams, contactParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
 				double probUnVac = infectionModel.getLastUnVacInfectionProbability();
 
@@ -227,7 +231,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+						contactParams, leavingParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
 				double probUnVac = infectionModel.getLastUnVacInfectionProbability();
 

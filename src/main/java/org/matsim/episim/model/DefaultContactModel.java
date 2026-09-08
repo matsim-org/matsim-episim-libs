@@ -188,17 +188,21 @@ public final class DefaultContactModel extends AbstractContactModel {
 
 			double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());
 
+			// transmission-route weights for this activity/age pair (symmetric in person order)
+			TransmissionWeights transmissionWeights = contactTransmission.resolve(leavingPersonsActivity, otherPersonsActivity,
+					personLeavingContainer.getAgeOrDefault(0), contactPerson.getAgeOrDefault(0));
+
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
+						leavingParams, contactParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+						contactParams, leavingParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
 				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
