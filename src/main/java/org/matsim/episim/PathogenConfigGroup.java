@@ -5,11 +5,14 @@ import com.google.common.base.Splitter;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.ContactTransmissionType;
 import org.matsim.episim.model.Pathogen;
+import org.matsim.episim.model.TransmissionWeights;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.TreeMap;
 
 /**
@@ -33,8 +36,15 @@ import java.util.TreeMap;
  * single entry such as {@code 0=0.8} therefore yields a constant probability for all ages.</p>
  *
  * <p>Strain-relative differences, vaccination effects, antibody/immunity effects, the {@code hospitalFactor}
- * and every other existing modifier stay where they are today. This config group only replaces the base
+ * and every other existing modifier stay where they are today. This config group replaces the base
  * probability that used to be hard-coded in the transition models.</p>
+ *
+ * <p>Each {@link PathogenParams} also carries {@code routeTransmissibility} &mdash; how well the pathogen
+ * transmits per {@link ContactTransmissionType} route (respiratory / direct contact / fomite), written in
+ * the same {@code route=weight;route=weight} notation as {@link ContactTransmissionConfigGroup}. This is the
+ * pathogen-side factor that the infection model combines with the contact-side route split from
+ * {@link ContactTransmissionConfigGroup}. The default is {@code respiratory=1.0}, so a respiratory-only
+ * pathogen such as SARS-CoV-2 keeps behaving exactly as before.</p>
  */
 public class PathogenConfigGroup extends ReflectiveConfigGroup {
 
@@ -156,6 +166,7 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private static final String SERIOUSLY_SICK = "seriouslySickProbabilityByAge";
 		private static final String CRITICAL = "criticalProbabilityByAge";
 		private static final String DEATH = "deathProbabilityByAge";
+		private static final String ROUTE_TRANSMISSIBILITY = "routeTransmissibility";
 
 		private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 		private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
@@ -176,6 +187,12 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private final NavigableMap<Integer, Double> criticalProbabilityByAge = new TreeMap<>();
 		private final NavigableMap<Integer, Double> deathProbabilityByAge = new TreeMap<>();
 
+		/**
+		 * Per-route transmissibility of this pathogen. Combined by the infection model with the contact-side
+		 * route split from {@link ContactTransmissionConfigGroup}. Defaults to respiratory-only.
+		 */
+		private TransmissionWeights routeTransmissibility = TransmissionWeights.parse("respiratory=1.0");
+
 		PathogenParams() {
 			super(SET_TYPE);
 		}
@@ -192,6 +209,8 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			p.setSeriouslySickProbabilityByAge(Map.of(0, 0.05625));
 			p.setCriticalProbabilityByAge(Map.of(0, 0.25));
 			p.setDeathProbabilityByAge(Map.of(0, 0.0));
+			// SARS-CoV-2 is treated as respiratory-only, matching the pre-route behaviour.
+			p.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
 			return p;
 		}
 
@@ -224,6 +243,8 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			p.setCriticalProbabilityByAge(critical);
 
 			p.setDeathProbabilityByAge(Map.of(0, 0.0));
+			// SARS-CoV-2 is treated as respiratory-only, matching the pre-route behaviour.
+			p.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
 			return p;
 		}
 
@@ -293,6 +314,30 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		@StringSetter(DEATH)
 		void setDeathProbabilityByAge(String config) {
 			replace(deathProbabilityByAge, parse(DEATH, config));
+		}
+
+		@StringGetter(ROUTE_TRANSMISSIBILITY)
+		String getRouteTransmissibilityString() {
+			return routeTransmissibility.toToken();
+		}
+
+		@StringSetter(ROUTE_TRANSMISSIBILITY)
+		void setRouteTransmissibilityString(String config) {
+			this.routeTransmissibility = TransmissionWeights.parse(config);
+		}
+
+		/**
+		 * Per-route transmissibility of this pathogen (respiratory / direct contact / fomite).
+		 */
+		public TransmissionWeights getRouteTransmissibility() {
+			return routeTransmissibility;
+		}
+
+		/**
+		 * Set the per-route transmissibility of this pathogen, replacing the previous value.
+		 */
+		public void setRouteTransmissibility(TransmissionWeights routeTransmissibility) {
+			this.routeTransmissibility = Objects.requireNonNull(routeTransmissibility, ROUTE_TRANSMISSIBILITY);
 		}
 
 		/**
@@ -376,6 +421,9 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			requireNonEmpty(groupName, SERIOUSLY_SICK, seriouslySickProbabilityByAge);
 			requireNonEmpty(groupName, CRITICAL, criticalProbabilityByAge);
 			requireNonEmpty(groupName, DEATH, deathProbabilityByAge);
+			if (routeTransmissibility.isZero())
+				throw new IllegalStateException("pathogen '" + pathogen.getName() + "' in config group '" + groupName
+						+ "' has an all-zero '" + ROUTE_TRANSMISSIBILITY + "'; it cannot transmit by any route.");
 		}
 
 		private void requireNonEmpty(String groupName, String param, NavigableMap<Integer, Double> map) {

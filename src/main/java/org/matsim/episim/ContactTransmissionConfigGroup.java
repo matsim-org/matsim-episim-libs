@@ -341,11 +341,11 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 							+ Math.max(ageA, ageB) + "') in file '" + file + "'.");
 				}
 
-				double[] weights = new double[ContactTransmissionType.values().length];
+				EnumMap<ContactTransmissionType, Double> weights = new EnumMap<>(ContactTransmissionType.class);
 				for (Map.Entry<ContactTransmissionType, String> column : routeColumns.entrySet()) {
 					String value = record.get(column.getValue());
 					try {
-						weights[column.getKey().ordinal()] = Double.parseDouble(value);
+						weights.put(column.getKey(), Double.parseDouble(value));
 					} catch (NumberFormatException e) {
 						throw new IllegalArgumentException("Invalid weight '" + value + "' for column '"
 								+ column.getValue() + "' in file '" + file + "'.", e);
