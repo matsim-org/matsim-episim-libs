@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VirusStrain.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">VirusStrain.java</span></div><h1>VirusStrain.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import org.jspecify.annotations.NonNull;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+/** A named variant of a {@link Pathogen}, optionally derived from a parent strain. */
+public final class VirusStrain implements ImmunityEvent, Comparable&lt;VirusStrain&gt; {
+
+<span class="fc" id="L15">	public static final VirusStrain SARS_CoV_2 = new VirusStrain(Pathogen.SARS_COV_2, &quot;SARS_CoV_2&quot;);</span>
+<span class="fc" id="L16">	public static final VirusStrain ALPHA = new VirusStrain(&quot;ALPHA&quot;, SARS_CoV_2);</span>
+<span class="fc" id="L17">	public static final VirusStrain B1351 = new VirusStrain(&quot;B1351&quot;, SARS_CoV_2);</span>
+<span class="fc" id="L18">	public static final VirusStrain DELTA = new VirusStrain(&quot;DELTA&quot;, ALPHA);</span>
+<span class="fc" id="L19">	public static final VirusStrain OMICRON_BA1 = new VirusStrain(&quot;OMICRON_BA1&quot;, DELTA);</span>
+<span class="fc" id="L20">	public static final VirusStrain OMICRON_BA2 = new VirusStrain(&quot;OMICRON_BA2&quot;, OMICRON_BA1);</span>
+<span class="fc" id="L21">	public static final VirusStrain OMICRON_BA5 = new VirusStrain(&quot;OMICRON_BA5&quot;, OMICRON_BA2);</span>
+<span class="fc" id="L22">	public static final VirusStrain XBB_15 = new VirusStrain(&quot;XBB_15&quot;, OMICRON_BA2);</span>
+<span class="fc" id="L23">	public static final VirusStrain XBB_19 = new VirusStrain(&quot;XBB_19&quot;, OMICRON_BA2);</span>
+<span class="fc" id="L24">	public static final VirusStrain BQ = new VirusStrain(&quot;BQ&quot;, OMICRON_BA5);</span>
+<span class="fc" id="L25">	public static final VirusStrain EG = new VirusStrain(&quot;EG&quot;, XBB_19);</span>
+<span class="fc" id="L26">	public static final VirusStrain STRAIN_A = new VirusStrain(&quot;STRAIN_A&quot;, OMICRON_BA5);</span>
+<span class="fc" id="L27">	public static final VirusStrain STRAIN_B = new VirusStrain(&quot;STRAIN_B&quot;, OMICRON_BA5);</span>
+<span class="fc" id="L28">	public static final VirusStrain A_1 = new VirusStrain(&quot;A_1&quot;, EG);</span>
+<span class="fc" id="L29">	public static final VirusStrain A_2 = new VirusStrain(&quot;A_2&quot;, A_1);</span>
+<span class="fc" id="L30">	public static final VirusStrain A_3 = new VirusStrain(&quot;A_3&quot;, A_2);</span>
+<span class="fc" id="L31">	public static final VirusStrain A_4 = new VirusStrain(&quot;A_4&quot;, A_3);</span>
+<span class="fc" id="L32">	public static final VirusStrain A_5 = new VirusStrain(&quot;A_5&quot;, A_4);</span>
+<span class="fc" id="L33">	public static final VirusStrain A_6 = new VirusStrain(&quot;A_6&quot;, A_5);</span>
+<span class="fc" id="L34">	public static final VirusStrain A_7 = new VirusStrain(&quot;A_7&quot;, A_6);</span>
+<span class="fc" id="L35">	public static final VirusStrain A_8 = new VirusStrain(&quot;A_8&quot;, A_7);</span>
+<span class="fc" id="L36">	public static final VirusStrain A_9 = new VirusStrain(&quot;A_9&quot;, A_8);</span>
+<span class="fc" id="L37">	public static final VirusStrain A_10 = new VirusStrain(&quot;A_10&quot;, A_9);</span>
+<span class="fc" id="L38">	public static final VirusStrain A_11 = new VirusStrain(&quot;A_11&quot;, A_10);</span>
+<span class="fc" id="L39">	public static final VirusStrain A_12 = new VirusStrain(&quot;A_12&quot;, A_11);</span>
+<span class="fc" id="L40">	public static final VirusStrain A_13 = new VirusStrain(&quot;A_13&quot;, A_12);</span>
+<span class="fc" id="L41">	public static final VirusStrain A_14 = new VirusStrain(&quot;A_14&quot;, A_13);</span>
+<span class="fc" id="L42">	public static final VirusStrain A_15 = new VirusStrain(&quot;A_15&quot;, A_14);</span>
+<span class="fc" id="L43">	public static final VirusStrain A_16 = new VirusStrain(&quot;A_16&quot;, A_15);</span>
+<span class="fc" id="L44">	public static final VirusStrain A_17 = new VirusStrain(&quot;A_17&quot;, A_16);</span>
+<span class="fc" id="L45">	public static final VirusStrain A_18 = new VirusStrain(&quot;A_18&quot;, A_17);</span>
+<span class="fc" id="L46">	public static final VirusStrain A_19 = new VirusStrain(&quot;A_19&quot;, A_18);</span>
+<span class="fc" id="L47">	public static final VirusStrain A_20 = new VirusStrain(&quot;A_20&quot;, A_19);</span>
+<span class="fc" id="L48">	public static final VirusStrain B_1 = new VirusStrain(&quot;B_1&quot;);</span>
+<span class="fc" id="L49">	public static final VirusStrain B_2 = new VirusStrain(&quot;B_2&quot;);</span>
+<span class="fc" id="L50">	public static final VirusStrain B_3 = new VirusStrain(&quot;B_3&quot;);</span>
+<span class="fc" id="L51">	public static final VirusStrain B_4 = new VirusStrain(&quot;B_4&quot;);</span>
+<span class="fc" id="L52">	public static final VirusStrain B_5 = new VirusStrain(&quot;B_5&quot;);</span>
+<span class="fc" id="L53">	public static final VirusStrain B_6 = new VirusStrain(&quot;B_6&quot;);</span>
+<span class="fc" id="L54">	public static final VirusStrain B_7 = new VirusStrain(&quot;B_7&quot;);</span>
+<span class="fc" id="L55">	public static final VirusStrain B_8 = new VirusStrain(&quot;B_8&quot;);</span>
+<span class="fc" id="L56">	public static final VirusStrain B_9 = new VirusStrain(&quot;B_9&quot;);</span>
+<span class="fc" id="L57">	public static final VirusStrain B_10 = new VirusStrain(&quot;B_10&quot;);</span>
+<span class="fc" id="L58">	public static final VirusStrain B_11 = new VirusStrain(&quot;B_11&quot;);</span>
+<span class="fc" id="L59">	public static final VirusStrain B_12 = new VirusStrain(&quot;B_12&quot;);</span>
+<span class="fc" id="L60">	public static final VirusStrain B_13 = new VirusStrain(&quot;B_13&quot;);</span>
+<span class="fc" id="L61">	public static final VirusStrain B_14 = new VirusStrain(&quot;B_14&quot;);</span>
+<span class="fc" id="L62">	public static final VirusStrain B_15 = new VirusStrain(&quot;B_15&quot;);</span>
+<span class="fc" id="L63">	public static final VirusStrain B_16 = new VirusStrain(&quot;B_16&quot;);</span>
+<span class="fc" id="L64">	public static final VirusStrain B_17 = new VirusStrain(&quot;B_17&quot;);</span>
+<span class="fc" id="L65">	public static final VirusStrain B_18 = new VirusStrain(&quot;B_18&quot;);</span>
+<span class="fc" id="L66">	public static final VirusStrain B_19 = new VirusStrain(&quot;B_19&quot;);</span>
+<span class="fc" id="L67">	public static final VirusStrain B_20 = new VirusStrain(&quot;B_20&quot;);</span>
+
+<span class="fc" id="L69">	private static final List&lt;VirusStrain&gt; STANDARD_OPTIONS = List.of(</span>
+		SARS_CoV_2,
+		ALPHA,
+		B1351,
+		DELTA,
+		OMICRON_BA1,
+		OMICRON_BA2,
+		OMICRON_BA5,
+		XBB_15,
+		XBB_19,
+		BQ,
+		EG,
+		STRAIN_A,
+		STRAIN_B,
+		A_1,
+		A_2,
+		A_3,
+		A_4,
+		A_5,
+		A_6,
+		A_7,
+		A_8,
+		A_9,
+		A_10,
+		A_11,
+		A_12,
+		A_13,
+		A_14,
+		A_15,
+		A_16,
+		A_17,
+		A_18,
+		A_19,
+		A_20,
+		B_1,
+		B_2,
+		B_3,
+		B_4,
+		B_5,
+		B_6,
+		B_7,
+		B_8,
+		B_9,
+		B_10,
+		B_11,
+		B_12,
+		B_13,
+		B_14,
+		B_15,
+		B_16,
+		B_17,
+		B_18,
+		B_19,
+		B_20
+	);
+<span class="fc" id="L124">	private static final Map&lt;String, VirusStrain&gt; STRAINS_BY_NAME = new ConcurrentHashMap&lt;&gt;();</span>
+
+	static {
+<span class="fc bfc" id="L127" title="All 2 branches covered.">		for (VirusStrain strain : STANDARD_OPTIONS) {</span>
+<span class="fc" id="L128">			STRAINS_BY_NAME.put(strain.virusStrainName, strain);</span>
+<span class="fc" id="L129">		}</span>
+<span class="fc" id="L130">	}</span>
+
+	private final String virusStrainName;
+	private final Pathogen pathogen;
+	public final VirusStrain parent;
+
+	private VirusStrain(String virusStrainName) {
+<span class="fc" id="L137">		this(Pathogen.SARS_COV_2, virusStrainName, null);</span>
+<span class="fc" id="L138">	}</span>
+
+	private VirusStrain(String virusStrainName, VirusStrain parent) {
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">		this(parent == null ? Pathogen.SARS_COV_2 : parent.pathogen, virusStrainName, parent);</span>
+<span class="fc" id="L142">	}</span>
+
+	private VirusStrain(Pathogen pathogen, String virusStrainName) {
+<span class="fc" id="L145">		this(pathogen, virusStrainName, null);</span>
+<span class="fc" id="L146">	}</span>
+
+<span class="fc" id="L148">	private VirusStrain(Pathogen pathogen, String virusStrainName, VirusStrain parent) {</span>
+<span class="fc" id="L149">		this.pathogen = Objects.requireNonNull(pathogen, &quot;Pathogen must not be null&quot;);</span>
+<span class="fc" id="L150">		this.virusStrainName = Objects.requireNonNull(virusStrainName, &quot;Virus strain name must not be null&quot;);</span>
+<span class="fc" id="L151">		this.parent = parent;</span>
+<span class="fc" id="L152">	}</span>
+
+	public static Collection&lt;VirusStrain&gt; getAllStandardOptions() {
+<span class="fc" id="L155">		return STANDARD_OPTIONS;</span>
+	}
+
+	/**
+	 * Returns the canonical strain instance for the given name.
+	 */
+	public static VirusStrain of(String name) {
+<span class="fc" id="L162">		Objects.requireNonNull(name, &quot;Virus strain name must not be null&quot;);</span>
+<span class="fc" id="L163">		return STRAINS_BY_NAME.computeIfAbsent(name, VirusStrain::new);</span>
+	}
+
+	/**
+	 * Returns the canonical strain instance and registers its pathogen when the name is first seen.
+	 * A strain name cannot be associated with more than one pathogen.
+	 */
+	public static VirusStrain of(Pathogen pathogen, String name) {
+<span class="fc" id="L171">		Objects.requireNonNull(pathogen, &quot;Pathogen must not be null&quot;);</span>
+<span class="fc" id="L172">		Objects.requireNonNull(name, &quot;Virus strain name must not be null&quot;);</span>
+
+<span class="fc" id="L174">		return STRAINS_BY_NAME.compute(name, (strainName, existing) -&gt; {</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">			if (existing == null) {</span>
+<span class="fc" id="L176">				return new VirusStrain(pathogen, strainName);</span>
+			}
+<span class="fc bfc" id="L178" title="All 2 branches covered.">			if (!existing.pathogen.equals(pathogen)) {</span>
+<span class="fc" id="L179">				throw new IllegalArgumentException(&quot;Virus strain name '&quot; + strainName</span>
+					+ &quot;' is already registered for pathogen '&quot; + existing.pathogen
+					+ &quot;' and cannot be registered for pathogen '&quot; + pathogen + &quot;'&quot;);
+			}
+<span class="fc" id="L183">			return existing;</span>
+		});
+	}
+
+	/**
+	 * Returns the canonical child strain instance, inheriting the pathogen from its parent.
+	 * A strain name cannot be associated with a different parent after registration.
+	 */
+	public static VirusStrain of(String name, VirusStrain parent) {
+<span class="fc" id="L192">		Objects.requireNonNull(name, &quot;Virus strain name must not be null&quot;);</span>
+<span class="fc" id="L193">		Objects.requireNonNull(parent, &quot;Parent strain must not be null&quot;);</span>
+
+<span class="fc" id="L195">		return STRAINS_BY_NAME.compute(name, (strainName, existing) -&gt; {</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">			if (existing == null) {</span>
+<span class="fc" id="L197">				return new VirusStrain(strainName, parent);</span>
+			}
+<span class="pc bpc" id="L199" title="1 of 2 branches missed.">			if (!existing.pathogen.equals(parent.pathogen)) {</span>
+<span class="nc" id="L200">				throw new IllegalArgumentException(&quot;Virus strain name '&quot; + strainName</span>
+					+ &quot;' is already registered for pathogen '&quot; + existing.pathogen
+					+ &quot;' and cannot inherit from pathogen '&quot; + parent.pathogen + &quot;'&quot;);
+			}
+<span class="fc bfc" id="L204" title="All 2 branches covered.">			if (existing.parent != parent) {</span>
+<span class="fc" id="L205">				throw new IllegalArgumentException(&quot;Virus strain name '&quot; + strainName</span>
+					+ &quot;' is already registered with parent '&quot; + existing.parent
+					+ &quot;' and cannot be registered with parent '&quot; + parent + &quot;'&quot;);
+			}
+<span class="fc" id="L209">			return existing;</span>
+		});
+	}
+
+	public String getVirusStrainName() {
+<span class="fc" id="L214">		return virusStrainName;</span>
+	}
+
+	public Pathogen getPathogen() {
+<span class="fc" id="L218">		return pathogen;</span>
+	}
+
+	@Override
+	public boolean equals(Object o) {
+<span class="pc bpc" id="L223" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L224">		VirusStrain that = (VirusStrain) o;</span>
+<span class="fc" id="L225">		return Objects.equals(virusStrainName, that.virusStrainName);</span>
+	}
+
+	@Override
+	public int hashCode() {
+<span class="fc" id="L230">		return Objects.hashCode(virusStrainName);</span>
+	}
+
+	@Override
+	public String toString() {
+<span class="fc" id="L235">		return virusStrainName;</span>
+	}
+
+	@Override
+	public int compareTo(@NonNull VirusStrain o) {
+<span class="fc" id="L240">		return Comparator.nullsFirst(String::compareTo)</span>
+<span class="fc" id="L241">			.compare(virusStrainName, o.virusStrainName);</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

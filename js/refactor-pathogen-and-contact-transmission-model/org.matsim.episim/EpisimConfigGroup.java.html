@@ -1,0 +1,1211 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">EpisimConfigGroup.java</span></div><h1>EpisimConfigGroup.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import com.google.common.annotations.Beta;
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.magnos.trie.Trie;
+import org.magnos.trie.TrieMatch;
+import org.magnos.trie.Tries;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.ShutdownPolicy;
+
+import jakarta.validation.constraints.NotNull;
+import java.io.File;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Main config for episim.
+ */
+@SuppressWarnings(&quot;checkstyle:MethodName&quot;)
+public final class EpisimConfigGroup extends ReflectiveConfigGroup {
+
+<span class="fc" id="L54">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L55">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+
+	private static final String WRITE_EVENTS = &quot;writeEvents&quot;;
+	private static final String CALIBRATION_PARAMETER = &quot;calibrationParameter&quot;;
+	private static final String HOSPITAL_FACTOR = &quot;hospitalFactor&quot;;
+	private static final String INITIAL_INFECTIONS = &quot;initialInfections&quot;;
+	private static final String INITIAL_INFECTION_DISTRICT = &quot;initialInfectionDistrict&quot;;
+	private static final String INFECTIONS_PER_DAY = &quot;infectionsPerDay&quot;;
+	private static final String LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS = &quot;lowerAgeBoundaryForInitInfections&quot;;
+	private static final String UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS = &quot;upperAgeBoundaryForInitInfections&quot;;
+	private static final String MAX_CONTACTS = &quot;maxContacts&quot;;
+	private static final String SAMPLE_SIZE = &quot;sampleSize&quot;;
+	private static final String START_DATE = &quot;startDate&quot;;
+	private static final String SNAPSHOT_INTERVAL = &quot;snapshotInterval&quot;;
+	private static final String START_FROM_SNAPSHOT = &quot;startFromSnapshot&quot;;
+	private static final String START_FROM_IMMUNIZATION = &quot;startFromImmunization&quot;;
+	private static final String SNAPSHOT_PREFIX = &quot;snapshotPrefix&quot;;
+	private static final String SNAPSHOT_SEED = &quot;snapshotSeed&quot;;
+	private static final String LEISUREOUTDOORFRACTION = &quot;leisureOutdoorFraction&quot;;
+	private static final String INPUT_DAYS = &quot;inputDays&quot;;
+	private static final String DAYS_INFECTIOUS = &quot;daysInfectious&quot;;
+	private static final String ACTIVITY_HANDLING = &quot;activityHandling&quot;;
+	private static final String THREADS = &quot;threads&quot;;
+	private static final String CURFEW_COMPLIANCE = &quot;curfewCompliance&quot;;
+	private static final String DISTRICT_LEVEL_RESTRICTIONS = &quot;districtLevelRestrictions&quot;;
+	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = &quot;districtLevelRestrictionsAttribute&quot;;
+	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = &quot;contagiousContainerOptimization&quot;;
+	private static final String REPORT_TIME_USE = &quot;reportTimeUse&quot;;
+	private static final String SINGLE_EVENT_FILE = &quot;singleEventFile&quot;;
+	private static final String END_EARLY = &quot;endEarly&quot;;
+
+<span class="fc" id="L86">	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);</span>
+	private static final String GROUPNAME = &quot;episim&quot;;
+
+<span class="fc" id="L89">	private final Trie&lt;String, InfectionParams&gt; paramsTrie = Tries.forStrings();</span>
+
+	/**
+	 * Number of initial infections per day.
+	 * Default is 1 infection per day for {@link VirusStrain#SARS_CoV_2}.
+	 */
+<span class="fc" id="L95">	private final Map&lt;VirusStrain, NavigableMap&lt;LocalDate, Integer&gt;&gt; infectionsPerDay = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2, new TreeMap&lt;&gt;()));</span>
+
+	/**
+	 * Leisure outdoor fractions per day.
+	 */
+<span class="fc" id="L100">	private final Map&lt;LocalDate, Double&gt; leisureOutdoorFraction = new TreeMap&lt;&gt;(Map.of(</span>
+<span class="fc" id="L101">			LocalDate.parse(&quot;2020-01-15&quot;), 0.1,</span>
+<span class="fc" id="L102">			LocalDate.parse(&quot;2020-04-15&quot;), 0.8,</span>
+<span class="fc" id="L103">			LocalDate.parse(&quot;2020-09-15&quot;), 0.8,</span>
+<span class="fc" id="L104">			LocalDate.parse(&quot;2020-11-15&quot;), 0.1,</span>
+<span class="fc" id="L105">			LocalDate.parse(&quot;2021-02-15&quot;), 0.1,</span>
+<span class="fc" id="L106">			LocalDate.parse(&quot;2021-04-15&quot;), 0.8,</span>
+<span class="fc" id="L107">			LocalDate.parse(&quot;2021-09-15&quot;), 0.8)</span>
+	);
+
+	/**
+	 * Re-mapping of specific dates to different week days events.
+	 */
+<span class="fc" id="L113">	private final Map&lt;LocalDate, DayOfWeek&gt; inputDays = new HashMap&lt;&gt;();</span>
+
+	/**
+	 * Which events to write in the output.
+	 */
+<span class="fc" id="L118">	private WriteEvents writeEvents = WriteEvents.episim;</span>
+	// this is current default for 25% scenarios
+<span class="fc" id="L120">	private double calibrationParameter = 0.000002;</span>
+<span class="fc" id="L121">	private double hospitalFactor = 1.;</span>
+<span class="fc" id="L122">	private double sampleSize = 0.1;</span>
+<span class="fc" id="L123">	private int initialInfections = 10;</span>
+<span class="fc" id="L124">	private int lowerAgeBoundaryForInitInfections = -1;</span>
+<span class="fc" id="L125">	private int upperAgeBoundaryForInitInfections = -1;</span>
+	/**
+	 * If not null, filter persons for initial infection by district.
+	 */
+<span class="fc" id="L129">	private String initialInfectionDistrict = null;</span>
+	/**
+	 * Start date of the simulation (Day 1).
+	 */
+<span class="fc" id="L133">	private LocalDate startDate = LocalDate.of(1970, 1, 1);</span>
+	/**
+	 * Offset of start date in unix epoch seconds.
+	 */
+<span class="fc" id="L137">	private long startOffset = 0;</span>
+	/**
+	 * Write snapshot every x days.
+	 */
+<span class="fc" id="L141">	private int snapshotInterval = 0;</span>
+	/**
+	 * Path to snapshot file.
+	 */
+<span class="fc" id="L145">	private String startFromSnapshot = null;</span>
+<span class="fc" id="L146">	private String startFromImmunization = null;</span>
+
+	/**
+	 * Filename prefix for snapshot.
+	 */
+<span class="fc" id="L151">	private String snapshotPrefix = &quot;episim-snapshot&quot;;</span>
+
+	/**
+	 * How the internal rng state should be handled.
+	 */
+<span class="fc" id="L156">	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;</span>
+<span class="fc" id="L157">	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;</span>
+<span class="fc" id="L158">	private ActivityHandling activityHandling = ActivityHandling.duringContact;</span>
+<span class="fc" id="L159">	private Config policyConfig = ConfigFactory.empty();</span>
+<span class="fc" id="L160">	private Config progressionConfig = ConfigFactory.empty();</span>
+<span class="fc" id="L161">	private String overwritePolicyLocation = null;</span>
+<span class="fc" id="L162">	private double maxContacts = 3.;</span>
+<span class="fc" id="L163">	private int daysInfectious = 4;</span>
+<span class="fc" id="L164">	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;</span>
+<span class="fc" id="L165">	private String districtLevelRestrictionsAttribute = &quot;&quot;;</span>
+<span class="fc" id="L166">	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;</span>
+<span class="fc" id="L167">	private ReportTimeUse reportTimeUse = ReportTimeUse.no;</span>
+<span class="fc" id="L168">	private SingleEventFile singleEventFile = SingleEventFile.yes;</span>
+<span class="fc" id="L169">	private boolean endEarly = false;</span>
+<span class="fc" id="L170">	private int threads = 2;</span>
+
+
+	/**
+	 * Compliance if a curfew is set.
+	 */
+<span class="fc" id="L176">	private NavigableMap&lt;LocalDate, Double&gt; curfewCompliance = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Default constructor.
+	 */
+	public EpisimConfigGroup() {
+<span class="fc" id="L182">		super(GROUPNAME);</span>
+<span class="fc" id="L183">	}</span>
+
+	public String getInputEventsFile() {
+<span class="fc" id="L186">		List&lt;EventFileParams&gt; list = Lists.newArrayList(getInputEventsFiles());</span>
+
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">		if (list.size() != 1) {</span>
+<span class="nc" id="L189">			throw new IllegalStateException(&quot;There is not exactly one input event file. Use .getEventFileParams() instead.&quot;);</span>
+		}
+
+<span class="fc" id="L192">		return list.get(0).path;</span>
+	}
+
+	/**
+	 * Adds one single input event file for all days of the week.
+	 */
+	public void setInputEventsFile(String inputEventsFile) {
+
+<span class="fc" id="L200">		clearParameterSetsForType(EventFileParams.SET_TYPE);</span>
+<span class="fc" id="L201">		addInputEventsFile(inputEventsFile)</span>
+<span class="fc" id="L202">				.addDays(DayOfWeek.values());</span>
+<span class="fc" id="L203">	}</span>
+
+	@StringSetter(THREADS)
+	public void setThreads(int threads) {
+<span class="fc" id="L207">		this.threads = threads;</span>
+<span class="fc" id="L208">	}</span>
+
+	@StringGetter(THREADS)
+	public int getThreads() {
+<span class="fc" id="L212">		return threads;</span>
+	}
+
+	@StringGetter(WRITE_EVENTS)
+	public WriteEvents getWriteEvents() {
+<span class="fc" id="L217">		return writeEvents;</span>
+	}
+
+	@StringSetter(WRITE_EVENTS)
+	public void setWriteEvents(WriteEvents writeEvents) {
+<span class="nc" id="L222">		this.writeEvents = writeEvents;</span>
+<span class="nc" id="L223">	}</span>
+
+	@StringGetter(CALIBRATION_PARAMETER)
+	public double getCalibrationParameter() {
+<span class="fc" id="L227">		return this.calibrationParameter;</span>
+	}
+
+	@StringSetter(CALIBRATION_PARAMETER)
+	public void setCalibrationParameter(double calibrationParameter) {
+<span class="fc" id="L232">		this.calibrationParameter = calibrationParameter;</span>
+<span class="fc" id="L233">	}</span>
+
+	/**
+	 * Is multiplied with probability to transition to seriously sick in age dependent progression model.
+	 */
+	@StringGetter(HOSPITAL_FACTOR)
+	public double getHospitalFactor() {
+<span class="fc" id="L240">		return this.hospitalFactor;</span>
+	}
+
+	@StringSetter(HOSPITAL_FACTOR)
+	public void setHospitalFactor(double hospitalFactor) {
+<span class="fc" id="L245">		this.hospitalFactor = hospitalFactor;</span>
+<span class="fc" id="L246">	}</span>
+
+	@StringGetter(INITIAL_INFECTIONS)
+	public int getInitialInfections() {
+<span class="fc" id="L250">		return this.initialInfections;</span>
+	}
+
+	/**
+	 * Sets the initial number of infections.
+	 *
+	 * @param initialInfections -- number of initial infections to start the dynamics.  These will be distributed over several days.
+	 * @see #setInfections_pers_per_day(Map)
+	 */
+	@StringSetter(INITIAL_INFECTIONS)
+	public void setInitialInfections(int initialInfections) {
+<span class="fc" id="L261">		this.initialInfections = initialInfections;</span>
+<span class="fc" id="L262">	}</span>
+
+	@StringGetter(LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public int getLowerAgeBoundaryForInitInfections() {
+<span class="fc" id="L266">		return this.lowerAgeBoundaryForInitInfections;</span>
+	}
+
+	@StringSetter(LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public void setLowerAgeBoundaryForInitInfections(int lowerAgeBoundaryForInitInfections) {
+<span class="nc" id="L271">		this.lowerAgeBoundaryForInitInfections = lowerAgeBoundaryForInitInfections;</span>
+<span class="nc" id="L272">	}</span>
+
+	@StringGetter(UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public int getUpperAgeBoundaryForInitInfections() {
+<span class="fc" id="L276">		return this.upperAgeBoundaryForInitInfections;</span>
+	}
+
+	@StringSetter(UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public void setUpperAgeBoundaryForInitInfections(int upperAgeBoundaryForInitInfections) {
+<span class="nc" id="L281">		this.upperAgeBoundaryForInitInfections = upperAgeBoundaryForInitInfections;</span>
+<span class="nc" id="L282">	}</span>
+
+	public Map&lt;VirusStrain, NavigableMap&lt;LocalDate, Integer&gt;&gt; getInfections_pers_per_day() {
+<span class="fc" id="L285">		return infectionsPerDay;</span>
+	}
+
+	/**
+	 * Sets the number of infections per day for the base strain.
+	 *
+	 * @param infectionsPerDay -- From each given date, this will be the number of infections.  Until {@link #setInitialInfections(int)} are used up.
+	 */
+	public void setInfections_pers_per_day(Map&lt;LocalDate, Integer&gt; infectionsPerDay) {
+<span class="fc" id="L294">		this.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infectionsPerDay);</span>
+<span class="fc" id="L295">	}</span>
+
+	public void setInfections_pers_per_day(VirusStrain strain, Map&lt;LocalDate, Integer&gt; infectionsPerDay) {
+
+<span class="fc" id="L299">		Map&lt;LocalDate, Integer&gt; perDay = this.infectionsPerDay.computeIfAbsent(strain, (k) -&gt; new TreeMap&lt;&gt;());</span>
+
+		// yyyy Is it really so plausible to have this here _and_ the plain integer initial infections?  kai, oct'20
+		// yyyyyy Is it correct that the default of this is empty, so even if someone sets the initial infections to some number, this will not have any effect?  kai, nov'20
+		// No, If no entry is present, 1 will be assumed (because this was default at some point).
+		// This logic of handling no entries is not part of the config, but the initial infection handler  - cr, nov'20
+<span class="fc" id="L305">		perDay.clear();</span>
+<span class="fc" id="L306">		perDay.putAll(infectionsPerDay);</span>
+<span class="fc" id="L307">	}</span>
+
+	@StringGetter(INFECTIONS_PER_DAY)
+	String getInfectionsPerDay() {
+<span class="fc" id="L311">		Map&lt;VirusStrain, String&gt; collect =</span>
+<span class="fc" id="L312">				infectionsPerDay.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -&gt; JOINER.join(e.getValue())));</span>
+
+<span class="fc" id="L314">		return Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).join(collect);</span>
+	}
+
+	@StringSetter(INFECTIONS_PER_DAY)
+	void setInfectionsPerDay(String capacity) {
+
+<span class="fc" id="L320">		Map&lt;String, String&gt; cap = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).split(capacity);</span>
+
+<span class="fc bfc" id="L322" title="All 2 branches covered.">		for (Map.Entry&lt;String, String&gt; v : cap.entrySet()) {</span>
+
+<span class="fc bfc" id="L324" title="All 2 branches covered.">			if (v.getValue().isBlank()) {</span>
+<span class="fc" id="L325">				setInfections_pers_per_day(VirusStrain.of(v.getKey()), new TreeMap&lt;&gt;());</span>
+<span class="fc" id="L326">				continue;</span>
+			}
+
+<span class="fc" id="L329">			Map&lt;String, String&gt; map = SPLITTER.split(v.getValue());</span>
+<span class="fc" id="L330">			setInfections_pers_per_day(VirusStrain.of(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L331">					e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+			)));
+<span class="fc" id="L333">		}</span>
+<span class="fc" id="L334">	}</span>
+
+	@StringGetter(INITIAL_INFECTION_DISTRICT)
+	public String getInitialInfectionDistrict() {
+<span class="fc" id="L338">		return initialInfectionDistrict;</span>
+	}
+
+	@StringSetter(INITIAL_INFECTION_DISTRICT)
+	public void setInitialInfectionDistrict(String initialInfectionDistrict) {
+<span class="fc" id="L343">		this.initialInfectionDistrict = initialInfectionDistrict;</span>
+<span class="fc" id="L344">	}</span>
+
+	@StringGetter(START_DATE)
+	public LocalDate getStartDate() {
+<span class="fc" id="L348">		return startDate;</span>
+	}
+
+	@StringSetter(START_DATE)
+	public void setStartDate(String startDate) {
+<span class="fc" id="L353">		setStartDate(LocalDate.parse(startDate));</span>
+<span class="fc" id="L354">	}</span>
+
+	public void setStartDate(LocalDate startDate) {
+<span class="fc" id="L357">		this.startDate = startDate;</span>
+<span class="fc" id="L358">		this.startOffset = EpisimUtils.getStartOffset(startDate);</span>
+<span class="fc" id="L359">	}</span>
+
+	@StringGetter(SNAPSHOT_INTERVAL)
+	public int getSnapshotInterval() {
+<span class="fc" id="L363">		return snapshotInterval;</span>
+	}
+
+	@StringSetter(SNAPSHOT_INTERVAL)
+	public void setSnapshotInterval(int snapshotInterval) {
+<span class="fc" id="L368">		this.snapshotInterval = snapshotInterval;</span>
+<span class="fc" id="L369">	}</span>
+
+	@StringGetter(START_FROM_SNAPSHOT)
+	public String getStartFromSnapshot() {
+<span class="fc" id="L373">		return startFromSnapshot;</span>
+	}
+
+	@StringSetter(START_FROM_SNAPSHOT)
+	public void setStartFromSnapshot(String startFromSnapshot) {
+<span class="fc" id="L378">		this.startFromSnapshot = startFromSnapshot;</span>
+<span class="fc" id="L379">	}</span>
+
+	@StringGetter(START_FROM_IMMUNIZATION)
+	public String getStartFromImmunization() {
+<span class="fc" id="L383">		return startFromImmunization;</span>
+	}
+
+	@StringSetter(START_FROM_IMMUNIZATION)
+	public void setStartFromImmunization(String startFromImmunization) {
+<span class="nc" id="L388">		this.startFromImmunization = startFromImmunization;</span>
+<span class="nc" id="L389">	}</span>
+
+	@StringGetter(SNAPSHOT_PREFIX)
+	public String getSnapshotPrefix() {
+<span class="fc" id="L393">		return snapshotPrefix;</span>
+	}
+
+	@StringSetter(SNAPSHOT_PREFIX)
+	public void setSnapshotPrefix(String snapshotPrefix) {
+<span class="nc" id="L398">		this.snapshotPrefix = snapshotPrefix;</span>
+<span class="nc" id="L399">	}</span>
+
+	@StringGetter(SNAPSHOT_SEED)
+	public SnapshotSeed getSnapshotSeed() {
+<span class="fc" id="L403">		return snapshotSeed;</span>
+	}
+
+	@StringSetter(SNAPSHOT_SEED)
+	public void setSnapshotSeed(SnapshotSeed snapshotSeed) {
+<span class="fc" id="L408">		this.snapshotSeed = snapshotSeed;</span>
+<span class="fc" id="L409">	}</span>
+
+	public long getStartOffset() {
+<span class="fc" id="L412">		return startOffset;</span>
+	}
+
+	/**
+	 * Sample size in relation to whole population, between (0, 1].
+	 */
+	@StringGetter(SAMPLE_SIZE)
+	public double getSampleSize() {
+<span class="fc" id="L420">		return sampleSize;</span>
+	}
+
+	@StringSetter(SAMPLE_SIZE)
+	public void setSampleSize(double sampleSize) {
+<span class="fc" id="L425">		this.sampleSize = sampleSize;</span>
+<span class="fc" id="L426">	}</span>
+
+	@StringGetter(&quot;policyConfig&quot;)
+	public String getPolicyConfig() {
+<span class="pc bpc" id="L430" title="1 of 2 branches missed.">		if (overwritePolicyLocation != null)</span>
+<span class="nc" id="L431">			return overwritePolicyLocation;</span>
+
+<span class="fc" id="L433">		return policyConfig.origin().filename();</span>
+	}
+
+	/**
+	 * Set the policy config instance.
+	 */
+	public void setPolicyConfig(Config policyConfig) {
+<span class="fc" id="L440">		this.policyConfig = policyConfig;</span>
+<span class="fc" id="L441">	}</span>
+
+	/**
+	 * Sets policy config by loading it from a file first.
+	 *
+	 * @param policyConfig resource of filename to policy
+	 */
+	@StringSetter(&quot;policyConfig&quot;)
+	public void setPolicyConfig(String policyConfig) {
+<span class="nc bnc" id="L450" title="All 2 branches missed.">		if (policyConfig == null)</span>
+<span class="nc" id="L451">			this.policyConfig = ConfigFactory.empty();</span>
+		else {
+<span class="nc" id="L453">			File file = new File(policyConfig);</span>
+<span class="nc bnc" id="L454" title="All 4 branches missed.">			if (!policyConfig.equals(&quot;null&quot;) &amp;&amp; !file.exists())</span>
+<span class="nc" id="L455">				throw new IllegalArgumentException(&quot;Policy config does not exist: &quot; + policyConfig);</span>
+<span class="nc" id="L456">			this.policyConfig = ConfigFactory.parseFileAnySyntax(file);</span>
+		}
+<span class="nc" id="L458">	}</span>
+
+	/**
+	 * Overwrite the policy location, which will be returned by {@link #getPolicyConfig()}.
+	 */
+	public void setOverwritePolicyLocation(String overwritePolicyLocation) {
+<span class="nc" id="L464">		this.overwritePolicyLocation = overwritePolicyLocation;</span>
+<span class="nc" id="L465">	}</span>
+
+	/**
+	 * Gets the actual policy configuration.
+	 */
+	public Config getPolicy() {
+<span class="fc" id="L471">		return policyConfig;</span>
+	}
+
+	/**
+	 * Sets policy class and desired config.
+	 * @deprecated set policy class via guice.
+	 * @see #setPolicy(Config)
+	 */
+	@Deprecated
+	public void setPolicy(Class&lt;? extends ShutdownPolicy&gt; policy, Config config) {
+<span class="fc" id="L481">		this.policyConfig = config;</span>
+<span class="fc" id="L482">	}</span>
+
+	/**
+	 * Sets policy config.
+	 */
+	public void setPolicy(Config config) {
+<span class="fc" id="L488">		this.policyConfig = config;</span>
+<span class="fc" id="L489">	}</span>
+
+	@StringGetter(&quot;progressionConfig&quot;)
+	public String getProgressionConfigName() {
+<span class="pc bpc" id="L493" title="1 of 2 branches missed.">		if (progressionConfig.origin().filename() != null)</span>
+<span class="nc" id="L494">			return progressionConfig.origin().filename();</span>
+
+<span class="fc" id="L496">		return progressionConfig.origin().description();</span>
+	}
+
+	/**
+	 * Gets the progression config configuration.
+	 */
+	public Config getProgressionConfig() {
+<span class="fc" id="L503">		return progressionConfig;</span>
+	}
+
+	public void setProgressionConfig(Config progressionConfig) {
+<span class="fc" id="L507">		this.progressionConfig = progressionConfig;</span>
+<span class="fc" id="L508">	}</span>
+
+	/**
+	 * Sets the progression config location as file name.
+	 */
+	@StringSetter(&quot;progressionConfig&quot;)
+	public void setProgressionConfig(String progressionConfig) {
+<span class="nc bnc" id="L515" title="All 2 branches missed.">		if (progressionConfig == null)</span>
+<span class="nc" id="L516">			this.progressionConfig = ConfigFactory.empty();</span>
+		else {
+<span class="nc" id="L518">			File file = new File(progressionConfig);</span>
+<span class="nc bnc" id="L519" title="All 4 branches missed.">			if (!progressionConfig.equals(&quot;null&quot;) &amp;&amp; !file.exists())</span>
+<span class="nc" id="L520">				throw new IllegalArgumentException(&quot;Progression config does not exist: &quot; + progressionConfig);</span>
+<span class="nc" id="L521">			this.progressionConfig = ConfigFactory.parseFileAnySyntax(file);</span>
+		}
+<span class="nc" id="L523">	}</span>
+
+	@StringGetter(MAX_CONTACTS)
+	public double getMaxContacts() {
+<span class="fc" id="L527">		return maxContacts;</span>
+	}
+
+	@StringSetter(MAX_CONTACTS)
+	public void setMaxContacts(double maxContacts) {
+<span class="fc" id="L532">		this.maxContacts = maxContacts;</span>
+<span class="fc" id="L533">	}</span>
+
+	@StringGetter(DAYS_INFECTIOUS)
+	public int getDaysInfectious() {
+<span class="fc" id="L537">		return daysInfectious;</span>
+	}
+
+	@StringSetter(DAYS_INFECTIOUS)
+	public void setDaysInfectious(int daysInfectious) {
+<span class="fc" id="L542">		this.daysInfectious = daysInfectious;</span>
+<span class="fc" id="L543">	}</span>
+
+	/**
+	 * Sets the leisure outdoor fraction for the whole simulation period.
+	 */
+	public void setLeisureOutdoorFraction(double fraction) {
+<span class="nc" id="L549">		setLeisureOutdoorFraction(Map.of(LocalDate.of(1970, 1, 1), fraction));</span>
+<span class="nc" id="L550">	}</span>
+
+	/**
+	 * Sets the leisure outdoor fraction for individual days. If a day has no entry the values will be interpolated.
+	 */
+	public void setLeisureOutdoorFraction(Map&lt;LocalDate, Double&gt; fraction) {
+<span class="fc" id="L556">		leisureOutdoorFraction.clear();</span>
+<span class="fc" id="L557">		leisureOutdoorFraction.putAll(fraction);</span>
+<span class="fc" id="L558">	}</span>
+
+	public Map&lt;LocalDate, Double&gt; getLeisureOutdoorFraction() {
+<span class="fc" id="L561">		return leisureOutdoorFraction;</span>
+	}
+
+	@StringSetter(LEISUREOUTDOORFRACTION)
+	void setLeisureOutdoorFraction(String capacity) {
+
+<span class="nc" id="L567">		Map&lt;String, String&gt; map = SPLITTER.split(capacity);</span>
+<span class="nc" id="L568">		setLeisureOutdoorFraction(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L569">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+		)));
+<span class="nc" id="L571">	}</span>
+
+	@StringGetter(LEISUREOUTDOORFRACTION)
+	String getLeisureOutdoorFractionString() {
+<span class="fc" id="L575">		return JOINER.join(leisureOutdoorFraction);</span>
+	}
+
+
+	public NavigableMap&lt;LocalDate, Double&gt; getCurfewCompliance() {
+<span class="fc" id="L580">		return curfewCompliance;</span>
+	}
+
+	public void setCurfewCompliance(Map&lt;LocalDate, Double&gt; curfewCompliance) {
+<span class="fc" id="L584">		this.curfewCompliance.clear();</span>
+<span class="fc" id="L585">		this.curfewCompliance.putAll(curfewCompliance);</span>
+<span class="fc" id="L586">	}</span>
+
+	@StringGetter(CURFEW_COMPLIANCE)
+	String getCurfewComplianceString() {
+<span class="fc" id="L590">		return JOINER.join(curfewCompliance);</span>
+	}
+
+	@StringSetter(CURFEW_COMPLIANCE)
+	void setCurfewCompliance(String config) {
+<span class="nc" id="L595">		Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
+<span class="nc" id="L596">		setCurfewCompliance(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L597">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+		)));
+<span class="nc" id="L599">	}</span>
+
+	/**
+	 * Get remapping of input days.
+	 */
+	public Map&lt;LocalDate, DayOfWeek&gt; getInputDays() {
+<span class="fc" id="L605">		return inputDays;</span>
+	}
+
+	public void setInputDays(Map&lt;LocalDate, DayOfWeek&gt; days) {
+<span class="fc" id="L609">		this.inputDays.clear();</span>
+<span class="fc" id="L610">		this.inputDays.putAll(days);</span>
+<span class="fc" id="L611">	}</span>
+
+	@StringSetter(INPUT_DAYS)
+	void setInputDays(String days) {
+<span class="nc" id="L615">		Map&lt;String, String&gt; map = SPLITTER.split(days);</span>
+<span class="nc" id="L616">		setInputDays(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L617">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; DayOfWeek.valueOf(e.getValue())</span>
+		)));
+<span class="nc" id="L619">	}</span>
+
+	@StringGetter(INPUT_DAYS)
+	String getInputDaysString() {
+<span class="fc" id="L623">		return JOINER.join(inputDays);</span>
+	}
+
+
+	/**
+	 * Create restriction for each {@link InfectionParams}.
+	 */
+	public Map&lt;String, Restriction&gt; createInitialRestrictions() {
+<span class="fc" id="L631">		Map&lt;String, Restriction&gt; r = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L632">		getContainerParams().forEach((s, p) -&gt; r.put(s, Restriction.none()));</span>
+<span class="fc" id="L633">		return r;</span>
+	}
+
+	@StringGetter(&quot;facilitiesHandling&quot;)
+	public FacilitiesHandling getFacilitiesHandling() {
+<span class="fc" id="L638">		return facilitiesHandling;</span>
+	}
+
+	@StringSetter(&quot;facilitiesHandling&quot;)
+	public void setFacilitiesHandling(FacilitiesHandling facilitiesHandling) {
+<span class="fc" id="L643">		this.facilitiesHandling = facilitiesHandling;</span>
+<span class="fc" id="L644">	}</span>
+
+
+	@StringGetter(ACTIVITY_HANDLING)
+	public ActivityHandling getActivityHandling() {
+<span class="fc" id="L649">		return activityHandling;</span>
+	}
+
+	@StringSetter(ACTIVITY_HANDLING)
+	public void setActivityHandling(ActivityHandling activityHandling) {
+<span class="fc" id="L654">		this.activityHandling = activityHandling;</span>
+<span class="fc" id="L655">	}</span>
+
+	/**
+	 * District level restrictions for location based restrictions.
+	 */
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public DistrictLevelRestrictions getDistrictLevelRestrictions() {
+<span class="fc" id="L662">		return this.districtLevelRestrictions;</span>
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public void setDistrictLevelRestrictions(DistrictLevelRestrictions districtLevelRestrictions) {
+<span class="fc" id="L667">		this.districtLevelRestrictions = districtLevelRestrictions;</span>
+<span class="fc" id="L668">	}</span>
+
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public String getDistrictLevelRestrictionsAttribute() {
+<span class="fc" id="L672">		return this.districtLevelRestrictionsAttribute;</span>
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public void setDistrictLevelRestrictionsAttribute(String districtLevelRestrictionsAttribute) {
+<span class="fc" id="L677">		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;</span>
+<span class="fc" id="L678">	}</span>
+
+	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
+	public ContagiousOptimization getContagiousOptimization() {
+<span class="fc" id="L682">		return this.contagiousContainerOptimization;</span>
+	}
+
+	@StringSetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
+	public void setContagiousOptimization(ContagiousOptimization contagiousOptimization) {
+<span class="nc" id="L687">		this.contagiousContainerOptimization = contagiousOptimization;</span>
+<span class="nc" id="L688">	}</span>
+
+	@StringGetter(SINGLE_EVENT_FILE)
+	public SingleEventFile getSingleEventFile() {
+<span class="fc" id="L692">		return singleEventFile;</span>
+	}
+
+	@StringSetter(SINGLE_EVENT_FILE)
+	public void setSingleEventFile(SingleEventFile singleEventFile) {
+<span class="nc" id="L697">		this.singleEventFile = singleEventFile;</span>
+<span class="nc" id="L698">	}</span>
+
+	@StringGetter(REPORT_TIME_USE)
+	public ReportTimeUse getReportTimeUse() {
+<span class="fc" id="L702">		return reportTimeUse;</span>
+	}
+
+	@StringSetter(REPORT_TIME_USE)
+	public void setReportTimeUse(ReportTimeUse reportTimeUse) {
+<span class="nc" id="L707">		this.reportTimeUse = reportTimeUse;</span>
+<span class="nc" id="L708">	}</span>
+
+
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+		// this is, I think, necessary for the automatic reading from file, and possibly for the commandline stuff.
+<span class="pc bpc" id="L714" title="1 of 3 branches missed.">		switch (set.getName()) {</span>
+			case InfectionParams.SET_TYPE:
+<span class="fc" id="L716">				addContainerParams((InfectionParams) set);</span>
+<span class="fc" id="L717">				break;</span>
+			case EventFileParams.SET_TYPE:
+<span class="fc" id="L719">				super.addParameterSet(set);</span>
+<span class="fc" id="L720">				break;</span>
+			default:
+<span class="nc" id="L722">				throw new IllegalArgumentException(set.getName());</span>
+		}
+<span class="fc" id="L724">	}</span>
+
+	@Override
+	public ConfigGroup createParameterSet(final String type) {
+<span class="nc bnc" id="L728" title="All 3 branches missed.">		switch (type) {</span>
+			case InfectionParams.SET_TYPE:
+<span class="nc" id="L730">				return new InfectionParams();</span>
+			case EventFileParams.SET_TYPE:
+<span class="nc" id="L732">				return new EventFileParams();</span>
+			default:
+<span class="nc" id="L734">				throw new IllegalArgumentException(type);</span>
+		}
+	}
+
+	@Override
+	protected void checkParameterSet(final ConfigGroup module) {
+<span class="pc bpc" id="L740" title="1 of 3 branches missed.">		switch (module.getName()) {</span>
+			case InfectionParams.SET_TYPE:
+<span class="pc bpc" id="L742" title="1 of 2 branches missed.">				if (!(module instanceof InfectionParams)) {</span>
+<span class="nc" id="L743">					throw new IllegalArgumentException(&quot;unexpected class for module &quot; + module);</span>
+				}
+				break;
+			case EventFileParams.SET_TYPE:
+<span class="pc bpc" id="L747" title="1 of 2 branches missed.">				if (!(module instanceof EventFileParams)) {</span>
+<span class="nc" id="L748">					throw new IllegalArgumentException(&quot;unexpected class for module &quot; + module);</span>
+				}
+				break;
+			default:
+<span class="nc" id="L752">				throw new IllegalArgumentException(module.getName());</span>
+		}
+<span class="fc" id="L754">	}</span>
+
+	/**
+	 * Adds given params to the parameter set, replacing existing ones.
+	 */
+	public void addContainerParams(final InfectionParams params) {
+<span class="fc" id="L760">		final InfectionParams previous = this.getContainerParams().get(params.getContainerName());</span>
+
+<span class="pc bpc" id="L762" title="1 of 2 branches missed.">		Optional&lt;String&gt; match = params.mappedNames.stream().filter(s -&gt; paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();</span>
+<span class="pc bpc" id="L763" title="1 of 2 branches missed.">		if (match.isPresent()) {</span>
+<span class="nc" id="L764">			throw new IllegalArgumentException(&quot;New param for &quot; + match.get() + &quot; matches one of the already present params. Try to define the params in different order.&quot;);</span>
+		}
+
+<span class="fc" id="L767">		params.mappedNames.forEach(name -&gt; paramsTrie.put(name, params));</span>
+
+<span class="pc bpc" id="L769" title="1 of 2 branches missed.">		if (previous != null) {</span>
+<span class="nc" id="L770">			log.info(&quot;scoring parameters for activityType=&quot; + previous.getContainerName() + &quot; were just replaced.&quot;);</span>
+
+<span class="nc" id="L772">			params.mappedNames.forEach(paramsTrie::remove);</span>
+
+<span class="nc" id="L774">			final boolean removed = removeParameterSet(previous);</span>
+<span class="nc bnc" id="L775" title="All 2 branches missed.">			if (!removed)</span>
+<span class="nc" id="L776">				throw new IllegalStateException(&quot;problem replacing params&quot;);</span>
+		}
+
+<span class="fc" id="L779">		super.addParameterSet(params);</span>
+<span class="fc" id="L780">	}</span>
+
+	/**
+	 * Returns a container from the parameter set if it exists or creates a new one.
+	 */
+	public InfectionParams getOrAddContainerParams(final String containerName, String... mappedNames) {
+<span class="fc" id="L786">		InfectionParams params = this.getContainerParams().get(containerName);</span>
+
+<span class="fc bfc" id="L788" title="All 2 branches covered.">		if (params != null)</span>
+<span class="fc" id="L789">			return params;</span>
+
+<span class="fc" id="L791">		params = new InfectionParams(containerName, mappedNames);</span>
+
+<span class="fc" id="L793">		addParameterSet(params);</span>
+<span class="fc" id="L794">		return params;</span>
+	}
+
+	/**
+	 * Adds an event file to the config.
+	 */
+	public EventFileParams addInputEventsFile(final String path) {
+
+<span class="fc bfc" id="L802" title="All 2 branches covered.">		for (EventFileParams f : getInputEventsFiles()) {</span>
+<span class="pc bpc" id="L803" title="1 of 2 branches missed.">			if (f.path.equals(path)) throw new IllegalArgumentException(&quot;Input file already defined: &quot; + path);</span>
+<span class="fc" id="L804">		}</span>
+
+<span class="fc" id="L806">		EventFileParams params = new EventFileParams(path);</span>
+<span class="fc" id="L807">		addParameterSet(params);</span>
+<span class="fc" id="L808">		return params;</span>
+	}
+
+	/**
+	 * Removes all defined input files.
+	 */
+	public void clearInputEventsFiles() {
+<span class="fc" id="L815">		clearParameterSetsForType(EventFileParams.SET_TYPE);</span>
+<span class="fc" id="L816">	}</span>
+
+	/**
+	 * Get a copy of container params. Don't use this heavily, it is slow because a new map is created every time.
+	 */
+	Map&lt;String, InfectionParams&gt; getContainerParams() {
+<span class="fc" id="L822">		@SuppressWarnings(&quot;unchecked&quot;) final Collection&lt;InfectionParams&gt; parameters = (Collection&lt;InfectionParams&gt;) getParameterSets(InfectionParams.SET_TYPE);</span>
+<span class="fc" id="L823">		final Map&lt;String, InfectionParams&gt; map = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L825" title="All 2 branches covered.">		for (InfectionParams pars : parameters) {</span>
+<span class="pc bpc" id="L826" title="1 of 2 branches missed.">			if (this.isLocked()) {</span>
+<span class="nc" id="L827">				pars.setLocked();</span>
+			}
+<span class="fc" id="L829">			map.put(pars.getContainerName(), pars);</span>
+<span class="fc" id="L830">		}</span>
+
+<span class="fc" id="L832">		return Collections.unmodifiableMap(map);</span>
+	}
+
+	/**
+	 * Lookup which infection param is relevant for an activity. Throws exception when none was found.
+	 *
+	 * @param activity full activity identifier (including id etc.)
+	 * @return matched infection param
+	 * @throws NoSuchElementException when no param could be matched
+	 */
+	@NotNull
+	public InfectionParams selectInfectionParams(String activity) {
+
+<span class="fc" id="L845">		InfectionParams params = paramsTrie.get(activity, TrieMatch.STARTS_WITH);</span>
+<span class="fc bfc" id="L846" title="All 2 branches covered.">		if (params != null)</span>
+<span class="fc" id="L847">			return params;</span>
+
+<span class="fc" id="L849">		throw new NoSuchElementException(String.format(&quot;No params known for activity %s. Please add prefix to one infection parameter.&quot;, activity));</span>
+	}
+
+	/**
+	 * Get the {@link InfectionParams} of a container by its name.
+	 */
+	public InfectionParams getInfectionParam(String containerName) {
+<span class="fc" id="L856">		return this.getContainerParams().get(containerName);</span>
+	}
+
+	/**
+	 * All defined infection parameter.
+	 */
+	public Collection&lt;InfectionParams&gt; getInfectionParams() {
+<span class="fc" id="L863">		return (Collection&lt;InfectionParams&gt;) getParameterSets(InfectionParams.SET_TYPE);</span>
+	}
+
+	/**
+	 * All defined input event files.
+	 */
+	public Collection&lt;EventFileParams&gt; getInputEventsFiles() {
+<span class="fc" id="L870">		return (Collection&lt;EventFileParams&gt;) getParameterSets(EventFileParams.SET_TYPE);</span>
+	}
+
+	/**
+	 * Whether simulation ends when there are no further infected persons.
+	 */
+	@StringGetter(END_EARLY)
+	public boolean isEndEarly() {
+<span class="fc" id="L878">		return endEarly;</span>
+	}
+
+	@StringSetter(END_EARLY)
+	public void setEndEarly(boolean endEarly) {
+<span class="fc" id="L883">		this.endEarly = endEarly;</span>
+<span class="fc" id="L884">	}</span>
+
+	/**
+	 * Defines how facilities should be handled.
+	 */
+<span class="fc" id="L889">	public enum FacilitiesHandling {</span>
+		/**
+		 * A facility id will be constructed using the link id where the activity is performed.
+		 */
+<span class="fc" id="L893">		bln,</span>
+		/**
+		 * Facilities ids of activities will be used directly.
+		 */
+<span class="fc" id="L897">		snz</span>
+	}
+
+	/**
+	 * Defines which events will be written.
+	 */
+<span class="fc" id="L903">	public enum WriteEvents {</span>
+		/**
+		 * Disable event writing completely.
+		 */
+<span class="fc" id="L907">		none,</span>
+		/**
+		 * Write basic events like infections or disease status change.
+		 */
+<span class="fc" id="L911">		episim,</span>
+
+		/**
+		 * Write the input event each day.
+		 */
+<span class="fc" id="L916">		input,</span>
+
+		/**
+		 * Write additional contact tracing events.
+		 */
+<span class="fc" id="L921">		tracing,</span>
+		/**
+		 * Write all, including input events.
+		 */
+<span class="fc" id="L925">		all</span>
+	}
+
+	/**
+	 * Defines how the snapshot seed should be processed.
+	 */
+<span class="fc" id="L931">	public enum SnapshotSeed {</span>
+		/**
+		 * Restore rng state from the snapshot and continue as before.
+		 */
+<span class="fc" id="L935">		restore,</span>
+
+		/**
+		 * Overwrite the rng state with a new seed taken from config.
+		 */
+<span class="fc" id="L940">		reseed</span>
+	}
+
+	/**
+	 * Defines how activity participation is handled.
+	 */
+<span class="fc" id="L946">	public enum ActivityHandling {</span>
+
+		/**
+		 * Activity participation is randdom during each contact.
+		 */
+<span class="fc" id="L951">		duringContact,</span>
+
+		/**
+		 * Activity participation is fixed at start of the day.
+		 */
+<span class="fc" id="L956">		startOfDay</span>
+
+	}
+
+
+	/**
+	 * Decides whether location based restrictions should be implemented.
+	 */
+<span class="fc" id="L964">	public enum DistrictLevelRestrictions {</span>
+<span class="fc" id="L965">		yes,</span>
+<span class="fc" id="L966">		no</span>
+	}
+
+
+	/**
+	 * In the case that this optimization is enabled, the infectionDynamics
+	 * methods are only called, if a contagious person is in the container.
+     */
+<span class="fc" id="L974">	public enum ContagiousOptimization {</span>
+<span class="fc" id="L975">		yes,</span>
+<span class="fc" id="L976">		no</span>
+	}
+
+	/**
+	 * The used time tracking costs a lot of CPU cycles, so this
+	 * can be disabled.
+     */
+<span class="fc" id="L983">	public enum ReportTimeUse {</span>
+<span class="fc" id="L984">		yes,</span>
+<span class="fc" id="L985">		no</span>
+	}
+
+
+	/**
+	 * Whether to write all events into a single file.
+	 */
+<span class="fc" id="L992">	public enum SingleEventFile {</span>
+<span class="fc" id="L993">		yes,</span>
+<span class="fc" id="L994">		no</span>
+	}
+
+	/**
+	 * Parameter set for one activity type.
+	 */
+	public static final class InfectionParams extends ReflectiveConfigGroup {
+		public static final String ACTIVITY_TYPE = &quot;activityType&quot;;
+		public static final String CONTACT_INTENSITY = &quot;contactIntensity&quot;;
+		public static final String SPACES_PER_FACILITY = &quot;nSpacesPerFacility&quot;;
+		public static final String SEASONALITY = &quot;seasonal&quot;;
+		public static final String MAPPED_NAMES = &quot;mappedNames&quot;;
+
+		static final String SET_TYPE = &quot;infectionParams&quot;;
+		/**
+		 * Name of the container as reference by {@link ShutdownPolicy}.
+		 */
+		private String containerName;
+
+		/**
+		 * Prefixes of activity names that will be associated with this container type.
+		 */
+		private Set&lt;String&gt; mappedNames;
+<span class="fc" id="L1017">		private double contactIntensity = 1.;</span>
+
+		/**
+		 * Typical number of distinct spaces per facility.
+		 */
+<span class="fc" id="L1022">		private double spacesPerFacility = 20.;</span>
+
+		/**
+		 * If 1.0, activity type is seasonal; 0.0 means it is not.
+		 */
+<span class="fc" id="L1027">		private double seasonality = 0.0;</span>
+
+		/**
+		 * See {@link #InfectionParams(String, String...)}. Name itself will also be used as prefix.
+		 */
+		InfectionParams(final String containerName) {
+<span class="fc" id="L1033">			this();</span>
+<span class="fc" id="L1034">			this.containerName = containerName;</span>
+<span class="fc" id="L1035">			this.mappedNames = Sets.newHashSet(containerName);</span>
+<span class="fc" id="L1036">		}</span>
+
+		/**
+		 * Constructor.
+		 *
+		 * @param containerName name of this activity type
+		 * @param mappedNames   activity prefixes that will also be mapped to this container
+		 */
+		InfectionParams(final String containerName, String... mappedNames) {
+<span class="fc" id="L1045">			this();</span>
+<span class="fc" id="L1046">			this.containerName = containerName;</span>
+<span class="fc bfc" id="L1047" title="All 2 branches covered.">			this.mappedNames = mappedNames.length == 0 ?</span>
+<span class="fc" id="L1048">					Sets.newHashSet(containerName) : Sets.newHashSet(mappedNames);</span>
+<span class="fc" id="L1049">		}</span>
+
+		private InfectionParams() {
+<span class="fc" id="L1052">			super(SET_TYPE);</span>
+<span class="fc" id="L1053">		}</span>
+
+		@StringGetter(MAPPED_NAMES)
+		public String getMappedNames() {
+<span class="fc" id="L1057">			return Joiner.on(&quot;,&quot;).join(mappedNames);</span>
+		}
+
+		@StringSetter(MAPPED_NAMES)
+		void setMappedNames(String mappedNames) {
+<span class="nc" id="L1062">			this.mappedNames = Sets.newHashSet(mappedNames.split(&quot;,&quot;));</span>
+<span class="nc" id="L1063">		}</span>
+
+		@StringGetter(ACTIVITY_TYPE)
+		public String getContainerName() {
+<span class="fc" id="L1067">			return containerName;</span>
+		}
+
+		@StringSetter(ACTIVITY_TYPE)
+		void setContainerName(String actType) {
+<span class="nc" id="L1072">			this.containerName = actType;</span>
+<span class="nc" id="L1073">		}</span>
+
+		/**
+		 * this is from iteration 0!
+		 */
+		@StringGetter(CONTACT_INTENSITY)
+		public double getContactIntensity() {
+<span class="fc" id="L1080">			return contactIntensity;</span>
+		}
+
+		/**
+		 * this is from iteration 0!
+		 **/
+		@StringSetter(CONTACT_INTENSITY)
+		public InfectionParams setContactIntensity(double contactIntensity) {
+<span class="fc" id="L1088">			this.contactIntensity = contactIntensity;</span>
+<span class="fc" id="L1089">			return this;</span>
+		}
+
+		/**
+		 * Returns the spaces for facilities.
+		 *
+		 * @implNote Don't use this yet, may be removed or renamed.
+		 */
+		@Beta
+		@StringGetter(SPACES_PER_FACILITY)
+		public double getSpacesPerFacility() {
+<span class="fc" id="L1100">			return spacesPerFacility;</span>
+		}
+
+		@Beta
+		@StringSetter(SPACES_PER_FACILITY)
+		public InfectionParams setSpacesPerFacility(double nSpacesPerFacility) {
+<span class="fc" id="L1106">			this.spacesPerFacility = nSpacesPerFacility;</span>
+<span class="fc" id="L1107">			return this;</span>
+		}
+
+		@StringSetter(SEASONALITY)
+		public InfectionParams setSeasonality(double seasonality) {
+<span class="fc" id="L1112">			this.seasonality = seasonality;</span>
+<span class="fc" id="L1113">			return this;</span>
+		}
+
+		/**
+		 * The extent of an activity's seasonal effects.
+		 */
+		@StringGetter(SEASONALITY)
+		public double getSeasonality() {
+<span class="fc" id="L1121">			return seasonality;</span>
+		}
+
+		/**
+		 * Check whether an activity belong to this container group.
+		 */
+		public boolean includesActivity(String actType) {
+<span class="nc bnc" id="L1128" title="All 2 branches missed.">			for (String mapped : mappedNames)</span>
+<span class="nc bnc" id="L1129" title="All 2 branches missed.">				if (actType.startsWith(mapped))</span>
+<span class="nc" id="L1130">					return true;</span>
+
+<span class="nc" id="L1132">			return false;</span>
+		}
+
+	}
+
+	/**
+	 * Event file configuration for certain weekdays.
+	 */
+	public static final class EventFileParams extends ReflectiveConfigGroup {
+
+		public static final String DAYS = &quot;days&quot;;
+		public static final String PATH = &quot;path&quot;;
+		static final String SET_TYPE = &quot;eventFiles&quot;;
+<span class="fc" id="L1145">		private final Set&lt;DayOfWeek&gt; days = EnumSet.noneOf(DayOfWeek.class);</span>
+		private String path;
+
+		EventFileParams(String path) {
+<span class="fc" id="L1149">			this();</span>
+<span class="fc" id="L1150">			this.path = path;</span>
+<span class="fc" id="L1151">		}</span>
+
+		private EventFileParams() {
+<span class="fc" id="L1154">			super(SET_TYPE);</span>
+<span class="fc" id="L1155">		}</span>
+
+		@StringGetter(PATH)
+		public String getPath() {
+<span class="fc" id="L1159">			return path;</span>
+		}
+
+		@StringSetter(PATH)
+		void setPath(String path) {
+<span class="nc" id="L1164">			this.path = path;</span>
+<span class="nc" id="L1165">		}</span>
+
+		/**
+		 * Adds week days when this event file should be used.
+		 */
+		public void addDays(DayOfWeek... days) {
+<span class="fc" id="L1171">			this.days.addAll(Arrays.asList(days));</span>
+<span class="fc" id="L1172">		}</span>
+
+
+		public Set&lt;DayOfWeek&gt; getDays() {
+<span class="fc" id="L1176">			return days;</span>
+		}
+
+		@StringGetter(DAYS)
+		public String getDaysString() {
+<span class="fc" id="L1181">			return days.stream()</span>
+<span class="fc" id="L1182">				.map(DayOfWeek::name)</span>
+<span class="fc" id="L1183">				.collect(Collectors.joining(&quot;, &quot;));</span>
+		}
+
+		@StringSetter(DAYS)
+		public void setDays(String days) {
+<span class="nc" id="L1188">			String str = days.replace(&quot;[&quot;, &quot;&quot;).replace(&quot; &quot;, &quot;&quot;).replace(&quot;]&quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L1190">			this.days.addAll(</span>
+<span class="nc" id="L1191">					Arrays.stream(str.split(&quot;,&quot;)).map(DayOfWeek::valueOf).collect(Collectors.toSet())</span>
+			);
+<span class="nc" id="L1193">		}</span>
+
+		@Override
+		public boolean equals(Object o) {
+<span class="nc bnc" id="L1197" title="All 2 branches missed.">			if (this == o) return true;</span>
+<span class="nc bnc" id="L1198" title="All 4 branches missed.">			if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L1199">			EventFileParams that = (EventFileParams) o;</span>
+<span class="nc bnc" id="L1200" title="All 2 branches missed.">			return path.equals(that.path) &amp;&amp;</span>
+<span class="nc bnc" id="L1201" title="All 2 branches missed.">					days.equals(that.days);</span>
+		}
+
+		@Override
+		public int hashCode() {
+<span class="nc" id="L1206">			return Objects.hash(path, days);</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -1,0 +1,691 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ContactTransmissionConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">ContactTransmissionConfigGroup.java</span></div><h1>ContactTransmissionConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.ContactTransmissionType;
+import org.matsim.episim.model.TransmissionWeights;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Configures transmission-route weights for contacts between activity types.
+ */
+public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
+
+	/** Name of this config group. */
+	public static final String GROUPNAME = &quot;contactTransmission&quot;;
+
+	private static final String AGE_BANDS = &quot;ageBands&quot;;
+	private static final String DEFAULT_TRANSMISSION_WEIGHTS = &quot;defaultTransmissionWeights&quot;;
+
+<span class="fc" id="L44">	private final Map&lt;String, ContactPairParams&gt; contactPairs = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L45">	private final Map&lt;String, ContactGroupParams&gt; contactGroups = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L46">	private List&lt;Integer&gt; ageBands = new ArrayList&lt;&gt;(Collections.singletonList(0));</span>
+<span class="fc" id="L47">	private TransmissionWeights defaultTransmissionWeights = TransmissionWeights.parse(&quot;respiratory=1.0&quot;);</span>
+	private URL context;
+
+	/**
+	 * Creates a contact-transmission configuration pre-populated with the historical cross-activity
+	 * interaction rules: &quot;home&quot; only shares a container with {@code home}/{@code leisure}/{@code work},
+	 * and &quot;education&quot; only with {@code education}/{@code work}. These defaults reproduce the behaviour
+	 * that used to be hard-coded in {@code DefaultContactModel} / {@code SymmetricContactModel}.
+	 */
+	public ContactTransmissionConfigGroup() {
+<span class="fc" id="L57">		super(GROUPNAME);</span>
+<span class="fc" id="L58">		addDefaultContactGroup(&quot;home&quot;, &quot;home&quot;, &quot;leis&quot;, &quot;work&quot;);</span>
+<span class="fc" id="L59">		addDefaultContactGroup(&quot;edu&quot;, &quot;edu&quot;, &quot;work&quot;);</span>
+<span class="fc" id="L60">	}</span>
+
+	private void addDefaultContactGroup(String activity, String... allowedPartners) {
+<span class="fc" id="L63">		ContactGroupParams group = new ContactGroupParams();</span>
+<span class="fc" id="L64">		group.setActivity(activity);</span>
+<span class="fc" id="L65">		group.setAllowedPartners(Arrays.asList(allowedPartners));</span>
+<span class="fc" id="L66">		addParameterSet(group);</span>
+<span class="fc" id="L67">	}</span>
+
+	@StringGetter(AGE_BANDS)
+	String getAgeBandsString() {
+<span class="fc" id="L71">		return Joiner.on(&quot;,&quot;).join(ageBands);</span>
+	}
+
+	@StringSetter(AGE_BANDS)
+	void setAgeBandsString(String value) {
+<span class="fc" id="L76">		List&lt;Integer&gt; parsed = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">		for (String token : Splitter.on(&quot;,&quot;).trimResults().split(value)) {</span>
+			try {
+<span class="fc" id="L79">				parsed.add(Integer.parseInt(token));</span>
+<span class="nc" id="L80">			} catch (NumberFormatException e) {</span>
+<span class="nc" id="L81">				throw new IllegalArgumentException(&quot;Invalid age band '&quot; + token + &quot;' in '&quot; + value + &quot;'.&quot;, e);</span>
+<span class="fc" id="L82">			}</span>
+<span class="fc" id="L83">		}</span>
+<span class="fc" id="L84">		setAgeBands(parsed);</span>
+<span class="fc" id="L85">	}</span>
+
+	/**
+	 * Returns the configured age-band lower bounds.
+	 */
+	public List&lt;Integer&gt; getAgeBands() {
+<span class="fc" id="L91">		return Collections.unmodifiableList(ageBands);</span>
+	}
+
+	/**
+	 * Sets the age-band lower bounds.
+	 */
+	public void setAgeBands(Collection&lt;Integer&gt; ageBands) {
+<span class="fc" id="L98">		this.ageBands = new ArrayList&lt;&gt;(ageBands);</span>
+<span class="fc" id="L99">	}</span>
+
+	@StringGetter(DEFAULT_TRANSMISSION_WEIGHTS)
+	String getDefaultTransmissionWeightsString() {
+<span class="fc" id="L103">		return defaultTransmissionWeights.toToken();</span>
+	}
+
+	@StringSetter(DEFAULT_TRANSMISSION_WEIGHTS)
+	void setDefaultTransmissionWeightsString(String value) {
+<span class="fc" id="L108">		defaultTransmissionWeights = TransmissionWeights.parse(value);</span>
+<span class="fc" id="L109">	}</span>
+
+	/**
+	 * Returns the weights used when no contact pair is configured.
+	 */
+	public TransmissionWeights getDefaultTransmissionWeights() {
+<span class="fc" id="L115">		return defaultTransmissionWeights;</span>
+	}
+
+	/**
+	 * Sets the weights used when no contact pair is configured.
+	 */
+	public void setDefaultTransmissionWeights(TransmissionWeights weights) {
+<span class="fc" id="L122">		defaultTransmissionWeights = requireNonNull(weights, DEFAULT_TRANSMISSION_WEIGHTS);</span>
+<span class="fc" id="L123">	}</span>
+
+	/**
+	 * Gets an existing contact pair or adds a new one.
+	 */
+	public ContactPairParams getOrAddContactPair(String activityA, String activityB) {
+<span class="fc" id="L129">		String key = pairKey(activityA, activityB);</span>
+<span class="fc" id="L130">		ContactPairParams existing = contactPairs.get(key);</span>
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">		if (existing != null) {</span>
+<span class="nc" id="L132">			return existing;</span>
+		}
+
+<span class="fc" id="L135">		ContactPairParams params = new ContactPairParams();</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">		if (activityA.compareTo(activityB) &lt;= 0) {</span>
+<span class="fc" id="L137">			params.activityA = activityA;</span>
+<span class="fc" id="L138">			params.activityB = activityB;</span>
+		} else {
+<span class="fc" id="L140">			params.activityA = activityB;</span>
+<span class="fc" id="L141">			params.activityB = activityA;</span>
+		}
+<span class="fc" id="L143">		addParameterSet(params);</span>
+<span class="fc" id="L144">		return params;</span>
+	}
+
+	/**
+	 * Returns the configured parameters for a contact pair.
+	 */
+	public ContactPairParams getContactPair(String activityA, String activityB) {
+<span class="fc" id="L151">		ContactPairParams params = contactPairs.get(pairKey(activityA, activityB));</span>
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">		if (params == null) {</span>
+<span class="nc" id="L153">			throw new IllegalStateException(&quot;Contact pair '&quot; + activityA + &quot;'/'&quot; + activityB + &quot;' is not configured.&quot;);</span>
+		}
+<span class="fc" id="L155">		return params;</span>
+	}
+
+	/**
+	 * Returns whether a contact pair is configured.
+	 */
+	public boolean hasContactPair(String activityA, String activityB) {
+<span class="nc" id="L162">		return contactPairs.containsKey(pairKey(activityA, activityB));</span>
+	}
+
+	/**
+	 * Returns all configured contact pairs in insertion order.
+	 */
+	public Collection&lt;ContactPairParams&gt; getContactPairs() {
+<span class="fc" id="L169">		return Collections.unmodifiableCollection(contactPairs.values());</span>
+	}
+
+	/**
+	 * Gets an existing per-activity contact group or adds a new one.
+	 */
+	public ContactGroupParams getOrAddContactGroup(String activity) {
+<span class="fc" id="L176">		ContactGroupParams existing = contactGroups.get(activity);</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">		if (existing != null) {</span>
+<span class="fc" id="L178">			return existing;</span>
+		}
+
+<span class="fc" id="L181">		ContactGroupParams group = new ContactGroupParams();</span>
+<span class="fc" id="L182">		group.setActivity(activity);</span>
+<span class="fc" id="L183">		addParameterSet(group);</span>
+<span class="fc" id="L184">		return group;</span>
+	}
+
+	/**
+	 * Returns whether a contact group is configured for the given activity type.
+	 */
+	public boolean hasContactGroup(String activity) {
+<span class="fc" id="L191">		return contactGroups.containsKey(activity);</span>
+	}
+
+	/**
+	 * Returns all configured per-activity contact groups in insertion order.
+	 */
+	public Collection&lt;ContactGroupParams&gt; getContactGroups() {
+<span class="fc" id="L198">		return Collections.unmodifiableCollection(contactGroups.values());</span>
+	}
+
+	/** {@inheritDoc} */
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+<span class="fc bfc" id="L204" title="All 2 branches covered.">		if (ContactPairParams.SET_TYPE.equals(type)) {</span>
+<span class="fc" id="L205">			return new ContactPairParams();</span>
+		}
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">		if (ContactGroupParams.SET_TYPE.equals(type)) {</span>
+<span class="fc" id="L208">			return new ContactGroupParams();</span>
+		}
+<span class="nc" id="L210">		throw new IllegalArgumentException(&quot;Unknown type &quot; + type);</span>
+	}
+
+	/** {@inheritDoc} */
+	@Override
+	public void addParameterSet(ConfigGroup set) {
+<span class="fc bfc" id="L216" title="All 2 branches covered.">		if (ContactPairParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L217">			ContactPairParams params = (ContactPairParams) set;</span>
+<span class="fc" id="L218">			contactPairs.put(pairKey(params.activityA, params.activityB), params);</span>
+<span class="fc" id="L219">			super.addParameterSet(set);</span>
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">		} else if (ContactGroupParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L221">			ContactGroupParams params = (ContactGroupParams) set;</span>
+<span class="fc" id="L222">			ContactGroupParams previous = contactGroups.put(params.getActivity(), params);</span>
+			// replace a previously registered group (e.g. an auto-added default) instead of keeping a duplicate
+<span class="fc bfc" id="L224" title="All 2 branches covered.">			if (previous != null) {</span>
+<span class="fc" id="L225">				super.removeParameterSet(previous);</span>
+			}
+<span class="fc" id="L227">			super.addParameterSet(set);</span>
+<span class="fc" id="L228">		} else {</span>
+<span class="nc" id="L229">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
+		}
+<span class="fc" id="L231">	}</span>
+
+	/**
+	 * Validates this configuration and builds an immutable runtime resolver.
+	 */
+	public Resolver createResolver() {
+<span class="fc" id="L237">		validateAgeBands(ageBands);</span>
+<span class="fc" id="L238">		requireNonNull(defaultTransmissionWeights, DEFAULT_TRANSMISSION_WEIGHTS);</span>
+
+<span class="fc" id="L240">		List&lt;Integer&gt; bands = Collections.unmodifiableList(new ArrayList&lt;&gt;(ageBands));</span>
+<span class="fc" id="L241">		Map&lt;Integer, Integer&gt; bandIndices = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L242" title="All 2 branches covered.">		for (int i = 0; i &lt; bands.size(); i++) {</span>
+<span class="fc" id="L243">			bandIndices.put(bands.get(i), i);</span>
+		}
+
+<span class="fc" id="L246">		Map&lt;String, ResolvedPair&gt; resolvedPairs = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L247">		Set&lt;String&gt; forbiddenPairs = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L248">		Map&lt;String, TransmissionWeights[][]&gt; loadedFiles = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">		for (ContactPairParams params : contactPairs.values()) {</span>
+<span class="fc" id="L250">			params.validate();</span>
+<span class="fc" id="L251">			String key = pairKey(params.activityA, params.activityB);</span>
+<span class="fc bfc" id="L252" title="All 2 branches covered.">			if (params.forbidden) {</span>
+<span class="fc" id="L253">				forbiddenPairs.add(key);</span>
+<span class="fc" id="L254">				resolvedPairs.put(key, new ResolvedPair(TransmissionWeights.ZERO, null));</span>
+<span class="fc bfc" id="L255" title="All 2 branches covered.">			} else if (params.file != null) {</span>
+<span class="fc" id="L256">				URL url = resolveFile(params.file);</span>
+<span class="fc" id="L257">				String resolvedPath = url.toExternalForm();</span>
+<span class="fc" id="L258">				TransmissionWeights[][] table = loadedFiles.get(resolvedPath);</span>
+<span class="pc bpc" id="L259" title="1 of 2 branches missed.">				if (table == null) {</span>
+<span class="fc" id="L260">					table = readAgeMatrix(url, params.file, bands.size(), bandIndices);</span>
+<span class="fc" id="L261">					loadedFiles.put(resolvedPath, table);</span>
+				}
+<span class="fc" id="L263">				resolvedPairs.put(key, new ResolvedPair(null, table));</span>
+<span class="fc" id="L264">			} else {</span>
+<span class="fc" id="L265">				resolvedPairs.put(key, new ResolvedPair(params.transmissionWeights, null));</span>
+			}
+<span class="fc" id="L267">		}</span>
+
+<span class="fc" id="L269">		Map&lt;String, List&lt;String&gt;&gt; groupWhitelist = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">		for (ContactGroupParams group : contactGroups.values()) {</span>
+<span class="fc" id="L271">			group.validate();</span>
+<span class="fc" id="L272">			groupWhitelist.put(group.getActivity(), new ArrayList&lt;&gt;(group.getAllowedPartners()));</span>
+<span class="fc" id="L273">		}</span>
+
+<span class="fc" id="L275">		return new Resolver(bands, defaultTransmissionWeights, resolvedPairs, groupWhitelist, forbiddenPairs);</span>
+	}
+
+	void setContext(URL context) {
+<span class="fc" id="L279">		this.context = context;</span>
+<span class="fc" id="L280">	}</span>
+
+	private URL getContext() {
+<span class="fc" id="L283">		return context;</span>
+	}
+
+	private URL resolveFile(String file) {
+<span class="pc bpc" id="L287" title="1 of 2 branches missed.">		if (getContext() != null) {</span>
+<span class="nc" id="L288">			return ConfigGroup.getInputFileURL(getContext(), file);</span>
+		}
+		try {
+<span class="fc" id="L291">			return Path.of(file).toUri().toURL();</span>
+<span class="nc" id="L292">		} catch (MalformedURLException e) {</span>
+<span class="nc" id="L293">			throw new IllegalArgumentException(&quot;Invalid contact transmission file '&quot; + file + &quot;'.&quot;, e);</span>
+		}
+	}
+
+	private static TransmissionWeights[][] readAgeMatrix(URL url, String file, int bandCount,
+			Map&lt;Integer, Integer&gt; bandIndices) {
+<span class="fc" id="L299">		TransmissionWeights[][] table = new TransmissionWeights[bandCount][bandCount];</span>
+<span class="fc" id="L300">		try (Reader reader = new InputStreamReader(url.openStream(), StandardCharsets.UTF_8);</span>
+<span class="fc" id="L301">			 CSVParser csv = new CSVParser(reader,</span>
+<span class="fc" id="L302">					 CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#'))) {</span>
+<span class="fc" id="L303">			List&lt;String&gt; headers = csv.getHeaderNames();</span>
+<span class="pc bpc" id="L304" title="2 of 4 branches missed.">			if (!headers.contains(&quot;ageA&quot;) || !headers.contains(&quot;ageB&quot;)) {</span>
+<span class="nc" id="L305">				throw new IllegalArgumentException(&quot;CSV file '&quot; + file + &quot;' must contain ageA and ageB columns.&quot;);</span>
+			}
+
+<span class="fc" id="L308">			Map&lt;ContactTransmissionType, String&gt; routeColumns = new EnumMap&lt;&gt;(ContactTransmissionType.class);</span>
+<span class="fc bfc" id="L309" title="All 2 branches covered.">			for (String header : headers) {</span>
+<span class="fc bfc" id="L310" title="All 4 branches covered.">				if (&quot;ageA&quot;.equals(header) || &quot;ageB&quot;.equals(header)) {</span>
+<span class="fc" id="L311">					continue;</span>
+				}
+<span class="fc" id="L313">				ContactTransmissionType route = TransmissionWeights.parseRoute(header);</span>
+<span class="fc" id="L314">				String previous = routeColumns.put(route, header);</span>
+<span class="pc bpc" id="L315" title="1 of 2 branches missed.">				if (previous != null) {</span>
+<span class="nc" id="L316">					throw new IllegalArgumentException(&quot;Duplicate route columns '&quot; + previous + &quot;' and '&quot; + header</span>
+							+ &quot;' in CSV file '&quot; + file + &quot;'.&quot;);
+				}
+<span class="fc" id="L319">			}</span>
+<span class="pc bpc" id="L320" title="1 of 2 branches missed.">			if (routeColumns.isEmpty()) {</span>
+<span class="nc" id="L321">				throw new IllegalArgumentException(&quot;CSV file '&quot; + file + &quot;' must contain at least one transmission route column.&quot;);</span>
+			}
+
+<span class="fc bfc" id="L324" title="All 2 branches covered.">			for (CSVRecord record : csv) {</span>
+<span class="fc" id="L325">				int ageA = parseAge(record.get(&quot;ageA&quot;), &quot;ageA&quot;, file);</span>
+<span class="fc" id="L326">				int ageB = parseAge(record.get(&quot;ageB&quot;), &quot;ageB&quot;, file);</span>
+<span class="fc" id="L327">				Integer indexA = bandIndices.get(ageA);</span>
+<span class="fc" id="L328">				Integer indexB = bandIndices.get(ageB);</span>
+<span class="fc bfc" id="L329" title="All 2 branches covered.">				if (indexA == null) {</span>
+<span class="fc" id="L330">					throw new IllegalArgumentException(&quot;CSV ageA value '&quot; + ageA + &quot;' in file '&quot; + file</span>
+							+ &quot;' is not a declared ageBands lower bound.&quot;);
+				}
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">				if (indexB == null) {</span>
+<span class="nc" id="L334">					throw new IllegalArgumentException(&quot;CSV ageB value '&quot; + ageB + &quot;' in file '&quot; + file</span>
+							+ &quot;' is not a declared ageBands lower bound.&quot;);
+				}
+<span class="fc" id="L337">				int lower = Math.min(indexA, indexB);</span>
+<span class="fc" id="L338">				int upper = Math.max(indexA, indexB);</span>
+<span class="pc bpc" id="L339" title="1 of 2 branches missed.">				if (table[lower][upper] != null) {</span>
+<span class="nc" id="L340">					throw new IllegalArgumentException(&quot;Duplicate CSV age cell ('&quot; + Math.min(ageA, ageB) + &quot;','&quot;</span>
+<span class="nc" id="L341">							+ Math.max(ageA, ageB) + &quot;') in file '&quot; + file + &quot;'.&quot;);</span>
+				}
+
+<span class="fc" id="L344">				double[] weights = new double[ContactTransmissionType.values().length];</span>
+<span class="fc bfc" id="L345" title="All 2 branches covered.">				for (Map.Entry&lt;ContactTransmissionType, String&gt; column : routeColumns.entrySet()) {</span>
+<span class="fc" id="L346">					String value = record.get(column.getValue());</span>
+					try {
+<span class="fc" id="L348">						weights[column.getKey().ordinal()] = Double.parseDouble(value);</span>
+<span class="nc" id="L349">					} catch (NumberFormatException e) {</span>
+<span class="nc" id="L350">						throw new IllegalArgumentException(&quot;Invalid weight '&quot; + value + &quot;' for column '&quot;</span>
+<span class="nc" id="L351">								+ column.getValue() + &quot;' in file '&quot; + file + &quot;'.&quot;, e);</span>
+<span class="fc" id="L352">					}</span>
+<span class="fc" id="L353">				}</span>
+<span class="fc" id="L354">				table[lower][upper] = new TransmissionWeights(weights);</span>
+<span class="fc" id="L355">			}</span>
+<span class="fc" id="L356">			return table;</span>
+<span class="nc" id="L357">		} catch (IOException e) {</span>
+<span class="nc" id="L358">			throw new UncheckedIOException(&quot;Could not read contact transmission file '&quot; + file + &quot;'.&quot;, e);</span>
+		}
+	}
+
+	private static int parseAge(String value, String column, String file) {
+		try {
+<span class="fc" id="L364">			return Integer.parseInt(value);</span>
+<span class="nc" id="L365">		} catch (NumberFormatException e) {</span>
+<span class="nc" id="L366">			throw new IllegalArgumentException(&quot;Invalid &quot; + column + &quot; value '&quot; + value + &quot;' in file '&quot; + file + &quot;'.&quot;, e);</span>
+		}
+	}
+
+	private static void validateAgeBands(List&lt;Integer&gt; bands) {
+<span class="pc bpc" id="L371" title="1 of 2 branches missed.">		if (bands.isEmpty()) {</span>
+<span class="nc" id="L372">			throw new IllegalArgumentException(&quot;ageBands must not be empty.&quot;);</span>
+		}
+<span class="pc bpc" id="L374" title="2 of 4 branches missed.">		if (bands.get(0) == null || bands.get(0) != 0) {</span>
+<span class="nc" id="L375">			throw new IllegalArgumentException(&quot;ageBands first value must be 0, but was '&quot; + bands.get(0) + &quot;'.&quot;);</span>
+		}
+<span class="fc bfc" id="L377" title="All 2 branches covered.">		for (int i = 0; i &lt; bands.size(); i++) {</span>
+<span class="fc" id="L378">			Integer band = bands.get(i);</span>
+<span class="pc bpc" id="L379" title="2 of 4 branches missed.">			if (band == null || band &lt; 0) {</span>
+<span class="nc" id="L380">				throw new IllegalArgumentException(&quot;ageBands contains invalid value '&quot; + band + &quot;'.&quot;);</span>
+			}
+<span class="fc bfc" id="L382" title="All 4 branches covered.">			if (i &gt; 0 &amp;&amp; band &lt;= bands.get(i - 1)) {</span>
+<span class="fc" id="L383">				throw new IllegalArgumentException(&quot;ageBands must be strictly ascending; offending value '&quot; + band + &quot;'.&quot;);</span>
+			}
+		}
+<span class="fc" id="L386">	}</span>
+
+	private static String pairKey(String activityA, String activityB) {
+<span class="pc bpc" id="L389" title="2 of 4 branches missed.">		if (activityA == null || activityB == null) {</span>
+<span class="nc" id="L390">			throw new IllegalArgumentException(&quot;Contact pair activities must not be null: '&quot; + activityA + &quot;', '&quot; + activityB + &quot;'.&quot;);</span>
+		}
+<span class="fc bfc" id="L392" title="All 2 branches covered.">		return activityA.compareTo(activityB) &lt;= 0 ? activityA + &quot; &quot; + activityB : activityB + &quot; &quot; + activityA;</span>
+	}
+
+	private static &lt;T&gt; T requireNonNull(T value, String name) {
+<span class="pc bpc" id="L396" title="1 of 2 branches missed.">		if (value == null) {</span>
+<span class="nc" id="L397">			throw new IllegalArgumentException(name + &quot; must not be null.&quot;);</span>
+		}
+<span class="fc" id="L399">		return value;</span>
+	}
+
+	/**
+	 * Holds options for one unordered pair of activity types.
+	 */
+	public static final class ContactPairParams extends ReflectiveConfigGroup {
+
+		/** Parameter-set type used in MATSim configuration files. */
+		public static final String SET_TYPE = &quot;contactPair&quot;;
+
+		private static final String ACTIVITY_A = &quot;activityA&quot;;
+		private static final String ACTIVITY_B = &quot;activityB&quot;;
+		private static final String TRANSMISSION_WEIGHTS = &quot;transmissionWeights&quot;;
+		private static final String FILE = &quot;file&quot;;
+		private static final String FORBIDDEN = &quot;forbidden&quot;;
+
+		private String activityA;
+		private String activityB;
+		private TransmissionWeights transmissionWeights;
+		private String file;
+		private boolean forbidden;
+
+		ContactPairParams() {
+<span class="fc" id="L423">			super(SET_TYPE);</span>
+<span class="fc" id="L424">		}</span>
+
+		/** Returns the first activity type. */
+		@StringGetter(ACTIVITY_A)
+		public String getActivityA() {
+<span class="fc" id="L429">			return activityA;</span>
+		}
+
+		/** Sets the first activity type. */
+		@StringSetter(ACTIVITY_A)
+		public void setActivityA(String activityA) {
+<span class="fc" id="L435">			this.activityA = activityA;</span>
+<span class="fc" id="L436">		}</span>
+
+		/** Returns the second activity type. */
+		@StringGetter(ACTIVITY_B)
+		public String getActivityB() {
+<span class="fc" id="L441">			return activityB;</span>
+		}
+
+		/** Sets the second activity type. */
+		@StringSetter(ACTIVITY_B)
+		public void setActivityB(String activityB) {
+<span class="fc" id="L447">			this.activityB = activityB;</span>
+<span class="fc" id="L448">		}</span>
+
+		@StringGetter(TRANSMISSION_WEIGHTS)
+		String getTransmissionWeightsString() {
+<span class="fc bfc" id="L452" title="All 2 branches covered.">			return transmissionWeights == null ? null : transmissionWeights.toToken();</span>
+		}
+
+		@StringSetter(TRANSMISSION_WEIGHTS)
+		void setTransmissionWeightsString(String value) {
+<span class="fc bfc" id="L457" title="All 2 branches covered.">			transmissionWeights = value == null ? null : TransmissionWeights.parse(value);</span>
+<span class="fc" id="L458">		}</span>
+
+		/** Returns the inline transmission weights, or {@code null}. */
+		public TransmissionWeights getTransmissionWeights() {
+<span class="fc" id="L462">			return transmissionWeights;</span>
+		}
+
+		/** Sets the inline transmission weights. */
+		public void setTransmissionWeights(TransmissionWeights transmissionWeights) {
+<span class="fc" id="L467">			this.transmissionWeights = transmissionWeights;</span>
+<span class="fc" id="L468">		}</span>
+
+		/** Returns the age-matrix file path, or {@code null}. */
+		@StringGetter(FILE)
+		public String getFile() {
+<span class="fc" id="L473">			return file;</span>
+		}
+
+		/** Sets the age-matrix file path. */
+		@StringSetter(FILE)
+		public void setFile(String file) {
+<span class="fc" id="L479">			this.file = file;</span>
+<span class="fc" id="L480">		}</span>
+
+		/** Returns whether this activity pair is blocked from any transmission. */
+		@StringGetter(FORBIDDEN)
+		public boolean isForbidden() {
+<span class="fc" id="L485">			return forbidden;</span>
+		}
+
+		/**
+		 * Marks this activity pair as blocked from any transmission. A forbidden pair must not also set
+		 * {@code transmissionWeights} or {@code file}.
+		 */
+		@StringSetter(FORBIDDEN)
+		public void setForbidden(boolean forbidden) {
+<span class="fc" id="L494">			this.forbidden = forbidden;</span>
+<span class="fc" id="L495">		}</span>
+
+		private void validate() {
+<span class="pc bpc" id="L498" title="2 of 4 branches missed.">			if (activityA == null || activityA.trim().isEmpty()) {</span>
+<span class="nc" id="L499">				throw new IllegalArgumentException(&quot;Invalid activityA '&quot; + activityA + &quot;' for contact pair.&quot;);</span>
+			}
+<span class="pc bpc" id="L501" title="2 of 4 branches missed.">			if (activityB == null || activityB.trim().isEmpty()) {</span>
+<span class="nc" id="L502">				throw new IllegalArgumentException(&quot;Invalid activityB '&quot; + activityB + &quot;' for contact pair.&quot;);</span>
+			}
+<span class="fc bfc" id="L504" title="All 2 branches covered.">			boolean hasWeights = transmissionWeights != null;</span>
+<span class="fc bfc" id="L505" title="All 2 branches covered.">			boolean hasFile = file != null;</span>
+<span class="fc bfc" id="L506" title="All 2 branches covered.">			if (forbidden) {</span>
+<span class="pc bpc" id="L507" title="1 of 4 branches missed.">				if (hasWeights || hasFile) {</span>
+<span class="fc" id="L508">					throw new IllegalArgumentException(&quot;Forbidden contact pair '&quot; + activityA + &quot;'/'&quot; + activityB</span>
+							+ &quot;' must not set transmissionWeights or file.&quot;);
+				}
+<span class="fc" id="L511">				return;</span>
+			}
+<span class="fc bfc" id="L513" title="All 2 branches covered.">			if (hasWeights == hasFile) {</span>
+<span class="fc" id="L514">				throw new IllegalArgumentException(&quot;Contact pair '&quot; + activityA + &quot;'/'&quot; + activityB</span>
+						+ &quot;' must set exactly one of transmissionWeights or file.&quot;);
+			}
+<span class="pc bpc" id="L517" title="1 of 4 branches missed.">			if (hasFile &amp;&amp; file.trim().isEmpty()) {</span>
+<span class="nc" id="L518">				throw new IllegalArgumentException(&quot;Invalid file value '&quot; + file + &quot;' for contact pair '&quot;</span>
+						+ activityA + &quot;'/'&quot; + activityB + &quot;'.&quot;);
+			}
+<span class="fc" id="L521">		}</span>
+	}
+
+	/**
+	 * Whitelist of activity types that one activity type may share a container with.
+	 *
+	 * &lt;p&gt;Matching is prefix-based: an activity {@code educ_primary} is covered by a group whose
+	 * {@code activity} is {@code edu}, and it is allowed to meet any partner whose type starts with one
+	 * of the {@code allowedPartners} prefixes. An activity without a group may meet anyone.&lt;/p&gt;
+	 */
+	public static final class ContactGroupParams extends ReflectiveConfigGroup {
+
+		/** Parameter-set type used in MATSim configuration files. */
+		public static final String SET_TYPE = &quot;contactGroup&quot;;
+
+		private static final String ACTIVITY = &quot;activity&quot;;
+		private static final String ALLOWED_PARTNERS = &quot;allowedPartners&quot;;
+
+		private String activity;
+<span class="fc" id="L540">		private List&lt;String&gt; allowedPartners = new ArrayList&lt;&gt;();</span>
+
+		ContactGroupParams() {
+<span class="fc" id="L543">			super(SET_TYPE);</span>
+<span class="fc" id="L544">		}</span>
+
+		/** Returns the activity type this group constrains. */
+		@StringGetter(ACTIVITY)
+		public String getActivity() {
+<span class="fc" id="L549">			return activity;</span>
+		}
+
+		/** Sets the activity type this group constrains. */
+		@StringSetter(ACTIVITY)
+		public void setActivity(String activity) {
+<span class="fc" id="L555">			this.activity = activity;</span>
+<span class="fc" id="L556">		}</span>
+
+		@StringGetter(ALLOWED_PARTNERS)
+		String getAllowedPartnersString() {
+<span class="fc" id="L560">			return Joiner.on(&quot;,&quot;).join(allowedPartners);</span>
+		}
+
+		@StringSetter(ALLOWED_PARTNERS)
+		void setAllowedPartnersString(String value) {
+<span class="fc" id="L565">			List&lt;String&gt; parsed = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L566" title="All 2 branches covered.">			for (String token : Splitter.on(&quot;,&quot;).trimResults().omitEmptyStrings().split(value)) {</span>
+<span class="fc" id="L567">				parsed.add(token);</span>
+<span class="fc" id="L568">			}</span>
+<span class="fc" id="L569">			this.allowedPartners = parsed;</span>
+<span class="fc" id="L570">		}</span>
+
+		/** Returns the allowed partner activity-type prefixes. */
+		public List&lt;String&gt; getAllowedPartners() {
+<span class="fc" id="L574">			return Collections.unmodifiableList(allowedPartners);</span>
+		}
+
+		/** Sets the allowed partner activity-type prefixes. */
+		public void setAllowedPartners(Collection&lt;String&gt; allowedPartners) {
+<span class="fc" id="L579">			this.allowedPartners = new ArrayList&lt;&gt;(allowedPartners);</span>
+<span class="fc" id="L580">		}</span>
+
+		private void validate() {
+<span class="pc bpc" id="L583" title="2 of 4 branches missed.">			if (activity == null || activity.trim().isEmpty()) {</span>
+<span class="nc" id="L584">				throw new IllegalArgumentException(&quot;Invalid activity '&quot; + activity + &quot;' for contact group.&quot;);</span>
+			}
+<span class="pc bpc" id="L586" title="1 of 2 branches missed.">			if (allowedPartners.isEmpty()) {</span>
+<span class="nc" id="L587">				throw new IllegalArgumentException(&quot;Contact group '&quot; + activity</span>
+						+ &quot;' must list at least one allowed partner.&quot;);
+			}
+<span class="fc bfc" id="L590" title="All 2 branches covered.">			for (String partner : allowedPartners) {</span>
+<span class="pc bpc" id="L591" title="2 of 4 branches missed.">				if (partner == null || partner.trim().isEmpty()) {</span>
+<span class="nc" id="L592">					throw new IllegalArgumentException(&quot;Contact group '&quot; + activity</span>
+							+ &quot;' has an invalid allowed partner '&quot; + partner + &quot;'.&quot;);
+				}
+<span class="fc" id="L595">			}</span>
+<span class="fc" id="L596">		}</span>
+	}
+
+	/**
+	 * Immutable, thread-safe runtime resolver for contact transmission weights.
+	 */
+	public static final class Resolver {
+
+		private final List&lt;Integer&gt; bands;
+		private final TransmissionWeights defaultWeights;
+		private final Map&lt;String, ResolvedPair&gt; pairs;
+		private final Map&lt;String, List&lt;String&gt;&gt; groupWhitelist;
+		private final Set&lt;String&gt; forbiddenPairs;
+
+		private Resolver(List&lt;Integer&gt; bands, TransmissionWeights defaultWeights, Map&lt;String, ResolvedPair&gt; pairs,
+<span class="fc" id="L611">				Map&lt;String, List&lt;String&gt;&gt; groupWhitelist, Set&lt;String&gt; forbiddenPairs) {</span>
+<span class="fc" id="L612">			this.bands = bands;</span>
+<span class="fc" id="L613">			this.defaultWeights = defaultWeights;</span>
+<span class="fc" id="L614">			this.pairs = Collections.unmodifiableMap(new LinkedHashMap&lt;&gt;(pairs));</span>
+<span class="fc" id="L615">			this.groupWhitelist = Collections.unmodifiableMap(new LinkedHashMap&lt;&gt;(groupWhitelist));</span>
+<span class="fc" id="L616">			this.forbiddenPairs = Collections.unmodifiableSet(new HashSet&lt;&gt;(forbiddenPairs));</span>
+<span class="fc" id="L617">		}</span>
+
+		/**
+		 * Returns whether two activity types may share a container for transmission purposes.
+		 * Applies both the explicit forbidden pairs and the per-activity allow-lists; unknown activity
+		 * types without a group are unconstrained.
+		 */
+		public boolean isContactAllowed(String activityA, String activityB) {
+<span class="fc bfc" id="L625" title="All 2 branches covered.">			if (forbiddenPairs.contains(pairKey(activityA, activityB))) {</span>
+<span class="fc" id="L626">				return false;</span>
+			}
+<span class="fc bfc" id="L628" title="All 4 branches covered.">			return partnerAllowed(activityA, activityB) &amp;&amp; partnerAllowed(activityB, activityA);</span>
+		}
+
+		private boolean partnerAllowed(String activity, String partner) {
+<span class="fc bfc" id="L632" title="All 2 branches covered.">			for (Map.Entry&lt;String, List&lt;String&gt;&gt; rule : groupWhitelist.entrySet()) {</span>
+<span class="fc bfc" id="L633" title="All 2 branches covered.">				if (!activity.startsWith(rule.getKey())) {</span>
+<span class="fc" id="L634">					continue;</span>
+				}
+<span class="fc" id="L636">				boolean matched = false;</span>
+<span class="fc bfc" id="L637" title="All 2 branches covered.">				for (String allowed : rule.getValue()) {</span>
+<span class="fc bfc" id="L638" title="All 2 branches covered.">					if (partner.startsWith(allowed)) {</span>
+<span class="fc" id="L639">						matched = true;</span>
+<span class="fc" id="L640">						break;</span>
+					}
+<span class="fc" id="L642">				}</span>
+<span class="fc bfc" id="L643" title="All 2 branches covered.">				if (!matched) {</span>
+<span class="fc" id="L644">					return false;</span>
+				}
+<span class="fc" id="L646">			}</span>
+<span class="fc" id="L647">			return true;</span>
+		}
+
+		/**
+		 * Resolves weights for an unordered activity and age pair.
+		 * The simple version, if it will be too slow, we could change it later
+		 */
+		public TransmissionWeights resolve(String activityA, String activityB, int ageA, int ageB) {
+<span class="fc" id="L655">			ResolvedPair pair = pairs.get(pairKey(activityA, activityB));</span>
+<span class="fc bfc" id="L656" title="All 2 branches covered.">			if (pair == null) {</span>
+<span class="fc" id="L657">				return defaultWeights;</span>
+			}
+<span class="fc bfc" id="L659" title="All 2 branches covered.">			if (pair.table == null) {</span>
+<span class="fc" id="L660">				return pair.inlineWeights;</span>
+			}
+
+<span class="fc" id="L663">			int indexA = bandIndex(ageA);</span>
+<span class="fc" id="L664">			int indexB = bandIndex(ageB);</span>
+<span class="fc" id="L665">			TransmissionWeights weights = pair.table[Math.min(indexA, indexB)][Math.max(indexA, indexB)];</span>
+<span class="fc bfc" id="L666" title="All 2 branches covered.">			return weights == null ? TransmissionWeights.ZERO : weights;</span>
+		}
+
+		/**
+		 * Returns the age-band index containing the supplied age.
+		 */
+		public int bandIndex(int age) {
+<span class="pc bpc" id="L673" title="1 of 2 branches missed.">			if (age &lt; 0) {</span>
+<span class="nc" id="L674">				throw new IllegalArgumentException(&quot;Age must be non-negative, but was '&quot; + age + &quot;'.&quot;);</span>
+			}
+<span class="fc" id="L676">			int result = Collections.binarySearch(bands, age);</span>
+<span class="fc bfc" id="L677" title="All 2 branches covered.">			return result &gt;= 0 ? result : -result - 2;</span>
+		}
+	}
+
+	private static final class ResolvedPair {
+		private final TransmissionWeights inlineWeights;
+		private final TransmissionWeights[][] table;
+
+<span class="fc" id="L685">		private ResolvedPair(TransmissionWeights inlineWeights, TransmissionWeights[][] table) {</span>
+<span class="fc" id="L686">			this.inlineWeights = inlineWeights;</span>
+<span class="fc" id="L687">			this.table = table;</span>
+<span class="fc" id="L688">		}</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
