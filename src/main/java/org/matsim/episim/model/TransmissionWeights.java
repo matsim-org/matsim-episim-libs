@@ -14,7 +14,7 @@ import java.util.Map;
  * Immutable weights indexed by {@link ContactTransmissionType}.
  *
  * <p>The same value type is used both as a configuration value (parsed from / serialized to the
- * {@code route=weight;route=weight} token notation) and as the runtime value handed to the infection
+ * {@code route=weight;route=weight} notation) and as the runtime value handed to the infection
  * model. Instances are validated on construction: every weight is finite and non-negative and the sum
  * does not exceed 1.</p>
  */
@@ -26,22 +26,22 @@ public final class TransmissionWeights {
 	private static final double SUM_TOLERANCE = 1e-9;
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
-	private static final Map<ContactTransmissionType, String> ROUTE_TOKENS;
-	private static final Map<String, ContactTransmissionType> ROUTES_BY_TOKEN;
+	private static final Map<ContactTransmissionType, String> ROUTE_KEYS;
+	private static final Map<String, ContactTransmissionType> ROUTE_BY_KEY;
 
 	static {
-		EnumMap<ContactTransmissionType, String> tokens = new EnumMap<>(ContactTransmissionType.class);
-		tokens.put(ContactTransmissionType.RESPIRATORY, "respiratory");
-		tokens.put(ContactTransmissionType.DIRECT_CONTACT, "directContact");
-		tokens.put(ContactTransmissionType.FOMITE, "fomite");
-		ROUTE_TOKENS = Collections.unmodifiableMap(tokens);
+		EnumMap<ContactTransmissionType, String> keys = new EnumMap<>(ContactTransmissionType.class);
+		keys.put(ContactTransmissionType.RESPIRATORY, "respiratory");
+		keys.put(ContactTransmissionType.DIRECT_CONTACT, "directContact");
+		keys.put(ContactTransmissionType.FOMITE, "fomite");
+		ROUTE_KEYS = Collections.unmodifiableMap(keys);
 
 		Map<String, ContactTransmissionType> routes = new HashMap<>();
 		for (ContactTransmissionType type : ContactTransmissionType.values()) {
-			routes.put(tokens.get(type).toLowerCase(Locale.ROOT), type);
+			routes.put(keys.get(type).toLowerCase(Locale.ROOT), type);
 			routes.put(type.name().toLowerCase(Locale.ROOT), type);
 		}
-		ROUTES_BY_TOKEN = Collections.unmodifiableMap(routes);
+		ROUTE_BY_KEY = Collections.unmodifiableMap(routes);
 	}
 
 	private final double[] weights;
@@ -88,7 +88,7 @@ public final class TransmissionWeights {
 		for (Map.Entry<String, String> entry : values.entrySet()) {
 			ContactTransmissionType route = parseRoute(entry.getKey());
 			if (seen[route.ordinal()]) {
-				throw new IllegalArgumentException("Duplicate transmission route token '" + entry.getKey()
+				throw new IllegalArgumentException("Duplicate transmission route '" + entry.getKey()
 						+ "' in '" + token + "'.");
 			}
 			seen[route.ordinal()] = true;
@@ -103,12 +103,13 @@ public final class TransmissionWeights {
 	}
 
 	/**
-	 * Resolves a transmission route token (canonical token or enum name, case-insensitive).
+	 * Resolves a transmission route from its key (canonical key such as {@code directContact}, or the
+	 * enum name, case-insensitive).
 	 */
-	public static ContactTransmissionType parseRoute(String token) {
-		ContactTransmissionType type = ROUTES_BY_TOKEN.get(token.trim().toLowerCase(Locale.ROOT));
+	public static ContactTransmissionType parseRoute(String key) {
+		ContactTransmissionType type = ROUTE_BY_KEY.get(key.trim().toLowerCase(Locale.ROOT));
 		if (type == null) {
-			throw new IllegalArgumentException("Unknown transmission route token '" + token + "'.");
+			throw new IllegalArgumentException("Unknown transmission route '" + key + "'.");
 		}
 		return type;
 	}
@@ -119,7 +120,7 @@ public final class TransmissionWeights {
 	public String toToken() {
 		Map<String, Double> values = new LinkedHashMap<>();
 		for (ContactTransmissionType type : ContactTransmissionType.values()) {
-			values.put(ROUTE_TOKENS.get(type), weights[type.ordinal()]);
+			values.put(ROUTE_KEYS.get(type), weights[type.ordinal()]);
 		}
 		return JOINER.join(values);
 	}
@@ -164,7 +165,7 @@ public final class TransmissionWeights {
 		for (ContactTransmissionType type : ContactTransmissionType.values()) {
 			double value = weights[type.ordinal()];
 			if (!Double.isFinite(value) || value < 0) {
-				throw new IllegalArgumentException("Invalid " + ROUTE_TOKENS.get(type) + " weight '" + value + "'.");
+				throw new IllegalArgumentException("Invalid " + ROUTE_KEYS.get(type) + " weight '" + value + "'.");
 			}
 		}
 		double sum = sum();
