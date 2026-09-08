@@ -68,6 +68,11 @@ public abstract class AbstractContactModel implements ContactModel {
 	 */
 	protected final InfectionModel infectionModel;
 
+	/**
+	 * Resolves which activity types may infect each other (cross-activity interaction rules).
+	 */
+	protected final ContactTransmissionConfigGroup.Resolver contactTransmission;
+
 	protected int iteration;
 	protected DayOfWeek day;
 	private Map<String, Restriction> restrictions;
@@ -97,6 +102,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.trParams = episimConfig.selectInfectionParams("tr");
 		this.qhParams = episimConfig.selectInfectionParams(QUARANTINE_HOME);
 		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();
+		this.contactTransmission = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class).createResolver();
 		this.scenario = scenario;
 
 		subdistrictFacilities = new HashMap<>();

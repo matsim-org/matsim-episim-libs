@@ -18,14 +18,17 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Configures transmission-route weights for contacts between activity types.
@@ -59,15 +62,28 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	private final Map<String, ContactPairParams> contactPairs = new LinkedHashMap<>();
+	private final Map<String, ContactGroupParams> contactGroups = new LinkedHashMap<>();
 	private List<Integer> ageBands = new ArrayList<>(Collections.singletonList(0));
 	private TransmissionWeights defaultTransmissionWeights = TransmissionWeights.parse("respiratory=1.0");
 	private URL context;
 
 	/**
-	 * Creates an empty contact-transmission configuration.
+	 * Creates a contact-transmission configuration pre-populated with the historical cross-activity
+	 * interaction rules: "home" only shares a container with {@code home}/{@code leisure}/{@code work},
+	 * and "education" only with {@code education}/{@code work}. These defaults reproduce the behaviour
+	 * that used to be hard-coded in {@code DefaultContactModel} / {@code SymmetricContactModel}.
 	 */
 	public ContactTransmissionConfigGroup() {
 		super(GROUPNAME);
+		addDefaultContactGroup("home", "home", "leis", "work");
+		addDefaultContactGroup("edu", "edu", "work");
+	}
+
+	private void addDefaultContactGroup(String activity, String... allowedPartners) {
+		ContactGroupParams group = new ContactGroupParams();
+		group.setActivity(activity);
+		group.setAllowedPartners(Arrays.asList(allowedPartners));
+		addParameterSet(group);
 	}
 
 	@StringGetter(AGE_BANDS)
@@ -173,11 +189,43 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		return Collections.unmodifiableCollection(contactPairs.values());
 	}
 
+	/**
+	 * Gets an existing per-activity contact group or adds a new one.
+	 */
+	public ContactGroupParams getOrAddContactGroup(String activity) {
+		ContactGroupParams existing = contactGroups.get(activity);
+		if (existing != null) {
+			return existing;
+		}
+
+		ContactGroupParams group = new ContactGroupParams();
+		group.setActivity(activity);
+		addParameterSet(group);
+		return group;
+	}
+
+	/**
+	 * Returns whether a contact group is configured for the given activity type.
+	 */
+	public boolean hasContactGroup(String activity) {
+		return contactGroups.containsKey(activity);
+	}
+
+	/**
+	 * Returns all configured per-activity contact groups in insertion order.
+	 */
+	public Collection<ContactGroupParams> getContactGroups() {
+		return Collections.unmodifiableCollection(contactGroups.values());
+	}
+
 	/** {@inheritDoc} */
 	@Override
 	public ConfigGroup createParameterSet(String type) {
 		if (ContactPairParams.SET_TYPE.equals(type)) {
 			return new ContactPairParams();
+		}
+		if (ContactGroupParams.SET_TYPE.equals(type)) {
+			return new ContactGroupParams();
 		}
 		throw new IllegalArgumentException("Unknown type " + type);
 	}
@@ -185,12 +233,21 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	/** {@inheritDoc} */
 	@Override
 	public void addParameterSet(ConfigGroup set) {
-		if (!ContactPairParams.SET_TYPE.equals(set.getName())) {
+		if (ContactPairParams.SET_TYPE.equals(set.getName())) {
+			ContactPairParams params = (ContactPairParams) set;
+			contactPairs.put(pairKey(params.activityA, params.activityB), params);
+			super.addParameterSet(set);
+		} else if (ContactGroupParams.SET_TYPE.equals(set.getName())) {
+			ContactGroupParams params = (ContactGroupParams) set;
+			ContactGroupParams previous = contactGroups.put(params.getActivity(), params);
+			// replace a previously registered group (e.g. an auto-added default) instead of keeping a duplicate
+			if (previous != null) {
+				super.removeParameterSet(previous);
+			}
+			super.addParameterSet(set);
+		} else {
 			throw new IllegalStateException("Unknown set type " + set.getName());
 		}
-		ContactPairParams params = (ContactPairParams) set;
-		contactPairs.put(pairKey(params.activityA, params.activityB), params);
-		super.addParameterSet(set);
 	}
 
 	/**
@@ -207,11 +264,15 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		Map<String, ResolvedPair> resolvedPairs = new LinkedHashMap<>();
+		Set<String> forbiddenPairs = new HashSet<>();
 		Map<String, TransmissionWeights[][]> loadedFiles = new HashMap<>();
 		for (ContactPairParams params : contactPairs.values()) {
 			params.validate();
 			String key = pairKey(params.activityA, params.activityB);
-			if (params.file != null) {
+			if (params.forbidden) {
+				forbiddenPairs.add(key);
+				resolvedPairs.put(key, new ResolvedPair(TransmissionWeights.ZERO, null));
+			} else if (params.file != null) {
 				URL url = resolveFile(params.file);
 				String resolvedPath = url.toExternalForm();
 				TransmissionWeights[][] table = loadedFiles.get(resolvedPath);
@@ -225,7 +286,13 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			}
 		}
 
-		return new Resolver(bands, defaultTransmissionWeights, resolvedPairs);
+		Map<String, List<String>> groupWhitelist = new LinkedHashMap<>();
+		for (ContactGroupParams group : contactGroups.values()) {
+			group.validate();
+			groupWhitelist.put(group.getActivity(), new ArrayList<>(group.getAllowedPartners()));
+		}
+
+		return new Resolver(bands, defaultTransmissionWeights, resolvedPairs, groupWhitelist, forbiddenPairs);
 	}
 
 	void setContext(URL context) {
@@ -372,11 +439,13 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		private static final String ACTIVITY_B = "activityB";
 		private static final String TRANSMISSION_WEIGHTS = "transmissionWeights";
 		private static final String FILE = "file";
+		private static final String FORBIDDEN = "forbidden";
 
 		private String activityA;
 		private String activityB;
 		private TransmissionWeights transmissionWeights;
 		private String file;
+		private boolean forbidden;
 
 		ContactPairParams() {
 			super(SET_TYPE);
@@ -438,6 +507,21 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			this.file = file;
 		}
 
+		/** Returns whether this activity pair is blocked from any transmission. */
+		@StringGetter(FORBIDDEN)
+		public boolean isForbidden() {
+			return forbidden;
+		}
+
+		/**
+		 * Marks this activity pair as blocked from any transmission. A forbidden pair must not also set
+		 * {@code transmissionWeights} or {@code file}.
+		 */
+		@StringSetter(FORBIDDEN)
+		public void setForbidden(boolean forbidden) {
+			this.forbidden = forbidden;
+		}
+
 		private void validate() {
 			if (activityA == null || activityA.trim().isEmpty()) {
 				throw new IllegalArgumentException("Invalid activityA '" + activityA + "' for contact pair.");
@@ -447,6 +531,13 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			}
 			boolean hasWeights = transmissionWeights != null;
 			boolean hasFile = file != null;
+			if (forbidden) {
+				if (hasWeights || hasFile) {
+					throw new IllegalArgumentException("Forbidden contact pair '" + activityA + "'/'" + activityB
+							+ "' must not set transmissionWeights or file.");
+				}
+				return;
+			}
 			if (hasWeights == hasFile) {
 				throw new IllegalArgumentException("Contact pair '" + activityA + "'/'" + activityB
 						+ "' must set exactly one of transmissionWeights or file.");
@@ -454,6 +545,81 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			if (hasFile && file.trim().isEmpty()) {
 				throw new IllegalArgumentException("Invalid file value '" + file + "' for contact pair '"
 						+ activityA + "'/'" + activityB + "'.");
+			}
+		}
+	}
+
+	/**
+	 * Whitelist of activity types that one activity type may share a container with.
+	 *
+	 * <p>Matching is prefix-based: an activity {@code educ_primary} is covered by a group whose
+	 * {@code activity} is {@code edu}, and it is allowed to meet any partner whose type starts with one
+	 * of the {@code allowedPartners} prefixes. An activity without a group may meet anyone.</p>
+	 */
+	public static final class ContactGroupParams extends ReflectiveConfigGroup {
+
+		/** Parameter-set type used in MATSim configuration files. */
+		public static final String SET_TYPE = "contactGroup";
+
+		private static final String ACTIVITY = "activity";
+		private static final String ALLOWED_PARTNERS = "allowedPartners";
+
+		private String activity;
+		private List<String> allowedPartners = new ArrayList<>();
+
+		ContactGroupParams() {
+			super(SET_TYPE);
+		}
+
+		/** Returns the activity type this group constrains. */
+		@StringGetter(ACTIVITY)
+		public String getActivity() {
+			return activity;
+		}
+
+		/** Sets the activity type this group constrains. */
+		@StringSetter(ACTIVITY)
+		public void setActivity(String activity) {
+			this.activity = activity;
+		}
+
+		@StringGetter(ALLOWED_PARTNERS)
+		String getAllowedPartnersString() {
+			return Joiner.on(",").join(allowedPartners);
+		}
+
+		@StringSetter(ALLOWED_PARTNERS)
+		void setAllowedPartnersString(String value) {
+			List<String> parsed = new ArrayList<>();
+			for (String token : Splitter.on(",").trimResults().omitEmptyStrings().split(value)) {
+				parsed.add(token);
+			}
+			this.allowedPartners = parsed;
+		}
+
+		/** Returns the allowed partner activity-type prefixes. */
+		public List<String> getAllowedPartners() {
+			return Collections.unmodifiableList(allowedPartners);
+		}
+
+		/** Sets the allowed partner activity-type prefixes. */
+		public void setAllowedPartners(Collection<String> allowedPartners) {
+			this.allowedPartners = new ArrayList<>(allowedPartners);
+		}
+
+		private void validate() {
+			if (activity == null || activity.trim().isEmpty()) {
+				throw new IllegalArgumentException("Invalid activity '" + activity + "' for contact group.");
+			}
+			if (allowedPartners.isEmpty()) {
+				throw new IllegalArgumentException("Contact group '" + activity
+						+ "' must list at least one allowed partner.");
+			}
+			for (String partner : allowedPartners) {
+				if (partner == null || partner.trim().isEmpty()) {
+					throw new IllegalArgumentException("Contact group '" + activity
+							+ "' has an invalid allowed partner '" + partner + "'.");
+				}
 			}
 		}
 	}
@@ -593,11 +759,47 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		private final List<Integer> bands;
 		private final TransmissionWeights defaultWeights;
 		private final Map<String, ResolvedPair> pairs;
+		private final Map<String, List<String>> groupWhitelist;
+		private final Set<String> forbiddenPairs;
 
-		private Resolver(List<Integer> bands, TransmissionWeights defaultWeights, Map<String, ResolvedPair> pairs) {
+		private Resolver(List<Integer> bands, TransmissionWeights defaultWeights, Map<String, ResolvedPair> pairs,
+				Map<String, List<String>> groupWhitelist, Set<String> forbiddenPairs) {
 			this.bands = bands;
 			this.defaultWeights = defaultWeights;
 			this.pairs = Collections.unmodifiableMap(new LinkedHashMap<>(pairs));
+			this.groupWhitelist = Collections.unmodifiableMap(new LinkedHashMap<>(groupWhitelist));
+			this.forbiddenPairs = Collections.unmodifiableSet(new HashSet<>(forbiddenPairs));
+		}
+
+		/**
+		 * Returns whether two activity types may share a container for transmission purposes.
+		 * Applies both the explicit forbidden pairs and the per-activity allow-lists; unknown activity
+		 * types without a group are unconstrained.
+		 */
+		public boolean isContactAllowed(String activityA, String activityB) {
+			if (forbiddenPairs.contains(pairKey(activityA, activityB))) {
+				return false;
+			}
+			return partnerAllowed(activityA, activityB) && partnerAllowed(activityB, activityA);
+		}
+
+		private boolean partnerAllowed(String activity, String partner) {
+			for (Map.Entry<String, List<String>> rule : groupWhitelist.entrySet()) {
+				if (!activity.startsWith(rule.getKey())) {
+					continue;
+				}
+				boolean matched = false;
+				for (String allowed : rule.getValue()) {
+					if (partner.startsWith(allowed)) {
+						matched = true;
+						break;
+					}
+				}
+				if (!matched) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		/**

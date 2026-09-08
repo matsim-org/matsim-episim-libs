@@ -133,6 +133,89 @@ public class ContactTransmissionConfigGroupTest {
 				.hasMessageContaining("6");
 	}
 
+	@Test
+	public void defaultWhitelistReproducesHardcodedRules() {
+		Resolver resolver = new ContactTransmissionConfigGroup().createResolver();
+
+		// home only mixes with home / leisure / work
+		assertThat(resolver.isContactAllowed("home", "home")).isTrue();
+		assertThat(resolver.isContactAllowed("home", "leisure")).isTrue();
+		assertThat(resolver.isContactAllowed("home", "leisPrivate")).isTrue();
+		assertThat(resolver.isContactAllowed("home", "work")).isTrue();
+		assertThat(resolver.isContactAllowed("home", "educ_primary")).isFalse();
+		assertThat(resolver.isContactAllowed("home", "shop")).isFalse();
+
+		// education only mixes with education / work
+		assertThat(resolver.isContactAllowed("educ_kiga", "educ_higher")).isTrue();
+		assertThat(resolver.isContactAllowed("educ_primary", "work")).isTrue();
+		assertThat(resolver.isContactAllowed("educ_primary", "leisure")).isFalse();
+		assertThat(resolver.isContactAllowed("edu", "leis")).isFalse();
+
+		// unconstrained activities may always meet
+		assertThat(resolver.isContactAllowed("work", "shop")).isTrue();
+		assertThat(resolver.isContactAllowed("shop", "leisure")).isTrue();
+	}
+
+	@Test
+	public void customContactGroupOverridesDefault() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactGroup("home").setAllowedPartners(Arrays.asList("home"));
+
+		Resolver resolver = group.createResolver();
+
+		assertThat(resolver.isContactAllowed("home", "work")).isFalse();
+		assertThat(resolver.isContactAllowed("home", "home")).isTrue();
+	}
+
+	@Test
+	public void forbiddenPairBlocksContactAndResolvesToZero() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactPair("work", "leisure").setForbidden(true);
+
+		Resolver resolver = group.createResolver();
+
+		assertThat(resolver.isContactAllowed("leisure", "work")).isFalse();
+		assertThat(resolver.resolve("work", "leisure", 20, 40)).isSameAs(TransmissionWeights.ZERO);
+		// unaffected pair still allowed
+		assertThat(resolver.isContactAllowed("work", "shop")).isTrue();
+	}
+
+	@Test
+	public void forbiddenPairRejectsWeights() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		ContactPairParams pair = group.getOrAddContactPair("home", "work");
+		pair.setForbidden(true);
+		pair.setTransmissionWeights(TransmissionWeights.parse("respiratory=1.0"));
+
+		assertThatThrownBy(group::createResolver)
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("must not set transmissionWeights");
+	}
+
+	@Test
+	public void serializesContactGroupsAndForbiddenFlag() throws IOException {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactGroup("shop").setAllowedPartners(Arrays.asList("shop", "work"));
+		group.getOrAddContactPair("home", "errands").setForbidden(true);
+
+		Config config = ConfigUtils.createConfig(group);
+		File configFile = temporaryFolder.newFile("ct-config.xml");
+		ConfigUtils.writeConfig(config, configFile.toString());
+
+		ContactTransmissionConfigGroup copy = new ContactTransmissionConfigGroup();
+		ConfigUtils.loadConfig(configFile.toString(), copy);
+
+		// defaults are not duplicated on reload
+		assertThat(copy.getContactGroups()).hasSize(3);
+		assertThat(copy.hasContactGroup("home")).isTrue();
+		assertThat(copy.getOrAddContactGroup("shop").getAllowedPartners()).containsExactly("shop", "work");
+		assertThat(copy.getContactPair("errands", "home").isForbidden()).isTrue();
+
+		Resolver resolver = copy.createResolver();
+		assertThat(resolver.isContactAllowed("home", "errands")).isFalse();
+		assertThat(resolver.isContactAllowed("shop", "leisure")).isFalse();
+	}
+
 	private ContactTransmissionConfigGroup fileGroup(File matrix) {
 		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
 		group.setAgeBands(Arrays.asList(0, 20));
