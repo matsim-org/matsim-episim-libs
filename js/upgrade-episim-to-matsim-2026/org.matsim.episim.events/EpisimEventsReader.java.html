@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimEventsReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.events</a> &gt; <span class="el_source">EpisimEventsReader.java</span></div><h1>EpisimEventsReader.java</h1><pre class="source lang-java linenums">/* *********************************************************************** *
+ * project: org.matsim.*
+ * Controler.java
+ *                                                                         *
+ * *********************************************************************** *
+ *                                                                         *
+ * copyright       : (C) 2007 by the members listed in the COPYING,        *
+ *                   LICENSE and WARRANTY file.                            *
+ * email           : info at matsim dot org                                *
+ *                                                                         *
+ * *********************************************************************** *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *   See also COPYING, LICENSE and WARRANTY file                           *
+ *                                                                         *
+ * *********************************************************************** */
+
+package org.matsim.episim.events;
+
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.events.EventsReaderXMLv1;
+import org.matsim.core.events.MatsimEventsReader;
+import org.matsim.core.utils.io.MatsimXmlParser;
+import org.matsim.episim.EpisimContainer;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
+import org.matsim.facilities.ActivityFacility;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.Stack;
+
+/**
+ * Reads Episim-specific events from MATSim event files.
+ */
+public class EpisimEventsReader extends MatsimXmlParser {
+
+	private EventsReaderXMLv1 delegate;
+
+	/**
+	 * EventsReader for EpisimEvents.
+	 */
+	public EpisimEventsReader(EventsManager events) {
+<span class="nc" id="L53">		super(ValidationType.NO_VALIDATION);</span>
+<span class="nc" id="L54">		delegate = new EventsReaderXMLv1(events);</span>
+<span class="nc" id="L55">		delegate.addCustomEventMapper(EpisimInfectionEvent.EVENT_TYPE, getEpisimInfectionEventMapper());</span>
+<span class="nc" id="L56">		delegate.addCustomEventMapper(EpisimPotentialInfectionEvent.EVENT_TYPE, getEpisimPotentialInfectionEventMapper());</span>
+<span class="nc" id="L57">		delegate.addCustomEventMapper(EpisimInitialInfectionEvent.EVENT_TYPE, getEpisimInitialInfectionEventMapper());</span>
+<span class="nc" id="L58">		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());</span>
+<span class="nc" id="L59">		delegate.addCustomEventMapper(EpisimContactEvent.EVENT_TYPE, getEpisimContactEventMapper());</span>
+<span class="nc" id="L60">		delegate.addCustomEventMapper(EpisimVaccinationEvent.EVENT_TYPE, getEpisimVaccinationEventMapper());</span>
+<span class="nc" id="L61">		delegate.addCustomEventMapper(EpisimStartEvent.EVENT_TYPE, getEpisimStartEventMapper());</span>
+<span class="nc" id="L62">	}</span>
+
+	/**
+	 * Delegates character data to the underlying MATSim event reader.
+	 */
+	public void characters(char[] ch, int start, int length) throws SAXException {
+<span class="nc" id="L68">		delegate.characters(ch, start, length);</span>
+<span class="nc" id="L69">	}</span>
+
+	private MatsimEventsReader.CustomEventMapper getEpisimInfectionEventMapper() {
+<span class="nc" id="L72">		return event -&gt; {</span>
+
+<span class="nc" id="L74">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+
+<span class="nc" id="L76">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L77">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L78">			Id&lt;Person&gt; infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));</span>
+<span class="nc" id="L79">			Id&lt;?&gt; container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);</span>
+<span class="nc" id="L80">			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);</span>
+
+			// check for the presence of these attributes
+<span class="nc" id="L83">			double probability = -1;</span>
+<span class="nc" id="L84">			String attr = attributes.get(EpisimInfectionEvent.PROBABILITY);</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L86">				probability = Double.parseDouble(attr);</span>
+
+<span class="nc" id="L88">			int groupSize = -1;</span>
+<span class="nc" id="L89">			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L91">				groupSize = Integer.parseInt(attr);</span>
+
+<span class="nc" id="L93">			VirusStrain virusStrain = null;</span>
+<span class="nc" id="L94">			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L96">				virusStrain = VirusStrain.valueOf(attr);</span>
+
+<span class="nc" id="L98">			double antibodies = -1;</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
+<span class="nc" id="L100">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
+			}
+
+<span class="nc" id="L103">			double maxAntibodies = -1;</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {</span>
+<span class="nc" id="L105">				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));</span>
+			}
+
+<span class="nc" id="L108">			int vaccinationCnt = -1;</span>
+<span class="nc" id="L109">			attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L111">				vaccinationCnt = Integer.parseInt(attr);</span>
+
+<span class="nc" id="L113">			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies, maxAntibodies, vaccinationCnt);</span>
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimPotentialInfectionEventMapper() {
+<span class="nc" id="L118">		return event -&gt; {</span>
+
+<span class="nc" id="L120">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+
+<span class="nc" id="L122">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L123">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L124">			Id&lt;Person&gt; infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));</span>
+<span class="nc" id="L125">			Id&lt;?&gt; container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);</span>
+<span class="nc" id="L126">			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);</span>
+
+<span class="nc" id="L128">			double probability = Double.parseDouble(attributes.get(EpisimInfectionEvent.PROBABILITY));</span>
+<span class="nc" id="L129">			double unVacProb = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.UNVAC_PROBABILITY));</span>
+
+<span class="nc" id="L131">			int groupSize = Integer.parseInt(attributes.get(EpisimInfectionEvent.GROUP_SIZE));</span>
+<span class="nc" id="L132">			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));</span>
+<span class="nc" id="L133">			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));</span>
+
+<span class="nc" id="L135">			double antibodies = -1;</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
+<span class="nc" id="L137">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
+			}
+
+<span class="nc" id="L140">			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, antibodies, rnd);</span>
+
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimInitialInfectionEventMapper() {
+<span class="nc" id="L146">		return event -&gt; {</span>
+
+<span class="nc" id="L148">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+
+<span class="nc" id="L150">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L151">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L152">			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));</span>
+<span class="nc" id="L153">			double antibodies = -1;</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
+<span class="nc" id="L155">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
+			}
+
+<span class="nc" id="L158">			double maxAntibodies = -1;</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {</span>
+<span class="nc" id="L160">				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));</span>
+			}
+
+<span class="nc" id="L163">			int vaccinationCnt = -1;</span>
+<span class="nc" id="L164">			String attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L166">				vaccinationCnt = Integer.parseInt(attr);</span>
+
+<span class="nc" id="L168">			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies, vaccinationCnt);</span>
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimPersonStatusEventMapper() {
+<span class="nc" id="L173">		return event -&gt; {</span>
+
+<span class="nc" id="L175">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+
+<span class="nc" id="L177">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L178">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L179">			DiseaseStatus diseaseStatus = DiseaseStatus.valueOf(attributes.get(EpisimPersonStatusEvent.DISEASE_STATUS));</span>
+
+<span class="nc" id="L181">			return new EpisimPersonStatusEvent(time, person, diseaseStatus);</span>
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimContactEventMapper() {
+<span class="nc" id="L186">		return event -&gt; {</span>
+
+<span class="nc" id="L188">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+
+<span class="nc" id="L190">			double time = Double.parseDouble(attributes.get(EpisimContactEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L191">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimContactEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L192">			Id&lt;Person&gt; contactPerson = Id.createPersonId(attributes.get(EpisimContactEvent.CONTACT_PERSON));</span>
+<span class="nc" id="L193">			Id&lt;ActivityFacility&gt; container = Id.create(attributes.get(EpisimContactEvent.CONTAINER), ActivityFacility.class);</span>
+
+<span class="nc" id="L195">			return new EpisimContactEvent(time, person, contactPerson, container, attributes.get(ActivityEndEvent.ATTRIBUTE_ACTTYPE).intern(),</span>
+<span class="nc" id="L196">					Double.parseDouble(attributes.get(EpisimContactEvent.DURATION)), Integer.parseInt(attributes.get(EpisimContactEvent.GROUP_SIZE)));</span>
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimVaccinationEventMapper() {
+<span class="nc" id="L201">		return event -&gt; {</span>
+
+<span class="nc" id="L203">			Map&lt;String, String&gt; attr = event.getAttributes();</span>
+<span class="nc" id="L204">			return new EpisimVaccinationEvent(</span>
+<span class="nc" id="L205">					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),</span>
+<span class="nc" id="L206">					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),</span>
+<span class="nc" id="L207">					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),</span>
+<span class="nc" id="L208">					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))</span>
+			);
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimStartEventMapper() {
+<span class="nc" id="L214">		return event -&gt; {</span>
+
+<span class="nc" id="L216">			Map&lt;String, String&gt; attr = event.getAttributes();</span>
+<span class="nc" id="L217">			return new EpisimStartEvent(</span>
+<span class="nc" id="L218">					LocalDate.parse(attr.get(EpisimStartEvent.START_DATE)),</span>
+<span class="nc" id="L219">					attr.get(EpisimStartEvent.IMMUNIZATION)</span>
+			);
+		};
+	}
+
+
+	@Override
+	public void startTag(String name, Attributes atts, Stack&lt;String&gt; context) {
+<span class="nc" id="L227">		delegate.startTag(name, atts, context);</span>
+<span class="nc" id="L228">	}</span>
+
+	@Override
+	public void endTag(String name, String content, Stack&lt;String&gt; context) {
+<span class="nc" id="L232">		delegate.endTag(name, content, context);</span>
+<span class="nc" id="L233">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
