@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractContactModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">AbstractContactModel.java</span></div><h1>AbstractContactModel.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim.model;
+
+import org.matsim.api.core.v01.Scenario;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.*;
+import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimPotentialInfectionEvent;
+import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.util.EpisimSplittableRandom;
+import org.matsim.facilities.ActivityFacility;
+
+import java.util.HashMap;
+import java.time.DayOfWeek;
+import java.util.Map;
+
+import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
+import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
+
+
+/**
+ * Base implementation for interactions of persons during activities.
+ */
+public abstract class AbstractContactModel implements ContactModel {
+	public static final String QUARANTINE_HOME = &quot;quarantine_home&quot;;
+
+	protected final Scenario scenario;
+	protected final EpisimSplittableRandom rnd;
+	protected final EpisimConfigGroup episimConfig;
+	protected final EpisimReporting reporting;
+	protected final TracingConfigGroup tracingConfig;
+
+	/**
+	 * Infections parameter instances for re-use. These are params that are always needed independent of the scenario.
+	 */
+	protected final EpisimConfigGroup.InfectionParams trParams;
+	/**
+	 * Home quarantine infection param.
+	 */
+	protected final EpisimConfigGroup.InfectionParams qhParams;
+	/**
+	 * See {@link TracingConfigGroup#getMinDuration()}.
+	 */
+	protected final double trackingMinDuration;
+
+	/**
+	 * Infection probability calculation.
+	 */
+	protected final InfectionModel infectionModel;
+
+	protected int iteration;
+	protected DayOfWeek day;
+	private Map&lt;String, Restriction&gt; restrictions;
+
+	/**
+	 * Count number of contacts per day.
+	 */
+<span class="fc" id="L78">	protected int numContacts = 0;</span>
+
+	/**
+	 * Curfew compliance valid for the day.
+	 */
+	private double curfewCompliance;
+
+	/**
+	 * Map of each ActivityFacility with the corresponding subdistrict.
+	 */
+	private final Map&lt;String, String&gt; subdistrictFacilities;
+
+
+<span class="fc" id="L91">	AbstractContactModel(EpisimSplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting, Scenario scenario) {</span>
+<span class="fc" id="L92">		this.rnd = rnd;</span>
+<span class="fc" id="L93">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L94">		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);</span>
+<span class="fc" id="L95">		this.infectionModel = infectionModel;</span>
+<span class="fc" id="L96">		this.reporting = reporting;</span>
+<span class="fc" id="L97">		this.trParams = episimConfig.selectInfectionParams(&quot;tr&quot;);</span>
+<span class="fc" id="L98">		this.qhParams = episimConfig.selectInfectionParams(QUARANTINE_HOME);</span>
+<span class="fc" id="L99">		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();</span>
+<span class="fc" id="L100">		this.scenario = scenario;</span>
+
+<span class="fc" id="L102">		subdistrictFacilities = new HashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L103" title="1 of 4 branches missed.">		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)</span>
+				&amp;&amp; scenario != null
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">				&amp;&amp; !scenario.getActivityFacilities().getFacilities().isEmpty()) {</span>
+
+<span class="fc bfc" id="L107" title="All 2 branches covered.">			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {</span>
+<span class="fc" id="L108">				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();</span>
+<span class="fc" id="L109">				String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">				if (subdistrict != null) {</span>
+<span class="fc" id="L111">					this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);</span>
+				}
+<span class="fc" id="L113">			}</span>
+		}
+<span class="fc" id="L115">	}</span>
+
+	AbstractContactModel(EpisimSplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
+<span class="nc" id="L118">		this(rnd, config, infectionModel, reporting, null);</span>
+
+<span class="nc" id="L120">	}</span>
+
+	private static boolean hasDiseaseStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
+<span class="pc bpc" id="L123" title="1 of 3 branches missed.">		switch (personWrapper.getDiseaseStatus()) {</span>
+			case susceptible:
+			case contagious:
+			case showingSymptoms:
+<span class="fc" id="L127">				return true;</span>
+
+			case infectedButNotContagious:
+			case recovered:
+			case seriouslySick: // assume is in hospital
+			case critical:
+			case seriouslySickAfterCritical:
+			case deceased:
+<span class="fc" id="L135">				return false;</span>
+
+			default:
+<span class="nc" id="L138">				throw new IllegalStateException(&quot;Unexpected value: &quot; + personWrapper.getDiseaseStatus());</span>
+		}
+	}
+
+	/**
+	 * This method checks whether person1 and person2 have relevant disease status for infection dynamics.
+	 * If not or if both have the same disease status, the return value is false.
+	 */
+	static boolean personsCanInfectEachOther(EpisimPerson person1, EpisimPerson person2) {
+<span class="fc bfc" id="L147" title="All 2 branches covered.">		if (person1.getDiseaseStatus() == person2.getDiseaseStatus()) return false;</span>
+		// at least one of the persons must be susceptible
+<span class="fc bfc" id="L149" title="All 4 branches covered.">		if (person1.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible &amp;&amp; person2.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible)</span>
+<span class="fc" id="L150">			return false;</span>
+<span class="fc bfc" id="L151" title="All 4 branches covered.">		return (hasDiseaseStatusRelevantForInfectionDynamics(person1) &amp;&amp; hasDiseaseStatusRelevantForInfectionDynamics(person2));</span>
+	}
+
+	/**
+	 * Attention: In order to re-use the underlying object, this function returns a buffer.
+	 * Be aware that the old result will be overwritten, when the function is called multiple times.
+	 */
+	protected static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer&lt;?&gt; container, String leavingPersonsActivity,
+													String otherPersonsActivity) {
+<span class="fc" id="L160">		buffer.setLength(0);</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">		if (container instanceof EpisimFacility) {</span>
+<span class="fc" id="L162">			buffer.append(leavingPersonsActivity).append(&quot;_&quot;).append(otherPersonsActivity);</span>
+<span class="fc" id="L163">			return buffer;</span>
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">		} else if (container instanceof EpisimVehicle) {</span>
+<span class="fc" id="L165">			buffer.append(&quot;pt&quot;);</span>
+<span class="fc" id="L166">			return buffer;</span>
+		} else {
+<span class="nc" id="L168">			throw new RuntimeException(&quot;Infection situation is unknown&quot;);</span>
+		}
+	}
+
+	/**
+	 * Get the relevant infection parameter based on container and activity and person.
+	 */
+	protected EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer&lt;?&gt; container, EpisimPerson person, EpisimPerson.PerformedActivity activity) {
+<span class="fc bfc" id="L176" title="All 2 branches covered.">		if (container instanceof EpisimVehicle) {</span>
+<span class="fc" id="L177">			return trParams;</span>
+<span class="pc bpc" id="L178" title="1 of 2 branches missed.">		} else if (container instanceof EpisimFacility) {</span>
+<span class="fc" id="L179">			EpisimConfigGroup.InfectionParams params = activity.params;</span>
+
+			// Select different infection params for home quarantined persons
+<span class="fc bfc" id="L182" title="All 4 branches covered.">			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome &amp;&amp; params.getContainerName().equals(&quot;home&quot;)) {</span>
+<span class="fc" id="L183">				return qhParams;</span>
+			}
+
+<span class="fc" id="L186">			return params;</span>
+		} else
+<span class="nc" id="L188">			throw new IllegalStateException(&quot;Don't know how to deal with container &quot; + container);</span>
+
+	}
+
+	/**
+	 * Tracks a contact between two persons when tracing is applicable.
+	 */
+	protected void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, double jointTimeInContainer,
+									  StringBuilder infectionType) {
+
+		// Don't track certain activities
+<span class="pc bpc" id="L199" title="1 of 4 branches missed.">		if (infectionType.indexOf(&quot;pt&quot;) &gt;= 0 || infectionType.indexOf(&quot;shop&quot;) &gt;= 0) {</span>
+<span class="fc" id="L200">			return;</span>
+		}
+
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">		for (String act : tracingConfig.getIgnoredActivities()) {</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">			if (infectionType.indexOf(act) &gt;= 0)</span>
+<span class="nc" id="L205">				return;</span>
+<span class="nc" id="L206">		}</span>
+
+		// don't track below threshold
+<span class="fc bfc" id="L209" title="All 2 branches covered.">		if (jointTimeInContainer &lt; trackingMinDuration) {</span>
+<span class="fc" id="L210">			return;</span>
+		}
+
+<span class="fc" id="L213">		personLeavingContainer.addTraceableContactPerson(otherPerson, now);</span>
+<span class="fc" id="L214">		otherPerson.addTraceableContactPerson(personLeavingContainer, now);</span>
+<span class="fc" id="L215">	}</span>
+
+	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer&lt;?&gt; container, Map&lt;String,
+			Restriction&gt; restrictions, EpisimSplittableRandom rnd) {
+
+<span class="fc" id="L220">		EpisimPerson.PerformedActivity act = container.getPerformedActivity(person.getPersonId());</span>
+
+		// Check if person is home quarantined
+<span class="fc bfc" id="L223" title="All 4 branches covered.">		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome &amp;&amp; !act.actType().startsWith(&quot;home&quot;))</span>
+<span class="fc" id="L224">			return false;</span>
+
+		// enforce max group sizes
+<span class="fc" id="L227">		Restriction r = restrictions.get(act.params.getContainerName());</span>
+<span class="pc bpc" id="L228" title="1 of 6 branches missed.">		if (r.getMaxGroupSize() != null &amp;&amp; r.getMaxGroupSize() &gt; -1 &amp;&amp; container.getMaxGroupSize() &gt; 0 &amp;&amp;</span>
+<span class="fc bfc" id="L229" title="All 2 branches covered.">				container.getMaxGroupSize() &gt; r.getMaxGroupSize())</span>
+<span class="fc" id="L230">			return false;</span>
+
+		// reduce group size probabilistically
+<span class="fc" id="L233">		Integer reducedGroupSize = r.getReducedGroupSize();</span>
+<span class="pc bpc" id="L234" title="1 of 6 branches missed.">		if (reducedGroupSize != null &amp;&amp; reducedGroupSize &gt; -1 &amp;&amp; reducedGroupSize != Integer.MAX_VALUE) {</span>
+<span class="fc" id="L235">			double current = (container.getPersons().size() * episimConfig.getSampleSize()) / container.getNumSpaces();</span>
+
+			// always false if current &lt; reduced size
+<span class="fc bfc" id="L238" title="All 2 branches covered.">			boolean out = rnd.nextDouble() &gt; reducedGroupSize / current;</span>
+
+			// don'T return true, other conditions might be false
+<span class="fc bfc" id="L241" title="All 2 branches covered.">			if (out) return false;</span>
+		}
+
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">		if (r.isClosed(container.getContainerId()))</span>
+<span class="nc" id="L245">			return false;</span>
+
+<span class="fc" id="L247">		return actIsRelevant(act.params, restrictions, rnd, container);</span>
+	}
+
+	private boolean actIsRelevant(EpisimConfigGroup.InfectionParams params, Map&lt;String, Restriction&gt; restrictions, EpisimSplittableRandom rnd, EpisimContainer container) {
+
+<span class="fc" id="L252">		Restriction r = restrictions.get(params.getContainerName());</span>
+<span class="fc" id="L253">		Double remainingFraction = r.getRemainingFraction();</span>
+
+		// Applies location based restriction, if applicable
+		// So far, they are only applied for EpisimFacilities, not EpisimVehicles
+<span class="pc bpc" id="L257" title="1 of 4 branches missed.">		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes) &amp;&amp; container != null) {</span>
+<span class="pc bpc" id="L258" title="1 of 2 branches missed.">			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {</span>
+<span class="fc" id="L259">				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">				if (r.getLocationBasedRf().containsKey(subdistrict)) {</span>
+<span class="fc" id="L261">					remainingFraction = r.getLocationBasedRf().get(subdistrict);</span>
+				}
+			}
+		}
+
+		// avoid use of rnd if outcome is known beforehand
+<span class="fc bfc" id="L267" title="All 2 branches covered.">		if (remainingFraction == 1)</span>
+<span class="fc" id="L268">			return true;</span>
+<span class="fc bfc" id="L269" title="All 2 branches covered.">		if (remainingFraction == 0)</span>
+<span class="fc" id="L270">			return false;</span>
+
+<span class="fc bfc" id="L272" title="All 2 branches covered.">		return rnd.nextDouble() &lt; remainingFraction;</span>
+
+	}
+
+	private boolean tripRelevantForInfectionDynamics(double time, EpisimPerson person, Map&lt;String, Restriction&gt; restrictions, EpisimSplittableRandom rnd) {
+
+<span class="pc bpc" id="L278" title="1 of 4 branches missed.">		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no &amp;&amp; person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.testing)</span>
+<span class="fc" id="L279">			return false;</span>
+
+<span class="fc" id="L281">		EpisimPerson.PerformedActivity lastAct = person.getActivity(day, time % 86400);</span>
+
+<span class="fc" id="L283">		EpisimPerson.PerformedActivity nextAct = person.getNextActivity(day, time % 86400);</span>
+
+		// next activity is only considered if present
+<span class="pc bpc" id="L286" title="1 of 4 branches missed.">		return actIsRelevant(trParams, restrictions, rnd, null) &amp;&amp;</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">				(nextAct == null || actIsRelevant(nextAct.params, restrictions, rnd, null)) &amp;&amp;</span>
+<span class="fc bfc" id="L288" title="All 2 branches covered.">				(actIsRelevant(lastAct.params, restrictions, rnd, null));</span>
+
+	}
+
+	/**
+	 * Checks whether person is relevant for tracking or for infection dynamics.  Currently, &quot;relevant for infection dynamics&quot; is a subset of &quot;relevant for
+	 * tracking&quot;.  However, I am not sure if this will always be the case.  kai, apr'20
+	 *
+	 * @noinspection BooleanMethodIsAlwaysInverted
+	 */
+	protected final boolean personRelevantForTrackingOrInfectionDynamics(double time, EpisimPerson person, EpisimContainer&lt;?&gt; container,
+																		 Map&lt;String, Restriction&gt; restrictions, EpisimSplittableRandom rnd) {
+
+<span class="fc bfc" id="L301" title="All 4 branches covered.">		return personHasRelevantStatus(person) &amp;&amp; checkPersonInContainer(time, person, container, restrictions, rnd);</span>
+	}
+
+	/**
+	 * Checks whether the person's status is relevant for infection dynamics.
+	 */
+	protected final boolean personHasRelevantStatus(EpisimPerson person) {
+		// Infected but not contagious persons are considered additionally
+<span class="fc bfc" id="L309" title="All 2 branches covered.">		return hasDiseaseStatusRelevantForInfectionDynamics(person) ||</span>
+<span class="fc bfc" id="L310" title="All 2 branches covered.">				person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious;</span>
+	}
+
+	/**
+	 * Checks whether a person would be present in the container.
+	 */
+	protected final boolean checkPersonInContainer(double time, EpisimPerson person, EpisimContainer&lt;?&gt; container, Map&lt;String, Restriction&gt; restrictions, EpisimSplittableRandom rnd) {
+<span class="fc bfc" id="L317" title="All 2 branches covered.">		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {</span>
+<span class="fc" id="L318">			return false;</span>
+		}
+
+		// if activity participation was already handled, everything else is not relevant
+<span class="fc bfc" id="L322" title="All 2 branches covered.">		if (episimConfig.getActivityHandling() != EpisimConfigGroup.ActivityHandling.duringContact)</span>
+<span class="fc" id="L323">			return true;</span>
+
+<span class="fc bfc" id="L325" title="All 4 branches covered.">		if (container instanceof EpisimFacility &amp;&amp; activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {</span>
+<span class="fc" id="L326">			return true;</span>
+		}
+<span class="fc bfc" id="L328" title="All 4 branches covered.">		return container instanceof EpisimVehicle &amp;&amp; tripRelevantForInfectionDynamics(time, person, restrictions, rnd);</span>
+	}
+
+	/**
+	 * Calculate the joint time persons have been in a container.
+	 * This takes possible closing hours into account.
+	 */
+	protected double calculateJointTimeInContainer(double now, EpisimConfigGroup.InfectionParams act, double containerEnterTimeOfPersonLeaving, double containerEnterTimeOfOtherPerson) {
+<span class="fc" id="L336">		Restriction r = getRestrictions().get(act.getContainerName());</span>
+
+<span class="fc" id="L338">		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);</span>
+
+		// no closing hour set, or no compliance
+<span class="pc bpc" id="L341" title="1 of 4 branches missed.">		if (!r.hasClosingHours() || curfewCompliance == 0) {</span>
+<span class="fc" id="L342">			return now - max;</span>
+<span class="pc bpc" id="L343" title="2 of 4 branches missed.">		} else if (episimConfig.getCalibrationParameter() != 1 &amp;&amp; rnd.nextDouble() &gt;= curfewCompliance) {</span>
+<span class="nc" id="L344">			return now - max;</span>
+		}
+
+<span class="fc" id="L347">		double overlap = r.overlapWithClosingHour(max, now);</span>
+<span class="fc bfc" id="L348" title="All 2 branches covered.">		if (overlap &gt; 0) {</span>
+<span class="fc" id="L349">			double jointTime = now - max - overlap;</span>
+			// joint time can now be negative and will be set to 0
+<span class="fc bfc" id="L351" title="All 2 branches covered.">			return jointTime &gt; 0 ? jointTime : 0;</span>
+
+		} else {
+<span class="fc" id="L354">			return now - max;</span>
+		}
+	}
+
+	/**
+	 * Set the iteration number and restrictions that are in place.
+	 */
+	@Override
+	public void setRestrictionsForIteration(int iteration, Map&lt;String, Restriction&gt; restrictions) {
+<span class="fc" id="L363">		this.iteration = iteration;</span>
+<span class="fc" id="L364">		this.day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
+<span class="fc" id="L365">		this.restrictions = restrictions;</span>
+<span class="fc" id="L366">		this.infectionModel.setIteration(iteration);</span>
+<span class="fc" id="L367">		this.curfewCompliance = EpisimUtils.findValidEntry(episimConfig.getCurfewCompliance(), 1.0,</span>
+<span class="fc" id="L368">				episimConfig.getStartDate().plusDays(iteration - 1));</span>
+<span class="fc" id="L369">		this.numContacts = 0;</span>
+<span class="fc" id="L370">	}</span>
+
+	public int getNumContacts() {
+<span class="fc" id="L373">		return numContacts;</span>
+	}
+
+	/**
+	 * Sets the infection status of a person and reports the event.
+	 */
+	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
+								double prob, EpisimContainer&lt;?&gt; container) {
+
+<span class="pc bpc" id="L382" title="1 of 2 branches missed.">		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {</span>
+<span class="nc" id="L383">			throw new IllegalStateException(&quot;Person to be infected is not susceptible. Status is=&quot; + personWrapper.getDiseaseStatus());</span>
+		}
+<span class="pc bpc" id="L385" title="1 of 4 branches missed.">		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious &amp;&amp; infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="nc" id="L386">			throw new IllegalStateException(&quot;Infector is not contagious. Status is=&quot; + infector.getDiseaseStatus());</span>
+		}
+<span class="pc bpc" id="L388" title="1 of 2 branches missed.">		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {</span>
+<span class="nc" id="L389">			throw new IllegalStateException(&quot;Person to be infected is in full quarantine.&quot;);</span>
+		}
+<span class="pc bpc" id="L391" title="1 of 2 branches missed.">		if (infector.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {</span>
+<span class="nc" id="L392">			throw new IllegalStateException(&quot;Infector is in ful quarantine.&quot;);</span>
+		}
+		//		if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
+		//			throw new IllegalStateException(&quot;Person and infector are not in same container!&quot;);
+		//		}
+
+		// TODO: during iteration persons can get infected after 24h
+		// this can lead to strange effects / ordering of events, because it is assumed one iteration is one day
+		// now is overwritten to be at the end of day
+<span class="fc bfc" id="L401" title="All 2 branches covered.">		if (now &gt;= EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60, iteration)) {</span>
+<span class="fc" id="L402">			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);</span>
+		}
+
+<span class="fc" id="L405">		personWrapper.possibleInfection(</span>
+<span class="fc" id="L406">				new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),</span>
+<span class="fc" id="L407">						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob,</span>
+<span class="fc" id="L408">						personWrapper.getAntibodies(infector.getVirusStrain()), personWrapper.getMaxAntibodies(infector.getVirusStrain()), personWrapper.getNumVaccinations())</span>
+		);
+
+		// check infection immediately if there is only one thread
+<span class="fc bfc" id="L412" title="All 2 branches covered.">		if (episimConfig.getThreads() == 1)</span>
+<span class="fc" id="L413">			reporting.reportInfection(personWrapper.checkInfection());</span>
+
+<span class="fc" id="L415">	}</span>
+
+	/**
+	 * Reports a potential infection for later evaluation.
+	 */
+	protected void potentialInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
+		double prob, EpisimContainer&lt;?&gt; container, double probUnVac, double rnd) {
+
+		// for now, only filter vaccinated persons
+<span class="pc bpc" id="L424" title="1 of 2 branches missed.">		if (personWrapper.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="fc" id="L425">			return;</span>
+
+<span class="nc" id="L427">		personWrapper.potentialInfection(</span>
+<span class="nc" id="L428">				new EpisimPotentialInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),</span>
+<span class="nc" id="L429">						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob, probUnVac,</span>
+<span class="nc" id="L430">						personWrapper.getAntibodies(infector.getVirusStrain()), rnd)</span>
+		);
+
+<span class="nc" id="L433">	}</span>
+
+
+	public Map&lt;String, Restriction&gt; getRestrictions() {
+<span class="fc" id="L437">		return restrictions;</span>
+	}
+
+	@Override
+	public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now) {
+<span class="fc" id="L442">	}</span>
+
+	@Override
+	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now) {
+<span class="fc" id="L446">	}</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
