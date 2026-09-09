@@ -24,6 +24,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private final EpisimReporting reporting;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
+	private final PathogenConfigGroup pathogenConfig;
 
 	private double outdoorFactor;
 	private int iteration;
@@ -35,6 +36,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 		this.reporting = reporting;
 	}
 
@@ -60,16 +62,26 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer
 				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* susceptibility
-				* strain.getInfectiousness()
+				* strain.getInfectiousness();
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+		double respiratoryModifier = ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
-				* getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2)
-		);
+				* getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
 	/**

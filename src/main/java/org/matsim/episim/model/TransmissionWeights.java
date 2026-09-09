@@ -9,22 +9,27 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Immutable weights for the three transmission routes &mdash; respiratory, direct contact and fomite.
+ * Immutable weights for the transmission routes &mdash; currently respiratory and direct contact.
  *
  * <p>The same value type is used both as a configuration value (parsed from / serialized to the
  * {@code route=weight;route=weight} notation) and as the runtime value handed to the infection model.
- * Instances are validated on construction: every weight is finite and non-negative and the sum does not
- * exceed 1.</p>
+ * Each weight is validated on construction to be finite and non-negative. The weights are relative and
+ * <b>not</b> normalised: routes are independent, additive exposure channels, so adding weight to one
+ * route does not take anything away from another. {@code respiratory=1.0} is the conventional anchor
+ * (see {@link #RESPIRATORY_ONLY}); other weights are read relative to it.</p>
+ *
+ * <p>The <b>fomite</b> route is temporarily disabled &mdash; there is no within-facility fomite contact
+ * model yet. Every line needed to bring it back is kept in place, commented with a {@code fomite:}
+ * marker; restore them together with the {@code FOMITE} constant in {@link ContactTransmissionType}.</p>
  */
 public final class TransmissionWeights {
 
 	/** All-zero transmission weights. */
-	public static final TransmissionWeights ZERO = new TransmissionWeights(0, 0, 0);
+	public static final TransmissionWeights ZERO = new TransmissionWeights(0, 0 /* fomite: , 0 */);
 
 	/** Respiratory-only transmission; the neutral element for both the contact and the pathogen axis. */
-	public static final TransmissionWeights RESPIRATORY_ONLY = new TransmissionWeights(1, 0, 0);
+	public static final TransmissionWeights RESPIRATORY_ONLY = new TransmissionWeights(1, 0 /* fomite: , 0 */);
 
-	private static final double SUM_TOLERANCE = 1e-9;
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Map<String, ContactTransmissionType> ROUTE_BY_KEY;
 
@@ -32,7 +37,7 @@ public final class TransmissionWeights {
 		Map<String, ContactTransmissionType> routes = new HashMap<>();
 		routes.put("respiratory", ContactTransmissionType.RESPIRATORY);
 		routes.put("directcontact", ContactTransmissionType.DIRECT_CONTACT);
-		routes.put("fomite", ContactTransmissionType.FOMITE);
+		// fomite: routes.put("fomite", ContactTransmissionType.FOMITE);
 		for (ContactTransmissionType type : ContactTransmissionType.values()) {
 			routes.put(type.name().toLowerCase(Locale.ROOT), type);
 		}
@@ -41,15 +46,15 @@ public final class TransmissionWeights {
 
 	private final double respiratory;
 	private final double directContact;
-	private final double fomite;
+	// fomite: private final double fomite;
 
 	/**
-	 * Creates weights for the three transmission routes.
+	 * Creates weights for the transmission routes.
 	 */
-	public TransmissionWeights(double respiratory, double directContact, double fomite) {
+	public TransmissionWeights(double respiratory, double directContact /* fomite: , double fomite */) {
 		this.respiratory = respiratory;
 		this.directContact = directContact;
-		this.fomite = fomite;
+		// fomite: this.fomite = fomite;
 		validate();
 	}
 
@@ -58,12 +63,12 @@ public final class TransmissionWeights {
 	 */
 	public TransmissionWeights(Map<ContactTransmissionType, Double> weights) {
 		this(orZero(weights.get(ContactTransmissionType.RESPIRATORY)),
-				orZero(weights.get(ContactTransmissionType.DIRECT_CONTACT)),
-				orZero(weights.get(ContactTransmissionType.FOMITE)));
+				orZero(weights.get(ContactTransmissionType.DIRECT_CONTACT))
+				/* fomite: , orZero(weights.get(ContactTransmissionType.FOMITE)) */);
 	}
 
 	/**
-	 * Parses the {@code route=weight;route=weight} notation, e.g. {@code respiratory=0.7;fomite=0.3}.
+	 * Parses the {@code route=weight;route=weight} notation, e.g. {@code respiratory=0.7;directContact=0.3}.
 	 */
 	public static TransmissionWeights parse(String encoded) {
 		requireNonNull(encoded, "transmissionWeights");
@@ -114,10 +119,10 @@ public final class TransmissionWeights {
 		return directContact;
 	}
 
-	/** Weight of the fomite (contaminated-surface) route. */
-	public double getFomite() {
-		return fomite;
-	}
+	// fomite: /** Weight of the fomite (contaminated-surface) route. */
+	// fomite: public double getFomite() {
+	// fomite: 	return fomite;
+	// fomite: }
 
 	/**
 	 * Returns the weight of the given route.
@@ -128,8 +133,8 @@ public final class TransmissionWeights {
 				return respiratory;
 			case DIRECT_CONTACT:
 				return directContact;
-			case FOMITE:
-				return fomite;
+			// fomite: case FOMITE:
+			// fomite: 	return fomite;
 			default:
 				throw new IllegalArgumentException("Unhandled transmission route '" + route + "'.");
 		}
@@ -139,7 +144,7 @@ public final class TransmissionWeights {
 	 * Returns the sum of all route weights.
 	 */
 	public double sum() {
-		return respiratory + directContact + fomite;
+		return respiratory + directContact /* fomite: + fomite */;
 	}
 
 	/**
@@ -156,7 +161,7 @@ public final class TransmissionWeights {
 		EnumMap<ContactTransmissionType, Double> result = new EnumMap<>(ContactTransmissionType.class);
 		result.put(ContactTransmissionType.RESPIRATORY, respiratory);
 		result.put(ContactTransmissionType.DIRECT_CONTACT, directContact);
-		result.put(ContactTransmissionType.FOMITE, fomite);
+		// fomite: result.put(ContactTransmissionType.FOMITE, fomite);
 		return result;
 	}
 
@@ -164,18 +169,14 @@ public final class TransmissionWeights {
 	 * Serializes to the {@code route=weight;route=weight} notation using canonical keys.
 	 */
 	public String toToken() {
-		return "respiratory=" + respiratory + ";directContact=" + directContact + ";fomite=" + fomite;
+		return "respiratory=" + respiratory + ";directContact=" + directContact
+				/* fomite: + ";fomite=" + fomite */;
 	}
 
 	private void validate() {
 		checkFiniteNonNegative("respiratory", respiratory);
 		checkFiniteNonNegative("directContact", directContact);
-		checkFiniteNonNegative("fomite", fomite);
-
-		double sum = sum();
-		if (sum > 1 + SUM_TOLERANCE) {
-			throw new IllegalArgumentException("Transmission weights sum '" + sum + "' exceeds 1.");
-		}
+		// fomite: checkFiniteNonNegative("fomite", fomite);
 	}
 
 	private static void checkFiniteNonNegative(String route, double value) {

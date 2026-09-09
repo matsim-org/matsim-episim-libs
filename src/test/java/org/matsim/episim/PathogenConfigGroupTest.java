@@ -264,7 +264,6 @@ public class PathogenConfigGroupTest {
 			TransmissionWeights w = group.getParams(Pathogen.SARS_COV_2, ageDependent).getRouteTransmissibility();
 			assertThat(w.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(1.0);
 			assertThat(w.get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.0);
-			assertThat(w.get(ContactTransmissionType.FOMITE)).isEqualTo(0.0);
 		}
 
 		TransmissionWeights fresh = group.getOrAddParams(INFLUENZA, false).getRouteTransmissibility();
@@ -285,7 +284,7 @@ public class PathogenConfigGroupTest {
 		flu.setSeriouslySickProbabilityByAge(Map.of(0, 0.01));
 		flu.setCriticalProbabilityByAge(Map.of(0, 0.05));
 		flu.setDeathProbabilityByAge(Map.of(0, 0.0));
-		flu.setRouteTransmissibility(TransmissionWeights.parse("respiratory=0.6;directContact=0.2;fomite=0.2"));
+		flu.setRouteTransmissibility(TransmissionWeights.parse("respiratory=0.6;directContact=0.2"));
 
 		File tmp = File.createTempFile("matsim", "config");
 		tmp.deleteOnExit();
@@ -296,23 +295,24 @@ public class PathogenConfigGroupTest {
 
 		// SARS-CoV-2 default unchanged and not duplicated
 		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getRouteTransmissibility().toToken())
-				.isEqualTo("respiratory=1.0;directContact=0.0;fomite=0.0");
+				.isEqualTo("respiratory=1.0;directContact=0.0");
 
 		TransmissionWeights reloaded = copy.getParams(INFLUENZA, false).getRouteTransmissibility();
 		assertThat(reloaded.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(0.6);
 		assertThat(reloaded.get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.2);
-		assertThat(reloaded.get(ContactTransmissionType.FOMITE)).isEqualTo(0.2);
 	}
 
 	/**
-	 * (11) A route mix whose weights sum above 1 is rejected on assignment.
+	 * (11) Route weights are relative and additive: a sum above 1 is accepted; only non-finite or
+	 * negative weights are rejected.
 	 */
 	@Test
-	public void routeTransmissibilityRejectsInvalidWeights() {
+	public void routeTransmissibilityAcceptsSumAboveOneRejectsNegative() {
 		PathogenParams p = new PathogenParams();
 
-		assertThatThrownBy(() -> p.setRouteTransmissibilityString("respiratory=0.8;fomite=0.5"))
-				.isInstanceOf(IllegalArgumentException.class);
+		p.setRouteTransmissibilityString("respiratory=1.0;directContact=0.5");
+		assertThat(p.getRouteTransmissibility().sum()).isEqualTo(1.5);
+
 		assertThatThrownBy(() -> p.setRouteTransmissibilityString("respiratory=-0.1"))
 				.isInstanceOf(IllegalArgumentException.class);
 	}

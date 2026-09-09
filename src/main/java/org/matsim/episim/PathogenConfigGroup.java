@@ -40,11 +40,19 @@ import java.util.TreeMap;
  * probability that used to be hard-coded in the transition models.</p>
  *
  * <p>Each {@link PathogenParams} also carries {@code routeTransmissibility} &mdash; how well the pathogen
- * transmits per {@link ContactTransmissionType} route (respiratory / direct contact / fomite), written in
- * the same {@code route=weight;route=weight} notation as {@link ContactTransmissionConfigGroup}. This is the
- * pathogen-side factor that the infection model combines with the contact-side route split from
- * {@link ContactTransmissionConfigGroup}. The default is {@code respiratory=1.0}, so a respiratory-only
- * pathogen such as SARS-CoV-2 keeps behaving exactly as before.</p>
+ * transmits per {@link ContactTransmissionType} route (respiratory / direct contact), written in the same
+ * {@code route=weight;route=weight} notation as {@link ContactTransmissionConfigGroup}. The infection
+ * model multiplies it, route by route, with the contact-side split from
+ * {@link ContactTransmissionConfigGroup} and sums the products under the exponent
+ * ({@code via[route] = contactWeight[route] &middot; routeTransmissibility[route] &middot; routeModifiers}).</p>
+ *
+ * <p>The routes are independent, <b>additive</b> channels: the weights are relative and not normalised,
+ * so raising one route's transmissibility does not lower another's. {@code respiratory=1.0} is the
+ * conventional anchor &mdash; with it (and the default contact-side weights) the formula reduces to the
+ * previous respiratory-only model, so SARS-CoV-2 behaves exactly as before. A pathogen that also spreads
+ * by direct contact is written as e.g. {@code respiratory=1.0;directContact=0.4} (note the sum exceeds 1,
+ * which is allowed). Only finite, non-negative weights are accepted, and a pathogen whose weights are all
+ * zero &mdash; it could not transmit at all &mdash; is rejected on config finalisation.</p>
  */
 public class PathogenConfigGroup extends ReflectiveConfigGroup {
 
@@ -188,8 +196,9 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private final NavigableMap<Integer, Double> deathProbabilityByAge = new TreeMap<>();
 
 		/**
-		 * Per-route transmissibility of this pathogen. Combined by the infection model with the contact-side
-		 * route split from {@link ContactTransmissionConfigGroup}. Defaults to respiratory-only.
+		 * Per-route transmissibility of this pathogen. Relative, additive weights (no sum constraint);
+		 * the infection model multiplies them route by route with the contact-side split from
+		 * {@link ContactTransmissionConfigGroup}. Defaults to respiratory-only.
 		 */
 		private TransmissionWeights routeTransmissibility = TransmissionWeights.parse("respiratory=1.0");
 
@@ -327,7 +336,8 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
-		 * Per-route transmissibility of this pathogen (respiratory / direct contact / fomite).
+		 * Per-route transmissibility of this pathogen (respiratory / direct contact) &mdash; relative,
+		 * additive weights, {@code respiratory=1.0} by default.
 		 */
 		public TransmissionWeights getRouteTransmissibility() {
 			return routeTransmissibility;

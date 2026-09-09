@@ -22,5 +22,5 @@ public enum ContactTransmissionType {
 	DIRECT_CONTACT,
 
 	/** Transmission through contaminated objects or surfaces. */
-	FOMITE
+	//FOMITE //We do not have necessary to do it now, and we do not have this logic in facilities, it is future improvement
 }

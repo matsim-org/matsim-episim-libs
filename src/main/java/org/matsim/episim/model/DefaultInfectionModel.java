@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.policy.Restriction;
@@ -23,6 +24,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
+	private final PathogenConfigGroup pathogenConfig;
 	private int iteration;
 
 	@Inject
@@ -31,7 +33,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-
+		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 	}
 
 	@Override
@@ -54,14 +56,25 @@ public final class DefaultInfectionModel implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer
 				* getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* susceptibility
-				* strain.getInfectiousness()
+				* strain.getInfectiousness();
+
+		// respiratory route only: ventilation / contact-intensity correction and face masks
+		double respiratoryModifier = ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
-				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
-		);
+				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
 	/**

@@ -31,7 +31,38 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Configures transmission-route weights for contacts between activity types.
+ * Per-contact split of infectious exposure across {@link ContactTransmissionType} routes
+ * ({@code respiratory}, {@code directContact}; {@code fomite} is deferred).
+ *
+ * <p>For a contact between two activity types &mdash; optionally resolved further by the two persons' age
+ * bands &mdash; a {@link TransmissionWeights} vector says how that contact's exposure is distributed over
+ * the routes. The weights are <b>relative</b>: they carry no absolute magnitude. The infection model
+ * combines them, route by route, with the pathogen's own per-route efficiency
+ * ({@code routeTransmissibility} in {@link PathogenConfigGroup}):</p>
+ * <pre>
+ *   via[route] = contactWeight[route] &middot; pathogenTransmissibility[route] &middot; routeModifiers
+ *   p         = 1 - exp( -base &middot; &Sigma; via[route] )
+ * </pre>
+ * <p>{@code base} carries the absolute scale (global {@code calibrationParameter}, the per-contact
+ * {@code contactIntensity} and joint time, susceptibility, infectiousness, &hellip;); {@code routeModifiers}
+ * are route-specific attenuations (face masks, ventilation and indoor/outdoor dilution apply to
+ * {@code respiratory} only). {@code respiratory=1.0} is the conventional anchor: with the default weights
+ * on both the contact and the pathogen side the formula reduces to the previous respiratory-only model.
+ * The weights are <b>not</b> normalised &mdash; each route is an independent, additive channel, so a
+ * contact can carry, say, {@code respiratory=1.0;directContact=0.5} without the routes competing for a
+ * shared budget.</p>
+ *
+ * <p>Configuration:</p>
+ * <ul>
+ *   <li>{@code defaultTransmissionWeights} &mdash; used for any contact not covered by a {@code contactPair}
+ *       (default {@code respiratory=1.0}).</li>
+ *   <li>{@code contactPair} &mdash; one unordered activity-type pair; sets either inline
+ *       {@code transmissionWeights}, a {@code file} with an age-band CSV
+ *       ({@code ageA,ageB,<route>,&hellip;}, rows keyed by the {@code ageBands} lower bounds), or
+ *       {@code forbidden=true} to block the pair entirely.</li>
+ *   <li>{@code contactGroup} &mdash; which activity types may share a container at all (see the
+ *       constructor).</li>
+ * </ul>
  */
 public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 
@@ -109,14 +140,15 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Returns the weights used when no contact pair is configured.
+	 * Returns the relative route split used for any contact not covered by a {@code contactPair}
+	 * (default {@code respiratory=1.0}).
 	 */
 	public TransmissionWeights getDefaultTransmissionWeights() {
 		return defaultTransmissionWeights;
 	}
 
 	/**
-	 * Sets the weights used when no contact pair is configured.
+	 * Sets the relative route split used for any contact not covered by a {@code contactPair}.
 	 */
 	public void setDefaultTransmissionWeights(TransmissionWeights weights) {
 		defaultTransmissionWeights = requireNonNull(weights, DEFAULT_TRANSMISSION_WEIGHTS);
@@ -400,7 +432,9 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Holds options for one unordered pair of activity types.
+	 * Route split for one unordered pair of activity types: exactly one of an inline
+	 * {@code transmissionWeights} (relative per-route weights), a {@code file} with an age-band matrix,
+	 * or {@code forbidden=true}.
 	 */
 	public static final class ContactPairParams extends ReflectiveConfigGroup {
 
@@ -457,12 +491,12 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			transmissionWeights = value == null ? null : TransmissionWeights.parse(value);
 		}
 
-		/** Returns the inline transmission weights, or {@code null}. */
+		/** Returns the inline relative per-route weights for this pair, or {@code null}. */
 		public TransmissionWeights getTransmissionWeights() {
 			return transmissionWeights;
 		}
 
-		/** Sets the inline transmission weights. */
+		/** Sets the inline relative per-route weights for this pair. */
 		public void setTransmissionWeights(TransmissionWeights transmissionWeights) {
 			this.transmissionWeights = transmissionWeights;
 		}

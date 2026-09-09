@@ -28,6 +28,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
+	private final PathogenConfigGroup pathogenConfig;
 
 	private final Map<VirusStrain, double[]> susceptibility;// = new EnumMap<>(VirusStrain.class);
 	private final Map<VirusStrain, double[]> infectivity;// = new EnumMap<>(VirusStrain.class);
@@ -50,6 +51,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
 		this.susceptibility = new HashMap<>();
@@ -96,20 +98,28 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
 
-		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake);
+		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, transmissionWeights, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake);
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer
 				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
-				* strain.getInfectiousness()
-				* shedding
-				* intake
-				* indoorOutdoorFactor
-		);
+				* strain.getInfectiousness();
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+		double respiratoryModifier = ciCorrection * shedding * intake * indoorOutdoorFactor;
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
-	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
+	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, TransmissionWeights transmissionWeights, double contactIntensity, double jointTimeInContainer,
 		double indoorOutdoorFactor, double shedding, double intake) {
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
@@ -122,15 +132,23 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		// vac is reduced from this term
 		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer
 				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
-				* strain.getInfectiousness()
-				* shedding
-				* intake
-				* indoorOutdoorFactor
-		);
+				* strain.getInfectiousness();
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+		double respiratoryModifier = ciCorrection * shedding * intake * indoorOutdoorFactor;
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
 	/**
