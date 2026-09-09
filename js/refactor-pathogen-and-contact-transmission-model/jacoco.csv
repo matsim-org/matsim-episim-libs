@@ -68,7 +68,7 @@ MATSim Episim,org.matsim.episim.model,ContactTransmissionType,0,15,0,0,0,3,0,1,0
 MATSim Episim,org.matsim.episim.model,DirectContactModel.Group,50,0,8,0,10,0,8,0,4,0
 MATSim Episim,org.matsim.episim.model,VirusStrain,16,711,4,14,1,99,4,22,0,17
 MATSim Episim,org.matsim.episim,EpisimReporting.InfectionsWriterFields,0,225,0,0,0,4,0,1,0,1
-MATSim Episim,org.matsim.episim,ReplayHandler.EventReader,14,117,4,18,2,28,4,9,0,2
+MATSim Episim,org.matsim.episim,ReplayHandler.EventReader,14,114,4,18,2,28,4,9,0,2
 MATSim Episim,org.matsim.episim,VaccinationConfigGroup.VaccinationParams,36,419,1,9,6,86,7,42,6,38
 MATSim Episim,org.matsim.episim,EpisimConfigGroup.WriteEvents,0,33,0,0,0,6,0,1,0,1
 MATSim Episim,org.matsim.episim,InfectionEventHandler,234,2488,33,151,43,440,33,106,3,44
@@ -77,10 +77,10 @@ MATSim Episim,org.matsim.episim,ContactTransmissionConfigGroup.ContactGroupParam
 MATSim Episim,org.matsim.episim,EpisimConfigGroup.FacilitiesHandling,0,15,0,0,0,3,0,1,0,1
 MATSim Episim,org.matsim.episim,EpisimModule,7,195,2,2,2,39,2,15,0,15
 MATSim Episim,org.matsim.episim,DataUtils,62,88,3,3,13,16,3,3,1,2
-MATSim Episim,org.matsim.episim,InfectionEventHandler.1.new TypeLiteral() {...},0,8,0,0,0,1,0,1,0,1
+MATSim Episim,org.matsim.episim,InfectionEventHandler.1.new TypeLiteral() {...},0,6,0,0,0,1,0,1,0,1
 MATSim Episim,org.matsim.episim,EpisimContainer,40,306,5,9,3,81,6,27,2,24
-MATSim Episim,org.matsim.episim,InfectionEventHandler.1.new TypeLiteral() {...},0,8,0,0,0,1,0,1,0,1
-MATSim Episim,org.matsim.episim,InfectionEventHandler.1.new TypeLiteral() {...},0,8,0,0,0,1,0,1,0,1
+MATSim Episim,org.matsim.episim,InfectionEventHandler.1.new TypeLiteral() {...},0,6,0,0,0,1,0,1,0,1
+MATSim Episim,org.matsim.episim,InfectionEventHandler.1.new TypeLiteral() {...},0,6,0,0,0,1,0,1,0,1
 MATSim Episim,org.matsim.episim,ContactTransmissionConfigGroup.Resolver,6,162,1,25,1,35,1,17,0,5
 MATSim Episim,org.matsim.episim,ReplayHandler,38,253,10,22,6,49,10,16,0,10
 MATSim Episim,org.matsim.episim,EpisimPerson.PerformedActivity,10,19,0,0,2,7,2,3,2,3
@@ -126,7 +126,7 @@ MATSim Episim,org.matsim.episim,BatchRun.Option,47,0,0,0,11,0,5,0,5,0
 MATSim Episim,org.matsim.episim,EpisimConfigGroup.SnapshotSeed,0,15,0,0,0,3,0,1,0,1
 MATSim Episim,org.matsim.episim,EpisimPerson.TestStatus,0,21,0,0,0,1,0,1,0,1
 MATSim Episim,org.matsim.episim,TrajectoryHandler,183,541,24,52,31,112,16,38,1,15
-MATSim Episim,org.matsim.episim,InfectionEventHandler.new AbstractModule() {...},0,70,0,0,0,10,0,2,0,2
+MATSim Episim,org.matsim.episim,InfectionEventHandler.new AbstractModule() {...},0,67,0,0,0,10,0,2,0,2
 MATSim Episim,org.matsim.episim,PreparedRun.Run,0,15,0,0,0,6,0,1,0,1
 MATSim Episim,org.matsim.episim,VirusStrainConfigGroup.StrainParams,24,232,3,5,4,62,7,30,4,29
 MATSim Episim,org.matsim.episim,GuiceUtils.CopyModule,6,93,0,12,2,21,0,8,0,2
