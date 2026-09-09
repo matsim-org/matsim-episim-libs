@@ -7,17 +7,13 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.model.SimulationListener;
-import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
 import java.io.BufferedWriter;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.SplittableRandom;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Writes contacts for each day.
@@ -30,7 +26,7 @@ public class WriteContactsPerDay implements SimulationListener {
 	private BufferedWriter writer;
 
 	@Override
-	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	public void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 		this.persons = persons;
 	}
 

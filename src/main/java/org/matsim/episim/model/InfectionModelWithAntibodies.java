@@ -10,9 +10,9 @@ import org.matsim.episim.policy.Restriction;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
@@ -23,7 +23,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final ProgressionModel progression;
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
@@ -32,7 +32,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final RealDistribution distribution;
 
 	/**
-	 * Scale infectivity to 1.0
+	 * Scale infectivity to 1.0.
 	 */
 	private final double scale;
 
@@ -42,7 +42,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 	@Inject
 	InfectionModelWithAntibodies(FaceMaskModel faceMaskModel, ProgressionModel progression,
-															Config config, EpisimReporting reporting, SplittableRandom rnd) {
+															Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.progression = progression;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -94,13 +94,12 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));
 		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));
 
-		{
 			double igaFactor = 0.0;
 			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
 			if (target.hadStrain(infector.getVirusStrain())) {
 
 				int lastInfectionWithStrain = 0;
-				for (int ii = 0; ii < target.getNumInfections();  ii++) {
+				for (int ii = 0; ii < target.getNumInfections(); ii++) {
 					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {
 						lastInfectionWithStrain = ii;
 					}
@@ -149,8 +148,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				if(strainsLineA.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;
 					boolean targetHadStrain = false;
-					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (strainsLineA.contains(target.getVirusStrain(ii))){
+					for (int ii = 0; ii < target.getNumInfections(); ii++) {
+						if (strainsLineA.contains(target.getVirusStrain(ii))) {
 							targetHadStrain = true;
 							lastInfectionWithStrain = ii;
 						}
@@ -166,8 +165,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				if(strainsLineB.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;
 					boolean targetHadStrain = false;
-					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (strainsLineB.contains(target.getVirusStrain(ii))){
+					for (int ii = 0; ii < target.getNumInfections(); ii++) {
+						if (strainsLineB.contains(target.getVirusStrain(ii))) {
 							targetHadStrain = true;
 							lastInfectionWithStrain = ii;
 						}
@@ -199,10 +198,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 				susceptibility = susceptibility * (1.0 - igaFactor);
 //			}
-		}
-
-
-
 		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
 		// remaining risk --> lower val, lower risk, max risk at 1
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
@@ -219,7 +214,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	}
 
 	private double calcInfectionProbabilityWoImmunity(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
-	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
+		double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());

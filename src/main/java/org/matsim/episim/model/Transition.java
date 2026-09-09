@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigValue;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.util.*;
 
@@ -130,7 +131,7 @@ public abstract class Transition {
 	/**
 	 * Returns the day when the transition should occur.
 	 */
-	public abstract int getTransitionDay(SplittableRandom rnd);
+	public abstract int getTransitionDay(EpisimSplittableRandom rnd);
 
 	/**
 	 * Implementation for a fixed transition.
@@ -144,7 +145,7 @@ public abstract class Transition {
 		}
 
 		@Override
-		public int getTransitionDay(SplittableRandom rnd) {
+		public int getTransitionDay(EpisimSplittableRandom rnd) {
 			return day;
 		}
 
@@ -165,7 +166,7 @@ public abstract class Transition {
 	/**
 	 * Implementation for log normal distributed transition.
 	 *
-	 * @see EpisimUtils#nextLogNormal(SplittableRandom, double, double)
+	 * @see EpisimUtils#nextLogNormal(EpisimSplittableRandom, double, double)
 	 */
 	private static final class LogNormalTransition extends Transition {
 
@@ -181,7 +182,7 @@ public abstract class Transition {
 		}
 
 		@Override
-		public int getTransitionDay(SplittableRandom rnd) {
+		public int getTransitionDay(EpisimSplittableRandom rnd) {
 			return (int) FastMath.round(EpisimUtils.nextLogNormal(rnd, mu, sigma));
 		}
 

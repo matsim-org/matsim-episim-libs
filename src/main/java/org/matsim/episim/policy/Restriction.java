@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.poi.util.Beta;
 import org.matsim.api.core.v01.Id;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 
 import javax.annotation.Nullable;
@@ -61,7 +62,7 @@ public final class Restriction {
 	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
 
 	/**
-	 * Maps location-based remainingFraction to district name
+	 * Maps location-based remainingFraction to district name.
 	 */
 	private Map<String, Double> locationBasedRf;
 
@@ -87,7 +88,7 @@ public final class Restriction {
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
 						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf,
-	                    @Nullable Double susceptibleRf, @Nullable Double vaccinatedRf) {
+		@Nullable Double susceptibleRf, @Nullable Double vaccinatedRf) {
 
 		if (remainingFraction != null && !Objects.equals(remainingFraction, ShutdownPolicy.REG_HOSPITAL) && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -95,7 +96,7 @@ public final class Restriction {
 			throw new IllegalArgumentException("contact intensity correction must be larger than 0 but is=" + ciCorrection);
 		if (maskUsage != null && maskUsage.values().stream().anyMatch(p -> p < 0 || p > 1))
 			throw new IllegalArgumentException("Mask usage probabilities must be between [0, 1]");
-		if (susceptibleRf != null &&  (Double.isNaN(susceptibleRf) || susceptibleRf < 0 || susceptibleRf > 1))
+		if (susceptibleRf != null && (Double.isNaN(susceptibleRf) || susceptibleRf < 0 || susceptibleRf > 1))
 			throw new IllegalArgumentException("Susceptible fraction must be between 0 and 1 but is="+ susceptibleRf);
 
 		this.remainingFraction = remainingFraction;
@@ -289,6 +290,9 @@ public final class Restriction {
 		return new Restriction(null, null, null, null, null, null, null, new HashMap<>(), null, remainingFraction);
 	}
 
+	/**
+	 * Creates a restriction with location-based remaining fractions.
+	 */
 	public static Restriction ofLocationBasedRf(Map<String, Double> locationBasedRf) {
 		return new Restriction(null, null, null, null, null, null, null, locationBasedRf, null, null);
 
@@ -358,7 +362,7 @@ public final class Restriction {
 	/**
 	 * Determines / Randomly draws which mask a persons wears while this restriction is in place.
 	 */
-	public FaceMask determineMask(SplittableRandom rnd) {
+	public FaceMask determineMask(EpisimSplittableRandom rnd) {
 
 		if (maskUsage.isEmpty()) return FaceMask.NONE;
 
@@ -390,7 +394,7 @@ public final class Restriction {
 
 		if (adjustFrom) {
 			if (ch.overnight)
-				return sod >= ch.from ? ch.length - (sod - ch.from) : ch.length -  (sod + 86400 - ch.from);
+				return sod >= ch.from ? ch.length - (sod - ch.from) : ch.length - (sod + 86400 - ch.from);
 
 			return ch.length - (sod - ch.from);
 		} else {
@@ -517,14 +521,11 @@ public final class Restriction {
 		Map<String, Double> otherLocationBasedRf = new HashMap<>();
 		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
 
-		// if new and old Restriction have equal Rfs: warn
-		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)){
+		// If the new and old restrictions have equal Rfs, warn. If the new restriction does not
+		// have a value for Rf, keep the old value and use its localRf when the new one is absent.
+		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)) {
 			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
-		}
-		// if new Restriction doesn't have value for Rf:
-		// 1) keep old value for Rf
-		// 2) check whether new Restriction has localRf, and if not, then use localRf from old Restriction
-		else if (remainingFraction == null){
+		} else if (remainingFraction == null) {
 			remainingFraction = otherRf;
 
 			if (!locationBasedRf.isEmpty() && !otherLocationBasedRf.isEmpty() && !locationBasedRf.equals(otherLocationBasedRf)) {
@@ -677,7 +678,7 @@ public final class Restriction {
 	public static final class ClosingHours {
 
 		/**
-		 * Starting second when activity is closed (exclusive)
+		 * Starting second when activity is closed (exclusive).
 		 */
 		public final int from;
 

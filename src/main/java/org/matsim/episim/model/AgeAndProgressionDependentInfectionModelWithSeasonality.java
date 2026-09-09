@@ -10,7 +10,8 @@ import org.matsim.episim.policy.Restriction;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.matsim.episim.model.DefaultInfectionModel.*;
 
@@ -23,7 +24,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	private final ProgressionModel progression;
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
@@ -32,7 +33,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	private final RealDistribution distribution;
 
 	/**
-	 * Scale infectivity to 1.0
+	 * Scale infectivity to 1.0.
 	 */
 	private final double scale;
 
@@ -42,7 +43,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 	@Inject
 	AgeAndProgressionDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ProgressionModel progression,
-															Config config, EpisimReporting reporting, SplittableRandom rnd) {
+															Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.progression = progression;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -104,7 +105,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	}
 
 	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
-	                                            double indoorOutdoorFactor, double shedding, double intake) {
+		double indoorOutdoorFactor, double shedding, double intake) {
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 

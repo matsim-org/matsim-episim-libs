@@ -3,7 +3,7 @@ package org.matsim.episim.events;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.internal.HasPersonId;
+import org.matsim.api.core.v01.events.HasPersonId;
 import org.matsim.episim.model.VirusStrain;
 
 import static org.matsim.episim.events.EpisimInfectionEvent.*;
@@ -36,7 +36,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 	 * Constructor.
 	 */
 	public EpisimPotentialInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double antibodies, double rnd) {
+		int groupSize, VirusStrain strain, double probability, double unVacProbability, double antibodies, double rnd) {
 
 		super(time);
 

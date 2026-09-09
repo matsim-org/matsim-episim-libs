@@ -7,29 +7,30 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.time.LocalDate;
 import java.util.*;
 
 /**
- * Vaccinate people starting with the oldest first
+ * Vaccinate people starting with the oldest first.
  */
 public class VaccinationByAge implements VaccinationModel {
 
-	protected final SplittableRandom rnd;
+	protected final EpisimSplittableRandom rnd;
 	protected final VaccinationConfigGroup vaccinationConfig;
 
 	protected final static int MAX_AGE = 130;
 	protected final static int MINIMUM_AGE_FOR_VACCINATIONS = 0;
 
 	@Inject
-	public VaccinationByAge(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
+	public VaccinationByAge(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 	}
 
 	/**
-	 * Return an array where we have for each age (in years) an ArrayList of Persons that are qualified for a vaccination
+	 * Return an array where we have for each age (in years) an ArrayList of Persons that are qualified for a vaccination.
 	 */
 	List<EpisimPerson>[] collectPerAge(Map<Id<Person>, EpisimPerson> persons, int iteration, boolean reVaccination) {
 		final List<EpisimPerson>[] perAge = new List[MAX_AGE];

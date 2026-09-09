@@ -23,13 +23,13 @@ public enum VirusStrain implements ImmunityEvent {
 	B1351(SARS_CoV_2), //todo?
 
 	/**
-	 * unknown mutation
+	 * Unknown mutation.
 	 */
 //	MUTB,
 	DELTA(ALPHA),
 
 	/**
-	 * VoC B.1.1.529, first reported to WHO from South Africa on 24 November 2021
+	 * VoC B.1.1.529, first reported to WHO from South Africa on 24 November 2021.
 	 */
 //	OMICRON,
 	OMICRON_BA1(DELTA),

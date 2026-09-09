@@ -20,8 +20,14 @@
 package org.matsim.episim.events;
 
 import org.matsim.core.events.handler.EventHandler;
-import org.matsim.episim.events.EpisimInfectionEvent;
 
+
+/**
+ * Handles Episim infection events.
+ */
 public interface EpisimInfectionEventHandler extends EventHandler {
+	/**
+	 * Handles an infection event.
+	 */
 	void handleEvent(EpisimInfectionEvent event);
 }

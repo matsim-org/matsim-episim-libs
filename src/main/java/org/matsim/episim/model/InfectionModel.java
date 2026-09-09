@@ -6,6 +6,9 @@ import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
 
+/**
+ * Calculates infection probabilities during person contacts.
+ */
 public interface InfectionModel {
 
 

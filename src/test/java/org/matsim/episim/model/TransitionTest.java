@@ -10,7 +10,8 @@ import org.junit.Test;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 import java.util.Objects;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.matsim.episim.model.Transition.to;
@@ -20,7 +21,7 @@ public class TransitionTest {
 	@Test
 	public void logNormalMean() {
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 
 		Transition t = Transition.logNormalWithMeanAndStd(10, 5);
 		double[] values = new double[100_000];
@@ -38,7 +39,7 @@ public class TransitionTest {
 	@Test
 	public void logNormalMedian() {
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 
 		double[] values = new double[100_000];
 
@@ -70,7 +71,7 @@ public class TransitionTest {
 	@Test
 	public void sigmaZero() {
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 		Transition t = Transition.logNormalWithMeanAndStd(10, 0);
 		for (int i = 0; i < 1000; i++) {
 			assertThat(t.getTransitionDay(rnd)).isEqualTo(10);

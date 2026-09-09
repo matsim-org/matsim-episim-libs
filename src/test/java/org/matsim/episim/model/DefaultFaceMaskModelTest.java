@@ -10,7 +10,7 @@ import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,7 +22,7 @@ public class DefaultFaceMaskModelTest {
 	@Before
 	public void setUp() throws Exception {
 		config = ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class );
-		model = new DefaultFaceMaskModel(new SplittableRandom(1));
+		model = new DefaultFaceMaskModel(new EpisimSplittableRandom(1));
 	}
 
 	private double sample(Restriction r, FaceMask type) {

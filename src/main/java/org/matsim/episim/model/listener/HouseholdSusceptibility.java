@@ -15,6 +15,7 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.analysis.DistrictLookup;
 import org.matsim.episim.model.SimulationListener;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
@@ -22,6 +23,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 
+/**
+ * Assigns susceptibility values at household level.
+ */
 public class HouseholdSusceptibility implements SimulationListener {
 
 	private static final Logger log = LogManager.getLogger(HouseholdSusceptibility.class);
@@ -44,7 +48,7 @@ public class HouseholdSusceptibility implements SimulationListener {
 	}
 
 	@Override
-	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	public void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 
 		DistrictLookup.Index index = null;
 		if (config.shp != null) {
@@ -97,7 +101,7 @@ public class HouseholdSusceptibility implements SimulationListener {
 	/**
 	 * Samples susceptibility for a household.
 	 */
-	private double sample(SplittableRandom rnd) {
+	private double sample(EpisimSplittableRandom rnd) {
 
 		if (rnd.nextDouble() < config.pHouseholds)
 			return config.susceptibility;

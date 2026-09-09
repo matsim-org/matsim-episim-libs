@@ -194,6 +194,11 @@ public class EpisimWriter {
 		}
 	}
 
+	/**
+	 * Flushes the given writer.
+	 *
+	 * @param writer writer to flush
+	 */
 	public synchronized void flush(Writer writer) {
 		try {
 			writer.flush();

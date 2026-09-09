@@ -30,7 +30,7 @@ import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.controler.ControllerUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
@@ -93,11 +93,11 @@ public final class EpisimRunner {
 		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
 			manager.addHandler(reporting);
 
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
+		ControllerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
 		handler.init(replay.getEvents());
 
-		Path output = Path.of(config.controler().getOutputDirectory());
+		Path output = Path.of(config.controller().getOutputDirectory());
 
 		int iteration = 1;
 		if (episimConfig.getStartFromSnapshot() != null && episimConfig.getStartFromImmunization() != null) {
@@ -155,7 +155,7 @@ public final class EpisimRunner {
 	/**
 	 * Update events data and internal person data structure.
 	 *
-	 * @param events
+	 * @param events events grouped by day of week
 	 */
 	public void updateEvents(Map<DayOfWeek, List<Event>> events) {
 
@@ -228,7 +228,7 @@ public final class EpisimRunner {
 					.createArchiveOutputStream("zip", out);
 
 			// Copy whole output to the snapshot
-			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controler().getRunId(), archive);
+			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controller().getRunId(), archive);
 
 			archive.putArchiveEntry(new ZipArchiveEntry("iteration"));
 			ObjectOutputStream oos = new ObjectOutputStream(archive);
@@ -245,7 +245,7 @@ public final class EpisimRunner {
 			archive.finish();
 			archive.close();
 
-		} catch (IOException | ArchiveException e) {
+		} catch (IOException e) {
 			log.error("Could not write snapshot", e);
 		}
 
@@ -254,7 +254,7 @@ public final class EpisimRunner {
 	}
 
 	/**
-	 * Read snapshot from disk and initialize simulation state
+	 * Read snapshot from disk and initialize simulation state.
 	 *
 	 * @param path path to snapshot archive
 	 * @return starting iteration
@@ -312,14 +312,14 @@ public final class EpisimRunner {
 
 			return iteration;
 
-		} catch (IOException | ArchiveException | ClassNotFoundException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			throw new IllegalStateException("Could not read snapshot", e);
 		}
 
 	}
 
 	/**
-	 * Helper method to write object into archive,
+	 * Helper method to write object into archive.
 	 */
 	private void writeObject(Externalizable obj, String name, ArchiveOutputStream archive) throws IOException {
 		archive.putArchiveEntry(new ZipArchiveEntry(name));

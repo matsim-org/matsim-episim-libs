@@ -33,7 +33,7 @@ import org.matsim.api.core.v01.IdMap;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.*;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.internal.HasPersonId;
+import org.matsim.api.core.v01.events.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.collections.Tuple;
@@ -44,9 +44,11 @@ import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.utils.objectattributes.attributable.AttributesImpl;
 import org.matsim.vehicles.Vehicle;
 
 import java.io.*;
@@ -57,7 +59,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.*;
 
@@ -162,12 +163,12 @@ public final class InfectionEventHandler implements Externalizable {
 	private final TracingConfigGroup tracingConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final EpisimReporting reporting;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 
 	/**
 	 * Local random, e.g. used for person initialization.
 	 */
-	private final SplittableRandom localRnd;
+	private final EpisimSplittableRandom localRnd;
 
 	private boolean init = false;
 	private int iteration = 0;
@@ -188,7 +189,7 @@ public final class InfectionEventHandler implements Externalizable {
 	private Set<VaccinationModel> vaccinations;
 
 	@Inject
-	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
+	public InfectionEventHandler(Injector injector, EpisimSplittableRandom rnd) {
 		this.injector = injector;
 		this.rnd = rnd;
 
@@ -200,7 +201,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
-		this.localRnd = new SplittableRandom(65536); // fixed seed, because it should not change between snapshots
+		this.localRnd = new EpisimSplittableRandom(65536); // fixed seed, because it should not change between snapshots
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
 		this.antibodyModel = injector.getInstance(AntibodyModel.class);
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
@@ -225,6 +226,9 @@ public final class InfectionEventHandler implements Externalizable {
 		return iteration > 0 && !progressionModel.canProgress(report);
 	}
 
+	/**
+	 * Shuts down the event-processing executor.
+	 */
 	public void finish() {
 		executor.shutdown();
 	}
@@ -282,7 +286,7 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Update events data and internal person data structure.
 	 *
-	 * @param events
+	 * @param events events grouped by day of week
 	 */
 	void updateEvents(Map<DayOfWeek, List<Event>> events) {
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
@@ -576,7 +580,7 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, by setting
 	 * the taskId attribute of the containers to values between 0 and episimConfig.getThreds() - 1,
-	 * so that the sum of numUsers * maxGroupSize has an even distribution
+	 * so that the sum of numUsers * maxGroupSize has an even distribution.
 	 */
 	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		// We need the containers sorted by the load, with the highest load first.
@@ -613,7 +617,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, using
-	 * the hashCode of the containerId (the original distribution schema)
+	 * the hashCode of the containerId (the original distribution schema).
 	 */
 	private void balanceContainersByHash(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
@@ -624,7 +628,7 @@ public final class InfectionEventHandler implements Externalizable {
 	}
 
 	/**
-	 * Create handlers for executing th
+	 * Create handlers for executing the simulation.
 	 */
 	protected void createTrajectoryHandlers() {
 
@@ -636,7 +640,7 @@ public final class InfectionEventHandler implements Externalizable {
 				@Override
 				protected void configure() {
 					// the seed state is set later by this class
-					bind(SplittableRandom.class).toInstance(new SplittableRandom(rnd.nextLong()));
+					bind(EpisimSplittableRandom.class).toInstance(new EpisimSplittableRandom(rnd.nextLong()));
 					bind(TrajectoryHandler.class);
 
 					TypeLiteral<Map<Id<Person>, EpisimPerson>> pMap = new TypeLiteral<>() {
@@ -672,7 +676,7 @@ public final class InfectionEventHandler implements Externalizable {
 		if (person != null) {
 			attrs = person.getAttributes();
 		} else {
-			attrs = new Attributes();
+			attrs = new AttributesImpl();
 		}
 
 		boolean traceable = localRnd.nextDouble() < tracingConfig.getEquipmentRate();
@@ -743,6 +747,9 @@ public final class InfectionEventHandler implements Externalizable {
 		log.info("Inserted {} stationary agents, total = {}", inserted, personMap.size());
 	}
 
+	/**
+	 * Resets the handler for the given iteration.
+	 */
 	public void reset(int iteration) {
 
 		// safety checks
@@ -1036,4 +1043,3 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 	}
 }
-

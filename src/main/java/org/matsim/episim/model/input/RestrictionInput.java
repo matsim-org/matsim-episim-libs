@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.logging.log4j.util.TriConsumer;
-import org.matsim.core.utils.io.UncheckedIOException;
+import java.io.UncheckedIOException;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.ShutdownPolicy;
 
@@ -135,10 +135,13 @@ public interface RestrictionInput {
 		return start;
 	}
 
+	/**
+	 * Resamples average weekday values by subdistrict.
+	 */
 	static LocalDate resampleAvgWeekdayBySubdistrict(Map<LocalDate, Double> daysGlobal,
-	                                                 Map<String, Map<LocalDate, Double>> daysPerDistrict,
-	                                                 LocalDate start,
-	                                                 TriConsumer<LocalDate, Double, Map<String, Double>> f) {
+		Map<String, Map<LocalDate, Double>> daysPerDistrict,
+		LocalDate start,
+		TriConsumer<LocalDate, Double, Map<String, Double>> f) {
 
 		Set<LocalDate> ignored;
 		try {

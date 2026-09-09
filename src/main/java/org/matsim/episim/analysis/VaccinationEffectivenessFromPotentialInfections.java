@@ -45,6 +45,9 @@ import java.nio.file.Path;
 import java.util.*;
 
 
+/**
+ * Calculates vaccination effectiveness from potential-infection events.
+ */
 @CommandLine.Command(
 		name = "vaccinationEffectiveness",
 		description = "Calculate vaccination effectiveness"
@@ -207,7 +210,6 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 		}
 	}
 }
-
 
 
 

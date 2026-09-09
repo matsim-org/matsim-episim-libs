@@ -2,9 +2,13 @@ package org.matsim.run;
 
 import com.google.inject.*;
 import com.google.inject.util.Modules;
-import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -30,16 +34,17 @@ import java.util.List;
 import static org.matsim.run.RunEpisimIntegrationTest.assertSimulationOutput;
 
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "restriction-{0}")
+@MethodSource("parameters")
 public class RunSnzIntegrationTest {
 
 	private static final int ITERATIONS = 80;
 	static final String INPUT = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/openDataModel/berlin/input/";
 
-	@Rule
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 
-	@Parameterized.Parameter
+	@Parameter(0)
 	public SnzBerlinProductionScenario.Restrictions r;
 
 	private EpisimRunner runner;
@@ -49,13 +54,12 @@ public class RunSnzIntegrationTest {
 	private TestingConfigGroup testingConfig;
 	private boolean skipped = true;
 
-	@Parameterized.Parameters(name = "restriction-{0}")
 	public static Iterable<SnzBerlinProductionScenario.Restrictions> parameters() {
 		return Arrays.asList(
 				SnzBerlinProductionScenario.Restrictions.yes, SnzBerlinProductionScenario.Restrictions.onlyEdu);
 	}
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 
@@ -72,7 +76,7 @@ public class RunSnzIntegrationTest {
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
 		if (!skipped)
 			assertSimulationOutput(utils);
@@ -162,7 +166,7 @@ public class RunSnzIntegrationTest {
 			episimConfig.setThreads(2);
 
 
-			config.controler().setOutputDirectory(utils.getOutputDirectory());
+			config.controller().setOutputDirectory(utils.getOutputDirectory());
 
 			return config;
 		}

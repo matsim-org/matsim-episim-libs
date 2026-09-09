@@ -127,7 +127,7 @@ public class RunParallel<T> implements Callable<Integer> {
 	private boolean writeMetadata;
 
 	/**
-	 * Prepared batch run
+	 * Prepared batch run.
 	 */
 	private PreparedRun prepare;
 
@@ -138,6 +138,9 @@ public class RunParallel<T> implements Callable<Integer> {
 		this.prepare = prepare;
 	}
 
+	/**
+	 * Creates a parallel-run command.
+	 */
 	public RunParallel() {
 	}
 
@@ -232,8 +235,8 @@ public class RunParallel<T> implements Callable<Integer> {
 			}
 
 			String outputPath = output + "/" + prepare.getOutputName(run);
-			run.config.controler().setOutputDirectory(outputPath);
-			run.config.controler().setRunId(prepare.setup.getMetadata().name + run.id);
+			run.config.controller().setOutputDirectory(outputPath);
+			run.config.controller().setRunId(prepare.setup.getMetadata().name + run.id);
 			run.config.setContext(context);
 
 			Collection<OutputAnalysis> post = prepare.setup.postProcessing();
@@ -339,7 +342,7 @@ public class RunParallel<T> implements Callable<Integer> {
 				RunEpisim.printBindings(injector);
 			}
 
-			String output = this.module.config.controler().getOutputDirectory();
+			String output = this.module.config.controller().getOutputDirectory();
 
 			log.info("Starting task: {}", output);
 

@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -29,12 +29,12 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 	private static final Logger log = LogManager.getLogger(RandomInitialInfections.class);
 
 	private final EpisimConfigGroup episimConfig;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 
 	private int initialInfectionsLeft;
 
 	@Inject
-	public RandomInitialInfections(Config config, SplittableRandom rnd) {
+	public RandomInitialInfections(Config config, EpisimSplittableRandom rnd) {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.rnd = rnd;
 	}

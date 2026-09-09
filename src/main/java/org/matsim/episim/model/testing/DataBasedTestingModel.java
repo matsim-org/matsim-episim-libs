@@ -19,7 +19,7 @@ import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.NavigableMap;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import java.util.TreeMap;
 
 /**
@@ -38,7 +38,7 @@ public final class DataBasedTestingModel extends DefaultTestingModel {
 	private Object2IntMap<String> forDay;
 
 	@Inject
-	DataBasedTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, EpisimConfigGroup episimConfig) {
+	DataBasedTestingModel(EpisimSplittableRandom rnd, Config config, TestingConfigGroup testingConfig, EpisimConfigGroup episimConfig) {
 		super(rnd, config, testingConfig, null, episimConfig);
 
 		capacities = readActivities();

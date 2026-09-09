@@ -26,9 +26,8 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
  * Variant of the {@link DefaultContactModel} with symmetric interactions.
@@ -57,8 +56,8 @@ public final class OldSymmetricContactModel extends AbstractContactModel {
 
 	@Inject
 	/* package */
-	OldSymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-							 EpisimReporting reporting, InfectionModel infectionModel ) {
+	OldSymmetricContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+	                         EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();

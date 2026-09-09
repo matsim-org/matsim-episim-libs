@@ -36,6 +36,9 @@ public interface ContactModel {
 	 */
 	void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now);
 
+	/**
+	 * Notifies the model that a person entered a vehicle.
+	 */
 	void notifyEnterVehicle(EpisimPerson personEnteringVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now);
 
 	/**
@@ -43,6 +46,9 @@ public interface ContactModel {
 	 */
 	void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now);
 
+	/**
+	 * Notifies the model that a person entered a facility.
+	 */
 	void notifyEnterFacility(EpisimPerson personEnteringFacility, InfectionEventHandler.EpisimFacility facility, double now);
 
 	/**

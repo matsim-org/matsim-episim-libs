@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 /**
  * Config option specific to contact tracing and measures performed in {@link org.matsim.episim.model.ProgressionModel}.
  */
+@SuppressWarnings("checkstyle:MethodName")
 public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
@@ -444,8 +445,14 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		return Joiner.on(";").join(ignoredActivities);
 	}
 
+	/**
+	 * Unit used to express tracing capacity.
+	 */
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}
 
+	/**
+	 * Available contact-tracing strategies.
+	 */
 	public enum Strategy {
 
 		/**

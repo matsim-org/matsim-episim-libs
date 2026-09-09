@@ -77,7 +77,7 @@
 
         <module name="IllegalType">
             <property name="illegalClassNames" value="java.util.Random"/>
-            <message key="illegal.type" value="Use java.util.SplittableRandom for better performance and randomness"/>
+            <message key="illegal.type" value="Use org.matsim.episim.util.EpisimSplittableRandom for better performance and randomness"/>
         </module>
 
         <module name="IllegalType">

@@ -14,6 +14,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.*;
@@ -23,7 +24,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SplittableRandom;
 import java.util.TreeMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,7 +58,7 @@ public class EpisimUtilsTest {
 	@Test
 	public void seed() {
 
-		SplittableRandom rnd = new SplittableRandom(1000);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1000);
 
 		assertThat(EpisimUtils.getSeed(rnd))
 				.isEqualTo(1000);
@@ -102,7 +102,7 @@ public class EpisimUtilsTest {
 	@Test
 	public void nextLogNormal() {
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 
 		double mu = 5;
 		double sigma = 1.5;

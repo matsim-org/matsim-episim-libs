@@ -5,7 +5,8 @@ import com.google.inject.*;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.matsim.episim.GuiceUtils.createCopiedInjector;
@@ -20,7 +21,7 @@ public class GuiceUtilsTest {
 			@Override
 			protected void configure() {
 				bind(Integer.class).toProvider(() -> 1).in(Singleton.class);
-				bind(SplittableRandom.class).toProvider(() -> new SplittableRandom(0)).in(Singleton.class);
+				bind(EpisimSplittableRandom.class).toProvider(() -> new EpisimSplittableRandom(0)).in(Singleton.class);
 			}
 
 			@Singleton
@@ -30,11 +31,11 @@ public class GuiceUtilsTest {
 			}
 		};
 
-		SplittableRandom local = new SplittableRandom(1);
+		EpisimSplittableRandom local = new EpisimSplittableRandom(1);
 		Module child = new AbstractModule() {
 			@Override
 			protected void configure() {
-				bind(SplittableRandom.class).toInstance(local);
+				bind(EpisimSplittableRandom.class).toInstance(local);
 				bind(Integer.class).toInstance(2);
 			}
 		};
@@ -43,11 +44,11 @@ public class GuiceUtilsTest {
 		assertThat(inj.getInstance(String.class)).isEqualTo("1");
 		Injector childInj = createCopiedInjector(inj, List.of(child), String.class);
 
-		SplittableRandom instance = inj.getInstance(SplittableRandom.class);
+		EpisimSplittableRandom instance = inj.getInstance(EpisimSplittableRandom.class);
 		assertThat(instance).isNotSameAs(local);
 		assertThat(inj.getInstance(String.class)).isEqualTo("1");
 
-		assertThat(childInj.getInstance(SplittableRandom.class)).isSameAs(local);
+		assertThat(childInj.getInstance(EpisimSplittableRandom.class)).isSameAs(local);
 		assertThat(childInj.getInstance(Integer.class)).isEqualTo(2);
 		assertThat(childInj.getInstance(String.class)).isEqualTo("2");
 

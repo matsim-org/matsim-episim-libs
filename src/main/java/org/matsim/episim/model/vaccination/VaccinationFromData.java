@@ -14,6 +14,7 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 import tech.tablesaw.api.*;
@@ -21,8 +22,6 @@ import tech.tablesaw.io.csv.CsvReadOptions;
 import tech.tablesaw.selection.Selection;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -67,14 +66,14 @@ public class VaccinationFromData extends VaccinationByAge {
 	private final RandomVaccination random;
 
 	@Inject
-	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, org.matsim.episim.model.vaccination.VaccinationFromData.Config config) {
+	public VaccinationFromData(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, org.matsim.episim.model.vaccination.VaccinationFromData.Config config) {
 		super(rnd, vaccinationConfig);
 		this.config = config;
 		this.random = new RandomVaccination(rnd, vaccinationConfig);
 	}
 
 	@Override
-	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	public void init(EpisimSplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 		if (vaccinationConfig.getFromFile() == null)
 			throw new IllegalArgumentException("Vaccination file must be set, but was null");
 
@@ -90,7 +89,7 @@ public class VaccinationFromData extends VaccinationByAge {
 		ageGroups.add(new VaccinationFromData.AgeGroup(18, 59));
 		ageGroups.add(new VaccinationFromData.AgeGroup(60, MAX_AGE - 1));
 
-		try {
+
 			Table rkiData = Table.read().usingOptions(CsvReadOptions.builder(vaccinationConfig.getFromFile())
 					.tableName("rkidata")
 					.columnTypes(types));
@@ -130,9 +129,6 @@ public class VaccinationFromData extends VaccinationByAge {
 			mergeData(filtered, refresher, endDate, "60+", config.groups.getDouble("60+"), 3);
 
 
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
 
 		// collect population sizes
 		for (EpisimPerson p : persons.values()) {
@@ -173,7 +169,7 @@ public class VaccinationFromData extends VaccinationByAge {
 	}
 
 	/**
-	 * Vaccinate all persons with the nth vaccination
+	 * Vaccinate all persons with the nth vaccination.
 	 * @param vaccinationN the nth vaccination
 	 */
 	private int vaccinate(Map<Id<Person>, EpisimPerson> persons, TreeMap<LocalDate, DoubleList> entries, int vaccinationN, LocalDate date, int iteration, double now) {
@@ -333,6 +329,9 @@ public class VaccinationFromData extends VaccinationByAge {
 		final String locationId;
 		final Object2DoubleMap<String> groups = new Object2DoubleLinkedOpenHashMap<>();
 
+		/**
+		 * Creates a vaccination configuration for the given location.
+		 */
 		public Config(String locationId) {
 			this.locationId = locationId;
 		}

@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
 import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -17,7 +18,7 @@ import java.util.*;
  */
 public class DefaultTestingModel implements TestingModel {
 
-	protected final SplittableRandom rnd;
+	protected final EpisimSplittableRandom rnd;
 	protected final VaccinationConfigGroup vaccinationConfig;
 	protected final EpisimConfigGroup episimConfig;
 	protected final TestingConfigGroup testingConfig;
@@ -36,7 +37,7 @@ public class DefaultTestingModel implements TestingModel {
 	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
 
 	/**
-	 * Current date
+	 * Current date.
 	 */
 	protected LocalDate date;
 
@@ -56,7 +57,7 @@ public class DefaultTestingModel implements TestingModel {
 	private boolean withOutBooster;
 
 	@Inject
-	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
+	DefaultTestingModel(EpisimSplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.config = config;
 		this.testingConfig = testingConfig;
@@ -95,7 +96,7 @@ public class DefaultTestingModel implements TestingModel {
 	private void initCompliance(Map<Id<Person>, EpisimPerson> personMap) {
 
 		// TODO: this class may needs to be added to the snapshot
-		SplittableRandom rnd = new SplittableRandom(config.global().getRandomSeed());
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(config.global().getRandomSeed());
 
 		// don't draw one household multiple times
 		Set<String> checked = new HashSet<>();

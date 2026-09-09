@@ -24,12 +24,10 @@ import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
  * Default interaction model executed, when a person ends his activity.
@@ -52,8 +50,8 @@ public final class SqrtContactModel extends AbstractContactModel {
 
 	@Inject
 	/* package */
-	SqrtContactModel( SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-			  EpisimReporting reporting, InfectionModel infectionModel ) {
+	SqrtContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+	                 EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();

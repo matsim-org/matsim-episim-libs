@@ -14,7 +14,7 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.RestrictionTest;
 
 import java.time.DayOfWeek;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,7 +32,7 @@ public class DefaultParticipationModelTest {
 
 		episimConfig.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay);
 
-		model = new DefaultParticipationModel(new SplittableRandom(0), episimConfig, ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class));
+		model = new DefaultParticipationModel(new EpisimSplittableRandom(0), episimConfig, ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class));
 		r = ImmutableMap.of(
 				"home", Restriction.none(),
 				"work", Restriction.none(),

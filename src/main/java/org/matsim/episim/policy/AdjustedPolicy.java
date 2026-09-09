@@ -16,8 +16,8 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.ReplayHandler;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;

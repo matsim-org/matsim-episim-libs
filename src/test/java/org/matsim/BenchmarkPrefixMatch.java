@@ -5,7 +5,7 @@ import org.magnos.trie.Trie;
 import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.run.RunEpisim;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
@@ -62,7 +62,7 @@ public class BenchmarkPrefixMatch {
 			pTrie.put(act, param);
 		}
 
-		SplittableRandom rnd = new SplittableRandom(1);
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 
 		for (int i = 0; i < 10_000; i++) {
 			int idx = rnd.nextInt(OpenBerlinScenario.DEFAULT_ACTIVITIES.length);

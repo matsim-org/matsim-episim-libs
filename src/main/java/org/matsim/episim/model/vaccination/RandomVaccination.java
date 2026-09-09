@@ -9,6 +9,7 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -21,11 +22,11 @@ public class RandomVaccination implements VaccinationModel {
 
 	private static final Logger log = LogManager.getLogger(RandomVaccination.class);
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 
 	@Inject
-	public RandomVaccination(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
+	public RandomVaccination(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 	}

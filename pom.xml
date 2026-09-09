@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.matsim-org</groupId>
     <artifactId>matsim-episim-libs</artifactId>
-    <version>2025.1</version>
+    <version>2027-SNAPSHOT</version>
 
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
@@ -20,7 +20,8 @@
     </licenses>
 
     <properties>
-        <matsim.version>13.0</matsim.version>
+        <matsim.version>2026.0</matsim.version>
+        <junit.version>6.0.3</junit.version>
         <!--<matsim.version>12.0-2020w09-SNAPSHOT</matsim.version>-->
         <mainClass>org.matsim.run.RunEpisim</mainClass>
     </properties>
@@ -126,7 +127,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.7</version>
+            <version>2.21.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -152,12 +153,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>2.10.2</version>
+            <version>2.21.2</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.10.2</version>
+            <version>2.21.2</version>
         </dependency>
 
         <dependency>
@@ -184,6 +185,20 @@
         </dependency>
 
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <!--MATSim test infrastructure.  Not transitive.-->
             <groupId>org.matsim</groupId>
             <artifactId>matsim</artifactId>
@@ -201,7 +216,7 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>3.3.3</version>
+            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -220,12 +235,12 @@
         <dependency>
             <groupId>tech.tablesaw</groupId>
             <artifactId>tablesaw-core</artifactId>
-            <version>0.38.1</version>
+            <version>0.44.4</version>
         </dependency>
         <dependency>
             <groupId>tech.tablesaw</groupId>
             <artifactId>tablesaw-jsplot</artifactId>
-            <version>0.38.1</version>
+            <version>0.44.4</version>
         </dependency>
         <!--        <dependency>-->
         <!--            <groupId>tech.tablesaw</groupId>-->
@@ -250,10 +265,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.14.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <release>25</release>
                     <showWarnings>false</showWarnings>
                     <showDeprecation>false</showDeprecation>
                     <encoding>UTF-8</encoding>
@@ -261,10 +275,12 @@
                     <fork>true</fork>
                     <meminitial>128m</meminitial>
                     <maxmem>512m</maxmem>
-                    <compilerArguments>
-                        <Xmaxwarns>4000</Xmaxwarns>
-                        <Xmaxerrs>100</Xmaxerrs>
-                    </compilerArguments>
+                    <compilerArgs>
+                        <arg>-Xmaxwarns</arg>
+                        <arg>4000</arg>
+                        <arg>-Xmaxerrs</arg>
+                        <arg>100</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
@@ -287,7 +303,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.2</version>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -408,7 +424,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <executable>java</executable>
+                    <executable>${java.home}/bin/java</executable>
                     <arguments>
                         <argument>-Dpicocli.autocomplete.systemExitOnError</argument>
                         <argument>-cp</argument>
@@ -435,7 +451,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.15</version>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>

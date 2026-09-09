@@ -22,8 +22,10 @@ package org.matsim.episim.analysis;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.geotools.data.FeatureReader;
-import org.geotools.data.FileDataStoreFactorySpi;
+import org.geotools.api.data.FeatureReader;
+import org.geotools.api.data.FileDataStoreFactorySpi;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.locationtech.jts.geom.Coordinate;
@@ -36,8 +38,6 @@ import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -58,9 +58,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Writes a new population file with the additional "district" attribute as result.
  */
 @CommandLine.Command(
-		name = "districtLookup",
-		description = "Calculate and attach district information to a population.",
-		mixinStandardHelpOptions = true
+	name = "districtLookup",
+	description = "Calculate and attach district information to a population.",
+	mixinStandardHelpOptions = true
 )
 public class DistrictLookup implements Callable<Integer> {
 
@@ -79,7 +79,7 @@ public class DistrictLookup implements Callable<Integer> {
 	private String attr;
 
 	@CommandLine.Option(names = "--input-crs", description = "Overwrite CRS of the population home coordinates. " +
-			"If not given it will be read from the population attributes.", defaultValue = "EPSG:25832")
+		"If not given it will be read from the population attributes.", defaultValue = "EPSG:25832")
 	private String inputCRS;
 
 	// because of the own transformation classes of matsim, the crs can not be easily read from the shapefile, but has to be explicitly defined
@@ -88,6 +88,35 @@ public class DistrictLookup implements Callable<Integer> {
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new DistrictLookup()).execute(args));
+	}
+
+	/**
+	 * Opens datastore to a shape-file.
+	 */
+	private static ShapefileDataStore openDataStore(Path shp) throws IOException {
+
+		FileDataStoreFactorySpi factory = new ShapefileDataStoreFactory();
+
+		ShapefileDataStore ds;
+		if (shp.toString().endsWith(".shp"))
+			ds = (ShapefileDataStore) factory.createDataStore(shp.toUri().toURL());
+		else if (shp.toString().endsWith(".zip")) {
+
+			FileSystem fs = FileSystems.newFileSystem(shp, ClassLoader.getSystemClassLoader());
+			Optional<Path> match = Files.walk(fs.getPath("/"))
+				.filter(p -> p.toString().endsWith(".shp"))
+				.findFirst();
+
+			if (match.isEmpty())
+				throw new IllegalArgumentException("No .shp file found in the zip.");
+
+			log.info("Using {} from {}", match.get(), shp);
+			ds = (ShapefileDataStore) factory.createDataStore(match.get().toUri().toURL());
+		} else {
+			throw new IllegalArgumentException("Shape file must either be .zip or .shp, but was: " + shp);
+		}
+
+		return ds;
 	}
 
 	@Override
@@ -145,7 +174,7 @@ public class DistrictLookup implements Callable<Integer> {
 		 * @param attr attribute for the result of {@link #query(double, double)}
 		 */
 		public Index(File shapeFile, CoordinateTransformation ct, String attr)
-				throws IOException {
+			throws IOException {
 			ShapefileDataStore ds = openDataStore(shapeFile.toPath());
 			ds.setCharset(StandardCharsets.UTF_8);
 
@@ -188,35 +217,6 @@ public class DistrictLookup implements Callable<Integer> {
 
 			throw new NoSuchElementException(String.format("No matching entry found for x:%f y:%f %s", x, y, p));
 		}
-	}
-
-	/**
-	 * Opens datastore to a shape-file.
-	 */
-	private static ShapefileDataStore openDataStore(Path shp) throws IOException {
-
-		FileDataStoreFactorySpi factory = new ShapefileDataStoreFactory();
-
-		ShapefileDataStore ds;
-		if (shp.toString().endsWith(".shp"))
-			ds = (ShapefileDataStore) factory.createDataStore(shp.toUri().toURL());
-		else if (shp.toString().endsWith(".zip")) {
-
-			FileSystem fs = FileSystems.newFileSystem(shp, ClassLoader.getSystemClassLoader());
-			Optional<Path> match = Files.walk(fs.getPath("/"))
-					.filter(p -> p.toString().endsWith(".shp"))
-					.findFirst();
-
-			if (match.isEmpty())
-				throw new IllegalArgumentException("No .shp file found in the zip.");
-
-			log.info("Using {} from {}", match.get(), shp);
-			ds = (ShapefileDataStore) factory.createDataStore(match.get().toUri().toURL());
-		} else {
-			throw new IllegalArgumentException("Shape file must either be .zip or .shp, but was: " + shp);
-		}
-
-		return ds;
 	}
 
 

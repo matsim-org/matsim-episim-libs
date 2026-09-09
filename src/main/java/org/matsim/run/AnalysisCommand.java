@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.EventHandler;
-import org.matsim.core.utils.io.UncheckedIOException;
+import java.io.UncheckedIOException;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.events.EpisimEventsReader;
 import picocli.AutoComplete;
@@ -69,6 +69,7 @@ public class AnalysisCommand implements Runnable {
 	/**
 	 * Separator for TSV.
 	 */
+	@SuppressWarnings("checkstyle:StaticVariableName")
 	public static Joiner TSV = Joiner.on("\t");
 
 	@CommandLine.Spec
@@ -122,7 +123,7 @@ public class AnalysisCommand implements Runnable {
 	 *
 	 * @param scenario            path of the scenario, which contains the event folder
 	 * @param callback            will be executed before reading an event file and pass the path. If false is returned, no more events will be read.
-	 * @param preferReducedEvents
+	 * @param preferReducedEvents whether reduced event files should be preferred
 	 * @param handler             handler for the events
 	 * @return list of read event files
 	 */
@@ -283,6 +284,7 @@ public class AnalysisCommand implements Runnable {
 	/**
 	 * This stream will not close the underlying stream.
 	 */
+	@SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 	private static final class NonClosingGZIPStream extends GZIPInputStream {
 
 		public NonClosingGZIPStream(InputStream in) throws IOException {

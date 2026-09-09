@@ -10,12 +10,12 @@ import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Abstract base implementation for a progression model that stores and updates state transitions.
@@ -23,7 +23,7 @@ import java.util.SplittableRandom;
  */
 abstract class AbstractProgressionModel implements ProgressionModel, Externalizable {
 
-	protected final SplittableRandom rnd;
+	protected final EpisimSplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 
 	/**
@@ -33,7 +33,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	private final DiseaseStatusTransitionModel statusTransitionModel;
 
 	@Inject
-	AbstractProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, DiseaseStatusTransitionModel statusTransitionModel) {
+	AbstractProgressionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, DiseaseStatusTransitionModel statusTransitionModel) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.statusTransitionModel = statusTransitionModel;

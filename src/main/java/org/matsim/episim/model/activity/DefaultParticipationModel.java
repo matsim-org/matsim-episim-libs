@@ -10,14 +10,15 @@ import org.matsim.episim.policy.Restriction;
 import java.time.LocalDate;
 import java.util.BitSet;
 import java.util.List;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Default participation model that restricts participation based on remaining fraction.
  */
 public class DefaultParticipationModel implements ActivityParticipationModel {
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private ImmutableMap<String, Restriction> im;
@@ -25,7 +26,7 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 	private LocalDate date;
 
 	@Inject
-	public DefaultParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig) {
+	public DefaultParticipationModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.vaccinationConfig = vaccinationConfig;

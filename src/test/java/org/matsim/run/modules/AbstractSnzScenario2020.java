@@ -10,7 +10,7 @@ import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
 import static org.matsim.episim.model.Transition.to;
 

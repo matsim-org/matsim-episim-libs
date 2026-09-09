@@ -21,15 +21,14 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.util.*;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 
@@ -60,8 +59,8 @@ public final class DirectContactModel extends AbstractContactModel {
 	private final Map<EpisimContainer<?>, List<Group>> groups = new IdentityHashMap<>();
 
 	@Inject
-		/*package*/ DirectContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-									   EpisimReporting reporting, InfectionModel infectionModel) {
+		/*package*/ DirectContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+		                               EpisimReporting reporting, InfectionModel infectionModel) {
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();

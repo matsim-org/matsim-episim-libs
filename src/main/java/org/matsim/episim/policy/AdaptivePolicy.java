@@ -152,7 +152,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	}
 
 	/**
-	 * Calculate incidence depending
+	 * Calculate incidence depending on the current report.
 	 */
 	private void calculateCases(EpisimReporting.InfectionReport report) {
 		double cases = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());
@@ -185,7 +185,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder<Object> {
 
 		/**
-		 * Use {@link #AdaptivePolicy#config()}.
+		 * Use {@link AdaptivePolicy#config()}.
 		 */
 		private ConfigBuilder() {
 			params.put("start-in-lockdown", false);

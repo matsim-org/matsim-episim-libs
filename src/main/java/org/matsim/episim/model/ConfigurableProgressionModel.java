@@ -13,6 +13,7 @@ import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimPerson.TestStatus;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
@@ -79,7 +80,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	/**
 	 * Definition of state transitions from x -> y
-	 * Indices are the ordinal values of {@link DiseaseStatus} (as 2d matrix form)
+	 * Indices are the ordinal values of {@link DiseaseStatus} (as 2d matrix form).
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
@@ -137,7 +138,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private long prevShowingSymptoms;
 
 	@Inject
-	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	public ConfigurableProgressionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
 	                                    VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
 		super(rnd, episimConfig, statusTransitionModel);
 		this.tracingConfig = tracingConfig;
@@ -208,7 +209,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		int tracingDistance = tracingConfig.getTracingDayDistance();
 		// clear tracing if not relevant anymore
 		persons.values().parallelStream().forEach(person ->
-		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));
+			person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));
 	}
 
 

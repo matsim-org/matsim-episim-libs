@@ -38,9 +38,9 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,6 +61,7 @@ public final class EpisimUtils {
 	/**
 	 * Seconds in one day.
 	 */
+
 	public static final double DAY = 24. * 3600;
 
 	private EpisimUtils() {
@@ -123,7 +124,7 @@ public final class EpisimUtils {
 				outdir.append("ci").append(infectionParams.getContactIntensity());
 			}
 		}
-		config.controler().setOutputDirectory(outdir.toString());
+		config.controller().setOutputDirectory(outdir.toString());
 	}
 
 	/**
@@ -145,29 +146,17 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Extracts the current state of a {@link SplittableRandom} instance.
+	 * Extracts the current state of a {@link EpisimSplittableRandom} instance.
 	 */
-	public static long getSeed(SplittableRandom rnd) {
-		try {
-			Field field = rnd.getClass().getDeclaredField("seed");
-			field.setAccessible(true);
-			return (long) field.get(rnd);
-		} catch (ReflectiveOperationException e) {
-			throw new IllegalStateException("Could not extract seed", e);
-		}
+	public static long getSeed(EpisimSplittableRandom rnd) {
+		return rnd.getSeed();
 	}
 
 	/**
-	 * Sets current seed of {@link SplittableRandom} instance.
+	 * Sets current seed of {@link EpisimSplittableRandom} instance.
 	 */
-	public static void setSeed(SplittableRandom rnd, long seed) {
-		try {
-			Field field = rnd.getClass().getDeclaredField("seed");
-			field.setAccessible(true);
-			field.set(rnd, seed);
-		} catch (ReflectiveOperationException e) {
-			throw new IllegalStateException("Could not extract seed", e);
-		}
+	public static void setSeed(EpisimSplittableRandom rnd, long seed) {
+		rnd.setSeed(seed);
 	}
 
 	/**
@@ -259,7 +248,7 @@ public final class EpisimUtils {
 
 			if (file.getName().equals("events.tar"))
 				assert true; // no op
-			// Zip files (i.e. other snapshots or large files) are not added
+				// Zip files (i.e. other snapshots or large files) are not added
 			else if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
 				continue;
 
@@ -303,7 +292,7 @@ public final class EpisimUtils {
 	 * @param rnd splittable random instance
 	 * @see BitsStreamGenerator#nextGaussian()
 	 */
-	public static double nextGaussian(SplittableRandom rnd) {
+	public static double nextGaussian(EpisimSplittableRandom rnd) {
 		// Normally this allows to generate two numbers, but one is thrown away because this function is stateless
 		// generate a new pair of gaussian numbers
 		final double x = rnd.nextDouble();
@@ -321,14 +310,17 @@ public final class EpisimUtils {
 	 * @param mu    mu ( median exp mu)
 	 * @param sigma sigma
 	 */
-	public static double nextLogNormal(SplittableRandom rnd, double mu, double sigma) {
+	public static double nextLogNormal(EpisimSplittableRandom rnd, double mu, double sigma) {
 		if (sigma == 0)
 			return Math.exp(mu);
 
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
 	}
 
-	public static double nextLogNormalFromMeanAndSigma(SplittableRandom rnd, double mean, double sigma) {
+	/**
+	 * Draws a log-normal value using the distribution mean and sigma.
+	 */
+	public static double nextLogNormalFromMeanAndSigma(EpisimSplittableRandom rnd, double mean, double sigma) {
 		double mu = Math.log(mean) - sigma * sigma / 2;
 		return nextLogNormal(rnd, mu, sigma);
 	}
@@ -352,53 +344,8 @@ public final class EpisimUtils {
 	 */
 	@Deprecated
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
-																	   Extrapolation extrapolate) throws IOException {
+		Extrapolation extrapolate) throws IOException {
 		return new CreateRestrictionsFromCSV(episimConfig).setInput(input.toPath()).setAlpha(alpha).setExtrapolation(extrapolate).createPolicy();
-	}
-
-	/**
-	 * Type of interpolation of activity pattern.
-	 */
-	public enum Extrapolation {none, linear, exponential, regHospital}
-
-	/**
-	 * Function fitter using least squares.
-	 * https://stackoverflow.com/questions/11335127/how-to-use-java-math-commons-curvefitter
-	 */
-	public static final class FuncFitter extends AbstractCurveFitter {
-
-		private final ParametricUnivariateFunction f;
-
-		public FuncFitter(ParametricUnivariateFunction f) {
-			this.f = f;
-		}
-
-		protected LeastSquaresProblem getProblem(Collection<WeightedObservedPoint> points) {
-			final int len = points.size();
-			final double[] target = new double[len];
-			final double[] weights = new double[len];
-			final double[] initialGuess = {1.0, 1.0};
-
-			int i = 0;
-			for (WeightedObservedPoint point : points) {
-				target[i] = point.getY();
-				weights[i] = point.getWeight();
-				i += 1;
-			}
-
-			final AbstractCurveFitter.TheoreticalValuesFunction model = new
-					AbstractCurveFitter.TheoreticalValuesFunction(f, points);
-
-			return new LeastSquaresBuilder().
-					maxEvaluations(Integer.MAX_VALUE).
-					maxIterations(Integer.MAX_VALUE).
-					start(initialGuess).
-					target(target).
-					weight(new DiagonalMatrix(weights)).
-					model(model.getModelFunction(), model.getModelFunctionJacobian()).
-					build();
-		}
-
 	}
 
 	/**
@@ -406,7 +353,7 @@ public final class EpisimUtils {
 	 */
 	public static NavigableMap<LocalDate, Double> readCSV(Path csv, CSVFormat format, String dateColumn, String valueColumn) {
 
-		TreeMap<LocalDate, Double> map = new TreeMap<>();
+		NavigableMap<LocalDate, Double> map = new TreeMap<>();
 
 		try (BufferedReader in = Files.newBufferedReader(csv)) {
 
@@ -451,7 +398,7 @@ public final class EpisimUtils {
 	}
 
 	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(File weatherCSV, double rainThreshold,
-																			Double temperatureIn, Double temperatureOut) throws IOException {
+		Double temperatureIn, Double temperatureOut) throws IOException {
 		if ((temperatureIn == null && temperatureOut != null) || (temperatureIn != null && temperatureOut == null)) {
 			throw new RuntimeException("one temperature is null, the other one is given; don't know how to interpret that; aborting ...");
 		}
@@ -497,6 +444,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	public static Map<LocalDate, Double> getOutdoorFractions2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
@@ -522,8 +470,8 @@ public final class EpisimUtils {
 
 		in = new FileReader(avgWeatherCSV);
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
-		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+		Map<String, Double> tmaxPerDay = new HashMap<String, Double>();
+		Map<String, Double> prcpPerDay = new HashMap<String, Double>();
 
 		for (CSVRecord record : records) {
 			String monthDay = record.get("monthDay");
@@ -533,7 +481,7 @@ public final class EpisimUtils {
 			prcpPerDay.put(monthDay, prcp);
 		}
 
-		for (int i = 1; i < 365*3; i++) {
+		for (int i = 1; i < 365 * 3; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
 			int day = date.getDayOfMonth();
@@ -547,7 +495,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-
+	@SuppressWarnings("checkstyle:ParameterName")
 	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 		//																																	// 18.5						25				18.5			18.5 -> move to 15?
 		Reader in = new FileReader(weatherCSV);
@@ -569,8 +517,7 @@ public final class EpisimUtils {
 
 			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
 				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
-			}
-			else {
+			} else {
 				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 
@@ -579,8 +526,8 @@ public final class EpisimUtils {
 
 		in = new FileReader(avgWeatherCSV);
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
-		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+		Map<String, Double> tmaxPerDay = new HashMap<>();
+		Map<String, Double> prcpPerDay = new HashMap<>();
 
 		for (CSVRecord record : records) {
 			String monthDay = record.get("monthDay");
@@ -590,7 +537,7 @@ public final class EpisimUtils {
 			prcpPerDay.put(monthDay, prcp);
 		}
 
-		for (int i = 1; i < 365*3; i++) {
+		for (int i = 1; i < 365 * 3; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
 			int day = date.getDayOfMonth();
@@ -599,8 +546,7 @@ public final class EpisimUtils {
 			double prcp = prcpPerDay.get(monthDay);
 			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
 				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
-			}
-			else {
+			} else {
 				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 		}
@@ -609,6 +555,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2Fall2022Override(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double TmidFall2022, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
@@ -641,8 +588,8 @@ public final class EpisimUtils {
 
 		in = new FileReader(avgWeatherCSV);
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
-		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+		Map<String, Double> tmaxPerDay = new HashMap<>();
+		Map<String, Double> prcpPerDay = new HashMap<>();
 
 		for (CSVRecord record : records) {
 			String monthDay = record.get("monthDay");
@@ -652,7 +599,7 @@ public final class EpisimUtils {
 			prcpPerDay.put(monthDay, prcp);
 		}
 
-		for (int i = 1; i < 365*3; i++) {
+		for (int i = 1; i < 365 * 3; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
 			int day = date.getDayOfMonth();
@@ -661,8 +608,7 @@ public final class EpisimUtils {
 			double prcp = prcpPerDay.get(monthDay);
 			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
 				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
-			}
-			else {
+			} else {
 				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 		}
@@ -671,6 +617,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
+	@SuppressWarnings("checkstyle:ParameterName")
 	private static double getOutDoorFractionFromDateAndTemp(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold, double alpha) {
 
 		double tMid;
@@ -704,11 +651,9 @@ public final class EpisimUtils {
 
 		if (month <= 3 || month >= 11) {
 			outDoorFractionFromDate = 0.0;
-		}
-		else if (month == 7 || month == 8) {
+		} else if (month == 7 || month == 8) {
 			outDoorFractionFromDate = 1.0;
-		}
-		else if (month == 4 || month == 5 || month == 6) {
+		} else if (month == 4 || month == 5 || month == 6) {
 			int lastMarch = 90;
 			int firstJuly = 182;
 			if (date.isLeapYear()) {
@@ -716,8 +661,7 @@ public final class EpisimUtils {
 				firstJuly++;
 			}
 			outDoorFractionFromDate = (double) (date.getDayOfYear() - lastMarch) / (double) (firstJuly - lastMarch);
-		}
-		else if (month == 9 || month == 10) {
+		} else if (month == 9 || month == 10) {
 			int lastAugust = 243;
 			int firstNovember = 305;
 			if (date.isLeapYear()) {
@@ -725,15 +669,14 @@ public final class EpisimUtils {
 				firstNovember++;
 			}
 			outDoorFractionFromDate = 1 - (double) (date.getDayOfYear() - lastAugust) / (double) (firstNovember - lastAugust);
-		}
-		else {
+		} else {
 			throw new RuntimeException("outDoorFractionFromDate not defined for month: " + month);
 		}
 
 		return alpha * outDoorFractionFromTemperature + (1 - alpha) * outDoorFractionFromDate;
 	}
 
-
+	@SuppressWarnings("checkstyle:ParameterName")
 	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
 
 		double tMid;
@@ -765,5 +708,53 @@ public final class EpisimUtils {
 
 
 		return outDoorFraction;
+	}
+
+	/**
+	 * Type of interpolation of activity pattern.
+	 */
+	public enum Extrapolation {none, linear, exponential, regHospital}
+
+	/**
+	 * Function fitter using least squares.
+	 * https://stackoverflow.com/questions/11335127/how-to-use-java-math-commons-curvefitter
+	 */
+	public static final class FuncFitter extends AbstractCurveFitter {
+
+		private final ParametricUnivariateFunction f;
+
+		/**
+		 * Creates a fitter for the given parametric function.
+		 */
+		public FuncFitter(ParametricUnivariateFunction f) {
+			this.f = f;
+		}
+
+		protected LeastSquaresProblem getProblem(Collection<WeightedObservedPoint> points) {
+			final int len = points.size();
+			final double[] target = new double[len];
+			final double[] weights = new double[len];
+			final double[] initialGuess = {1.0, 1.0};
+
+			int i = 0;
+			for (WeightedObservedPoint point : points) {
+				target[i] = point.getY();
+				weights[i] = point.getWeight();
+				i += 1;
+			}
+
+			final AbstractCurveFitter.TheoreticalValuesFunction model = new
+				AbstractCurveFitter.TheoreticalValuesFunction(f, points);
+
+			return new LeastSquaresBuilder().
+				maxEvaluations(Integer.MAX_VALUE).
+				maxIterations(Integer.MAX_VALUE).
+				start(initialGuess).
+				target(target).
+				weight(new DiagonalMatrix(weights)).
+				model(model.getModelFunction(), model.getModelFunctionJacobian()).
+				build();
+		}
+
 	}
 }

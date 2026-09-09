@@ -3,12 +3,12 @@ package org.matsim.run;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
@@ -20,27 +20,29 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+@ParameterizedClass(name = "scenario-{0}")
+@MethodSource("parameters")
 public class RunEpisimScenarioTest {
 
-	@Rule
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	private EpisimRunner runner;
 
-	@Parameterized.Parameter
+	@Parameter(0)
 	public String scenario;
 
-	@Parameterized.Parameters(name = "scenario-{0}")
 	public static Iterable<String> parameters() {
 		return Arrays.asList("jlm.output_events-0.1.xml.gz", "TAMA.output_events-0.1.xml.gz");
 	}
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new RunEpisimIntegrationTest.TestScenario(utils)));
 
-		Assume.assumeTrue(Files.exists(Path.of(scenario)));
+		assumeTrue(Files.exists(Path.of(scenario)));
 
 		EpisimConfigGroup episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		episimConfig.setInputEventsFile(scenario);

@@ -21,7 +21,14 @@ package org.matsim.episim.events;
 
 import org.matsim.core.events.handler.EventHandler;
 
+
+/**
+ * Handles changes to an Episim person's disease status.
+ */
 public interface EpisimPersonStatusEventHandler extends EventHandler {
+	/**
+	 * Handles a person-status event.
+	 */
 	void handleEvent(EpisimPersonStatusEvent event);
 
 }

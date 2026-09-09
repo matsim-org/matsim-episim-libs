@@ -24,6 +24,9 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * Creates reduced event files by retaining selected event types.
+ */
 @CommandLine.Command(
 		name = "filterEvents",
 		description = "Create reduced event file by filtering only for certain types."

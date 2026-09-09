@@ -6,12 +6,13 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
@@ -29,22 +30,22 @@ import java.util.zip.GZIPInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "tracing-{0}-{1}")
+@MethodSource("parameters")
 public class RunEpisimSnapshotTest {
 
-	@Rule
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	private Config config;
 	private EpisimConfigGroup episimConfig;
 	private EpisimRunner runner;
 
-	@Parameterized.Parameter
+	@Parameter(0)
 	public TracingConfigGroup.Strategy strategy;
 
-	@Parameterized.Parameter(1)
+	@Parameter(1)
 	public String model;
 
-	@Parameterized.Parameters(name = "tracing-{0}-{1}")
 	public static Collection<Object[]> parameters() {
 		List<Object[]> args = new ArrayList<>(Arrays.asList(new Object[][]{
 				{TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "bln"},
@@ -63,7 +64,7 @@ public class RunEpisimSnapshotTest {
 		return String.format("episim-snapshot-%03d-%s.zip", 15, episimConfig.getStartDate().plusDays(14).toString());
 	}
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 
@@ -104,7 +105,7 @@ public class RunEpisimSnapshotTest {
 		// run 2: start from snapshot (save to /fromSnapshot)
 		String fromSnapshot = utils.getOutputDirectory().replace(utils.getMethodName(), "fromSnapshot");
 		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + snapshotName());
-		config.controler().setOutputDirectory(fromSnapshot);
+		config.controller().setOutputDirectory(fromSnapshot);
 
 		runner.run(30);
 
@@ -143,7 +144,7 @@ public class RunEpisimSnapshotTest {
 	}
 
 	@Test
-	@Ignore("Snapshot file not checked into git because of its size")
+	@Disabled("Snapshot file not checked into git because of its size")
 	public void fixedSnapshot() {
 
 		episimConfig.setStartFromSnapshot(utils.getInputDirectory() + snapshotName());

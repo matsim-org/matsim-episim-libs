@@ -50,8 +50,9 @@
 
 
  /**
+  * Calculates vaccination effectiveness from events.
+  *
   * @author smueller
-  * Calcualte vaccination effectiveness from events
   */
  @CommandLine.Command(
 		 name = "vacEff",
@@ -547,8 +548,7 @@
 			 } else if (event.getN() == 1){
 				 attr.vaccinationDate = date;
 				 attr.vaccine = event.getVaccinationType();
-			 }
-			 else {
+				 } else {
 				 //todo
 			 }
 		 }
@@ -556,7 +556,7 @@
 
 
 	 /**
-	  * Data holder for attributes
+	  * Data holder for attributes.
 	  */
 	 private static final class Holder {
 
@@ -574,7 +574,4 @@
 	 }
 
  }
-
-
-
 

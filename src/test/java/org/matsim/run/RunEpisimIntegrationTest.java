@@ -3,12 +3,15 @@ package org.matsim.run;
 import com.google.common.collect.Lists;
 import com.google.inject.*;
 import com.google.inject.util.Modules;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
@@ -22,6 +25,7 @@ import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -30,16 +34,20 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "it{0}")
+@MethodSource("parameters")
 public class RunEpisimIntegrationTest {
 
-	@Rule
+	private static final Logger log = LogManager.getLogger(RunEpisimIntegrationTest.class);
+
+	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
 	/**
 	 * Iterations
 	 */
-	@Parameterized.Parameter
+	@Parameter
 	public int it;
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
@@ -47,7 +55,6 @@ public class RunEpisimIntegrationTest {
 	private TestingConfigGroup testingConfig;
 	private EpisimRunner runner;
 
-	@Parameterized.Parameters(name = "it{0}")
 	public static Iterable<Integer> parameters() {
 		return Arrays.asList(10, 100);
 	}
@@ -56,15 +63,93 @@ public class RunEpisimIntegrationTest {
 	 * Checks whether output of simulation matches expectation.
 	 */
 	static void assertSimulationOutput(MatsimTestUtils utils) {
+		assertSimulationOutput(utils, Path.of(utils.getInputDirectory()));
+	}
+
+	static void assertSimulationOutput(MatsimTestUtils utils, int iterations) {
+		assertSimulationOutput(utils, parameterizedInputDirectory(utils, utils.getMethodName(), iterations));
+	}
+
+	private static Path parameterizedInputDirectory(MatsimTestUtils utils, String methodName, int iterations) {
+		return Path.of(utils.getClassInputDirectory(), methodName + "[it" + iterations + "]");
+	}
+
+
+	private static void assertSimulationOutput(MatsimTestUtils utils, Path inputDirectory) {
 		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
-			File input = new File(utils.getInputDirectory(), name);
+			File input = inputDirectory.resolve(name).toFile();
+			log.info("Input file is {} ", input);
 			// events will be ignored if not existent
-			if (input.exists() || !name.equals("infectionEvents.txt"))
-				assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
+			if (input.exists() || !name.equals("infectionEvents.txt")) {
+				File actualFile = new File(utils.getOutputDirectory(), name);
+				log.info("File to comparison {} ", actualFile);
+				if (name.equals("infectionEvents.txt")) {
+					assertInfectionEvents(input, actualFile);
+				} else {
+					assertThat(actualFile).hasSameTextualContentAs(input);
+				}
+			}
+
 		}
 	}
 
-	@Before
+	private static void assertInfectionEvents(File expectedFile, File actualFile) {
+		try {
+			List<String> expectedLines = Files.readAllLines(expectedFile.toPath());
+			List<String> actualLines = Files.readAllLines(actualFile.toPath());
+
+			assertThat(actualLines)
+					.as("Number of lines in %s", actualFile)
+					.hasSameSizeAs(expectedLines);
+			assertThat(expectedLines)
+					.as("Expected infection events file %s", expectedFile)
+					.isNotEmpty();
+			assertThat(actualLines.get(0))
+					.as("Header in %s", actualFile)
+					.isEqualTo(expectedLines.get(0));
+
+			String[] header = expectedLines.get(0).split("\\t", -1);
+			int probabilityColumn = Arrays.asList(header).indexOf("probability");
+			assertThat(probabilityColumn)
+					.as("The probability column in %s", expectedFile)
+					.isGreaterThanOrEqualTo(0);
+
+			for (int lineIndex = 1; lineIndex < expectedLines.size(); lineIndex++) {
+				int lineNumber = lineIndex + 1;
+				String[] expectedValues = expectedLines.get(lineIndex).split("\\t", -1);
+				String[] actualValues = actualLines.get(lineIndex).split("\\t", -1);
+
+				assertThat(actualValues)
+						.as("Number of columns at line %d in %s", lineNumber, actualFile)
+						.hasSameSizeAs(expectedValues);
+				assertThat(expectedValues)
+						.as("Number of columns at line %d in %s", lineNumber, expectedFile)
+						.hasSize(header.length);
+
+				for (int column = 0; column < header.length; column++) {
+					if (column == probabilityColumn) {
+						continue;
+					}
+					assertThat(actualValues[column])
+							.as("Line %d, column '%s'", lineNumber, header[column])
+							.isEqualTo(expectedValues[column]);
+				}
+
+				double expectedProbability = Double.parseDouble(expectedValues[probabilityColumn]);
+				double actualProbability = Double.parseDouble(actualValues[probabilityColumn]);
+				/*
+					TODO Jaro: I know probably we should check the full equality of both files. And now it does not work in this way because we slightly changed the random generator. Add repr. test later
+					*/
+				assertThat(actualProbability)
+						.as("Line %d, column 'probability'", lineNumber)
+						.isCloseTo(expectedProbability, within(MatsimTestUtils.EPSILON));
+			}
+		} catch (IOException e) {
+			throw new UncheckedIOException("Could not compare infection events files", e);
+		}
+	}
+
+	@BeforeEach
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils, it)));
@@ -76,9 +161,9 @@ public class RunEpisimIntegrationTest {
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() {
-		assertSimulationOutput(utils);
+		assertSimulationOutput(utils, it);
 	}
 
 	@Test
@@ -100,7 +185,11 @@ public class RunEpisimIntegrationTest {
 		runner.run(it);
 
 		// the input of the base case
-		Path baseCase = Path.of(utils.getClassInputDirectory(), utils.getMethodName().replace("Tracing", "BaseCase"));
+		Path baseCase = parameterizedInputDirectory(
+				utils,
+				utils.getMethodName().replace("Tracing", "BaseCase"),
+				it
+		);
 
 		List<String> baseLines = Files.readAllLines(baseCase.resolve("infections.txt"));
 		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));
@@ -127,7 +216,7 @@ public class RunEpisimIntegrationTest {
 		);
 
 		runner.run(it);
-		assertSimulationOutput(utils);
+		assertSimulationOutput(utils, it);
 
 
 		// re-test with fixed date config, which should be the same result
@@ -166,7 +255,11 @@ public class RunEpisimIntegrationTest {
 
 		runner.run(it);
 
-		Path baseCase = Path.of(utils.getClassInputDirectory(), utils.getMethodName().replace("Vaccination", "BaseCase"));
+		Path baseCase = parameterizedInputDirectory(
+				utils,
+				utils.getMethodName().replace("Vaccination", "BaseCase"),
+				it
+		);
 		List<String> baseLines = Files.readAllLines(baseCase.resolve("infections.txt"));
 
 		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));
@@ -221,7 +314,7 @@ public class RunEpisimIntegrationTest {
 			episimConfig.setThreads(2);
 			episimConfig.setEndEarly(true);
 
-			config.controler().setOutputDirectory(utils.getOutputDirectory());
+			config.controller().setOutputDirectory(utils.getOutputDirectory());
 
 			OpenBerlinScenario.addDefaultParams(episimConfig);
 

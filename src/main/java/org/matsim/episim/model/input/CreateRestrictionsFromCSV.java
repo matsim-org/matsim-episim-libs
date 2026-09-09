@@ -12,7 +12,6 @@ import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +19,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+/**
+ * Creates policy restrictions from CSV input data.
+ */
 public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
 	// create method without damage.
@@ -33,6 +35,9 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
 	private Map<String, String> subdistrictInput;
 
+	/**
+	 * Creates a restriction input for the supplied Episim configuration.
+	 */
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
 	}
@@ -53,7 +58,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	}
 
 	/**
-	 * Sets the paths for each subdistrict CSV
+	 * Sets the paths for each subdistrict CSV.
 	 */
 	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, String> subdistrictInput) {
 		this.subdistrictInput = subdistrictInput;

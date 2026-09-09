@@ -7,7 +7,6 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
-import org.matsim.episim.model.VirusStrain;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -15,6 +14,9 @@ import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.DAY;
 
+/**
+ * Restores initial immunization state from previously generated events.
+ */
 public final class InitialImmunizationHandler implements Function<String, Boolean>,
 		EpisimVaccinationEventHandler, EpisimInfectionEventHandler,
 		EpisimInitialInfectionEventHandler, EpisimStartEventHandler {
@@ -31,6 +33,9 @@ public final class InitialImmunizationHandler implements Function<String, Boolea
 
 	int maxIterationReachedSoFar = 0;
 
+	/**
+	 * Creates an initial-immunization event handler.
+	 */
 	public InitialImmunizationHandler(Map<Id<Person>, EpisimPerson> personMap, EpisimConfigGroup episimConfig, AntibodyModel antibodyModel, ProgressionModel progressionModel) {
 		this.personMap = personMap;
 		this.episimConfig = episimConfig;
@@ -97,4 +102,3 @@ public final class InitialImmunizationHandler implements Function<String, Boolea
 		return continueProcessingEvents;
 	}
 }
-

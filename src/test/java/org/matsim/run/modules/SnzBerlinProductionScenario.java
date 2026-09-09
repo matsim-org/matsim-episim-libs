@@ -41,7 +41,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -410,7 +410,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		episimConfig.setPolicy(builder.build());
 
-		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
+		config.controller().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		return config;
 	}

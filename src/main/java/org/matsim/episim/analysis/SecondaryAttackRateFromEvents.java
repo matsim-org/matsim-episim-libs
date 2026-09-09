@@ -48,9 +48,10 @@ import java.util.stream.Collectors;
 
 
 /**
+ * Calculates secondary attack rate for all runs in the given directory.
+ * Output is written to secondaryAttackRate.txt in the working directory.
+ *
  * @author jakobrehmann
- * Calculates secondary attack rate for all runs in given directory
- * Output is written to secondaryAttackRate.txt in the working directory
  */
 
 @CommandLine.Command(
@@ -171,13 +172,13 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 	private static class SecondaryAttackRateHandler implements EpisimPersonStatusEventHandler {
 
 		/**
-		 * personID to hh Id
+		 * personID to hh Id.
 		 */
 		Map<String, String> personToHousehold;
 
 		/**
 		 * keys: all agents who are currently the index agent for their household
-		 * values: day at which they became contagious
+		 * values: day at which they became contagious.
 		 */
 		Map<String, Integer> indexPersons = new HashMap<>();
 
@@ -251,7 +252,5 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 	}
 
 }
-
-
 
 

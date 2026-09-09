@@ -3,7 +3,7 @@ package org.matsim.episim.events;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.internal.HasPersonId;
+import org.matsim.api.core.v01.events.HasPersonId;
 import org.matsim.episim.model.VirusStrain;
 
 import java.util.Map;
@@ -111,14 +111,14 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	}
 
 	/**
-	 * Maximum antibodies ever reached by agent with respect to infecting strain
+	 * Maximum antibodies ever reached by agent with respect to infecting strain.
 	 */
 	public double getMaxAntibodies() {
 		return maxAntibodies;
 	}
 
 	/**
-	 * Number of vaccinations agent has received at time of infection
+	 * Number of vaccinations agent has received at time of infection.
 	 */
 	public int getNumVaccinations(){
 		return numVaccinations;

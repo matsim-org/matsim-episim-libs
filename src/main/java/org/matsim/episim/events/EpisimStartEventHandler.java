@@ -21,7 +21,14 @@ package org.matsim.episim.events;
 
 import org.matsim.core.events.handler.EventHandler;
 
+
+/**
+ * Handles the start of an Episim simulation.
+ */
 public interface EpisimStartEventHandler extends EventHandler {
+	/**
+	 * Handles an Episim start event.
+	 */
 	void handleEvent(EpisimStartEvent event);
 
 }
