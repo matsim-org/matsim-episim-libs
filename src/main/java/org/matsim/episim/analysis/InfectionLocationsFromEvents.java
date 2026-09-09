@@ -20,8 +20,10 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.scenario.ProjectionUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.episim.EpisimConfigGroup;
@@ -42,12 +44,16 @@ import java.util.zip.GZIPOutputStream;
 /**
  * Creates the geocoded infection sidecar consumed by the Episim infection-map viewer.
  *
- * <p>The input population uses the Cologne grid coordinates in EPSG:25832. The output contains
- * WGS84 home coordinates and is intentionally written outside the per-run ZIP archive.</p>
+ * <p>The source coordinate system is taken from the scenario (population CRS attribute, then
+ * {@code plans.inputCRS}, then {@code global.coordinateSystem}); when the scenario declares none
+ * &mdash; or only the MATSim {@code "Atlantis"} placeholder &mdash; it falls back to
+ * {@value #FALLBACK_SOURCE_CRS} (the Cologne grid). The output contains WGS84 home coordinates and
+ * is intentionally written outside the per-run ZIP archive.</p>
  */
 public final class InfectionLocationsFromEvents implements OutputAnalysis {
 
-	private static final String SOURCE_CRS = "EPSG:25832";
+	/** Used when the scenario does not declare a real source CRS. */
+	private static final String FALLBACK_SOURCE_CRS = "EPSG:25832";
 
 	private Scenario scenario;
 	private LocalDate startDate;
@@ -81,7 +87,7 @@ public final class InfectionLocationsFromEvents implements OutputAnalysis {
 		Path infections = output.resolve(id + "infectionEvents.txt");
 		Path target = output.resolve(id + "infectionLoc.csv.gz");
 		CoordinateTransformation transformation = TransformationFactory.getCoordinateTransformation(
-			SOURCE_CRS, TransformationFactory.WGS84);
+			resolveSourceCrs(scenario), TransformationFactory.WGS84);
 
 		try (BufferedReader reader = Files.newBufferedReader(infections, StandardCharsets.UTF_8);
 			 CSVParser parser = new CSVParser(reader,
@@ -109,5 +115,35 @@ public final class InfectionLocationsFromEvents implements OutputAnalysis {
 				writer.newLine();
 			}
 		}
+	}
+
+	/**
+	 * Resolves the source CRS of the population's home coordinates from the scenario, falling back to
+	 * {@value #FALLBACK_SOURCE_CRS} when nothing usable is declared. Every lookup is null-safe: a
+	 * hand-built scenario or a {@link Config} without core modules may return {@code null} here.
+	 */
+	private static String resolveSourceCrs(Scenario scenario) {
+		String crs = null;
+
+		if (scenario != null) {
+			Population population = scenario.getPopulation();
+			if (population != null)
+				crs = ProjectionUtils.getCRS(population);
+
+			Config config = scenario.getConfig();
+			if (config != null) {
+				if (isUnset(crs) && config.plans() != null)
+					crs = config.plans().getInputCRS();
+				if (isUnset(crs) && config.global() != null)
+					crs = config.global().getCoordinateSystem();
+			}
+		}
+
+		return isUnset(crs) ? FALLBACK_SOURCE_CRS : crs;
+	}
+
+	/** Null, blank, or the MATSim {@code "Atlantis"} placeholder all mean "no real CRS declared". */
+	private static boolean isUnset(String crs) {
+		return crs == null || crs.isBlank() || TransformationFactory.ATLANTIS.equals(crs);
 	}
 }
