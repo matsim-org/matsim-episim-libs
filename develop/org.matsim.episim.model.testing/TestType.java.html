@@ -44,7 +44,7 @@ import org.matsim.episim.EpisimPerson;
 <span class="fc" id="L44">		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();</span>
 
 <span class="pc bpc" id="L46" title="1 of 2 branches missed.">		if (this == RAPID_TEST) {</span>
-<span class="pc bpc" id="L47" title="1 of 10 branches missed.">			return (status == EpisimPerson.DiseaseStatus.contagious &amp;&amp; person.daysSince(EpisimPerson.DiseaseStatus.contagious, day) &lt; 1)  || status == EpisimPerson.DiseaseStatus.infectedButNotContagious</span>
+<span class="pc bpc" id="L47" title="1 of 10 branches missed.">			return (status == EpisimPerson.DiseaseStatus.contagious &amp;&amp; person.daysSince(EpisimPerson.DiseaseStatus.contagious, day) &lt; 1) || status == EpisimPerson.DiseaseStatus.infectedButNotContagious</span>
 					|| status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered;
 
 <span class="nc bnc" id="L50" title="All 2 branches missed.">		} else if (this == PCR) {</span>
@@ -57,4 +57,4 @@ import org.matsim.episim.EpisimPerson;
 
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

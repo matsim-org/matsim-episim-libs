@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigValue;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.util.*;
 
@@ -23,28 +24,28 @@ public abstract class Transition {
 	/**
 	 * Inheritance is prohibited for external classes.
 	 */
-<span class="fc" id="L26">	Transition() {</span>
-<span class="fc" id="L27">	}</span>
+<span class="fc" id="L27">	Transition() {</span>
+<span class="fc" id="L28">	}</span>
 
 	/**
 	 * Parse Transition builder from a config file.
 	 */
 	public static Builder parse(Config config) {
-<span class="fc" id="L33">		return new Builder(config);</span>
+<span class="fc" id="L34">		return new Builder(config);</span>
 	}
 
 	/**
 	 * Create a new transition config builder.
 	 */
 	public static Builder config() {
-<span class="fc" id="L40">		return new Builder((String) null);</span>
+<span class="fc" id="L41">		return new Builder((String) null);</span>
 	}
 
 	/**
 	 * Create a new transition config builder with a filename, that will be used if the config is persisted.
 	 */
 	public static Builder config(String filename) {
-<span class="nc" id="L47">		return new Builder(filename);</span>
+<span class="nc" id="L48">		return new Builder(filename);</span>
 	}
 
 	/**
@@ -54,14 +55,14 @@ public abstract class Transition {
 	 * @param t      desired transition
 	 */
 	public static ToHolder to(DiseaseStatus status, Transition t) {
-<span class="fc" id="L57">		return new ToHolder(status, t);</span>
+<span class="fc" id="L58">		return new ToHolder(status, t);</span>
 	}
 
 	/**
 	 * Deterministic transition at day {@code day}.
 	 */
 	public static Transition fixed(int day) {
-<span class="fc" id="L64">		return new FixedTransition(day);</span>
+<span class="fc" id="L65">		return new FixedTransition(day);</span>
 	}
 
 	/**
@@ -75,19 +76,19 @@ public abstract class Transition {
 	public static Transition logNormalWithMean(double mean, double std) {
 
 		// mean==median if std=0
-<span class="fc bfc" id="L78" title="All 2 branches covered.">		if (std == 0) return logNormalWithMedianAndSigma(mean, 0);</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">		if (std == 0) return logNormalWithMedianAndSigma(mean, 0);</span>
 
-<span class="fc" id="L80">		double mu = Math.log((mean * mean) / Math.sqrt(mean * mean + std * std));</span>
-<span class="fc" id="L81">		double sigma = Math.log(1 + (std * std) / (mean * mean));</span>
+<span class="fc" id="L81">		double mu = Math.log((mean * mean) / Math.sqrt(mean * mean + std * std));</span>
+<span class="fc" id="L82">		double sigma = Math.log(1 + (std * std) / (mean * mean));</span>
 
-<span class="fc" id="L83">		return new LogNormalTransition(mu, Math.sqrt(sigma));</span>
+<span class="fc" id="L84">		return new LogNormalTransition(mu, Math.sqrt(sigma));</span>
 	}
 
 	/**
 	 * Same as {@link #logNormalWithMean(double, double)}.
 	 */
 	public static Transition logNormalWithMeanAndStd(double mean, double std) {
-<span class="fc" id="L90">		return logNormalWithMean(mean, std);</span>
+<span class="fc" id="L91">		return logNormalWithMean(mean, std);</span>
 	}
 
 	/**
@@ -99,8 +100,8 @@ public abstract class Transition {
 	 */
 	public static Transition logNormalWithMedianAndSigma(double median, double sigma) {
 
-<span class="fc" id="L102">		double mu = Math.log(median);</span>
-<span class="fc" id="L103">		return new LogNormalTransition(mu, sigma);</span>
+<span class="fc" id="L103">		double mu = Math.log(median);</span>
+<span class="fc" id="L104">		return new LogNormalTransition(mu, sigma);</span>
 	}
 
 	/**
@@ -113,24 +114,24 @@ public abstract class Transition {
 	public static Transition logNormalWithMedianAndStd(double median, double std) {
 
 		// equation below is numerical unstable for std near zero
-<span class="fc bfc" id="L116" title="All 2 branches covered.">		if (std == 0) return logNormalWithMedianAndSigma(median, 0);</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">		if (std == 0) return logNormalWithMedianAndSigma(median, 0);</span>
 
-<span class="fc" id="L118">		double mu = Math.log(median);</span>
+<span class="fc" id="L119">		double mu = Math.log(median);</span>
 
 		// Given the formula for std:
 		// \sqrt{\operatorname{Var}(X)}= \sqrt{\mathrm{e}^{2\mu+\sigma^{2}}(\mathrm{e}^{\sigma^{2}}-1)}=\mathrm{e}^{\mu+\frac{\sigma^{2}}{2}}\cdot\sqrt{\mathrm{e}^{\sigma^{2}}-1}
 
 		// solve for sigma
 		// https://www.wolframalpha.com/input/?i=solve+e%5E%28mu+%2B+s+%2F+2%29+*+sqrt%28e%5Es+-+1%29+%3D+x+for+s
-<span class="fc" id="L125">		double ssigma = Math.log(0.5 * Math.exp(-2 * mu) * (Math.exp(2 * mu) + Math.sqrt(Math.exp(4 * mu) + 4 * Math.exp(2 * mu) * std * std)));</span>
+<span class="fc" id="L126">		double ssigma = Math.log(0.5 * Math.exp(-2 * mu) * (Math.exp(2 * mu) + Math.sqrt(Math.exp(4 * mu) + 4 * Math.exp(2 * mu) * std * std)));</span>
 
-<span class="fc" id="L127">		return new LogNormalTransition(mu, Math.sqrt(ssigma));</span>
+<span class="fc" id="L128">		return new LogNormalTransition(mu, Math.sqrt(ssigma));</span>
 	}
 
 	/**
 	 * Returns the day when the transition should occur.
 	 */
-	public abstract int getTransitionDay(SplittableRandom rnd);
+	public abstract int getTransitionDay(EpisimSplittableRandom rnd);
 
 	/**
 	 * Implementation for a fixed transition.
@@ -139,64 +140,64 @@ public abstract class Transition {
 
 		private final int day;
 
-<span class="fc" id="L142">		private FixedTransition(int day) {</span>
-<span class="fc" id="L143">			this.day = day;</span>
-<span class="fc" id="L144">		}</span>
+<span class="fc" id="L143">		private FixedTransition(int day) {</span>
+<span class="fc" id="L144">			this.day = day;</span>
+<span class="fc" id="L145">		}</span>
 
 		@Override
-		public int getTransitionDay(SplittableRandom rnd) {
-<span class="fc" id="L148">			return day;</span>
+		public int getTransitionDay(EpisimSplittableRandom rnd) {
+<span class="fc" id="L149">			return day;</span>
 		}
 
 		@Override
 		public boolean equals(Object o) {
-<span class="pc bpc" id="L153" title="1 of 2 branches missed.">			if (this == o) return true;</span>
-<span class="fc bfc" id="L154" title="All 4 branches covered.">			if (o == null || getClass() != o.getClass()) return false;</span>
-<span class="fc" id="L155">			FixedTransition that = (FixedTransition) o;</span>
-<span class="fc bfc" id="L156" title="All 2 branches covered.">			return day == that.day;</span>
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">			if (this == o) return true;</span>
+<span class="fc bfc" id="L155" title="All 4 branches covered.">			if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L156">			FixedTransition that = (FixedTransition) o;</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">			return day == that.day;</span>
 		}
 
 		@Override
 		public int hashCode() {
-<span class="fc" id="L161">			return Objects.hashCode(day);</span>
+<span class="fc" id="L162">			return Objects.hashCode(day);</span>
 		}
 	}
 
 	/**
 	 * Implementation for log normal distributed transition.
 	 *
-	 * @see EpisimUtils#nextLogNormal(SplittableRandom, double, double)
+	 * @see EpisimUtils#nextLogNormal(EpisimSplittableRandom, double, double)
 	 */
 	private static final class LogNormalTransition extends Transition {
 
 		private final double mu;
 		private final double sigma;
 
-<span class="fc" id="L175">		private LogNormalTransition(double mu, double sigma) {</span>
-<span class="fc" id="L176">			this.mu = mu;</span>
-<span class="fc" id="L177">			this.sigma = sigma;</span>
+<span class="fc" id="L176">		private LogNormalTransition(double mu, double sigma) {</span>
+<span class="fc" id="L177">			this.mu = mu;</span>
+<span class="fc" id="L178">			this.sigma = sigma;</span>
 
-<span class="pc bpc" id="L179" title="2 of 4 branches missed.">			if (sigma &lt; 0 || Double.isNaN(sigma))</span>
-<span class="nc" id="L180">				throw new IllegalArgumentException(&quot;Sigma must be &gt;= 0&quot;);</span>
-<span class="fc" id="L181">		}</span>
+<span class="pc bpc" id="L180" title="2 of 4 branches missed.">			if (sigma &lt; 0 || Double.isNaN(sigma))</span>
+<span class="nc" id="L181">				throw new IllegalArgumentException(&quot;Sigma must be &gt;= 0&quot;);</span>
+<span class="fc" id="L182">		}</span>
 
 		@Override
-		public int getTransitionDay(SplittableRandom rnd) {
-<span class="fc" id="L185">			return (int) FastMath.round(EpisimUtils.nextLogNormal(rnd, mu, sigma));</span>
+		public int getTransitionDay(EpisimSplittableRandom rnd) {
+<span class="fc" id="L186">			return (int) FastMath.round(EpisimUtils.nextLogNormal(rnd, mu, sigma));</span>
 		}
 
 		@Override
 		public boolean equals(Object o) {
-<span class="pc bpc" id="L190" title="1 of 2 branches missed.">			if (this == o) return true;</span>
-<span class="fc bfc" id="L191" title="All 4 branches covered.">			if (o == null || getClass() != o.getClass()) return false;</span>
-<span class="fc" id="L192">			LogNormalTransition that = (LogNormalTransition) o;</span>
-<span class="fc bfc" id="L193" title="All 2 branches covered.">			return Double.compare(that.mu, mu) == 0 &amp;&amp;</span>
-<span class="pc bpc" id="L194" title="1 of 2 branches missed.">					Double.compare(that.sigma, sigma) == 0;</span>
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">			if (this == o) return true;</span>
+<span class="fc bfc" id="L192" title="All 4 branches covered.">			if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L193">			LogNormalTransition that = (LogNormalTransition) o;</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">			return Double.compare(that.mu, mu) == 0 &amp;&amp;</span>
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">					Double.compare(that.sigma, sigma) == 0;</span>
 		}
 
 		@Override
 		public int hashCode() {
-<span class="fc" id="L199">			return Objects.hashCode(mu, sigma);</span>
+<span class="fc" id="L200">			return Objects.hashCode(mu, sigma);</span>
 		}
 	}
 
@@ -206,46 +207,46 @@ public abstract class Transition {
 	public static final class Builder {
 
 		private final String origin;
-<span class="fc" id="L209">		private final Map&lt;DiseaseStatus, Map&lt;DiseaseStatus, Transition&gt;&gt; transitions = new EnumMap&lt;&gt;(DiseaseStatus.class);</span>
+<span class="fc" id="L210">		private final Map&lt;DiseaseStatus, Map&lt;DiseaseStatus, Transition&gt;&gt; transitions = new EnumMap&lt;&gt;(DiseaseStatus.class);</span>
 
-<span class="fc" id="L211">		private Builder(String origin) {</span>
-<span class="fc" id="L212">			this.origin = origin;</span>
-<span class="fc" id="L213">		}</span>
+<span class="fc" id="L212">		private Builder(String origin) {</span>
+<span class="fc" id="L213">			this.origin = origin;</span>
+<span class="fc" id="L214">		}</span>
 
 		/**
 		 * Initialize from config.
 		 */
 		@SuppressWarnings(&quot;unchecked&quot;)
-<span class="fc" id="L219">		private Builder(Config config) {</span>
+<span class="fc" id="L220">		private Builder(Config config) {</span>
 
-<span class="fc bfc" id="L221" title="All 2 branches covered.">			for (Map.Entry&lt;String, ConfigValue&gt; e : config.root().entrySet()) {</span>
+<span class="fc bfc" id="L222" title="All 2 branches covered.">			for (Map.Entry&lt;String, ConfigValue&gt; e : config.root().entrySet()) {</span>
 
-<span class="fc" id="L223">				DiseaseStatus status = DiseaseStatus.valueOf(e.getKey());</span>
-<span class="fc" id="L224">				Config toConfig = config.getConfig(e.getKey());</span>
+<span class="fc" id="L224">				DiseaseStatus status = DiseaseStatus.valueOf(e.getKey());</span>
+<span class="fc" id="L225">				Config toConfig = config.getConfig(e.getKey());</span>
 
-<span class="fc" id="L226">				List&lt;ToHolder&gt; tos = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L227">				List&lt;ToHolder&gt; tos = new ArrayList&lt;&gt;();</span>
 
-<span class="fc bfc" id="L228" title="All 2 branches covered.">				for (Map.Entry&lt;String, ConfigValue&gt; to : toConfig.root().entrySet()) {</span>
+<span class="fc bfc" id="L229" title="All 2 branches covered.">				for (Map.Entry&lt;String, ConfigValue&gt; to : toConfig.root().entrySet()) {</span>
 
-<span class="fc" id="L230">					Map&lt;String, String&gt; params = (Map&lt;String, String&gt;) to.getValue().unwrapped();</span>
+<span class="fc" id="L231">					Map&lt;String, String&gt; params = (Map&lt;String, String&gt;) to.getValue().unwrapped();</span>
 
-<span class="fc" id="L232">					DiseaseStatus toStatus = DiseaseStatus.valueOf(to.getKey());</span>
+<span class="fc" id="L233">					DiseaseStatus toStatus = DiseaseStatus.valueOf(to.getKey());</span>
 					Transition t;
-<span class="fc bfc" id="L234" title="All 2 branches covered.">					if (params.get(&quot;type&quot;).equals(&quot;FixedTransition&quot;))</span>
-<span class="fc" id="L235">						t = new FixedTransition(Integer.parseInt(params.get(&quot;day&quot;)));</span>
-<span class="pc bpc" id="L236" title="1 of 2 branches missed.">					else if (params.get(&quot;type&quot;).equals(&quot;LogNormalTransition&quot;))</span>
-<span class="fc" id="L237">						t = new LogNormalTransition(Double.parseDouble(params.get(&quot;mu&quot;)), Double.parseDouble(params.get(&quot;sigma&quot;)));</span>
+<span class="fc bfc" id="L235" title="All 2 branches covered.">					if (params.get(&quot;type&quot;).equals(&quot;FixedTransition&quot;))</span>
+<span class="fc" id="L236">						t = new FixedTransition(Integer.parseInt(params.get(&quot;day&quot;)));</span>
+<span class="pc bpc" id="L237" title="1 of 2 branches missed.">					else if (params.get(&quot;type&quot;).equals(&quot;LogNormalTransition&quot;))</span>
+<span class="fc" id="L238">						t = new LogNormalTransition(Double.parseDouble(params.get(&quot;mu&quot;)), Double.parseDouble(params.get(&quot;sigma&quot;)));</span>
 					else
-<span class="nc" id="L239">						throw new IllegalArgumentException(&quot;Could not parse transition: &quot; + params);</span>
+<span class="nc" id="L240">						throw new IllegalArgumentException(&quot;Could not parse transition: &quot; + params);</span>
 
-<span class="fc" id="L241">					tos.add(to(toStatus, t));</span>
-<span class="fc" id="L242">				}</span>
+<span class="fc" id="L242">					tos.add(to(toStatus, t));</span>
+<span class="fc" id="L243">				}</span>
 
-<span class="fc" id="L244">				from(status, tos.toArray(new ToHolder[0]));</span>
-<span class="fc" id="L245">			}</span>
+<span class="fc" id="L245">				from(status, tos.toArray(new ToHolder[0]));</span>
+<span class="fc" id="L246">			}</span>
 
-<span class="fc" id="L247">			this.origin = config.origin().description();</span>
-<span class="fc" id="L248">		}</span>
+<span class="fc" id="L248">			this.origin = config.origin().description();</span>
+<span class="fc" id="L249">		}</span>
 
 		/**
 		 * Defines which transitions should be taken from the state {@code} status to the states defined in {@code to}.
@@ -255,13 +256,13 @@ public abstract class Transition {
 		 * @see #to(DiseaseStatus, Transition)
 		 */
 		public Builder from(DiseaseStatus status, ToHolder... to) {
-<span class="pc bpc" id="L258" title="1 of 2 branches missed.">			if (to.length == 0) throw new IllegalArgumentException(&quot;No target states specified&quot;);</span>
+<span class="pc bpc" id="L259" title="1 of 2 branches missed.">			if (to.length == 0) throw new IllegalArgumentException(&quot;No target states specified&quot;);</span>
 
-<span class="fc bfc" id="L260" title="All 2 branches covered.">			for (ToHolder t : to) {</span>
-<span class="fc" id="L261">				transitions.computeIfAbsent(status, (k) -&gt; new EnumMap&lt;&gt;(DiseaseStatus.class))</span>
-<span class="fc" id="L262">						.put(t.status, t.t);</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">			for (ToHolder t : to) {</span>
+<span class="fc" id="L262">				transitions.computeIfAbsent(status, (k) -&gt; new EnumMap&lt;&gt;(DiseaseStatus.class))</span>
+<span class="fc" id="L263">						.put(t.status, t.t);</span>
 			}
-<span class="fc" id="L264">			return this;</span>
+<span class="fc" id="L265">			return this;</span>
 		}
 
 		/**
@@ -269,35 +270,35 @@ public abstract class Transition {
 		 */
 		public Config build() {
 
-<span class="fc" id="L272">			Map&lt;String, Object&gt; config = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L273">			Map&lt;String, Object&gt; config = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc bfc" id="L274" title="All 2 branches covered.">			for (Map.Entry&lt;DiseaseStatus, Map&lt;DiseaseStatus, Transition&gt;&gt; e : transitions.entrySet()) {</span>
+<span class="fc bfc" id="L275" title="All 2 branches covered.">			for (Map.Entry&lt;DiseaseStatus, Map&lt;DiseaseStatus, Transition&gt;&gt; e : transitions.entrySet()) {</span>
 
-<span class="fc" id="L276">				Map&lt;String, Object&gt; toConfig = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L277">				Map&lt;String, Object&gt; toConfig = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc bfc" id="L278" title="All 2 branches covered.">				for (Map.Entry&lt;DiseaseStatus, Transition&gt; to : e.getValue().entrySet()) {</span>
+<span class="fc bfc" id="L279" title="All 2 branches covered.">				for (Map.Entry&lt;DiseaseStatus, Transition&gt; to : e.getValue().entrySet()) {</span>
 					// params of the transition
-<span class="fc" id="L280">					Map&lt;String, String&gt; params = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L281">					Map&lt;String, String&gt; params = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc" id="L282">					Transition t = to.getValue();</span>
+<span class="fc" id="L283">					Transition t = to.getValue();</span>
 
-<span class="fc" id="L284">					params.put(&quot;type&quot;, t.getClass().getSimpleName());</span>
+<span class="fc" id="L285">					params.put(&quot;type&quot;, t.getClass().getSimpleName());</span>
 
-<span class="fc bfc" id="L286" title="All 2 branches covered.">					if (t instanceof FixedTransition) {</span>
-<span class="fc" id="L287">						params.put(&quot;day&quot;, String.valueOf(((FixedTransition) t).day));</span>
-<span class="pc bpc" id="L288" title="1 of 2 branches missed.">					} else if (t instanceof LogNormalTransition) {</span>
-<span class="fc" id="L289">						params.put(&quot;mu&quot;, String.valueOf(((LogNormalTransition) t).mu));</span>
-<span class="fc" id="L290">						params.put(&quot;sigma&quot;, String.valueOf(((LogNormalTransition) t).sigma));</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">					if (t instanceof FixedTransition) {</span>
+<span class="fc" id="L288">						params.put(&quot;day&quot;, String.valueOf(((FixedTransition) t).day));</span>
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">					} else if (t instanceof LogNormalTransition) {</span>
+<span class="fc" id="L290">						params.put(&quot;mu&quot;, String.valueOf(((LogNormalTransition) t).mu));</span>
+<span class="fc" id="L291">						params.put(&quot;sigma&quot;, String.valueOf(((LogNormalTransition) t).sigma));</span>
 					} else
-<span class="nc" id="L292">						throw new IllegalArgumentException(&quot;Can not serialize unknown transition &quot; + t);</span>
+<span class="nc" id="L293">						throw new IllegalArgumentException(&quot;Can not serialize unknown transition &quot; + t);</span>
 
-<span class="fc" id="L294">					toConfig.put(to.getKey().name(), params);</span>
-<span class="fc" id="L295">				}</span>
+<span class="fc" id="L295">					toConfig.put(to.getKey().name(), params);</span>
+<span class="fc" id="L296">				}</span>
 
-<span class="fc" id="L297">				config.put(e.getKey().name(), toConfig);</span>
-<span class="fc" id="L298">			}</span>
+<span class="fc" id="L298">				config.put(e.getKey().name(), toConfig);</span>
+<span class="fc" id="L299">			}</span>
 
-<span class="fc" id="L300">			return ConfigFactory.parseMap(config, origin);</span>
+<span class="fc" id="L301">			return ConfigFactory.parseMap(config, origin);</span>
 		}
 
 
@@ -306,20 +307,20 @@ public abstract class Transition {
 		 * Not defined transitions will be null.
 		 */
 		public Transition[] asArray() {
-<span class="fc" id="L309">			Transition[] array = new Transition[DiseaseStatus.values().length * DiseaseStatus.values().length];</span>
+<span class="fc" id="L310">			Transition[] array = new Transition[DiseaseStatus.values().length * DiseaseStatus.values().length];</span>
 
-<span class="fc bfc" id="L311" title="All 2 branches covered.">			for (Map.Entry&lt;DiseaseStatus, Map&lt;DiseaseStatus, Transition&gt;&gt; e : transitions.entrySet()) {</span>
-<span class="fc bfc" id="L312" title="All 2 branches covered.">				for (Map.Entry&lt;DiseaseStatus, Transition&gt; to : e.getValue().entrySet()) {</span>
-<span class="fc" id="L313">					array[e.getKey().ordinal() * DiseaseStatus.values().length + to.getKey().ordinal()] = to.getValue();</span>
-<span class="fc" id="L314">				}</span>
-<span class="fc" id="L315">			}</span>
+<span class="fc bfc" id="L312" title="All 2 branches covered.">			for (Map.Entry&lt;DiseaseStatus, Map&lt;DiseaseStatus, Transition&gt;&gt; e : transitions.entrySet()) {</span>
+<span class="fc bfc" id="L313" title="All 2 branches covered.">				for (Map.Entry&lt;DiseaseStatus, Transition&gt; to : e.getValue().entrySet()) {</span>
+<span class="fc" id="L314">					array[e.getKey().ordinal() * DiseaseStatus.values().length + to.getKey().ordinal()] = to.getValue();</span>
+<span class="fc" id="L315">				}</span>
+<span class="fc" id="L316">			}</span>
 
-<span class="fc" id="L317">			return array;</span>
+<span class="fc" id="L318">			return array;</span>
 		}
 
 		@Override
 		public String toString() {
-<span class="fc" id="L322">			return build().root().render(ConfigRenderOptions.concise().setJson(false));</span>
+<span class="fc" id="L323">			return build().root().render(ConfigRenderOptions.concise().setJson(false));</span>
 		}
 	}
 
@@ -331,18 +332,18 @@ public abstract class Transition {
 		public final DiseaseStatus status;
 		public final Transition t;
 
-<span class="fc" id="L334">		private ToHolder(DiseaseStatus status, Transition t) {</span>
-<span class="fc" id="L335">			this.status = status;</span>
-<span class="fc" id="L336">			this.t = t;</span>
-<span class="fc" id="L337">		}</span>
+<span class="fc" id="L335">		private ToHolder(DiseaseStatus status, Transition t) {</span>
+<span class="fc" id="L336">			this.status = status;</span>
+<span class="fc" id="L337">			this.t = t;</span>
+<span class="fc" id="L338">		}</span>
 
 		@Override
 		public String toString() {
-<span class="nc" id="L341">			return &quot;ToHolder{&quot; +</span>
+<span class="nc" id="L342">			return &quot;ToHolder{&quot; +</span>
 					&quot;status=&quot; + status +
 					&quot;, t=&quot; + t +
 					'}';
 		}
 	}
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

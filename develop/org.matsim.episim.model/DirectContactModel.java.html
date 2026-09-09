@@ -21,15 +21,14 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.util.*;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 
@@ -39,7 +38,7 @@ import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 @Deprecated
 public final class DirectContactModel extends AbstractContactModel {
 
-<span class="nc" id="L42">	private static final Logger log = LogManager.getLogger(DirectContactModel.class);</span>
+<span class="nc" id="L41">	private static final Logger log = LogManager.getLogger(DirectContactModel.class);</span>
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -54,71 +53,71 @@ public final class DirectContactModel extends AbstractContactModel {
 	/**
 	 * This buffer is used to store the infection type.
 	 */
-<span class="nc" id="L57">	private final StringBuilder buffer = new StringBuilder();</span>
+<span class="nc" id="L56">	private final StringBuilder buffer = new StringBuilder();</span>
 
-<span class="nc" id="L59">	private final Map&lt;EpisimContainer&lt;?&gt;, EpisimPerson&gt; singlePersons = new IdentityHashMap&lt;&gt;();</span>
-<span class="nc" id="L60">	private final Map&lt;EpisimContainer&lt;?&gt;, List&lt;Group&gt;&gt; groups = new IdentityHashMap&lt;&gt;();</span>
+<span class="nc" id="L58">	private final Map&lt;EpisimContainer&lt;?&gt;, EpisimPerson&gt; singlePersons = new IdentityHashMap&lt;&gt;();</span>
+<span class="nc" id="L59">	private final Map&lt;EpisimContainer&lt;?&gt;, List&lt;Group&gt;&gt; groups = new IdentityHashMap&lt;&gt;();</span>
 
 	@Inject
-		/*package*/ DirectContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-									   EpisimReporting reporting, InfectionModel infectionModel) {
-<span class="nc" id="L65">		super(rnd, config, infectionModel, reporting);</span>
-<span class="nc" id="L66">		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();</span>
-<span class="nc" id="L67">		this.traceSusceptible = tracingConfig.getTraceSusceptible();</span>
-<span class="nc" id="L68">	}</span>
+		/*package*/ DirectContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+		                               EpisimReporting reporting, InfectionModel infectionModel) {
+<span class="nc" id="L64">		super(rnd, config, infectionModel, reporting);</span>
+<span class="nc" id="L65">		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();</span>
+<span class="nc" id="L66">		this.traceSusceptible = tracingConfig.getTraceSusceptible();</span>
+<span class="nc" id="L67">	}</span>
 
 	@Override
 	public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, EpisimVehicle vehicle, double now) {
-<span class="nc" id="L72">		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);</span>
-<span class="nc" id="L73">	}</span>
+<span class="nc" id="L71">		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);</span>
+<span class="nc" id="L72">	}</span>
 
 	@Override
 	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, EpisimFacility facility, double now) {
-<span class="nc" id="L77">		infectionDynamicsGeneralized(personLeavingFacility, facility, now);</span>
-<span class="nc" id="L78">	}</span>
+<span class="nc" id="L76">		infectionDynamicsGeneralized(personLeavingFacility, facility, now);</span>
+<span class="nc" id="L77">	}</span>
 
 	@Override
 	public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now) {
-<span class="nc" id="L82">		notifyEnterContainerGeneralized(personEnteringVehicle, vehicle, now);</span>
-<span class="nc" id="L83">	}</span>
+<span class="nc" id="L81">		notifyEnterContainerGeneralized(personEnteringVehicle, vehicle, now);</span>
+<span class="nc" id="L82">	}</span>
 
 	@Override
 	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now) {
-<span class="nc" id="L87">		notifyEnterContainerGeneralized(personEnteringFacility, facility, now);</span>
-<span class="nc" id="L88">	}</span>
+<span class="nc" id="L86">		notifyEnterContainerGeneralized(personEnteringFacility, facility, now);</span>
+<span class="nc" id="L87">	}</span>
 
 	private void notifyEnterContainerGeneralized(EpisimPerson personEnteringContainer, EpisimContainer&lt;?&gt; container, double now) {
 
 		// this can happen because persons are not removed during initialization
-<span class="nc bnc" id="L93" title="All 2 branches missed.">		if (findGroup(container, personEnteringContainer) != null)</span>
-<span class="nc" id="L94">			return;</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">		if (findGroup(container, personEnteringContainer) != null)</span>
+<span class="nc" id="L93">			return;</span>
 
 		// for same reason a person currently at home will enter again
-<span class="nc bnc" id="L97" title="All 4 branches missed.">		if (!singlePersons.containsKey(container) || singlePersons.get(container) == personEnteringContainer) {</span>
-<span class="nc" id="L98">			singlePersons.put(container, personEnteringContainer);</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">		if (!singlePersons.containsKey(container) || singlePersons.get(container) == personEnteringContainer) {</span>
+<span class="nc" id="L97">			singlePersons.put(container, personEnteringContainer);</span>
 		} else {
-<span class="nc" id="L100">			groups.computeIfAbsent(container, k -&gt; new ArrayList&lt;&gt;())</span>
-<span class="nc" id="L101">					.add(Group.of(personEnteringContainer, singlePersons.get(container), now));</span>
-<span class="nc" id="L102">			singlePersons.remove(container);</span>
+<span class="nc" id="L99">			groups.computeIfAbsent(container, k -&gt; new ArrayList&lt;&gt;())</span>
+<span class="nc" id="L100">					.add(Group.of(personEnteringContainer, singlePersons.get(container), now));</span>
+<span class="nc" id="L101">			singlePersons.remove(container);</span>
 		}
-<span class="nc" id="L104">	}</span>
+<span class="nc" id="L103">	}</span>
 
 	private Group findGroup(EpisimContainer&lt;?&gt; container, EpisimPerson person) {
 
-<span class="nc bnc" id="L108" title="All 2 branches missed.">		if (!groups.containsKey(container))</span>
-<span class="nc" id="L109">			return null;</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">		if (!groups.containsKey(container))</span>
+<span class="nc" id="L108">			return null;</span>
 
-<span class="nc bnc" id="L111" title="All 2 branches missed.">		for (Group group : groups.get(container)) {</span>
-<span class="nc bnc" id="L112" title="All 2 branches missed.">			if (group.contains(person)) {</span>
-<span class="nc" id="L113">				return group;</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">		for (Group group : groups.get(container)) {</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">			if (group.contains(person)) {</span>
+<span class="nc" id="L112">				return group;</span>
 			}
-<span class="nc" id="L115">		}</span>
+<span class="nc" id="L114">		}</span>
 
-<span class="nc" id="L117">		return null;</span>
+<span class="nc" id="L116">		return null;</span>
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer&lt;?&gt; container, double now) {
-<span class="nc" id="L121">		throw new UnsupportedOperationException();</span>
+<span class="nc" id="L120">		throw new UnsupportedOperationException();</span>
 	}
 
 	/**
@@ -130,29 +129,29 @@ public final class DirectContactModel extends AbstractContactModel {
 		private final EpisimPerson b;
 		private final double time;
 
-<span class="nc" id="L133">		private Group(EpisimPerson a, EpisimPerson b, double time) {</span>
-<span class="nc" id="L134">			this.a = a;</span>
-<span class="nc" id="L135">			this.b = b;</span>
-<span class="nc" id="L136">			this.time = time;</span>
-<span class="nc" id="L137">		}</span>
+<span class="nc" id="L132">		private Group(EpisimPerson a, EpisimPerson b, double time) {</span>
+<span class="nc" id="L133">			this.a = a;</span>
+<span class="nc" id="L134">			this.b = b;</span>
+<span class="nc" id="L135">			this.time = time;</span>
+<span class="nc" id="L136">		}</span>
 
 		private static Group of(EpisimPerson a, EpisimPerson b, double time) {
-<span class="nc" id="L140">			return new Group(a, b, time);</span>
+<span class="nc" id="L139">			return new Group(a, b, time);</span>
 		}
 
 		public boolean contains(EpisimPerson person) {
-<span class="nc bnc" id="L144" title="All 4 branches missed.">			return a == person || b == person;</span>
+<span class="nc bnc" id="L143" title="All 4 branches missed.">			return a == person || b == person;</span>
 		}
 
 		/**
 		 * Return the left over person.
 		 */
 		public EpisimPerson remove(EpisimPerson p) {
-<span class="nc bnc" id="L151" title="All 2 branches missed.">			if (p == a) return b;</span>
-<span class="nc bnc" id="L152" title="All 2 branches missed.">			else if (p == b) return a;</span>
-<span class="nc" id="L153">			throw new IllegalStateException(&quot;Leaving person not in group.&quot;);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">			if (p == a) return b;</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">			else if (p == b) return a;</span>
+<span class="nc" id="L152">			throw new IllegalStateException(&quot;Leaving person not in group.&quot;);</span>
 		}
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

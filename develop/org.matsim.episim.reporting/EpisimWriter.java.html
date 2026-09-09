@@ -194,13 +194,18 @@ import java.util.Map;
 <span class="fc" id="L194">		}</span>
 <span class="fc" id="L195">	}</span>
 
+	/**
+	 * Flushes the given writer.
+	 *
+	 * @param writer writer to flush
+	 */
 	public synchronized void flush(Writer writer) {
 		try {
-<span class="nc" id="L199">			writer.flush();</span>
-<span class="nc" id="L200">		} catch (IOException e) {</span>
-<span class="nc" id="L201">			log.error(&quot;Could not flush writer&quot;, e);</span>
-<span class="nc" id="L202">			throw new UncheckedIOException(e);</span>
-<span class="nc" id="L203">		}</span>
-<span class="nc" id="L204">	}</span>
+<span class="nc" id="L204">			writer.flush();</span>
+<span class="nc" id="L205">		} catch (IOException e) {</span>
+<span class="nc" id="L206">			log.error(&quot;Could not flush writer&quot;, e);</span>
+<span class="nc" id="L207">			throw new UncheckedIOException(e);</span>
+<span class="nc" id="L208">		}</span>
+<span class="nc" id="L209">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

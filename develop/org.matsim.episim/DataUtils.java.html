@@ -33,7 +33,7 @@ public final class DataUtils {
 
 <span class="nc" id="L34">			DateTimeFormatter fmt = DateTimeFormatter.ofPattern(&quot;dd.MM.yy&quot;);</span>
 
-<span class="nc" id="L36">			TreeMap&lt;LocalDate, Double&gt; result = new TreeMap&lt;&gt;();</span>
+<span class="nc" id="L36">			NavigableMap&lt;LocalDate, Double&gt; result = new TreeMap&lt;&gt;();</span>
 
 <span class="nc bnc" id="L38" title="All 2 branches missed.">			for (CSVRecord record : csv) {</span>
 
@@ -50,7 +50,7 @@ public final class DataUtils {
 	}
 
 	/**
-	 * Read
+	 * Reads strain data.
 	 *
 	 * @return percentage of strain for each date.
 	 */
@@ -58,7 +58,7 @@ public final class DataUtils {
 
 <span class="fc" id="L59">		try (CSVParser csv = new CSVParser(Files.newBufferedReader(path), CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#'))) {</span>
 
-<span class="fc" id="L61">			TreeMap&lt;LocalDate, Map&lt;VirusStrain, Double&gt;&gt; result = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L61">			NavigableMap&lt;LocalDate, Map&lt;VirusStrain, Double&gt;&gt; result = new TreeMap&lt;&gt;();</span>
 
 
 <span class="fc bfc" id="L64" title="All 2 branches covered.">			for (CSVRecord record : csv) {</span>
@@ -88,4 +88,4 @@ public final class DataUtils {
 <span class="pc bpc" id="L88" title="1 of 2 branches missed.">		return record.isSet(column) ? Double.parseDouble(record.get(column)) : 0;</span>
 	}
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

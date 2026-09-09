@@ -23,7 +23,6 @@ package org.matsim.episim.policy;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
@@ -41,19 +40,19 @@ public abstract class ShutdownPolicy {
 	/**
 	 * Magic number to indicate this entry should be replaced based on hospital numbers.
 	 */
-<span class="fc" id="L44">	public static final Double REG_HOSPITAL = -200d;</span>
+<span class="fc" id="L43">	public static final Double REG_HOSPITAL = -200d;</span>
 
-<span class="fc" id="L46">	private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);</span>
+<span class="fc" id="L45">	private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);</span>
 
 	protected final Config config;
 
 	/**
 	 * Constructor from config.
 	 */
-<span class="fc" id="L53">	protected ShutdownPolicy(Config config) {</span>
-<span class="fc" id="L54">		this.config = config;</span>
+<span class="fc" id="L52">	protected ShutdownPolicy(Config config) {</span>
+<span class="fc" id="L53">		this.config = config;</span>
 		//log.info(&quot;Using policy {} with config: {}&quot;, getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
-<span class="fc" id="L56">	}</span>
+<span class="fc" id="L55">	}</span>
 
 
 	/**
@@ -68,7 +67,7 @@ public abstract class ShutdownPolicy {
 	 * @param start restored date
 	 * @param restrictions restrictions from snapshot
 	 */
-<span class="fc" id="L71">	public void restore(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions) {}</span>
+<span class="fc" id="L70">	public void restore(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions) {}</span>
 
 	/**
 	 * Update the restrictions at the start of the day based on the report.
@@ -88,18 +87,21 @@ public abstract class ShutdownPolicy {
 		/**
 		 * Maps activities to config objects.
 		 */
-<span class="fc" id="L91">		protected Map&lt;String, T&gt; params = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L90">		protected Map&lt;String, T&gt; params = new HashMap&lt;&gt;();</span>
 
 		/**
 		 * Public inheritance is forbidden.
 		 */
-<span class="fc" id="L96">		ConfigBuilder() {</span>
-<span class="fc" id="L97">		}</span>
+<span class="fc" id="L95">		ConfigBuilder() {</span>
+<span class="fc" id="L96">		}</span>
 
+		/**
+		 * Builds the shutdown-policy configuration.
+		 */
 		public Config build() {
-<span class="fc" id="L100">			return ConfigFactory.parseMap(params);</span>
+<span class="fc" id="L102">			return ConfigFactory.parseMap(params);</span>
 		}
 
 	}
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

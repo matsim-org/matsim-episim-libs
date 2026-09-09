@@ -7,22 +7,18 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.model.SimulationListener;
-import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
 import java.io.BufferedWriter;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.SplittableRandom;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Writes contacts for each day.
  */
-<span class="nc" id="L25">public class WriteContactsPerDay implements SimulationListener {</span>
+<span class="nc" id="L21">public class WriteContactsPerDay implements SimulationListener {</span>
 
 	private Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons;
 	@Inject
@@ -30,20 +26,20 @@ import java.util.stream.IntStream;
 	private BufferedWriter writer;
 
 	@Override
-	public void init(SplittableRandom rnd, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; facilities, Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicles) {
-<span class="nc" id="L34">		this.persons = persons;</span>
-<span class="nc" id="L35">	}</span>
+	public void init(EpisimSplittableRandom rnd, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; facilities, Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicles) {
+<span class="nc" id="L30">		this.persons = persons;</span>
+<span class="nc" id="L31">	}</span>
 
 	@Override
 	public void onIterationEnd(int iteration, LocalDate date) {
 
-<span class="nc bnc" id="L40" title="All 2 branches missed.">		if (writer == null) {</span>
-<span class="nc" id="L41">			writer = reporting.registerWriter(&quot;contactsPerDay.tsv&quot;);</span>
-<span class="nc" id="L42">			reporting.writeAsync(writer, &quot;date\tavgContacts\n&quot;);</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">		if (writer == null) {</span>
+<span class="nc" id="L37">			writer = reporting.registerWriter(&quot;contactsPerDay.tsv&quot;);</span>
+<span class="nc" id="L38">			reporting.writeAsync(writer, &quot;date\tavgContacts\n&quot;);</span>
 		}
 
-<span class="nc" id="L45">		reporting.writeAsync(writer, date + &quot;\t&quot; + reporting.getTotalContacts() / (double) persons.size() + &quot;\n&quot;);</span>
+<span class="nc" id="L41">		reporting.writeAsync(writer, date + &quot;\t&quot; + reporting.getTotalContacts() / (double) persons.size() + &quot;\n&quot;);</span>
 
-<span class="nc" id="L47">	}</span>
+<span class="nc" id="L43">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

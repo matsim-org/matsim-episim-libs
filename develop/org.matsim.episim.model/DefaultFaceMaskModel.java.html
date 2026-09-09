@@ -5,7 +5,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Default model only requires people to wear the mask mandated by current {@link Restriction}.
@@ -13,10 +13,10 @@ import java.util.SplittableRandom;
  */
 public class DefaultFaceMaskModel implements FaceMaskModel {
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 
 	@Inject
-<span class="fc" id="L19">	public DefaultFaceMaskModel(SplittableRandom rnd) {</span>
+<span class="fc" id="L19">	public DefaultFaceMaskModel(EpisimSplittableRandom rnd) {</span>
 <span class="fc" id="L20">		this.rnd = rnd;</span>
 <span class="fc" id="L21">	}</span>
 
@@ -25,4 +25,4 @@ public class DefaultFaceMaskModel implements FaceMaskModel {
 <span class="fc" id="L25">		return restriction.determineMask(rnd);</span>
 	}
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

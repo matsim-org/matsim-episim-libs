@@ -30,7 +30,7 @@ import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.controler.ControllerUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
@@ -93,11 +93,11 @@ public final class EpisimRunner {
 <span class="pc bpc" id="L93" title="1 of 2 branches missed.">		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)</span>
 <span class="fc" id="L94">			manager.addHandler(reporting);</span>
 
-<span class="fc" id="L96">		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, &quot;Just before starting iterations&quot;);</span>
+<span class="fc" id="L96">		ControllerUtils.checkConfigConsistencyAndWriteToLog(config, &quot;Just before starting iterations&quot;);</span>
 
 <span class="fc" id="L98">		handler.init(replay.getEvents());</span>
 
-<span class="fc" id="L100">		Path output = Path.of(config.controler().getOutputDirectory());</span>
+<span class="fc" id="L100">		Path output = Path.of(config.controller().getOutputDirectory());</span>
 
 <span class="fc" id="L102">		int iteration = 1;</span>
 <span class="pc bpc" id="L103" title="1 of 4 branches missed.">		if (episimConfig.getStartFromSnapshot() != null &amp;&amp; episimConfig.getStartFromImmunization() != null) {</span>
@@ -155,7 +155,7 @@ public final class EpisimRunner {
 	/**
 	 * Update events data and internal person data structure.
 	 *
-	 * @param events
+	 * @param events events grouped by day of week
 	 */
 	public void updateEvents(Map&lt;DayOfWeek, List&lt;Event&gt;&gt; events) {
 
@@ -228,7 +228,7 @@ public final class EpisimRunner {
 <span class="fc" id="L228">					.createArchiveOutputStream(&quot;zip&quot;, out);</span>
 
 			// Copy whole output to the snapshot
-<span class="fc" id="L231">			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controler().getRunId(), archive);</span>
+<span class="fc" id="L231">			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controller().getRunId(), archive);</span>
 
 <span class="fc" id="L233">			archive.putArchiveEntry(new ZipArchiveEntry(&quot;iteration&quot;));</span>
 <span class="fc" id="L234">			ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
@@ -245,7 +245,7 @@ public final class EpisimRunner {
 <span class="fc" id="L245">			archive.finish();</span>
 <span class="fc" id="L246">			archive.close();</span>
 
-<span class="nc" id="L248">		} catch (IOException | ArchiveException e) {</span>
+<span class="nc" id="L248">		} catch (IOException e) {</span>
 <span class="nc" id="L249">			log.error(&quot;Could not write snapshot&quot;, e);</span>
 <span class="fc" id="L250">		}</span>
 
@@ -254,7 +254,7 @@ public final class EpisimRunner {
 <span class="fc" id="L254">	}</span>
 
 	/**
-	 * Read snapshot from disk and initialize simulation state
+	 * Read snapshot from disk and initialize simulation state.
 	 *
 	 * @param path path to snapshot archive
 	 * @return starting iteration
@@ -312,14 +312,14 @@ public final class EpisimRunner {
 
 <span class="fc" id="L313">			return iteration;</span>
 
-<span class="nc" id="L315">		} catch (IOException | ArchiveException | ClassNotFoundException e) {</span>
+<span class="nc" id="L315">		} catch (IOException | ClassNotFoundException e) {</span>
 <span class="nc" id="L316">			throw new IllegalStateException(&quot;Could not read snapshot&quot;, e);</span>
 		}
 
 	}
 
 	/**
-	 * Helper method to write object into archive,
+	 * Helper method to write object into archive.
 	 */
 	private void writeObject(Externalizable obj, String name, ArchiveOutputStream archive) throws IOException {
 <span class="fc" id="L325">		archive.putArchiveEntry(new ZipArchiveEntry(name));</span>
@@ -330,4 +330,4 @@ public final class EpisimRunner {
 <span class="fc" id="L330">	}</span>
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

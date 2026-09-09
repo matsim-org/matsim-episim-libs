@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
 
 import javax.annotation.Nullable;
-import javax.inject.Named;
+import jakarta.inject.Named;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -84,7 +84,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 <span class="fc" id="L84">	}</span>
 
 	/**
-	 * Init restrictions that are before simulation start
+	 * Init restrictions that are before simulation start.
 	 */
 	static void initRestrictions(LocalDate start, ImmutableMap&lt;String, Restriction&gt; restrictions, Config config) {
 <span class="fc bfc" id="L90" title="All 2 branches covered.">		for (Map.Entry&lt;String, Restriction&gt; entry : restrictions.entrySet()) {</span>
@@ -294,18 +294,21 @@ public final class FixedPolicy extends ShutdownPolicy {
 <span class="fc" id="L294">			return restrict(date.toString(), Restriction.of(fraction), activities);</span>
 		}
 
+		/**
+		 * Adds a dated restriction with district-specific values.
+		 */
 		public ConfigBuilder restrictWithDistrict(LocalDate date, Map&lt;String, Double&gt; districtSpecificValue, double fraction, String... activities) {
-<span class="nc" id="L298">			Restriction restriction = Restriction.of(fraction);</span>
-<span class="nc" id="L299">			restriction.setLocationBasedRf(districtSpecificValue);</span>
+<span class="nc" id="L301">			Restriction restriction = Restriction.of(fraction);</span>
+<span class="nc" id="L302">			restriction.setLocationBasedRf(districtSpecificValue);</span>
 
-<span class="nc" id="L301">			return restrictWithDistrict(date.toString(), restriction, activities);</span>
+<span class="nc" id="L304">			return restrictWithDistrict(date.toString(), restriction, activities);</span>
 		}
 
 		/**
 		 * See {@link #restrict(String, Restriction, String...)}.
 		 */
 		public ConfigBuilder restrict(LocalDate date, Restriction restriction, String... activities) {
-<span class="fc" id="L308">			return restrict(date.toString(), restriction, activities);</span>
+<span class="fc" id="L311">			return restrict(date.toString(), restriction, activities);</span>
 		}
 
 		/**
@@ -315,23 +318,26 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder restrict(String date, double fraction, String... activities) {
 			// check if date is valid
-<span class="fc" id="L318">			return restrict(LocalDate.parse(date), fraction, activities);</span>
+<span class="fc" id="L321">			return restrict(LocalDate.parse(date), fraction, activities);</span>
 		}
 
 		/**
 		 * See {@link #restrict(String, Restriction, String...)}.
 		 */
 		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
-<span class="pc bpc" id="L325" title="1 of 2 branches missed.">			if (day &lt;= 0) throw new IllegalArgumentException(&quot;Day must be larger than 0&quot;);</span>
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">			if (day &lt;= 0) throw new IllegalArgumentException(&quot;Day must be larger than 0&quot;);</span>
 
-<span class="fc" id="L327">			return restrict(&quot;day-&quot; + day, restriction, activities);</span>
+<span class="fc" id="L330">			return restrict(&quot;day-&quot; + day, restriction, activities);</span>
 		}
 
+		/**
+		 * Adds a day-based restriction with district-specific values.
+		 */
 		public ConfigBuilder restrictWithDistrict(long day, Map&lt;String, Double&gt; locationBasedRf, double fraction, String... activities) {
-<span class="fc" id="L331">			Restriction restriction = Restriction.of(fraction);</span>
-<span class="fc" id="L332">			restriction.setLocationBasedRf(locationBasedRf);</span>
+<span class="fc" id="L337">			Restriction restriction = Restriction.of(fraction);</span>
+<span class="fc" id="L338">			restriction.setLocationBasedRf(locationBasedRf);</span>
 
-<span class="fc" id="L334">			return restrictWithDistrict(&quot;day-&quot; + day, restriction, activities);</span>
+<span class="fc" id="L340">			return restrictWithDistrict(&quot;day-&quot; + day, restriction, activities);</span>
 		}
 
 		/**
@@ -340,7 +346,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
 		 */
 		public ConfigBuilder restrict(long day, double fraction, String... activities) {
-<span class="fc" id="L343">			return restrict(day, Restriction.of(fraction), activities);</span>
+<span class="fc" id="L349">			return restrict(day, Restriction.of(fraction), activities);</span>
 		}
 
 		/**
@@ -349,7 +355,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
 		 */
 		public ConfigBuilder shutdown(long day, String... activities) {
-<span class="fc" id="L352">			return this.restrict(day, Restriction.of(0), activities);</span>
+<span class="fc" id="L358">			return this.restrict(day, Restriction.of(0), activities);</span>
 		}
 
 		/**
@@ -358,7 +364,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
 		 */
 		public ConfigBuilder open(long day, String... activities) {
-<span class="nc" id="L361">			return this.restrict(day, Restriction.none(), activities);</span>
+<span class="nc" id="L367">			return this.restrict(day, Restriction.none(), activities);</span>
 		}
 
 
@@ -375,31 +381,31 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @param activities     activities to restrict
 		 */
 		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, Restriction restrictionEnd, String... activities) {
-<span class="fc" id="L378">			double day = 0;</span>
+<span class="fc" id="L384">			double day = 0;</span>
 
-<span class="fc" id="L380">			long diff = ChronoUnit.DAYS.between(start, end);</span>
+<span class="fc" id="L386">			long diff = ChronoUnit.DAYS.between(start, end);</span>
 
-<span class="fc" id="L382">			double rf = Objects.requireNonNullElse(restriction.getRemainingFraction(), Double.NaN);</span>
-<span class="fc" id="L383">			double rfEnd = Objects.requireNonNullElse(restrictionEnd.getRemainingFraction(), Double.NaN);</span>
+<span class="fc" id="L388">			double rf = Objects.requireNonNullElse(restriction.getRemainingFraction(), Double.NaN);</span>
+<span class="fc" id="L389">			double rfEnd = Objects.requireNonNullElse(restrictionEnd.getRemainingFraction(), Double.NaN);</span>
 
-<span class="fc" id="L385">			double exp = Objects.requireNonNullElse(restriction.getCiCorrection(), Double.NaN);</span>
-<span class="fc" id="L386">			double expEnd = Objects.requireNonNullElse(restrictionEnd.getCiCorrection(), Double.NaN);</span>
+<span class="fc" id="L391">			double exp = Objects.requireNonNullElse(restriction.getCiCorrection(), Double.NaN);</span>
+<span class="fc" id="L392">			double expEnd = Objects.requireNonNullElse(restrictionEnd.getCiCorrection(), Double.NaN);</span>
 
-<span class="fc" id="L388">			LocalDate today = start;</span>
-<span class="fc bfc" id="L389" title="All 4 branches covered.">			while (today.isBefore(end) || today.isEqual(end)) {</span>
-<span class="fc" id="L390">				double r = rf + (rfEnd - rf) * (day / diff);</span>
-<span class="fc" id="L391">				double e = exp + (expEnd - exp) * (day / diff);</span>
+<span class="fc" id="L394">			LocalDate today = start;</span>
+<span class="fc bfc" id="L395" title="All 4 branches covered.">			while (today.isBefore(end) || today.isEqual(end)) {</span>
+<span class="fc" id="L396">				double r = rf + (rfEnd - rf) * (day / diff);</span>
+<span class="fc" id="L397">				double e = exp + (expEnd - exp) * (day / diff);</span>
 
-<span class="pc bpc" id="L393" title="3 of 4 branches missed.">				if (Double.isNaN(r) &amp;&amp; Double.isNaN(e))</span>
-<span class="nc" id="L394">					throw new IllegalArgumentException(&quot;The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.&quot;);</span>
+<span class="pc bpc" id="L399" title="3 of 4 branches missed.">				if (Double.isNaN(r) &amp;&amp; Double.isNaN(e))</span>
+<span class="nc" id="L400">					throw new IllegalArgumentException(&quot;The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.&quot;);</span>
 
-<span class="pc bpc" id="L396" title="1 of 4 branches missed.">				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,</span>
+<span class="pc bpc" id="L402" title="1 of 4 branches missed.">				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,</span>
 						null, null, null, null, null, new HashMap&lt;String, Double&gt;(), null, null, restriction), activities);
-<span class="fc" id="L398">				today = today.plusDays(1);</span>
-<span class="fc" id="L399">				day++;</span>
-<span class="fc" id="L400">			}</span>
+<span class="fc" id="L404">				today = today.plusDays(1);</span>
+<span class="fc" id="L405">				day++;</span>
+<span class="fc" id="L406">			}</span>
 
-<span class="fc" id="L402">			return this;</span>
+<span class="fc" id="L408">			return this;</span>
 		}
 
 		/**
@@ -407,7 +413,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * See {@link #interpolate(LocalDate, LocalDate, Restriction, Restriction, String...)}.
 		 */
 		public ConfigBuilder interpolate(String start, String end, Restriction restriction, Restriction restrictionEnd, String... activities) {
-<span class="nc" id="L410">			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, restrictionEnd, activities);</span>
+<span class="nc" id="L416">			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, restrictionEnd, activities);</span>
 		}
 
 		/**
@@ -420,28 +426,28 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder applyToRf(String from, String to, BiFunction&lt;LocalDate, Double, Double&gt; f, String... activities) {
 
-<span class="fc" id="L423">			LocalDate fromDate = LocalDate.parse(from);</span>
-<span class="fc" id="L424">			LocalDate toDate = LocalDate.parse(to);</span>
+<span class="fc" id="L429">			LocalDate fromDate = LocalDate.parse(from);</span>
+<span class="fc" id="L430">			LocalDate toDate = LocalDate.parse(to);</span>
 
-<span class="fc bfc" id="L426" title="All 2 branches covered.">			for (String act : activities) {</span>
-<span class="fc" id="L427">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.get(act);</span>
+<span class="fc bfc" id="L432" title="All 2 branches covered.">			for (String act : activities) {</span>
+<span class="fc" id="L433">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.get(act);</span>
 
-<span class="fc bfc" id="L429" title="All 2 branches covered.">				for (Map.Entry&lt;String, Map&lt;String, Object&gt;&gt; e : p.entrySet()) {</span>
-<span class="fc" id="L430">					LocalDate other = LocalDate.parse(e.getKey());</span>
+<span class="fc bfc" id="L435" title="All 2 branches covered.">				for (Map.Entry&lt;String, Map&lt;String, Object&gt;&gt; e : p.entrySet()) {</span>
+<span class="fc" id="L436">					LocalDate other = LocalDate.parse(e.getKey());</span>
 
-<span class="fc" id="L432">					Double rf = (Double) e.getValue().get(&quot;fraction&quot;);</span>
+<span class="fc" id="L438">					Double rf = (Double) e.getValue().get(&quot;fraction&quot;);</span>
 
 					// skip empty and special values
-<span class="pc bpc" id="L435" title="1 of 4 branches missed.">					if (rf == null || rf &lt; -100)</span>
-<span class="nc" id="L436">						continue;</span>
+<span class="pc bpc" id="L441" title="1 of 4 branches missed.">					if (rf == null || rf &lt; -100)</span>
+<span class="nc" id="L442">						continue;</span>
 
-<span class="pc bpc" id="L438" title="2 of 8 branches missed.">					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) &amp;&amp; (other.isEqual(toDate) || other.isBefore(toDate)))</span>
-<span class="fc" id="L439">						e.getValue().put(&quot;fraction&quot;, f.apply(other, rf));</span>
+<span class="pc bpc" id="L444" title="2 of 8 branches missed.">					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) &amp;&amp; (other.isEqual(toDate) || other.isBefore(toDate)))</span>
+<span class="fc" id="L445">						e.getValue().put(&quot;fraction&quot;, f.apply(other, rf));</span>
 
-<span class="fc" id="L441">				}</span>
+<span class="fc" id="L447">				}</span>
 			}
 
-<span class="fc" id="L444">			return this;</span>
+<span class="fc" id="L450">			return this;</span>
 
 		}
 
@@ -457,22 +463,22 @@ public final class FixedPolicy extends ShutdownPolicy {
 		@Beta
 		public ConfigBuilder apply(String from, String to, BiConsumer&lt;LocalDate, Map&lt;String, Object&gt;&gt; f, String... activities) {
 
-<span class="nc" id="L460">			LocalDate fromDate = LocalDate.parse(from);</span>
-<span class="nc" id="L461">			LocalDate toDate = LocalDate.parse(to);</span>
+<span class="nc" id="L466">			LocalDate fromDate = LocalDate.parse(from);</span>
+<span class="nc" id="L467">			LocalDate toDate = LocalDate.parse(to);</span>
 
-<span class="nc bnc" id="L463" title="All 2 branches missed.">			for (String act : activities) {</span>
-<span class="nc" id="L464">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.get(act);</span>
+<span class="nc bnc" id="L469" title="All 2 branches missed.">			for (String act : activities) {</span>
+<span class="nc" id="L470">				Map&lt;String, Map&lt;String, Object&gt;&gt; p = (Map&lt;String, Map&lt;String, Object&gt;&gt;) params.get(act);</span>
 
-<span class="nc bnc" id="L466" title="All 2 branches missed.">				for (Map.Entry&lt;String, Map&lt;String, Object&gt;&gt; e : p.entrySet()) {</span>
-<span class="nc" id="L467">					LocalDate other = LocalDate.parse(e.getKey());</span>
+<span class="nc bnc" id="L472" title="All 2 branches missed.">				for (Map.Entry&lt;String, Map&lt;String, Object&gt;&gt; e : p.entrySet()) {</span>
+<span class="nc" id="L473">					LocalDate other = LocalDate.parse(e.getKey());</span>
 
-<span class="nc bnc" id="L469" title="All 8 branches missed.">					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) &amp;&amp; (other.isEqual(toDate) || other.isBefore(toDate)))</span>
-<span class="nc" id="L470">						f.accept(other, e.getValue());</span>
+<span class="nc bnc" id="L475" title="All 8 branches missed.">					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) &amp;&amp; (other.isEqual(toDate) || other.isBefore(toDate)))</span>
+<span class="nc" id="L476">						f.accept(other, e.getValue());</span>
 
-<span class="nc" id="L472">				}</span>
+<span class="nc" id="L478">				}</span>
 			}
 
-<span class="nc" id="L475">			return this;</span>
+<span class="nc" id="L481">			return this;</span>
 		}
 
 
@@ -480,11 +486,11 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * Set scaling for remaining fraction when regression is used.
 		 */
 		public ConfigBuilder setHospitalScale(double scale) {
-<span class="nc" id="L483">			params.put(&quot;hospital&quot;, Map.of(&quot;scale&quot;, scale));</span>
-<span class="nc" id="L484">			return this;</span>
+<span class="nc" id="L489">			params.put(&quot;hospital&quot;, Map.of(&quot;scale&quot;, scale));</span>
+<span class="nc" id="L490">			return this;</span>
 		}
 
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

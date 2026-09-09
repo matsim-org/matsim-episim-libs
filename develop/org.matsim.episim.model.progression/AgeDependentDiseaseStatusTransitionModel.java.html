@@ -25,7 +25,7 @@ import org.matsim.episim.*;
 import com.google.inject.Inject;
 import org.matsim.episim.model.ConfigurableProgressionModel;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
@@ -35,7 +35,7 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	private final EpisimConfigGroup episimConfig;
 
 	@Inject
-	public AgeDependentDiseaseStatusTransitionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
+	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
 	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
 <span class="fc" id="L40">		super(rnd, vaccinationConfig, strainConfigGroup);</span>
 <span class="fc" id="L41">		this.episimConfig = episimConfig;</span>
@@ -43,7 +43,7 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 
 
 	@Override
-	protected double getProbaOfTransitioningToShowingSymptoms (EpisimPerson person) {
+	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
 
 <span class="fc" id="L48">		double proba = 0.8;</span>
 
@@ -239,4 +239,4 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

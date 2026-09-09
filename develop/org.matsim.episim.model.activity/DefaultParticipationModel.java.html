@@ -10,14 +10,15 @@ import org.matsim.episim.policy.Restriction;
 import java.time.LocalDate;
 import java.util.BitSet;
 import java.util.List;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Default participation model that restricts participation based on remaining fraction.
  */
 public class DefaultParticipationModel implements ActivityParticipationModel {
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private ImmutableMap&lt;String, Restriction&gt; im;
@@ -25,48 +26,48 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 	private LocalDate date;
 
 	@Inject
-<span class="fc" id="L28">	public DefaultParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig) {</span>
-<span class="fc" id="L29">		this.rnd = rnd;</span>
-<span class="fc" id="L30">		this.episimConfig = episimConfig;</span>
-<span class="fc" id="L31">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L29">	public DefaultParticipationModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig) {</span>
+<span class="fc" id="L30">		this.rnd = rnd;</span>
+<span class="fc" id="L31">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L32">		this.vaccinationConfig = vaccinationConfig;</span>
 
-<span class="pc bpc" id="L33" title="1 of 2 branches missed.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)</span>
-<span class="nc" id="L34">			throw new IllegalStateException(&quot;Participation model can only be used with activityHandling startOfDay&quot;);</span>
-<span class="fc" id="L35">	}</span>
+<span class="pc bpc" id="L34" title="1 of 2 branches missed.">		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)</span>
+<span class="nc" id="L35">			throw new IllegalStateException(&quot;Participation model can only be used with activityHandling startOfDay&quot;);</span>
+<span class="fc" id="L36">	}</span>
 
 	@Override
 	public void setRestrictionsForIteration(int iteration, ImmutableMap&lt;String, Restriction&gt; im) {
-<span class="fc" id="L39">		this.im = im;</span>
-<span class="fc" id="L40">		this.iteration = iteration;</span>
-<span class="fc" id="L41">		this.date = episimConfig.getStartDate().plusDays(iteration - 1);</span>
-<span class="fc" id="L42">	}</span>
+<span class="fc" id="L40">		this.im = im;</span>
+<span class="fc" id="L41">		this.iteration = iteration;</span>
+<span class="fc" id="L42">		this.date = episimConfig.getStartDate().plusDays(iteration - 1);</span>
+<span class="fc" id="L43">	}</span>
 
 	@Override
 	public void updateParticipation(EpisimPerson person, BitSet trajectory, int offset, List&lt;EpisimPerson.PerformedActivity&gt; activities) {
-<span class="fc bfc" id="L46" title="All 2 branches covered.">		for (int i = 0; i &lt; activities.size(); i++) {</span>
-<span class="fc" id="L47">			Restriction context = im.get(activities.get(i).params.getContainerName());</span>
-<span class="fc" id="L48">			double r = context.getRemainingFraction();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">		for (int i = 0; i &lt; activities.size(); i++) {</span>
+<span class="fc" id="L48">			Restriction context = im.get(activities.get(i).params.getContainerName());</span>
+<span class="fc" id="L49">			double r = context.getRemainingFraction();</span>
 
 			// reduce fraction for persons that are not vaccinated
-<span class="pc bpc" id="L51" title="1 of 4 branches missed.">			if (context.getSusceptibleRf() != null &amp;&amp; context.getSusceptibleRf() != 1d) {</span>
-<span class="fc bfc" id="L52" title="All 2 branches covered.">				if (!vaccinationConfig.hasGreenPass(person, iteration, date))</span>
-<span class="fc" id="L53">					r *= context.getSusceptibleRf();</span>
+<span class="pc bpc" id="L52" title="1 of 4 branches missed.">			if (context.getSusceptibleRf() != null &amp;&amp; context.getSusceptibleRf() != 1d) {</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">				if (!vaccinationConfig.hasGreenPass(person, iteration, date))</span>
+<span class="fc" id="L54">					r *= context.getSusceptibleRf();</span>
 			}
 
-<span class="pc bpc" id="L56" title="2 of 4 branches missed.">			if (context.getVaccinatedRf() != null &amp;&amp; context.getVaccinatedRf() != 1d) {</span>
-<span class="nc bnc" id="L57" title="All 2 branches missed.">				if (vaccinationConfig.hasGreenPass(person, iteration, date))</span>
-<span class="nc" id="L58">					r *= context.getVaccinatedRf();</span>
+<span class="pc bpc" id="L57" title="2 of 4 branches missed.">			if (context.getVaccinatedRf() != null &amp;&amp; context.getVaccinatedRf() != 1d) {</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">				if (vaccinationConfig.hasGreenPass(person, iteration, date))</span>
+<span class="nc" id="L59">					r *= context.getVaccinatedRf();</span>
 			}
 
-<span class="fc bfc" id="L61" title="All 2 branches covered.">			if (r == 1.0)</span>
-<span class="fc" id="L62">				trajectory.set(offset + i, true);</span>
-<span class="fc bfc" id="L63" title="All 2 branches covered.">			else if (r == 0.0)</span>
-<span class="fc" id="L64">				trajectory.set(offset + i, false);</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">			if (r == 1.0)</span>
+<span class="fc" id="L63">				trajectory.set(offset + i, true);</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">			else if (r == 0.0)</span>
+<span class="fc" id="L65">				trajectory.set(offset + i, false);</span>
 			else
-<span class="fc bfc" id="L66" title="All 2 branches covered.">				trajectory.set(offset + i, rnd.nextDouble() &lt; r);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">				trajectory.set(offset + i, rnd.nextDouble() &lt; r);</span>
 
 
 		}
-<span class="fc" id="L70">	}</span>
+<span class="fc" id="L71">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -6,6 +6,9 @@ import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
 
+/**
+ * Calculates infection probabilities during person contacts.
+ */
 public interface InfectionModel {
 
 
@@ -15,7 +18,7 @@ public interface InfectionModel {
 	 * @param iteration current iteration / day
 	 */
 	default void setIteration(int iteration) {
-<span class="nc" id="L18">	}</span>
+<span class="nc" id="L21">	}</span>
 
 	/**
 	 * Calculates the probability that person {@code infector} infects {@code target}.
@@ -37,8 +40,8 @@ public interface InfectionModel {
 	 * Returns the probability that person {@code infector} infects {@code target}, ignoring vaccination status of target.
 	 */
 	default double getLastUnVacInfectionProbability() {
-<span class="nc" id="L40">		return -1;</span>
+<span class="nc" id="L43">		return -1;</span>
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

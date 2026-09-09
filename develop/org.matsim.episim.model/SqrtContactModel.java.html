@@ -24,12 +24,10 @@ import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
-import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
  * Default interaction model executed, when a person ends his activity.
@@ -38,7 +36,7 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 @Deprecated
 public final class SqrtContactModel extends AbstractContactModel {
 
-<span class="nc" id="L41">	private static final Logger log = LogManager.getLogger( SqrtContactModel.class );</span>
+<span class="nc" id="L39">	private static final Logger log = LogManager.getLogger( SqrtContactModel.class );</span>
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -48,30 +46,30 @@ public final class SqrtContactModel extends AbstractContactModel {
 	/**
 	 * This buffer is used to store the infection type.
 	 */
-<span class="nc" id="L51">	private final StringBuilder buffer = new StringBuilder();</span>
+<span class="nc" id="L49">	private final StringBuilder buffer = new StringBuilder();</span>
 
 	@Inject
 	/* package */
-	SqrtContactModel( SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-			  EpisimReporting reporting, InfectionModel infectionModel ) {
+	SqrtContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+	                 EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
-<span class="nc" id="L58">		super(rnd, config, infectionModel, reporting);</span>
-<span class="nc" id="L59">		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();</span>
-<span class="nc" id="L60">	}</span>
+<span class="nc" id="L56">		super(rnd, config, infectionModel, reporting);</span>
+<span class="nc" id="L57">		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();</span>
+<span class="nc" id="L58">	}</span>
 
 	@Override
 	public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
-<span class="nc" id="L64">		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);</span>
-<span class="nc" id="L65">	}</span>
+<span class="nc" id="L62">		infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);</span>
+<span class="nc" id="L63">	}</span>
 
 	@Override
 	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now) {
-<span class="nc" id="L69">		infectionDynamicsGeneralized(personLeavingFacility, facility, now);</span>
-<span class="nc" id="L70">	}</span>
+<span class="nc" id="L67">		infectionDynamicsGeneralized(personLeavingFacility, facility, now);</span>
+<span class="nc" id="L68">	}</span>
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer&lt;?&gt; container, double now) {
-<span class="nc" id="L73">		throw new UnsupportedOperationException();</span>
+<span class="nc" id="L71">		throw new UnsupportedOperationException();</span>
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

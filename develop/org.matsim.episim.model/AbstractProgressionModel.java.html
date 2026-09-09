@@ -10,12 +10,12 @@ import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Abstract base implementation for a progression model that stores and updates state transitions.
@@ -23,7 +23,7 @@ import java.util.SplittableRandom;
  */
 abstract class AbstractProgressionModel implements ProgressionModel, Externalizable {
 
-	protected final SplittableRandom rnd;
+	protected final EpisimSplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 
 	/**
@@ -33,7 +33,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	private final DiseaseStatusTransitionModel statusTransitionModel;
 
 	@Inject
-<span class="fc" id="L36">	AbstractProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, DiseaseStatusTransitionModel statusTransitionModel) {</span>
+<span class="fc" id="L36">	AbstractProgressionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, DiseaseStatusTransitionModel statusTransitionModel) {</span>
 <span class="fc" id="L37">		this.rnd = rnd;</span>
 <span class="fc" id="L38">		this.episimConfig = episimConfig;</span>
 <span class="fc" id="L39">		this.statusTransitionModel = statusTransitionModel;</span>
@@ -163,4 +163,4 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		}
 <span class="fc" id="L164">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

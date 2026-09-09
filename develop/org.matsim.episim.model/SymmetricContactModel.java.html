@@ -27,7 +27,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -55,8 +55,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 	@Inject
 		/* package */
-	SymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-						  EpisimReporting reporting, InfectionModel infectionModel, Scenario scenario) {
+	SymmetricContactModel(EpisimSplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+	                      EpisimReporting reporting, InfectionModel infectionModel, Scenario scenario) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 <span class="fc" id="L61">		super(rnd, config, infectionModel, reporting, scenario);</span>
 <span class="fc" id="L62">		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();</span>
@@ -150,8 +150,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 <span class="nc" id="L150">				continue;</span>
 
 			// activity params of the contact person and leaving person
-<span class="fc" id="L153">			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer,  container.getPerformedActivity(personLeavingContainer.getPersonId()));</span>
-<span class="fc" id="L154">			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson,  container.getPerformedActivity(contactPerson.getPersonId()));</span>
+<span class="fc" id="L153">			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, container.getPerformedActivity(personLeavingContainer.getPersonId()));</span>
+<span class="fc" id="L154">			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, container.getPerformedActivity(contactPerson.getPersonId()));</span>
 
 <span class="fc bfc" id="L156" title="All 2 branches covered.">			String leavingPersonsActivity = leavingParams == qhParams ? &quot;home&quot; : leavingParams.getContainerName();</span>
 <span class="fc bfc" id="L157" title="All 2 branches covered.">			String otherPersonsActivity = contactParams == qhParams ? &quot;home&quot; : contactParams.getContainerName();</span>
@@ -249,4 +249,4 @@ public final class SymmetricContactModel extends AbstractContactModel {
 <span class="fc" id="L249">	}</span>
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

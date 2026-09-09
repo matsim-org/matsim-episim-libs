@@ -9,7 +9,7 @@ import org.matsim.episim.policy.Restriction;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import static org.matsim.episim.model.DefaultInfectionModel.*;
 
@@ -19,7 +19,7 @@ import static org.matsim.episim.model.DefaultInfectionModel.*;
 public final class InfectionModelWithSeasonality implements InfectionModel {
 
 	private final FaceMaskModel maskModel;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
 	private final VaccinationConfigGroup vaccinationConfig;
@@ -29,7 +29,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private int iteration;
 
 	@Inject
-<span class="fc" id="L32">	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, SplittableRandom rnd, Config config, EpisimReporting reporting) {</span>
+<span class="fc" id="L32">	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, EpisimSplittableRandom rnd, Config config, EpisimReporting reporting) {</span>
 <span class="fc" id="L33">		this.maskModel = faceMaskModel;</span>
 <span class="fc" id="L34">		this.rnd = rnd;</span>
 <span class="fc" id="L35">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
@@ -79,7 +79,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 <span class="fc" id="L79">		return EpisimUtils.interpolateEntry((NavigableMap&lt;LocalDate, ? extends Number&gt;) episimConfig.getLeisureOutdoorFraction(), date);</span>
 	}
 
-	static double getIndoorOutdoorFactor(double outdoorFraction, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+	static double getIndoorOutdoorFactor(double outdoorFraction, EpisimSplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
 
 <span class="fc bfc" id="L84" title="All 4 branches covered.">		if (act1.getSeasonality() == 0.0 &amp;&amp; act2.getSeasonality() == 0.0) {</span>
 <span class="fc" id="L85">			return 1.;</span>
@@ -96,4 +96,4 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 
 	}
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

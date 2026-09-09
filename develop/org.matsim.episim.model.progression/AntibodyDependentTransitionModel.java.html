@@ -8,69 +8,72 @@ import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.VirusStrain;
 
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
+/**
+ * Disease-status transition model that accounts for antibody levels.
+ */
 public class AntibodyDependentTransitionModel implements DiseaseStatusTransitionModel {
 
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup strainConfig;
 
 	@Inject
-	public AntibodyDependentTransitionModel(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
-<span class="fc" id="L21">	                                           VirusStrainConfigGroup strainConfigGroup) {</span>
-<span class="fc" id="L22">		this.rnd = rnd;</span>
-<span class="fc" id="L23">		this.vaccinationConfig = vaccinationConfig;</span>
-<span class="fc" id="L24">		this.strainConfig = strainConfigGroup;</span>
-<span class="fc" id="L25">	}</span>
+	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+<span class="fc" id="L24">	                                        VirusStrainConfigGroup strainConfigGroup) {</span>
+<span class="fc" id="L25">		this.rnd = rnd;</span>
+<span class="fc" id="L26">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L27">		this.strainConfig = strainConfigGroup;</span>
+<span class="fc" id="L28">	}</span>
 
 	@Override
 	public final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status, int day) {
 
-<span class="pc bpc" id="L30" title="1 of 8 branches missed.">		switch (status) {</span>
+<span class="pc bpc" id="L33" title="1 of 8 branches missed.">		switch (status) {</span>
 			case infectedButNotContagious:
-<span class="fc" id="L32">				return EpisimPerson.DiseaseStatus.contagious;</span>
+<span class="fc" id="L35">				return EpisimPerson.DiseaseStatus.contagious;</span>
 			case contagious:
 
-<span class="fc bfc" id="L35" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))</span>
-<span class="fc" id="L36">					return EpisimPerson.DiseaseStatus.showingSymptoms;</span>
+<span class="fc bfc" id="L38" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))</span>
+<span class="fc" id="L39">					return EpisimPerson.DiseaseStatus.showingSymptoms;</span>
 				else
-<span class="fc" id="L38">					return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L41">					return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case showingSymptoms:
-<span class="fc" id="L41">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToSeriouslySick(person)</span>
-<span class="pc bpc" id="L42" title="1 of 2 branches missed.">						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?</span>
-<span class="nc" id="L43">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :</span>
-<span class="fc" id="L44">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())</span>
-<span class="fc bfc" id="L45" title="All 2 branches covered.">						* getSeriouslySickFactor(person, vaccinationConfig, day))</span>
+<span class="fc" id="L44">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToSeriouslySick(person)</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?</span>
+<span class="nc" id="L46">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :</span>
+<span class="fc" id="L47">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">						* getSeriouslySickFactor(person, vaccinationConfig, day))</span>
 //						* (person.getNumInfections() &gt; 1 ? getFactorRecovered(person, day) : 1.0))
-<span class="fc" id="L47">					return EpisimPerson.DiseaseStatus.seriouslySick;</span>
+<span class="fc" id="L50">					return EpisimPerson.DiseaseStatus.seriouslySick;</span>
 				else
-<span class="fc" id="L49">					return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L52">					return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case seriouslySick:
-<span class="pc bpc" id="L52" title="1 of 2 branches missed.">				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)</span>
-<span class="fc" id="L53">						&amp;&amp; (rnd.nextDouble() &lt; getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()</span>
-<span class="fc bfc" id="L54" title="All 2 branches covered.">						* getCriticalFactor(person, vaccinationConfig, day)))</span>
-<span class="fc" id="L55">					return EpisimPerson.DiseaseStatus.critical;</span>
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)</span>
+<span class="fc" id="L56">						&amp;&amp; (rnd.nextDouble() &lt; getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">						* getCriticalFactor(person, vaccinationConfig, day)))</span>
+<span class="fc" id="L58">					return EpisimPerson.DiseaseStatus.critical;</span>
 				else
-<span class="fc" id="L57">					return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L60">					return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case critical:
-<span class="fc" id="L60">				double proba = getProbaOfTransitioningToDeceased(person);</span>
-<span class="pc bpc" id="L61" title="3 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
-<span class="nc" id="L62">					return DiseaseStatus.deceased;</span>
+<span class="fc" id="L63">				double proba = getProbaOfTransitioningToDeceased(person);</span>
+<span class="pc bpc" id="L64" title="3 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
+<span class="nc" id="L65">					return DiseaseStatus.deceased;</span>
 				else
-<span class="fc" id="L64">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
+<span class="fc" id="L67">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
 
 			case seriouslySickAfterCritical:
-<span class="fc" id="L67">				return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L70">				return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case recovered:
-<span class="fc" id="L70">				return EpisimPerson.DiseaseStatus.susceptible;</span>
+<span class="fc" id="L73">				return EpisimPerson.DiseaseStatus.susceptible;</span>
 
 			default:
-<span class="nc" id="L73">				throw new IllegalStateException(&quot;No state transition defined for &quot; + person.getDiseaseStatus());</span>
+<span class="nc" id="L76">				throw new IllegalStateException(&quot;No state transition defined for &quot; + person.getDiseaseStatus());</span>
 		}
 	}
 
@@ -79,106 +82,106 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	 */
 	protected double getFactorRecovered(EpisimPerson person, int day) {
 
-<span class="nc" id="L82">		int daysSince = person.daysSince(DiseaseStatus.recovered, day);</span>
+<span class="nc" id="L85">		int daysSince = person.daysSince(DiseaseStatus.recovered, day);</span>
 
 		//we assume about 20% loss of protection against severe progression every year
-<span class="nc" id="L85">		return Math.min(0.2 * (daysSince / 365), 1.0);</span>
+<span class="nc" id="L88">		return Math.min(0.2 * (daysSince / 365), 1.0);</span>
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
-<span class="nc" id="L92">		return 0.05625;</span>
+<span class="nc" id="L95">		return 0.05625;</span>
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
 	 */
 	public double getProbaOfTransitioningToCritical(Immunizable person) {
-<span class="nc" id="L99">		return 0.25;</span>
+<span class="nc" id="L102">		return 0.25;</span>
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-<span class="nc" id="L103">		return 0.8;</span>
+<span class="nc" id="L106">		return 0.8;</span>
 	}
 
 	@Override
 	public double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
-<span class="fc" id="L108">		return 1.0;</span>
+<span class="fc" id="L111">		return 1.0;</span>
 	}
 
 	@Override
 	public double getSeriouslySickFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
 
 
-<span class="fc" id="L115">		int numVaccinations = person.getNumVaccinations();</span>
-<span class="fc" id="L116">		int numInfections = person.getNumInfections() - 1;</span>
+<span class="fc" id="L118">		int numVaccinations = person.getNumVaccinations();</span>
+<span class="fc" id="L119">		int numInfections = person.getNumInfections() - 1;</span>
 
 //		if (numVaccinations == 0 &amp;&amp; numInfections == 0)
 //			return 1.0;
 
-<span class="fc" id="L121">		VirusStrain strain = person.getVirusStrain();</span>
+<span class="fc" id="L124">		VirusStrain strain = person.getVirusStrain();</span>
 
-<span class="fc" id="L123">		double abNoWaning = person.getMaxAntibodies(strain);</span>
+<span class="fc" id="L126">		double abNoWaning = person.getMaxAntibodies(strain);</span>
 
 		// Two modifications to antibody level below:
 		// a) we multiply the antibody level by 4 if the agent is boostered
-<span class="pc bpc" id="L127" title="1 of 2 branches missed.">		if (numVaccinations &gt; 1) {</span>
-<span class="nc" id="L128">			abNoWaning *= 4;</span>
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">		if (numVaccinations &gt; 1) {</span>
+<span class="nc" id="L131">			abNoWaning *= 4;</span>
 		}
 		// b) if strain is omicron, an additional factor of 3.7 is applied
-<span class="fc bfc" id="L131" title="All 2 branches covered.">		if (strain.equals(VirusStrain.OMICRON_BA1) ||</span>
-<span class="pc bpc" id="L132" title="1 of 2 branches missed.">			strain.equals(VirusStrain.OMICRON_BA2) ||</span>
-<span class="pc bpc" id="L133" title="1 of 2 branches missed.">			strain.equals(VirusStrain.OMICRON_BA5) ||</span>
-<span class="pc bpc" id="L134" title="1 of 2 branches missed.">			strain.equals(VirusStrain.BQ) ||</span>
-<span class="pc bpc" id="L135" title="1 of 2 branches missed.">			strain.equals(VirusStrain.EG) ||</span>
-<span class="pc bpc" id="L136" title="1 of 2 branches missed.">			strain.equals(VirusStrain.XBB_15) ||</span>
-<span class="pc bpc" id="L137" title="1 of 2 branches missed.">			strain.equals(VirusStrain.XBB_19) ||</span>
-<span class="pc bpc" id="L138" title="1 of 2 branches missed.">			strain.equals(VirusStrain.STRAIN_A) ||</span>
-<span class="pc bpc" id="L139" title="1 of 2 branches missed.">			strain.equals(VirusStrain.STRAIN_B) ||</span>
-<span class="pc bpc" id="L140" title="1 of 2 branches missed.">			strain.toString().startsWith(&quot;A_&quot;) ||</span>
-<span class="pc bpc" id="L141" title="1 of 2 branches missed.">			strain.toString().startsWith(&quot;B_&quot;)) {</span>
-<span class="fc" id="L142">			abNoWaning *= 3.7;</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">		if (strain.equals(VirusStrain.OMICRON_BA1) ||</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">			strain.equals(VirusStrain.OMICRON_BA2) ||</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">			strain.equals(VirusStrain.OMICRON_BA5) ||</span>
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">			strain.equals(VirusStrain.BQ) ||</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">			strain.equals(VirusStrain.EG) ||</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">			strain.equals(VirusStrain.XBB_15) ||</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">			strain.equals(VirusStrain.XBB_19) ||</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">			strain.equals(VirusStrain.STRAIN_A) ||</span>
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">			strain.equals(VirusStrain.STRAIN_B) ||</span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">			strain.toString().startsWith(&quot;A_&quot;) ||</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">			strain.toString().startsWith(&quot;B_&quot;)) {</span>
+<span class="fc" id="L145">			abNoWaning *= 3.7;</span>
 		}
 
 		// returns remaining risk of infection (1 is full risk, 0 is no risk), opposite of vaccine effectiveness
-<span class="fc" id="L146">		return 1. / (1. + Math.pow(abNoWaning,vaccinationConfig.getBeta()));</span>
+<span class="fc" id="L149">		return 1. / (1. + Math.pow(abNoWaning,vaccinationConfig.getBeta()));</span>
 
 	}
 
 	@Override
 	public double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-<span class="fc" id="L153">		int numVaccinations = person.getNumVaccinations();</span>
-<span class="fc" id="L154">		int numInfections = person.getNumInfections() - 1;</span>
+<span class="fc" id="L156">		int numVaccinations = person.getNumVaccinations();</span>
+<span class="fc" id="L157">		int numInfections = person.getNumInfections() - 1;</span>
 
-<span class="pc bpc" id="L156" title="1 of 4 branches missed.">		if (numVaccinations == 0 &amp;&amp; numInfections == 0)</span>
-<span class="fc" id="L157">			return 1.0;</span>
+<span class="pc bpc" id="L159" title="1 of 4 branches missed.">		if (numVaccinations == 0 &amp;&amp; numInfections == 0)</span>
+<span class="fc" id="L160">			return 1.0;</span>
 
-<span class="fc" id="L159">		VirusStrain strain = person.getVirusStrain();</span>
+<span class="fc" id="L162">		VirusStrain strain = person.getVirusStrain();</span>
 
-<span class="fc" id="L161">		double abNoWaning = person.getMaxAntibodies(strain);</span>
+<span class="fc" id="L164">		double abNoWaning = person.getMaxAntibodies(strain);</span>
 
 		// Two modifications to antibody level below:
 		// a) we multiply the antibody level by 4 if the agent is boostered
-<span class="pc bpc" id="L165" title="1 of 2 branches missed.">		if (numVaccinations &gt; 1) {</span>
-<span class="nc" id="L166">			abNoWaning *= 4;</span>
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">		if (numVaccinations &gt; 1) {</span>
+<span class="nc" id="L169">			abNoWaning *= 4;</span>
 		}
 		// b) if strain is omicron, an additional factor of 3.7 is applied
-<span class="pc bpc" id="L169" title="2 of 4 branches missed.">		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2)) {</span>
-<span class="nc" id="L170">			abNoWaning *= 3.7;</span>
+<span class="pc bpc" id="L172" title="2 of 4 branches missed.">		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2)) {</span>
+<span class="nc" id="L173">			abNoWaning *= 3.7;</span>
 		}
 
-<span class="fc" id="L173">		return 1. / (1. + Math.pow(abNoWaning, vaccinationConfig.getBeta()));</span>
+<span class="fc" id="L176">		return 1. / (1. + Math.pow(abNoWaning, vaccinationConfig.getBeta()));</span>
 
 	}
 
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-<span class="fc" id="L179">		return 0.0;</span>
+<span class="fc" id="L182">		return 0.0;</span>
 	}
 
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -10,9 +10,9 @@ import org.matsim.episim.policy.Restriction;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
-import java.util.SplittableRandom;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
@@ -23,7 +23,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final ProgressionModel progression;
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
@@ -32,7 +32,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final RealDistribution distribution;
 
 	/**
-	 * Scale infectivity to 1.0
+	 * Scale infectivity to 1.0.
 	 */
 	private final double scale;
 
@@ -42,7 +42,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 	@Inject
 	InfectionModelWithAntibodies(FaceMaskModel faceMaskModel, ProgressionModel progression,
-<span class="nc" id="L45">															Config config, EpisimReporting reporting, SplittableRandom rnd) {</span>
+<span class="nc" id="L45">															Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {</span>
 <span class="nc" id="L46">		this.maskModel = faceMaskModel;</span>
 <span class="nc" id="L47">		this.progression = progression;</span>
 <span class="nc" id="L48">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
@@ -94,89 +94,88 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 <span class="nc" id="L94">		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));</span>
 <span class="nc" id="L95">		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));</span>
 
-		{
-<span class="nc" id="L98">			double igaFactor = 0.0;</span>
-<span class="nc" id="L99">			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();</span>
-<span class="nc bnc" id="L100" title="All 2 branches missed.">			if (target.hadStrain(infector.getVirusStrain())) {</span>
+<span class="nc" id="L97">			double igaFactor = 0.0;</span>
+<span class="nc" id="L98">			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">			if (target.hadStrain(infector.getVirusStrain())) {</span>
 
-<span class="nc" id="L102">				int lastInfectionWithStrain = 0;</span>
-<span class="nc bnc" id="L103" title="All 2 branches missed.">				for (int ii = 0; ii &lt; target.getNumInfections();  ii++) {</span>
-<span class="nc bnc" id="L104" title="All 2 branches missed.">					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {</span>
-<span class="nc" id="L105">						lastInfectionWithStrain = ii;</span>
+<span class="nc" id="L101">				int lastInfectionWithStrain = 0;</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">				for (int ii = 0; ii &lt; target.getNumInfections(); ii++) {</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {</span>
+<span class="nc" id="L104">						lastInfectionWithStrain = ii;</span>
 					}
 				}
 //				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
-<span class="nc" id="L109">				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
+<span class="nc" id="L108">				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
 
 			}
 
-<span class="nc" id="L113">			ArrayList&lt;VirusStrain&gt; strainsLineA = new ArrayList&lt;VirusStrain&gt;();</span>
-<span class="nc" id="L114">			strainsLineA.add(VirusStrain.OMICRON_BA1);</span>
-<span class="nc" id="L115">			strainsLineA.add(VirusStrain.OMICRON_BA2);</span>
-<span class="nc" id="L116">			strainsLineA.add(VirusStrain.OMICRON_BA5);</span>
-<span class="nc" id="L117">			strainsLineA.add(VirusStrain.STRAIN_A);</span>
-<span class="nc" id="L118">			strainsLineA.add(VirusStrain.STRAIN_B);</span>
-<span class="nc" id="L119">			strainsLineA.add(VirusStrain.BQ);</span>
-<span class="nc" id="L120">			strainsLineA.add(VirusStrain.XBB_15);</span>
-<span class="nc" id="L121">			strainsLineA.add(VirusStrain.XBB_19);</span>
-<span class="nc" id="L122">			strainsLineA.add(VirusStrain.EG);</span>
+<span class="nc" id="L112">			ArrayList&lt;VirusStrain&gt; strainsLineA = new ArrayList&lt;VirusStrain&gt;();</span>
+<span class="nc" id="L113">			strainsLineA.add(VirusStrain.OMICRON_BA1);</span>
+<span class="nc" id="L114">			strainsLineA.add(VirusStrain.OMICRON_BA2);</span>
+<span class="nc" id="L115">			strainsLineA.add(VirusStrain.OMICRON_BA5);</span>
+<span class="nc" id="L116">			strainsLineA.add(VirusStrain.STRAIN_A);</span>
+<span class="nc" id="L117">			strainsLineA.add(VirusStrain.STRAIN_B);</span>
+<span class="nc" id="L118">			strainsLineA.add(VirusStrain.BQ);</span>
+<span class="nc" id="L119">			strainsLineA.add(VirusStrain.XBB_15);</span>
+<span class="nc" id="L120">			strainsLineA.add(VirusStrain.XBB_19);</span>
+<span class="nc" id="L121">			strainsLineA.add(VirusStrain.EG);</span>
 
-<span class="nc" id="L124">			ArrayList&lt;VirusStrain&gt; strainsLineB = new ArrayList&lt;VirusStrain&gt;();</span>
-<span class="nc" id="L125">			strainsLineB.add(VirusStrain.OMICRON_BA1);</span>
-<span class="nc" id="L126">			strainsLineB.add(VirusStrain.OMICRON_BA2);</span>
-<span class="nc" id="L127">			strainsLineB.add(VirusStrain.OMICRON_BA5);</span>
-<span class="nc" id="L128">			strainsLineB.add(VirusStrain.STRAIN_A);</span>
-<span class="nc" id="L129">			strainsLineB.add(VirusStrain.STRAIN_B);</span>
-<span class="nc" id="L130">			strainsLineB.add(VirusStrain.BQ);</span>
-<span class="nc" id="L131">			strainsLineB.add(VirusStrain.XBB_15);</span>
-<span class="nc" id="L132">			strainsLineB.add(VirusStrain.XBB_19);</span>
-<span class="nc" id="L133">			strainsLineB.add(VirusStrain.EG);</span>
+<span class="nc" id="L123">			ArrayList&lt;VirusStrain&gt; strainsLineB = new ArrayList&lt;VirusStrain&gt;();</span>
+<span class="nc" id="L124">			strainsLineB.add(VirusStrain.OMICRON_BA1);</span>
+<span class="nc" id="L125">			strainsLineB.add(VirusStrain.OMICRON_BA2);</span>
+<span class="nc" id="L126">			strainsLineB.add(VirusStrain.OMICRON_BA5);</span>
+<span class="nc" id="L127">			strainsLineB.add(VirusStrain.STRAIN_A);</span>
+<span class="nc" id="L128">			strainsLineB.add(VirusStrain.STRAIN_B);</span>
+<span class="nc" id="L129">			strainsLineB.add(VirusStrain.BQ);</span>
+<span class="nc" id="L130">			strainsLineB.add(VirusStrain.XBB_15);</span>
+<span class="nc" id="L131">			strainsLineB.add(VirusStrain.XBB_19);</span>
+<span class="nc" id="L132">			strainsLineB.add(VirusStrain.EG);</span>
 
-<span class="nc bnc" id="L135" title="All 2 branches missed.">			if (vaccinationConfig.getUseIgA()) {</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">			if (vaccinationConfig.getUseIgA()) {</span>
 
-<span class="nc bnc" id="L137" title="All 2 branches missed.">				for (VirusStrain str : VirusStrain.values()) {</span>
-<span class="nc bnc" id="L138" title="All 2 branches missed.">					if (str.toString().startsWith(&quot;A_&quot;))</span>
-<span class="nc" id="L139">						strainsLineA.add(str);</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">				for (VirusStrain str : VirusStrain.values()) {</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">					if (str.toString().startsWith(&quot;A_&quot;))</span>
+<span class="nc" id="L138">						strainsLineA.add(str);</span>
 				}
-<span class="nc bnc" id="L141" title="All 2 branches missed.">				for (VirusStrain str : VirusStrain.values()) {</span>
-<span class="nc bnc" id="L142" title="All 2 branches missed.">					if (str.toString().startsWith(&quot;B_&quot;))</span>
-<span class="nc" id="L143">						strainsLineB.add(str);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">				for (VirusStrain str : VirusStrain.values()) {</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">					if (str.toString().startsWith(&quot;B_&quot;))</span>
+<span class="nc" id="L142">						strainsLineB.add(str);</span>
 				}
 			}
 
 //			if (vaccinationConfig.getUseIgA()) {
 
-<span class="nc bnc" id="L149" title="All 2 branches missed.">				if(strainsLineA.contains(infector.getVirusStrain())){</span>
-<span class="nc" id="L150">					int lastInfectionWithStrain = 0;</span>
-<span class="nc" id="L151">					boolean targetHadStrain = false;</span>
-<span class="nc bnc" id="L152" title="All 2 branches missed.">					for (int ii = 0; ii &lt; target.getNumInfections();  ii++) {</span>
-<span class="nc bnc" id="L153" title="All 2 branches missed.">						if (strainsLineA.contains(target.getVirusStrain(ii))){</span>
-<span class="nc" id="L154">							targetHadStrain = true;</span>
-<span class="nc" id="L155">							lastInfectionWithStrain = ii;</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">				if(strainsLineA.contains(infector.getVirusStrain())){</span>
+<span class="nc" id="L149">					int lastInfectionWithStrain = 0;</span>
+<span class="nc" id="L150">					boolean targetHadStrain = false;</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">					for (int ii = 0; ii &lt; target.getNumInfections(); ii++) {</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">						if (strainsLineA.contains(target.getVirusStrain(ii))) {</span>
+<span class="nc" id="L153">							targetHadStrain = true;</span>
+<span class="nc" id="L154">							lastInfectionWithStrain = ii;</span>
 						}
 					}
 
-<span class="nc bnc" id="L159" title="All 2 branches missed.">					if (targetHadStrain) {</span>
-<span class="nc" id="L160">						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
-<span class="nc" id="L161">						fac = fac / 1.4;</span>
-<span class="nc" id="L162">						igaFactor = Math.max(fac, igaFactor);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">					if (targetHadStrain) {</span>
+<span class="nc" id="L159">						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
+<span class="nc" id="L160">						fac = fac / 1.4;</span>
+<span class="nc" id="L161">						igaFactor = Math.max(fac, igaFactor);</span>
 					}
 				}
 
-<span class="nc bnc" id="L166" title="All 2 branches missed.">				if(strainsLineB.contains(infector.getVirusStrain())){</span>
-<span class="nc" id="L167">					int lastInfectionWithStrain = 0;</span>
-<span class="nc" id="L168">					boolean targetHadStrain = false;</span>
-<span class="nc bnc" id="L169" title="All 2 branches missed.">					for (int ii = 0; ii &lt; target.getNumInfections();  ii++) {</span>
-<span class="nc bnc" id="L170" title="All 2 branches missed.">						if (strainsLineB.contains(target.getVirusStrain(ii))){</span>
-<span class="nc" id="L171">							targetHadStrain = true;</span>
-<span class="nc" id="L172">							lastInfectionWithStrain = ii;</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">				if(strainsLineB.contains(infector.getVirusStrain())){</span>
+<span class="nc" id="L166">					int lastInfectionWithStrain = 0;</span>
+<span class="nc" id="L167">					boolean targetHadStrain = false;</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">					for (int ii = 0; ii &lt; target.getNumInfections(); ii++) {</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">						if (strainsLineB.contains(target.getVirusStrain(ii))) {</span>
+<span class="nc" id="L170">							targetHadStrain = true;</span>
+<span class="nc" id="L171">							lastInfectionWithStrain = ii;</span>
 						}
 					}
 
-<span class="nc bnc" id="L176" title="All 2 branches missed.">					if (targetHadStrain) {</span>
-<span class="nc" id="L177">						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
-<span class="nc" id="L178">						fac = fac / 1.4;</span>
-<span class="nc" id="L179">						igaFactor = Math.max(fac, igaFactor);</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">					if (targetHadStrain) {</span>
+<span class="nc" id="L176">						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
+<span class="nc" id="L177">						fac = fac / 1.4;</span>
+<span class="nc" id="L178">						igaFactor = Math.max(fac, igaFactor);</span>
 					}
 				}
 
@@ -197,20 +196,16 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 //					}
 //				}
 
-<span class="nc" id="L200">				susceptibility = susceptibility * (1.0 - igaFactor);</span>
+<span class="nc" id="L199">				susceptibility = susceptibility * (1.0 - igaFactor);</span>
 //			}
-		}
-
-
-
-<span class="nc" id="L206">		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);</span>
+<span class="nc" id="L201">		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);</span>
 		// remaining risk --&gt; lower val, lower risk, max risk at 1
-<span class="nc" id="L208">		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));</span>
+<span class="nc" id="L203">		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));</span>
 
-<span class="nc" id="L210">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection</span>
-<span class="nc" id="L211">				* target.getSusceptibility()</span>
-<span class="nc" id="L212">				* getInfectivity(infector)</span>
-<span class="nc" id="L213">				* strain.getInfectiousness()</span>
+<span class="nc" id="L205">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection</span>
+<span class="nc" id="L206">				* target.getSusceptibility()</span>
+<span class="nc" id="L207">				* getInfectivity(infector)</span>
+<span class="nc" id="L208">				* strain.getInfectiousness()</span>
 				* shedding
 				* intake
 				* indoorOutdoorFactor
@@ -219,23 +214,23 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	}
 
 	private double calcInfectionProbabilityWoImmunity(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
-	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
+		double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
-<span class="nc" id="L225">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+<span class="nc" id="L220">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
 
-<span class="nc" id="L227">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+<span class="nc" id="L222">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
 
-<span class="nc" id="L229">		double relativeAntibodyLevel = 0.0;</span>
+<span class="nc" id="L224">		double relativeAntibodyLevel = 0.0;</span>
 
-<span class="nc" id="L231">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection</span>
-<span class="nc" id="L232">				* target.getSusceptibility()</span>
-<span class="nc" id="L233">				* getInfectivity(infector)</span>
-<span class="nc" id="L234">				* strain.getInfectiousness()</span>
+<span class="nc" id="L226">		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection</span>
+<span class="nc" id="L227">				* target.getSusceptibility()</span>
+<span class="nc" id="L228">				* getInfectivity(infector)</span>
+<span class="nc" id="L229">				* strain.getInfectiousness()</span>
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-<span class="nc" id="L238">				/ (1.0 + Math.pow(relativeAntibodyLevel, vaccinationConfig.getBeta()))</span>
+<span class="nc" id="L233">				/ (1.0 + Math.pow(relativeAntibodyLevel, vaccinationConfig.getBeta()))</span>
 
 		);
 	}
@@ -247,38 +242,38 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	 */
 	double getInfectivity(EpisimPerson infector) {
 
-<span class="nc bnc" id="L250" title="All 2 branches missed.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
-<span class="nc" id="L252">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
-<span class="nc" id="L253">			return distribution.density(afterSymptomOnset) * scale;</span>
-<span class="nc bnc" id="L254" title="All 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
+<span class="nc" id="L247">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
+<span class="nc" id="L248">			return distribution.density(afterSymptomOnset) * scale;</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
 
-<span class="nc" id="L256">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
-<span class="nc" id="L257">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
-<span class="nc" id="L258">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
-<span class="nc bnc" id="L259" title="All 2 branches missed.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="nc" id="L251">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
+<span class="nc" id="L252">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
+<span class="nc" id="L253">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
-<span class="nc" id="L261">				return distribution.density(transitionDays - daysSince) * scale;</span>
+<span class="nc" id="L256">				return distribution.density(transitionDays - daysSince) * scale;</span>
 
-<span class="nc bnc" id="L263" title="All 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
 
 				// when next state is recovered the half of the interval is used
-<span class="nc" id="L266">				return distribution.density(daysSince - transitionDays / 2.0) * scale;</span>
+<span class="nc" id="L261">				return distribution.density(daysSince - transitionDays / 2.0) * scale;</span>
 			}
 		}
 
 
-<span class="nc" id="L271">		return 0.0;</span>
+<span class="nc" id="L266">		return 0.0;</span>
 	}
 
 	public static void main(String[] args) {
 		// test distribution
-<span class="nc" id="L276">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
+<span class="nc" id="L271">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
 
-<span class="nc bnc" id="L278" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
-<span class="nc" id="L279">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
+<span class="nc" id="L274">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
 		}
 
-<span class="nc" id="L282">	}</span>
+<span class="nc" id="L277">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

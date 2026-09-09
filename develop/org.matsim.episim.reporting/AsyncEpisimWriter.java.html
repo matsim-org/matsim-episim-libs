@@ -70,36 +70,36 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 <span class="nc" id="L70">	}</span>
 
 	@Override
+	public void close() throws IOException {
+<span class="nc" id="L74">		log.info(&quot;Shutting down...&quot;);</span>
+<span class="nc" id="L75">		disruptor.shutdown();</span>
+<span class="nc" id="L76">	}</span>
+
+	@Override
 	public void onEvent(LogEvent event, long sequence, boolean endOfBatch) throws Exception {
 
-<span class="nc bnc" id="L75" title="All 2 branches missed.">		if (event.close) {</span>
-<span class="nc" id="L76">			event.writer.close();</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">		if (event.close) {</span>
+<span class="nc" id="L82">			event.writer.close();</span>
 		} else {
-<span class="nc" id="L78">			event.writer.append(event.content);</span>
+<span class="nc" id="L84">			event.writer.append(event.content);</span>
 			// Flushing is not enabled
 			// Events are async anyway, flushing does not make much sense
 			//if (event.flush)
 			//	event.writer.flush();
 		}
 
-<span class="nc" id="L85">		event.reset();</span>
-<span class="nc" id="L86">	}</span>
+<span class="nc" id="L91">		event.reset();</span>
+<span class="nc" id="L92">	}</span>
 
 	@Override
 	public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1, Double arg2) {
-<span class="nc" id="L90">		event.writer = arg0;</span>
-<span class="nc" id="L91">		event.flush = false;</span>
+<span class="nc" id="L96">		event.writer = arg0;</span>
+<span class="nc" id="L97">		event.flush = false;</span>
 		try {
-<span class="nc" id="L93">			EpisimWriter.writeEvent(event.content, arg1, arg2);</span>
-<span class="nc" id="L94">		} catch (IOException e) {</span>
-<span class="nc" id="L95">			log.error(&quot;Could not append event&quot;);</span>
-<span class="nc" id="L96">		}</span>
-<span class="nc" id="L97">	}</span>
-
-	@Override
-	public void close() throws IOException {
-<span class="nc" id="L101">		log.info(&quot;Shutting down...&quot;);</span>
-<span class="nc" id="L102">		disruptor.shutdown();</span>
+<span class="nc" id="L99">			EpisimWriter.writeEvent(event.content, arg1, arg2);</span>
+<span class="nc" id="L100">		} catch (IOException e) {</span>
+<span class="nc" id="L101">			log.error(&quot;Could not append event&quot;);</span>
+<span class="nc" id="L102">		}</span>
 <span class="nc" id="L103">	}</span>
 
 <span class="nc" id="L105">	protected static class LogEvent {</span>
@@ -164,4 +164,4 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

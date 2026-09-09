@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.logging.log4j.util.TriConsumer;
-import org.matsim.core.utils.io.UncheckedIOException;
+import java.io.UncheckedIOException;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.ShutdownPolicy;
 
@@ -135,64 +135,67 @@ public interface RestrictionInput {
 <span class="fc" id="L135">		return start;</span>
 	}
 
+	/**
+	 * Resamples average weekday values by subdistrict.
+	 */
 	static LocalDate resampleAvgWeekdayBySubdistrict(Map&lt;LocalDate, Double&gt; daysGlobal,
-	                                                 Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; daysPerDistrict,
-	                                                 LocalDate start,
-	                                                 TriConsumer&lt;LocalDate, Double, Map&lt;String, Double&gt;&gt; f) {
+		Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; daysPerDistrict,
+		LocalDate start,
+		TriConsumer&lt;LocalDate, Double, Map&lt;String, Double&gt;&gt; f) {
 
 		Set&lt;LocalDate&gt; ignored;
 		try {
-<span class="nc" id="L145">			ignored = Resources.readLines(Resources.getResource(&quot;bankHolidays.txt&quot;), StandardCharsets.UTF_8)</span>
-<span class="nc" id="L146">					.stream().map(LocalDate::parse).collect(Collectors.toSet());</span>
-<span class="nc" id="L147">		} catch (IOException e) {</span>
-<span class="nc" id="L148">			throw new UncheckedIOException(&quot;Could not read bank holidays.&quot;, e);</span>
-<span class="nc" id="L149">		}</span>
+<span class="nc" id="L148">			ignored = Resources.readLines(Resources.getResource(&quot;bankHolidays.txt&quot;), StandardCharsets.UTF_8)</span>
+<span class="nc" id="L149">					.stream().map(LocalDate::parse).collect(Collectors.toSet());</span>
+<span class="nc" id="L150">		} catch (IOException e) {</span>
+<span class="nc" id="L151">			throw new UncheckedIOException(&quot;Could not read bank holidays.&quot;, e);</span>
+<span class="nc" id="L152">		}</span>
 
-<span class="nc" id="L151">		LocalDate end = Iterables.getLast(daysGlobal.keySet());</span>
+<span class="nc" id="L154">		LocalDate end = Iterables.getLast(daysGlobal.keySet());</span>
 
-<span class="nc bnc" id="L153" title="All 2 branches missed.">		while (start.isBefore(end)) {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">		while (start.isBefore(end)) {</span>
 
-<span class="nc" id="L155">			DoubleList weekGlobal = new DoubleArrayList();</span>
-<span class="nc" id="L156">			Map&lt;String, DoubleArrayList&gt; weekPerDistrict = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L158">			DoubleList weekGlobal = new DoubleArrayList();</span>
+<span class="nc" id="L159">			Map&lt;String, DoubleArrayList&gt; weekPerDistrict = new HashMap&lt;&gt;();</span>
 
-<span class="nc bnc" id="L158" title="All 2 branches missed.">			for (int i = 0; i &lt; 7; i++) {</span>
-<span class="nc" id="L159">				LocalDate day = start.plusDays(i);</span>
-<span class="nc bnc" id="L160" title="All 6 branches missed.">				if (!ignored.contains(day) &amp;&amp; day.getDayOfWeek() != DayOfWeek.SATURDAY &amp;&amp; day.getDayOfWeek() != DayOfWeek.SUNDAY</span>
-<span class="nc bnc" id="L161" title="All 2 branches missed.">						&amp;&amp; day.getDayOfWeek() != DayOfWeek.FRIDAY) {</span>
-<span class="nc bnc" id="L162" title="All 2 branches missed.">					if (daysGlobal.containsKey(day)) {</span>
-<span class="nc" id="L163">						weekGlobal.add((double) daysGlobal.get(day));</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">			for (int i = 0; i &lt; 7; i++) {</span>
+<span class="nc" id="L162">				LocalDate day = start.plusDays(i);</span>
+<span class="nc bnc" id="L163" title="All 6 branches missed.">				if (!ignored.contains(day) &amp;&amp; day.getDayOfWeek() != DayOfWeek.SATURDAY &amp;&amp; day.getDayOfWeek() != DayOfWeek.SUNDAY</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">						&amp;&amp; day.getDayOfWeek() != DayOfWeek.FRIDAY) {</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">					if (daysGlobal.containsKey(day)) {</span>
+<span class="nc" id="L166">						weekGlobal.add((double) daysGlobal.get(day));</span>
 					}
 					// now per district
-<span class="nc bnc" id="L166" title="All 2 branches missed.">					for (Map.Entry&lt;String, Map&lt;LocalDate, Double&gt;&gt; entry : daysPerDistrict.entrySet()) {</span>
-<span class="nc" id="L167">						String districtName = entry.getKey();</span>
-<span class="nc" id="L168">						Map&lt;LocalDate, Double&gt; daysForDistrict = entry.getValue();</span>
-<span class="nc bnc" id="L169" title="All 2 branches missed.">						if (daysForDistrict.containsKey(day)) {</span>
-<span class="nc" id="L170">							DoubleArrayList weekForDistrict = weekPerDistrict.getOrDefault(districtName, new DoubleArrayList());</span>
-<span class="nc" id="L171">							weekForDistrict.add((double) daysForDistrict.get(day));</span>
-<span class="nc" id="L172">							weekPerDistrict.put(districtName, weekForDistrict);</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">					for (Map.Entry&lt;String, Map&lt;LocalDate, Double&gt;&gt; entry : daysPerDistrict.entrySet()) {</span>
+<span class="nc" id="L170">						String districtName = entry.getKey();</span>
+<span class="nc" id="L171">						Map&lt;LocalDate, Double&gt; daysForDistrict = entry.getValue();</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">						if (daysForDistrict.containsKey(day)) {</span>
+<span class="nc" id="L173">							DoubleArrayList weekForDistrict = weekPerDistrict.getOrDefault(districtName, new DoubleArrayList());</span>
+<span class="nc" id="L174">							weekForDistrict.add((double) daysForDistrict.get(day));</span>
+<span class="nc" id="L175">							weekPerDistrict.put(districtName, weekForDistrict);</span>
 						}
-<span class="nc" id="L174">					}</span>
+<span class="nc" id="L177">					}</span>
 				}
 			}
 
-<span class="nc" id="L178">			double avg = weekGlobal.doubleStream().average().orElseThrow();</span>
+<span class="nc" id="L181">			double avg = weekGlobal.doubleStream().average().orElseThrow();</span>
 
-<span class="nc" id="L180">			Map&lt;String, Double&gt; avgPerDistrict = new HashMap&lt;&gt;();</span>
-<span class="nc bnc" id="L181" title="All 2 branches missed.">			for (String districtName : weekPerDistrict.keySet()) {</span>
-<span class="nc" id="L182">				double avgForDistrict = weekPerDistrict.get(districtName).doubleStream().average().orElseThrow();</span>
-<span class="nc" id="L183">				avgPerDistrict.put(districtName, avgForDistrict);</span>
-<span class="nc" id="L184">			}</span>
+<span class="nc" id="L183">			Map&lt;String, Double&gt; avgPerDistrict = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">			for (String districtName : weekPerDistrict.keySet()) {</span>
+<span class="nc" id="L185">				double avgForDistrict = weekPerDistrict.get(districtName).doubleStream().average().orElseThrow();</span>
+<span class="nc" id="L186">				avgPerDistrict.put(districtName, avgForDistrict);</span>
+<span class="nc" id="L187">			}</span>
 			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
 
-<span class="nc" id="L187">			f.accept(start, avg, avgPerDistrict);</span>
+<span class="nc" id="L190">			f.accept(start, avg, avgPerDistrict);</span>
 
 			// calc next sunday:
-<span class="nc" id="L190">			int n = 7 - start.getDayOfWeek().getValue() % 7;</span>
-<span class="nc" id="L191">			start = start.plusDays(n);</span>
-<span class="nc" id="L192">		}</span>
+<span class="nc" id="L193">			int n = 7 - start.getDayOfWeek().getValue() % 7;</span>
+<span class="nc" id="L194">			start = start.plusDays(n);</span>
+<span class="nc" id="L195">		}</span>
 
-<span class="nc" id="L194">		return start;</span>
+<span class="nc" id="L197">		return start;</span>
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

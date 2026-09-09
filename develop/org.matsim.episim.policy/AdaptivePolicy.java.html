@@ -152,7 +152,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 <span class="fc" id="L152">	}</span>
 
 	/**
-	 * Calculate incidence depending
+	 * Calculate incidence depending on the current report.
 	 */
 	private void calculateCases(EpisimReporting.InfectionReport report) {
 <span class="fc" id="L158">		double cases = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());</span>
@@ -185,7 +185,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder&lt;Object&gt; {
 
 		/**
-		 * Use {@link #AdaptivePolicy#config()}.
+		 * Use {@link AdaptivePolicy#config()}.
 		 */
 <span class="fc" id="L190">		private ConfigBuilder() {</span>
 <span class="fc" id="L191">			params.put(&quot;start-in-lockdown&quot;, false);</span>
@@ -236,4 +236,4 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		}
 	}
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

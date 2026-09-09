@@ -25,8 +25,6 @@ import org.matsim.api.core.v01.events.*;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
-import java.lang.invoke.VarHandle;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -39,62 +37,68 @@ final public class ReplayEventsTask implements Runnable {
 
 	/**
 	 * taskId is in [0, numThreads - 1], and each thread must have
-	 * a different taskId
+	 * a different taskId.
 	 */
 	private final int taskId;
 	private final int numThreads;
 
 
+	/**
+	 * Creates a task for replaying the assigned events.
+	 */
 	public ReplayEventsTask(TrajectoryHandler trajectoryHandler,
 							List&lt;Event&gt; events,
 							int taskId,
-<span class="fc" id="L51">							int numThreads) {</span>
-<span class="fc" id="L52">		this.trajectoryHandler = trajectoryHandler;</span>
-<span class="fc" id="L53">		this.events = events;</span>
-<span class="fc" id="L54">		this.taskId = taskId;</span>
-<span class="fc" id="L55">		this.numThreads = numThreads;</span>
-<span class="fc" id="L56">	}</span>
+<span class="fc" id="L52">							int numThreads) {</span>
+<span class="fc" id="L53">		this.trajectoryHandler = trajectoryHandler;</span>
+<span class="fc" id="L54">		this.events = events;</span>
+<span class="fc" id="L55">		this.taskId = taskId;</span>
+<span class="fc" id="L56">		this.numThreads = numThreads;</span>
+<span class="fc" id="L57">	}</span>
 
 	/**
 	 * Check whether the handler is responsible for the facility with this id.
 	 */
 	boolean handlesFacility(Id&lt;ActivityFacility&gt; id) {
-<span class="fc bfc" id="L62" title="All 2 branches covered.">		return trajectoryHandler.getEpisimFacility(id).getTaskId() == taskId;</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">		return trajectoryHandler.getEpisimFacility(id).getTaskId() == taskId;</span>
 	}
 
 	/**
 	 * Check whether the handler is responsible for the vehicle with this id.
 	 */
 	boolean handlesVehicle(Id&lt;Vehicle&gt; id) {
-<span class="fc bfc" id="L69" title="All 2 branches covered.">		return trajectoryHandler.getEpisimVehicle(id).getTaskId() == taskId;</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">		return trajectoryHandler.getEpisimVehicle(id).getTaskId() == taskId;</span>
 	}
 
+	/**
+	 * Replays the assigned events.
+	 */
 	public void run() {
-<span class="fc" id="L73">		trajectoryHandler.reportCpuTime(&quot;start&quot;, taskId);</span>
-<span class="fc" id="L74">		trajectoryHandler.onStartDay(this::handlesFacility, this::handlesVehicle);</span>
+<span class="fc" id="L77">		trajectoryHandler.reportCpuTime(&quot;start&quot;, taskId);</span>
+<span class="fc" id="L78">		trajectoryHandler.onStartDay(this::handlesFacility, this::handlesVehicle);</span>
 
-<span class="fc bfc" id="L76" title="All 2 branches covered.">		for (final Event e : events) {</span>
-<span class="fc bfc" id="L77" title="All 2 branches covered.">			if (e instanceof ActivityStartEvent) {</span>
-<span class="fc" id="L78">				ActivityStartEvent ase = (ActivityStartEvent) e;</span>
-<span class="fc bfc" id="L79" title="All 2 branches covered.">				if (handlesFacility(ase.getFacilityId()))</span>
-<span class="fc" id="L80">					trajectoryHandler.handleEvent(ase);</span>
-<span class="fc bfc" id="L81" title="All 2 branches covered.">			} else if (e instanceof ActivityEndEvent) {</span>
-<span class="fc" id="L82">				ActivityEndEvent aee = (ActivityEndEvent) e;</span>
-<span class="fc bfc" id="L83" title="All 2 branches covered.">				if (handlesFacility(aee.getFacilityId())) {</span>
-<span class="fc" id="L84">					trajectoryHandler.handleEvent(aee);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">		for (final Event e : events) {</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">			if (e instanceof ActivityStartEvent) {</span>
+<span class="fc" id="L82">				ActivityStartEvent ase = (ActivityStartEvent) e;</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">				if (handlesFacility(ase.getFacilityId()))</span>
+<span class="fc" id="L84">					trajectoryHandler.handleEvent(ase);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">			} else if (e instanceof ActivityEndEvent) {</span>
+<span class="fc" id="L86">				ActivityEndEvent aee = (ActivityEndEvent) e;</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">				if (handlesFacility(aee.getFacilityId())) {</span>
+<span class="fc" id="L88">					trajectoryHandler.handleEvent(aee);</span>
 				}
-<span class="fc bfc" id="L86" title="All 2 branches covered.">			} else if (e instanceof PersonEntersVehicleEvent) {</span>
-<span class="fc" id="L87">				PersonEntersVehicleEvent peve = (PersonEntersVehicleEvent) e;</span>
-<span class="fc bfc" id="L88" title="All 2 branches covered.">				if (handlesVehicle(peve.getVehicleId()))</span>
-<span class="fc" id="L89">					trajectoryHandler.handleEvent(peve);</span>
-<span class="fc" id="L90">			} else {</span>
-<span class="fc" id="L91">				PersonLeavesVehicleEvent plve = (PersonLeavesVehicleEvent) e;</span>
-<span class="fc bfc" id="L92" title="All 2 branches covered.">				if (handlesVehicle(plve.getVehicleId()))</span>
-<span class="fc" id="L93">					trajectoryHandler.handleEvent(plve);</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">			} else if (e instanceof PersonEntersVehicleEvent) {</span>
+<span class="fc" id="L91">				PersonEntersVehicleEvent peve = (PersonEntersVehicleEvent) e;</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">				if (handlesVehicle(peve.getVehicleId()))</span>
+<span class="fc" id="L93">					trajectoryHandler.handleEvent(peve);</span>
+<span class="fc" id="L94">			} else {</span>
+<span class="fc" id="L95">				PersonLeavesVehicleEvent plve = (PersonLeavesVehicleEvent) e;</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">				if (handlesVehicle(plve.getVehicleId()))</span>
+<span class="fc" id="L97">					trajectoryHandler.handleEvent(plve);</span>
 			}
-<span class="fc" id="L95">		}</span>
+<span class="fc" id="L99">		}</span>
 
-<span class="fc" id="L97">		trajectoryHandler.reportCpuTime(&quot;finished&quot;, taskId);</span>
-<span class="fc" id="L98">	}</span>
+<span class="fc" id="L101">		trajectoryHandler.reportCpuTime(&quot;finished&quot;, taskId);</span>
+<span class="fc" id="L102">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

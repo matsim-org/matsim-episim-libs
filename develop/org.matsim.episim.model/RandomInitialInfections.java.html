@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -29,12 +29,12 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 <span class="fc" id="L29">	private static final Logger log = LogManager.getLogger(RandomInitialInfections.class);</span>
 
 	private final EpisimConfigGroup episimConfig;
-	private final SplittableRandom rnd;
+	private final EpisimSplittableRandom rnd;
 
 	private int initialInfectionsLeft;
 
 	@Inject
-<span class="fc" id="L37">	public RandomInitialInfections(Config config, SplittableRandom rnd) {</span>
+<span class="fc" id="L37">	public RandomInitialInfections(Config config, EpisimSplittableRandom rnd) {</span>
 <span class="fc" id="L38">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
 <span class="fc" id="L39">		this.rnd = rnd;</span>
 <span class="fc" id="L40">	}</span>
@@ -102,4 +102,4 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 <span class="fc" id="L102">		initialInfectionsLeft = num;</span>
 <span class="fc" id="L103">	}</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

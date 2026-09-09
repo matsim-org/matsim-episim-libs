@@ -8,7 +8,7 @@ import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
 import java.util.Map;
-import java.util.SplittableRandom;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Vaccination model executed every iteration.
@@ -60,7 +60,7 @@ public interface VaccinationModel extends SimulationListener {
 	/**
 	 * For the first vaccination, chose the {@link VaccinationType} a person is getting.
 	 */
-	static VaccinationType chooseVaccinationType(Map&lt;VaccinationType, Double&gt; prob, SplittableRandom rnd) {
+	static VaccinationType chooseVaccinationType(Map&lt;VaccinationType, Double&gt; prob, EpisimSplittableRandom rnd) {
 <span class="fc" id="L64">		double p = rnd.nextDouble();</span>
 <span class="pc bpc" id="L65" title="1 of 2 branches missed.">		for (Map.Entry&lt;VaccinationType, Double&gt; e : prob.entrySet()) {</span>
 <span class="pc bpc" id="L66" title="1 of 2 branches missed.">			if (p &lt; e.getValue())</span>
@@ -71,4 +71,4 @@ public interface VaccinationModel extends SimulationListener {
 	}
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
