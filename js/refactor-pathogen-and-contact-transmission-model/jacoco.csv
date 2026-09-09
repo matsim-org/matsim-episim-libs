@@ -114,7 +114,7 @@ MATSim Episim,org.matsim.episim,ContactTransmissionConfigGroup,153,737,20,62,28,
 MATSim Episim,org.matsim.episim,InfectionEventHandler.EpisimVehicle,0,4,0,0,0,2,0,1,0,1
 MATSim Episim,org.matsim.episim,EpisimReporting.InfectionReport,0,388,0,0,0,74,0,3,0,3
 MATSim Episim,org.matsim.episim,EpisimPerson.DiseaseStatus,0,57,0,0,0,3,0,1,0,1
-MATSim Episim,org.matsim.episim,EpisimPerson,175,1670,23,125,22,327,28,145,8,91
+MATSim Episim,org.matsim.episim,EpisimPerson,175,1674,23,125,22,327,28,145,8,91
 MATSim Episim,org.matsim.episim,PreparedRun,278,19,22,0,49,7,16,2,5,2
 MATSim Episim,org.matsim.episim,VaccinationConfigGroup.VaccinationConfigGroupParameter,0,191,0,10,0,33,0,14,0,9
 MATSim Episim,org.matsim.episim,PathogenConfigGroup,19,145,5,13,3,36,5,13,0,9

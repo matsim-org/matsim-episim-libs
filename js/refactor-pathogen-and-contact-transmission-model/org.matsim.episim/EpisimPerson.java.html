@@ -361,13 +361,13 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 <span class="fc" id="L362">		out.writeInt(antibodies.size());</span>
 <span class="fc bfc" id="L363" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : antibodies.object2DoubleEntrySet()) {</span>
-<span class="fc" id="L364">			out.writeUTF(kv.toString());</span>
+<span class="fc" id="L364">			out.writeUTF(kv.getKey().toString());</span>
 <span class="fc" id="L365">			out.writeDouble(kv.getDoubleValue());</span>
 <span class="fc" id="L366">		}</span>
 
 <span class="fc" id="L368">		out.writeInt(maxAntibodies.size());</span>
 <span class="fc bfc" id="L369" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : maxAntibodies.object2DoubleEntrySet()) {</span>
-<span class="fc" id="L370">			out.writeUTF(kv.toString());</span>
+<span class="fc" id="L370">			out.writeUTF(kv.getKey().toString());</span>
 <span class="fc" id="L371">			out.writeDouble(kv.getDoubleValue());</span>
 <span class="fc" id="L372">		}</span>
 
