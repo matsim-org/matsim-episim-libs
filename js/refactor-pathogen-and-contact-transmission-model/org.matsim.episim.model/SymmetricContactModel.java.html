@@ -210,36 +210,40 @@ public final class SymmetricContactModel extends AbstractContactModel {
 <span class="fc" id="L210">					contactParams.getContactIntensity() / (maxPersonsInContainer / nSpacesPerFacility)</span>
 			);
 
+			// transmission-route weights for this activity/age pair (symmetric in person order)
+<span class="fc" id="L214">			TransmissionWeights transmissionWeights = contactTransmission.resolve(leavingPersonsActivity, otherPersonsActivity,</span>
+<span class="fc" id="L215">					personLeavingContainer.getAgeOrDefault(0), contactPerson.getAgeOrDefault(0));</span>
+
 			// need to differentiate which person might be the infector
-<span class="fc bfc" id="L214" title="All 2 branches covered.">			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {</span>
+<span class="fc bfc" id="L218" title="All 2 branches covered.">			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {</span>
 
-<span class="fc" id="L216">				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),</span>
-						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
+<span class="fc" id="L220">				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),</span>
+						leavingParams, contactParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
-<span class="fc" id="L219">				double probUnVac = infectionModel.getLastUnVacInfectionProbability();</span>
+<span class="fc" id="L223">				double probUnVac = infectionModel.getLastUnVacInfectionProbability();</span>
 
-<span class="fc" id="L221">				double dbl = rnd.nextDouble();</span>
+<span class="fc" id="L225">				double dbl = rnd.nextDouble();</span>
 
-<span class="fc" id="L223">				potentialInfection(personLeavingContainer, contactPerson, now, infectionType, prob, container, probUnVac, dbl);</span>
+<span class="fc" id="L227">				potentialInfection(personLeavingContainer, contactPerson, now, infectionType, prob, container, probUnVac, dbl);</span>
 
-<span class="fc bfc" id="L225" title="All 2 branches covered.">				if (dbl &lt; prob)</span>
-<span class="fc" id="L226">					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);</span>
+<span class="fc bfc" id="L229" title="All 2 branches covered.">				if (dbl &lt; prob)</span>
+<span class="fc" id="L230">					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);</span>
 
-<span class="fc" id="L228">			} else {</span>
-<span class="fc" id="L229">				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),</span>
-						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+<span class="fc" id="L232">			} else {</span>
+<span class="fc" id="L233">				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),</span>
+						contactParams, leavingParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
-<span class="fc" id="L232">				double probUnVac = infectionModel.getLastUnVacInfectionProbability();</span>
+<span class="fc" id="L236">				double probUnVac = infectionModel.getLastUnVacInfectionProbability();</span>
 
-<span class="fc" id="L234">				double dbl = rnd.nextDouble();</span>
+<span class="fc" id="L238">				double dbl = rnd.nextDouble();</span>
 
-<span class="fc" id="L236">				potentialInfection(contactPerson, personLeavingContainer, now, infectionType, prob, container, probUnVac, dbl);</span>
+<span class="fc" id="L240">				potentialInfection(contactPerson, personLeavingContainer, now, infectionType, prob, container, probUnVac, dbl);</span>
 
-<span class="fc bfc" id="L238" title="All 2 branches covered.">				if (dbl &lt; prob)</span>
-<span class="fc" id="L239">					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);</span>
+<span class="fc bfc" id="L242" title="All 2 branches covered.">				if (dbl &lt; prob)</span>
+<span class="fc" id="L243">					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);</span>
 			}
-<span class="fc" id="L241">		}</span>
-<span class="fc" id="L242">	}</span>
+<span class="fc" id="L245">		}</span>
+<span class="fc" id="L246">	}</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
