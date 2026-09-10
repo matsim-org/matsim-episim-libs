@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
+import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.VirusStrainConfigGroup;
@@ -54,7 +55,7 @@ public class DefaultAntibodyModelTest {
 
 	private final List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
 	private DefaultAntibodyModel model;
-	private AntibodyModel.Config antibodyConfig;
+	private AntibodyConfigGroup antibodyConfig;
 	private final Offset<Double> OFFSET = Offset.offset(0.1);
 	;
 
@@ -62,7 +63,7 @@ public class DefaultAntibodyModelTest {
 	@BeforeEach
 	public void setup() {
 
-		antibodyConfig = AntibodyModel.newConfig();
+		antibodyConfig = new AntibodyConfigGroup();
 		model = new DefaultAntibodyModel(antibodyConfig, new VirusStrainConfigGroup());
 
 	}
@@ -94,7 +95,7 @@ public class DefaultAntibodyModelTest {
 		}
 
 		// test when sigma is 0; all immuneResponseMultipliers should = 1.0
-		antibodyConfig.setImmuneReponseSigma(0);
+		antibodyConfig.setImmuneResponseSigma(0);
 		model.init(episimPeople, 0);
 
 		for (EpisimPerson person : episimPeople) {
@@ -102,7 +103,7 @@ public class DefaultAntibodyModelTest {
 		}
 
 		// test when sigma is 1; multiplies should range between 0.1 and 10.
-		antibodyConfig.setImmuneReponseSigma(1);
+		antibodyConfig.setImmuneResponseSigma(1);
 		model.init(episimPeople, 0);
 
 		double sigma1q1;
@@ -125,7 +126,7 @@ public class DefaultAntibodyModelTest {
 		double sigma10q1;
 		double sigma10q3;
 		{
-			antibodyConfig.setImmuneReponseSigma(10);
+			antibodyConfig.setImmuneResponseSigma(10);
 			model.init(episimPeople, 0);
 
 			DoubleList multipliers = new DoubleArrayList();
@@ -440,7 +441,7 @@ public class DefaultAntibodyModelTest {
 
 //		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevelsAvg = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600, EpisimTestUtils.createPerson());
 
-		antibodyConfig.setImmuneReponseSigma(3.);
+		antibodyConfig.setImmuneResponseSigma(3.);
 		model.init(episimPeople, 0);
 		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevelsAvg = new Int2ObjectArrayMap<>();
 		for (EpisimPerson person : episimPeople) {

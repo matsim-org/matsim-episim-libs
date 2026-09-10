@@ -127,17 +127,19 @@
 		 );
 
 
-		 // antibody model
-		 AntibodyModel.Config antibodyConfig = new AntibodyModel.Config();
-		 antibodyConfig.setImmuneReponseSigma(3.0);
-		 bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
-
-
 		 Multibinder<SimulationListener> listener = Multibinder.newSetBinder(binder(), SimulationListener.class);
 
 		 listener.addBinding().to(HouseholdSusceptibility.class);
 
 
+	 }
+
+	 @Provides
+	 @Singleton
+	 public AntibodyConfigGroup antibodyConfigGroup(Config config) {
+		 AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
+		 antibodyConfig.setImmuneResponseSigma(3.0);
+		 return antibodyConfig;
 	 }
 
 	 @Provides

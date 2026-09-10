@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
+import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.ContactTransmissionConfigGroup;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
@@ -117,6 +118,17 @@ public class InfluenzaCologneScenarioTest {
 		SnzCologneOpenProductionScenario.interpolateImport(influenzaImport, COLOGNE_FACTOR * 4.0,
 				START_DATE.minusDays(1), START_DATE.plusDays(14), 0.9, 23.1);    // TODO real influenza import
 		episimConfig.setInfections_pers_per_day(INFLUENZA_STRAIN, influenzaImport);
+
+		// 5. antibody / individual-immunity model: give influenza the plain COVID-style profile
+		//    (flat 5.0 initial antibodies, 15.0 refresh factor against every strain), matching what
+		//    AntibodyConfigGroup fills in for a virus-strain immunity event without special-casing.
+		//    TODO replace with real influenza immunity numbers.
+		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
+		AntibodyConfigGroup.AntibodyParams influenzaAntibodies = antibodyConfig.getOrAddParams(INFLUENZA_STRAIN);
+		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
+			influenzaAntibodies.getInitialAntibodies().put(against, 5.0);
+			influenzaAntibodies.getAntibodyRefreshFactors().put(against, 15.0);
+		}
 	}
 
 	/**
@@ -167,7 +179,7 @@ public class InfluenzaCologneScenarioTest {
 	 * circulating virus.
 	 */
 	@Test
-	//@Disabled("template: downloads the full Cologne input set from the VSP SVN; provide real parameters and assertions")
+	@Disabled
 	public void runsOnCologneScenario() throws Exception {
 
 		OutputDirectoryLogging.catchLogEntries();

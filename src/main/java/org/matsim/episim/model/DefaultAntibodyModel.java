@@ -2,11 +2,13 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
+import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VirusStrainConfigGroup;
 
 import java.util.Collection;
+import java.util.Map;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -20,14 +22,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	// optimistic: 46
 	//
 
-	private final AntibodyModel.Config antibodyConfig;
+	private final AntibodyConfigGroup antibodyConfig;
 	private final EpisimSplittableRandom localRnd;
 
 	private final Collection<VirusStrain> virusStrains;
 
 
 	@Inject
-	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {
+	DefaultAntibodyModel(AntibodyConfigGroup antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {
 		this.antibodyConfig = antibodyConfig;
 		this.virusStrains = virusStrainConfig.getVirusStrains();
 		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
@@ -46,7 +48,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
 			double immuneResponseMultiplier = 0;
 			while (immuneResponseMultiplier < 0.1 || immuneResponseMultiplier > 10) {
-				immuneResponseMultiplier = EpisimUtils.nextLogNormal(localRnd, 0, antibodyConfig.getImmuneReponseSigma());
+
+				immuneResponseMultiplier = EpisimUtils.nextLogNormal(localRnd, 0, antibodyConfig.getImmuneResponseSigma());
 			}
 
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
@@ -107,7 +110,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			|| person.getNumInfections() > 4
 			|| person.getNumVaccinations() > 3) {
 
-			halflifeDays *= antibodyConfig.hlMultiForInfected; // 1, 2, 5
+			halflifeDays *= antibodyConfig.getHlMultiplierForInfected(); // 1, 2, 5
 		}
 
 		// if no immunity event: exponential decay, day by day:
@@ -121,11 +124,15 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	private void handleImmunization(EpisimPerson person, ImmunityEvent immunityEventType) {
 
 		boolean firstImmunization = checkFirstImmunization(person);
+
+		// resolve the per-event maps once instead of rebuilding the whole nested map per strain
+		Map<VirusStrain, Double> initialAntibodiesForEvent = antibodyConfig.getParams(immunityEventType).getInitialAntibodies();
+
 		// 1st immunization:
 		if (firstImmunization) {
 
 			for (VirusStrain strain2 : virusStrains) {
-				double antibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2);
+				double antibodies = initialAntibodiesForEvent.get(strain2);
 
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
@@ -138,8 +145,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 
 		} else {
+			Map<VirusStrain, Double> refreshFactorsForEvent = antibodyConfig.getParams(immunityEventType).getAntibodyRefreshFactors();
+
 			for (VirusStrain strain2 : virusStrains) {
-				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(immunityEventType).get(strain2);
+				double refreshFactor = refreshFactorsForEvent.get(strain2);
 
 				// antibodies before refresh
 				double antibodies = person.getAntibodies(strain2);
@@ -148,7 +157,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				antibodies = antibodies * refreshFactor;
 
 				// check that new antibody level at least as high as initial antibodies
-				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
+				double initialAntibodies = initialAntibodiesForEvent.get(strain2) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
 				// check that new antibody level is at most 150

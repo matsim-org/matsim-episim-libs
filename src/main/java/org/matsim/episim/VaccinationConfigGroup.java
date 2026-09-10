@@ -56,7 +56,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Holds all specific vaccination params.
 	 */
-	private final Map<VaccinationType, VaccinationParams> params = new EnumMap<>(VaccinationType.class);
+	private final Map<VaccinationType, VaccinationParams> params = new HashMap<>();
 	/**
 	 * Load vaccinations from file instead.
 	 */
@@ -422,7 +422,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		Map<String, String> share = Splitter.on("|").withKeyValueSeparator(">").split(value);
 		Map<LocalDate, Map<VaccinationType, Double>> collect = share.entrySet().stream().collect(Collectors.toMap(
 			e -> LocalDate.parse(e.getKey()),
-			e -> SPLITTER.split(e.getValue()).entrySet().stream().collect(Collectors.toMap(k -> VaccinationType.valueOf(k.getKey()), k -> Double.parseDouble(k.getValue())))
+			e -> SPLITTER.split(e.getValue()).entrySet().stream().collect(Collectors.toMap(k -> VaccinationType.of(k.getKey()), k -> Double.parseDouble(k.getValue())))
 		));
 
 		setVaccinationShare(collect);
@@ -435,7 +435,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Map<VaccinationType, Double> getVaccinationTypeProb(LocalDate date) {
 
-		EnumMap<VaccinationType, Double> prob = new EnumMap<>(VaccinationType.class);
+		// LinkedHashMap: chooseVaccinationType() iterates this and returns the first entry with p < value,
+		// so the entries must stay in the ascending (declaration) order they are inserted in below.
+		Map<VaccinationType, Double> prob = new LinkedHashMap<>();
 
 		Map<VaccinationType, Double> share = EpisimUtils.findValidEntry(vaccinationShare, null, date);
 
@@ -445,7 +447,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		double total = share.values().stream().sorted().mapToDouble(Double::doubleValue).sum();
 
 		double sum = 1 - total;
-		for (VaccinationType t : VaccinationType.values()) {
+		for (VaccinationType t : VaccinationType.getAllStandardOptions()) {
 			sum += share.getOrDefault(t, 0d);
 			prob.put(t, sum);
 		}
@@ -553,11 +555,22 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringGetter(TYPE)
+		String getTypeName() {
+			return type == null ? null : type.getName();
+		}
+
+		@StringSetter(TYPE)
+		void setType(String type) {
+			this.type = VaccinationType.of(type);
+		}
+
+		/**
+		 * Vaccination type this parameter set applies to.
+		 */
 		public VaccinationType getType() {
 			return type;
 		}
 
-		@StringSetter(TYPE)
 		public void setType(VaccinationType type) {
 			this.type = type;
 		}

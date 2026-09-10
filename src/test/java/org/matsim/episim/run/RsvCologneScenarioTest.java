@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
+import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.ContactTransmissionConfigGroup;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
@@ -122,6 +123,17 @@ public class RsvCologneScenarioTest {
 		SnzCologneOpenProductionScenario.interpolateImport(rsvImport, COLOGNE_FACTOR * 4.0,
 				START_DATE.minusDays(1), START_DATE.plusDays(14), 0.9, 23.1);    // TODO real RSV import
 		episimConfig.setInfections_pers_per_day(RSV_STRAIN, rsvImport);
+
+		// 6. antibody / individual-immunity model: give RSV the plain COVID-style profile
+		//    (flat 5.0 initial antibodies, 15.0 refresh factor against every strain), matching what
+		//    AntibodyConfigGroup fills in for a virus-strain immunity event without special-casing.
+		//    TODO replace with real RSV immunity numbers.
+		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
+		AntibodyConfigGroup.AntibodyParams rsvAntibodies = antibodyConfig.getOrAddParams(RSV_STRAIN);
+		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
+			rsvAntibodies.getInitialAntibodies().put(against, 5.0);
+			rsvAntibodies.getAntibodyRefreshFactors().put(against, 15.0);
+		}
 	}
 
 	/**

@@ -271,7 +271,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		n = in.readInt();
 		for (int i = 0; i < n; i++) {
-			vaccinations.add(VaccinationType.values()[in.readInt()]);
+			vaccinations.add(VaccinationType.ofId(in.readUTF()));
 			vaccinationDates.add(in.readInt());
 		}
 
@@ -348,7 +348,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		out.writeInt(vaccinations.size());
 		for (int i = 0; i < vaccinations.size(); i++) {
-			out.writeInt(vaccinations.get(i).ordinal());
+			out.writeUTF(vaccinations.get(i).getId());
 			out.writeInt(vaccinationDates.getInt(i));
 		}
 

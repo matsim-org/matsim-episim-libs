@@ -208,7 +208,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			return new EpisimVaccinationEvent(
 					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),
 					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),
-					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),
+					VaccinationType.of(attr.get(EpisimVaccinationEvent.TYPE)),
 					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))
 			);
 		};
