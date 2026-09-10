@@ -208,7 +208,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 <span class="nc" id="L208">			return new EpisimVaccinationEvent(</span>
 <span class="nc" id="L209">					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),</span>
 <span class="nc" id="L210">					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),</span>
-<span class="nc" id="L211">					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),</span>
+<span class="nc" id="L211">					VaccinationType.of(attr.get(EpisimVaccinationEvent.TYPE)),</span>
 <span class="nc" id="L212">					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))</span>
 			);
 		};

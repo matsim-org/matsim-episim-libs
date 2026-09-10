@@ -271,7 +271,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 <span class="fc" id="L272">		n = in.readInt();</span>
 <span class="pc bpc" id="L273" title="1 of 2 branches missed.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="nc" id="L274">			vaccinations.add(VaccinationType.values()[in.readInt()]);</span>
+<span class="nc" id="L274">			vaccinations.add(VaccinationType.ofId(in.readUTF()));</span>
 <span class="nc" id="L275">			vaccinationDates.add(in.readInt());</span>
 		}
 
@@ -348,7 +348,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 <span class="fc" id="L349">		out.writeInt(vaccinations.size());</span>
 <span class="pc bpc" id="L350" title="1 of 2 branches missed.">		for (int i = 0; i &lt; vaccinations.size(); i++) {</span>
-<span class="nc" id="L351">			out.writeInt(vaccinations.get(i).ordinal());</span>
+<span class="nc" id="L351">			out.writeUTF(vaccinations.get(i).getId());</span>
 <span class="nc" id="L352">			out.writeInt(vaccinationDates.getInt(i));</span>
 		}
 

@@ -196,7 +196,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L196">		virusStrains = EpisimWriter.prepare(base + &quot;strains.tsv&quot;, &quot;day&quot;, &quot;date&quot;, virusStrainConfig.getVirusStrains().toArray());</span>
 <span class="fc" id="L197">		cpuTime = EpisimWriter.prepare(base + &quot;cputime.tsv&quot;, &quot;iteration&quot;, &quot;where&quot;, &quot;what&quot;, &quot;when&quot;, &quot;thread&quot;);</span>
 <span class="fc" id="L198">		antibodiesPerPerson = EpisimWriter.prepare(base + &quot;antibodies.tsv&quot;, &quot;day&quot;, &quot;date&quot;, virusStrainConfig.getVirusStrains().toArray());</span>
-<span class="fc" id="L199">		vaccinationsPerType = EpisimWriter.prepare(base + &quot;vaccinations.tsv&quot;, &quot;day&quot;, &quot;date&quot;, (Object[]) VaccinationType.values());</span>
+<span class="fc" id="L199">		vaccinationsPerType = EpisimWriter.prepare(base + &quot;vaccinations.tsv&quot;, &quot;day&quot;, &quot;date&quot;, (Object[]) VaccinationType.getAllOptions().toArray());</span>
 <span class="fc" id="L200">		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + &quot;vaccinationsDetailed.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;type&quot;, &quot;number&quot;, &quot;amount&quot;);</span>
 
 <span class="fc" id="L202">		sampleSize = episimConfig.getSampleSize();</span>
@@ -557,11 +557,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L557">		writer.append(virusStrains, strainOut);</span>
 <span class="fc" id="L558">		strains.clear();</span>
 
-<span class="fc" id="L560">		String[] vacOut = new String[VaccinationType.values().length + 2];</span>
+<span class="fc" id="L560">		String[] vacOut = new String[VaccinationType.getAllOptions().size() + 2];</span>
 <span class="fc" id="L561">		vacOut[0] = String.valueOf(iteration);</span>
 <span class="fc" id="L562">		vacOut[1] = date;</span>
-<span class="fc bfc" id="L563" title="All 2 branches covered.">		for (int i = 0; i &lt; VaccinationType.values().length; i++) {</span>
-<span class="fc" id="L564">			vacOut[i + 2] = String.valueOf(vaccinations.getOrDefault(VaccinationType.values()[i], 0) * (1 / sampleSize));</span>
+<span class="fc bfc" id="L563" title="All 2 branches covered.">		for (int i = 0; i &lt; VaccinationType.getAllOptions().size(); i++) {</span>
+<span class="fc" id="L564">			vacOut[i + 2] = String.valueOf(vaccinations.getOrDefault(VaccinationType.getAllOptions().get(i), 0) * (1 / sampleSize));</span>
 		}
 <span class="fc" id="L566">		writer.append(vaccinationsPerType, vacOut);</span>
 <span class="fc" id="L567">		vaccinations.clear();</span>
