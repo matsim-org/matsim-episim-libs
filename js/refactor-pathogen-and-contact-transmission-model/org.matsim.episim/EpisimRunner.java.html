@@ -184,7 +184,7 @@ public final class EpisimRunner {
 	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
 
 <span class="fc" id="L186">		manager.resetHandlers(iteration);</span>
-<span class="fc" id="L187">		handler.reset(iteration); // The better naming is prepare, jaro 04.09.26.</span>
+<span class="fc" id="L187">		handler.reset(iteration);</span>
 
 <span class="fc" id="L189">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(this.config, EpisimConfigGroup.class);</span>
 
