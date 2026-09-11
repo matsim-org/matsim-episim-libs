@@ -34,7 +34,7 @@ import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.run.modules.SnzCologneOpenProductionScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -198,14 +198,19 @@ public class RsvCologneScenarioTest {
 				Modules.override(new EpisimModule()).with(new SnzCologneOpenProductionScenario.Builder().build()));
 
 		Config config = injector.getInstance(Config.class);
-		config.controller().setOutputDirectory(utils.getOutputDirectory());
-
 		configureRsv(config);   // before the runner is built - the contact model reads config at construction
+
+		// <EPISIM_OUTPUT or test output>/<date>/RSV-<NNNNN>/output, packed for the Episim viewer after the run
+		ViewerOutput output = ViewerOutput.create("RSV", Path.of(utils.getOutputDirectory()));
+		output.configure(config);
 
 		injector.getInstance(EpisimRunner.class).run(ITERATIONS);
 
-		assertThat(new File(utils.getOutputDirectory(), "infections.txt")).exists();
-		assertThat(new File(utils.getOutputDirectory(), "infectionEvents.txt")).exists();
+		assertThat(output.runOutput().resolve(output.runId() + ".infections.txt")).exists();
+
+		output.pack(config, "cologne", "rsv", ITERATIONS, "Köln");
+		assertThat(output.visualizationWithSeeds().resolve("summaries/" + output.runId() + ".zip")).exists();
+		assertThat(output.visualizationWithoutSeeds().resolve("summaries/0.zip")).exists();
 
 		// TODO assert RSV actually circulated:
 		//  - infectionEvents.txt has rows with virusStrain == "RSV", none with SARS_CoV_2

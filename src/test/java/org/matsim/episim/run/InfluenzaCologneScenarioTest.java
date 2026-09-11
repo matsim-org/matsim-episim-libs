@@ -25,6 +25,7 @@ import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.ContactTransmissionConfigGroup;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
+import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.PathogenConfigGroup;
@@ -38,7 +39,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.run.modules.SnzCologneOpenProductionScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -70,9 +71,9 @@ import static org.matsim.episim.model.Transition.to;
  * full Cologne input set from the VSP SVN and is meant to be run by hand, not in CI.</p>
  *
  * <p><b>Known limitations</b>: the antibody / individual immunity model is still SARS-CoV-2 specific,
- * so only influenza is seeded (the SARS-CoV-2 disease import is cleared). Symptomatic persons are put
- * into full quarantine at symptom onset by the progression model, which removes most post-onset
- * influenza transmission; see the parameterisation document, section "Gaps and risks".</p>
+ * so only influenza is seeded (the SARS-CoV-2 disease import is cleared). Isolation at symptom onset
+ * is set to 75 % home isolation, a low-confidence value derived from contact data during illness; see the
+ * parameterisation document, sections 4.9 and "Gaps and risks".</p>
  */
 public class InfluenzaCologneScenarioTest {
 
@@ -156,6 +157,11 @@ public class InfluenzaCologneScenarioTest {
 		// respiratory only: aerosols ~ half of household transmission (Cowling 2013, doi:10.1038/ncomms2922); hand hygiene
 		// alone showed no significant effect (Wong 2014, doi:10.1017/S095026881400003X)
 		byAge.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
+		// isolation at symptom onset: illness cut contacts, mostly outside the home, so that R fell to about 1/4
+		// (Van Kerckhove 2013, doi:10.1093/aje/kwt196). atHome removes all non-home contacts, so 1 - p = 0.25 -> p = 0.75.
+		// Low confidence: ILI cases in England 2009, sicker than all symptomatic infections; no age-specific estimate.
+		byAge.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.75));
+		byAge.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
 		// 3. disease progression timing (replaces the COVID progressionConfig of SnzCologneOpenProductionScenario)
 		episimConfig.setProgressionConfig(influenzaProgressionConfig(Transition.config()).build());
@@ -286,6 +292,9 @@ public class InfluenzaCologneScenarioTest {
 		assertThat(pathogenConfig.getParams(INFLUENZA, true).getRouteTransmissibility().getRespiratory()).isEqualTo(1.0);
 		assertThat(pathogenConfig.getParams(INFLUENZA, true).getRouteTransmissibility().getDirectContact()).isEqualTo(0.0);
 		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSeriouslySickProbability(85)).isGreaterThan(0.0);
+		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSymptomaticIsolationProbability(30)).isEqualTo(0.75);
+		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSymptomaticIsolationStatus())
+				.isEqualTo(EpisimPerson.QuarantineStatus.atHome);
 
 		// effective (after hospitalFactor) hospitalisation risk of a symptomatic 70-year-old equals the CDC ratio
 		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSeriouslySickProbability(70) * episimConfig.getHospitalFactor())
@@ -314,14 +323,19 @@ public class InfluenzaCologneScenarioTest {
 				Modules.override(new EpisimModule()).with(new SnzCologneOpenProductionScenario.Builder().build()));
 
 		Config config = injector.getInstance(Config.class);
-		config.controller().setOutputDirectory(utils.getOutputDirectory());
-
 		configureInfluenza(config);   // before the runner is built - the contact model reads config at construction
+
+		// <EPISIM_OUTPUT or test output>/<date>/INF-<NNNNN>/output, packed for the Episim viewer after the run
+		ViewerOutput output = ViewerOutput.create("INF", Path.of(utils.getOutputDirectory()));
+		output.configure(config);
 
 		injector.getInstance(EpisimRunner.class).run(ITERATIONS);
 
-		assertThat(new File(utils.getOutputDirectory(), "infections.txt")).exists();
-		assertThat(new File(utils.getOutputDirectory(), "infectionEvents.txt")).exists();
+		assertThat(output.runOutput().resolve(output.runId() + ".infections.txt")).exists();
+
+		output.pack(config, "cologne", "influenza", ITERATIONS, "Köln");
+		assertThat(output.visualizationWithSeeds().resolve("summaries/" + output.runId() + ".zip")).exists();
+		assertThat(output.visualizationWithoutSeeds().resolve("summaries/0.zip")).exists();
 
 		// TODO assert influenza actually circulated:
 		//  - infectionEvents.txt has rows with virusStrain == "influenza", none with SARS_CoV_2
