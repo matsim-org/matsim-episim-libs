@@ -88,6 +88,55 @@ public class ContactTransmissionConfigGroupTest {
 	}
 
 	@Test
+	public void contactPairsMatchContainerNamesByPrefix() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactPair("edu", "home").setTransmissionWeights(
+				TransmissionWeights.parse("respiratory=1.0;directContact=0.3"));
+
+		Resolver resolver = group.createResolver();
+
+		assertThat(resolver.resolve("educ_primary", "home", 10, 40).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.3);
+		assertThat(resolver.resolve("home", "educ_kiga", 40, 4).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.3);
+		// not covered by the pair -> default weights
+		assertThat(resolver.resolve("work", "home", 40, 40).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.0);
+	}
+
+	@Test
+	public void mostSpecificContactPairWins() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactPair("leis", "work").setTransmissionWeights(
+				TransmissionWeights.parse("respiratory=1.0;directContact=0.1"));
+		group.getOrAddContactPair("leisPublic", "work").setTransmissionWeights(
+				TransmissionWeights.parse("respiratory=1.0;directContact=0.2"));
+		group.getOrAddContactPair("shop", "work").setForbidden(true);
+		group.getOrAddContactPair("shop_daily", "work").setTransmissionWeights(
+				TransmissionWeights.parse("respiratory=1.0;directContact=0.5"));
+
+		Resolver resolver = group.createResolver();
+
+		assertThat(resolver.resolve("leisPublic", "work", 30, 30).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.2);
+		assertThat(resolver.resolve("work", "leisPrivate", 30, 30).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.1);
+		assertThat(resolver.resolve("leisure", "work", 30, 30).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.1);
+
+		// a broad forbidden pair blocks everything it covers ...
+		assertThat(resolver.isContactAllowed("shop_other", "work")).isFalse();
+		assertThat(resolver.resolve("shop_other", "work", 30, 30)).isSameAs(TransmissionWeights.ZERO);
+		// ... unless a more specific pair overrides it
+		assertThat(resolver.isContactAllowed("shop_daily", "work")).isTrue();
+		assertThat(resolver.resolve("work", "shop_daily", 30, 30).get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.5);
+	}
+
+	@Test
+	public void reportsContactPairsThatMatchNoContainer() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactPair("edu", "home").setTransmissionWeights(TransmissionWeights.parse("respiratory=1.0"));
+		group.getOrAddContactPair("school", "leisure").setTransmissionWeights(TransmissionWeights.parse("respiratory=1.0"));
+
+		assertThat(group.unmatchedContactPairs(Arrays.asList("home", "educ_primary", "leisure", "work")))
+				.containsExactly("leisure/school");
+	}
+
+	@Test
 	public void validatesNonAscendingAgeBands() {
 		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
 		group.setAgeBands(Arrays.asList(0, 20, 10));

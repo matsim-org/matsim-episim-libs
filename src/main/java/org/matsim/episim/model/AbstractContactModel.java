@@ -20,6 +20,8 @@
  */
 package org.matsim.episim.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -32,7 +34,9 @@ import org.matsim.facilities.ActivityFacility;
 
 import java.util.HashMap;
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
@@ -43,6 +47,8 @@ import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
  */
 public abstract class AbstractContactModel implements ContactModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";
+
+	private static final Logger log = LogManager.getLogger(AbstractContactModel.class);
 
 	protected final Scenario scenario;
 	protected final EpisimSplittableRandom rnd;
@@ -102,7 +108,14 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.trParams = episimConfig.selectInfectionParams("tr");
 		this.qhParams = episimConfig.selectInfectionParams(QUARANTINE_HOME);
 		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();
-		this.contactTransmission = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class).createResolver();
+		ContactTransmissionConfigGroup contactTransmissionConfig = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
+		this.contactTransmission = contactTransmissionConfig.createResolver();
+		List<String> containerNames = episimConfig.getInfectionParams().stream()
+				.map(EpisimConfigGroup.InfectionParams::getContainerName)
+				.collect(Collectors.toList());
+		for (String pair : contactTransmissionConfig.unmatchedContactPairs(containerNames)) {
+			log.warn("contactPair {} matches no infection container and will never apply; check the activity-type prefixes", pair);
+		}
 		this.scenario = scenario;
 
 		subdistrictFacilities = new HashMap<>();
