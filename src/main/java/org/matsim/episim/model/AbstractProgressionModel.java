@@ -51,8 +51,8 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 
-		// No transitions from susceptible
-		if (status == EpisimPerson.DiseaseStatus.susceptible)
+		// No transitions from susceptible or deceased
+		if (status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.deceased)
 			return;
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
@@ -100,6 +100,14 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		// clear transition
 		if (from == EpisimPerson.DiseaseStatus.susceptible) {
 			nextStateAndDay.removeLong(id);
+			return false;
+		}
+
+		// deceased is terminal: no further transition, and a deceased person is no longer in quarantine
+		if (from == EpisimPerson.DiseaseStatus.deceased) {
+			nextStateAndDay.removeLong(id);
+			if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+				person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 			return false;
 		}
 

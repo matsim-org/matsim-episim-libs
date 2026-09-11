@@ -335,6 +335,79 @@ public class PathogenConfigGroupTest {
 				.hasMessageContaining("routeTransmissibility");
 	}
 
+	/**
+	 * (13) Isolation at symptom onset defaults to the previously hard-coded behaviour: everybody, full quarantine.
+	 */
+	@Test
+	public void symptomaticIsolationDefaultsToFullForEveryone() {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+
+		for (boolean ageDependent : new boolean[]{false, true}) {
+			PathogenParams p = group.getParams(Pathogen.SARS_COV_2, ageDependent);
+			assertThat(p.getSymptomaticIsolationProbability(30)).isEqualTo(1.0);
+			assertThat(p.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.full);
+		}
+
+		PathogenParams fresh = group.getOrAddParams(INFLUENZA, true);
+		assertThat(fresh.getSymptomaticIsolationProbability(5)).isEqualTo(1.0);
+		assertThat(fresh.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.full);
+	}
+
+	/**
+	 * (14) Isolation probabilities are age buckets within [0, 1]; only 'full' and 'atHome' are valid statuses.
+	 */
+	@Test
+	public void symptomaticIsolationIsValidated() {
+		PathogenParams p = new PathogenParams();
+
+		assertThatThrownBy(() -> p.setSymptomaticIsolationProbabilityByAge(Map.of(0, 1.2)))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> p.setSymptomaticIsolationProbabilityByAge("0=-0.1"))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> p.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.testing))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> p.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.no))
+				.isInstanceOf(IllegalArgumentException.class);
+
+		p.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.5, 18, 0.25));
+		assertThat(p.getSymptomaticIsolationProbability(10)).isEqualTo(0.5);
+		assertThat(p.getSymptomaticIsolationProbability(18)).isEqualTo(0.25);
+		assertThat(p.getSymptomaticIsolationProbability(70)).isEqualTo(0.25);
+	}
+
+	/**
+	 * (15) The isolation settings survive an XML round-trip; the SARS-CoV-2 defaults stay untouched.
+	 */
+	@Test
+	public void symptomaticIsolationSurvivesXmlRoundTrip() throws IOException {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		Config config = ConfigUtils.createConfig(group);
+
+		PathogenParams flu = group.getOrAddParams(INFLUENZA, false);
+		flu.setShowingSymptomsProbabilityByAge(Map.of(0, 0.4));
+		flu.setSeriouslySickProbabilityByAge(Map.of(0, 0.01));
+		flu.setCriticalProbabilityByAge(Map.of(0, 0.05));
+		flu.setDeathProbabilityByAge(Map.of(0, 0.0));
+		flu.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.5, 18, 0.25));
+		flu.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
+
+		File tmp = File.createTempFile("matsim", "config");
+		tmp.deleteOnExit();
+		ConfigUtils.writeConfig(config, tmp.toString());
+
+		PathogenConfigGroup copy = new PathogenConfigGroup();
+		ConfigUtils.loadConfig(tmp.toString(), copy);
+
+		PathogenParams reloaded = copy.getParams(INFLUENZA, false);
+		assertThat(reloaded.getSymptomaticIsolationProbability(10)).isEqualTo(0.5);
+		assertThat(reloaded.getSymptomaticIsolationProbability(40)).isEqualTo(0.25);
+		assertThat(reloaded.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.atHome);
+
+		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getSymptomaticIsolationProbability(40)).isEqualTo(1.0);
+		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getSymptomaticIsolationStatus())
+				.isEqualTo(EpisimPerson.QuarantineStatus.full);
+	}
+
 	private static int countSeriouslySick(EpisimSplittableRandom rnd, PathogenConfigGroup pathogenConfig,
 	                                      VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig,
 	                                      double strainFactorSeriouslySick) {

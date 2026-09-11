@@ -24,11 +24,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Per-contact split of infectious exposure across {@link ContactTransmissionType} routes
@@ -59,7 +58,9 @@ import java.util.Set;
  *   <li>{@code contactPair} &mdash; one unordered activity-type pair; sets either inline
  *       {@code transmissionWeights}, a {@code file} with an age-band CSV
  *       ({@code ageA,ageB,<route>,&hellip;}, rows keyed by the {@code ageBands} lower bounds), or
- *       {@code forbidden=true} to block the pair entirely.</li>
+ *       {@code forbidden=true} to block the pair entirely. The two activity types are prefixes of
+ *       container names, as in {@code contactGroup} ({@code edu} covers {@code educ_primary}); when several
+ *       pairs match, the one with the longest combined prefix wins, ties go to the pair configured first.</li>
  *   <li>{@code contactGroup} &mdash; which activity types may share a container at all (see the
  *       constructor).</li>
  * </ul>
@@ -195,6 +196,25 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Returns the contact pairs, as {@code "activityA/activityB"}, whose activity-type prefixes do not both match
+	 * one of the given container names. Such pairs never apply and usually point to a misspelled prefix.
+	 */
+	public List<String> unmatchedContactPairs(Collection<String> containerNames) {
+		List<String> unmatched = new ArrayList<>();
+		for (ContactPairParams params : contactPairs.values()) {
+			if (params.activityA == null || params.activityB == null) {
+				continue;
+			}
+			boolean matchesA = containerNames.stream().anyMatch(name -> name.startsWith(params.activityA));
+			boolean matchesB = containerNames.stream().anyMatch(name -> name.startsWith(params.activityB));
+			if (!matchesA || !matchesB) {
+				unmatched.add(params.activityA + "/" + params.activityB);
+			}
+		}
+		return unmatched;
+	}
+
+	/**
 	 * Returns all configured contact pairs in insertion order.
 	 */
 	public Collection<ContactPairParams> getContactPairs() {
@@ -275,15 +295,13 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			bandIndices.put(bands.get(i), i);
 		}
 
-		Map<String, ResolvedPair> resolvedPairs = new LinkedHashMap<>();
-		Set<String> forbiddenPairs = new HashSet<>();
+		List<PairRule> pairRules = new ArrayList<>();
 		Map<String, TransmissionWeights[][]> loadedFiles = new HashMap<>();
 		for (ContactPairParams params : contactPairs.values()) {
 			params.validate();
-			String key = pairKey(params.activityA, params.activityB);
+			ResolvedPair resolved;
 			if (params.forbidden) {
-				forbiddenPairs.add(key);
-				resolvedPairs.put(key, new ResolvedPair(TransmissionWeights.ZERO, null));
+				resolved = new ResolvedPair(TransmissionWeights.ZERO, null, true);
 			} else if (params.file != null) {
 				URL url = resolveFile(params.file);
 				String resolvedPath = url.toExternalForm();
@@ -292,10 +310,11 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 					table = readAgeMatrix(url, params.file, bands.size(), bandIndices);
 					loadedFiles.put(resolvedPath, table);
 				}
-				resolvedPairs.put(key, new ResolvedPair(null, table));
+				resolved = new ResolvedPair(null, table, false);
 			} else {
-				resolvedPairs.put(key, new ResolvedPair(params.transmissionWeights, null));
+				resolved = new ResolvedPair(params.transmissionWeights, null, false);
 			}
+			pairRules.add(new PairRule(params.activityA, params.activityB, resolved));
 		}
 
 		Map<String, List<String>> groupWhitelist = new LinkedHashMap<>();
@@ -304,7 +323,7 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			groupWhitelist.put(group.getActivity(), new ArrayList<>(group.getAllowedPartners()));
 		}
 
-		return new Resolver(bands, defaultTransmissionWeights, resolvedPairs, groupWhitelist, forbiddenPairs);
+		return new Resolver(bands, defaultTransmissionWeights, pairRules, groupWhitelist);
 	}
 
 	void setContext(URL context) {
@@ -434,7 +453,8 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Route split for one unordered pair of activity types: exactly one of an inline
 	 * {@code transmissionWeights} (relative per-route weights), a {@code file} with an age-band matrix,
-	 * or {@code forbidden=true}.
+	 * or {@code forbidden=true}. {@code activityA} and {@code activityB} are container-name prefixes; the most
+	 * specific matching pair (longest combined prefix) applies.
 	 */
 	public static final class ContactPairParams extends ReflectiveConfigGroup {
 
@@ -637,17 +657,21 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 
 		private final List<Integer> bands;
 		private final TransmissionWeights defaultWeights;
-		private final Map<String, ResolvedPair> pairs;
+		private final List<PairRule> pairRules;
 		private final Map<String, List<String>> groupWhitelist;
-		private final Set<String> forbiddenPairs;
 
-		private Resolver(List<Integer> bands, TransmissionWeights defaultWeights, Map<String, ResolvedPair> pairs,
-				Map<String, List<String>> groupWhitelist, Set<String> forbiddenPairs) {
+		/**
+		 * Most specific matching pair per unordered container-name pair ({@link #NO_MATCH} if none). Filled
+		 * lazily; the set of container names is small and fixed during a run.
+		 */
+		private final Map<String, ResolvedPair> matchCache = new ConcurrentHashMap<>();
+
+		private Resolver(List<Integer> bands, TransmissionWeights defaultWeights, List<PairRule> pairRules,
+				Map<String, List<String>> groupWhitelist) {
 			this.bands = bands;
 			this.defaultWeights = defaultWeights;
-			this.pairs = Collections.unmodifiableMap(new LinkedHashMap<>(pairs));
+			this.pairRules = Collections.unmodifiableList(new ArrayList<>(pairRules));
 			this.groupWhitelist = Collections.unmodifiableMap(new LinkedHashMap<>(groupWhitelist));
-			this.forbiddenPairs = Collections.unmodifiableSet(new HashSet<>(forbiddenPairs));
 		}
 
 		/**
@@ -656,7 +680,8 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		 * types without a group are unconstrained.
 		 */
 		public boolean isContactAllowed(String activityA, String activityB) {
-			if (forbiddenPairs.contains(pairKey(activityA, activityB))) {
+			ResolvedPair pair = match(activityA, activityB);
+			if (pair != null && pair.forbidden) {
 				return false;
 			}
 			return partnerAllowed(activityA, activityB) && partnerAllowed(activityB, activityA);
@@ -686,7 +711,7 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		 * The simple version, if it will be too slow, we could change it later
 		 */
 		public TransmissionWeights resolve(String activityA, String activityB, int ageA, int ageB) {
-			ResolvedPair pair = pairs.get(pairKey(activityA, activityB));
+			ResolvedPair pair = match(activityA, activityB);
 			if (pair == null) {
 				return defaultWeights;
 			}
@@ -701,6 +726,33 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
+		 * Most specific configured pair for two container names, or {@code null}. A pair matches when each of its
+		 * activity types is a prefix of one of the two names (in either order); the longest combined prefix wins,
+		 * ties go to the pair configured first.
+		 */
+		private ResolvedPair match(String activityA, String activityB) {
+			String key = pairKey(activityA, activityB);
+			ResolvedPair cached = matchCache.get(key);
+			if (cached == null) {
+				cached = findBestMatch(activityA, activityB);
+				matchCache.putIfAbsent(key, cached);
+			}
+			return cached == NO_MATCH ? null : cached;
+		}
+
+		private ResolvedPair findBestMatch(String activityA, String activityB) {
+			ResolvedPair best = NO_MATCH;
+			int bestSpecificity = -1;
+			for (PairRule rule : pairRules) {
+				if (rule.matches(activityA, activityB) && rule.specificity() > bestSpecificity) {
+					best = rule.pair;
+					bestSpecificity = rule.specificity();
+				}
+			}
+			return best;
+		}
+
+		/**
 		 * Returns the age-band index containing the supplied age.
 		 */
 		public int bandIndex(int age) {
@@ -712,13 +764,42 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
+	/** Marker for "no configured pair matches" in the resolver cache; never returned to callers. */
+	private static final ResolvedPair NO_MATCH = new ResolvedPair(null, null, false);
+
 	private static final class ResolvedPair {
 		private final TransmissionWeights inlineWeights;
 		private final TransmissionWeights[][] table;
+		private final boolean forbidden;
 
-		private ResolvedPair(TransmissionWeights inlineWeights, TransmissionWeights[][] table) {
+		private ResolvedPair(TransmissionWeights inlineWeights, TransmissionWeights[][] table, boolean forbidden) {
 			this.inlineWeights = inlineWeights;
 			this.table = table;
+			this.forbidden = forbidden;
+		}
+	}
+
+	/**
+	 * One configured contact pair: two activity-type prefixes and what they resolve to.
+	 */
+	private static final class PairRule {
+		private final String activityA;
+		private final String activityB;
+		private final ResolvedPair pair;
+
+		private PairRule(String activityA, String activityB, ResolvedPair pair) {
+			this.activityA = activityA;
+			this.activityB = activityB;
+			this.pair = pair;
+		}
+
+		private boolean matches(String x, String y) {
+			return (x.startsWith(activityA) && y.startsWith(activityB))
+					|| (x.startsWith(activityB) && y.startsWith(activityA));
+		}
+
+		private int specificity() {
+			return activityA.length() + activityB.length();
 		}
 	}
 }

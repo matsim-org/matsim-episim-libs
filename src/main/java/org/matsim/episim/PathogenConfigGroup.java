@@ -53,6 +53,12 @@ import java.util.TreeMap;
  * by direct contact is written as e.g. {@code respiratory=1.0;directContact=0.4} (note the sum exceeds 1,
  * which is allowed). Only finite, non-negative weights are accepted, and a pathogen whose weights are all
  * zero &mdash; it could not transmit at all &mdash; is rejected on config finalisation.</p>
+ *
+ * <p>Each {@link PathogenParams} also defines the <b>isolation at symptom onset</b>. A person who starts showing
+ * symptoms goes into {@code symptomaticIsolationStatus} ({@code full}: no contacts at all; {@code atHome}: home
+ * activities only) with probability {@code symptomaticIsolationProbabilityByAge} (same age-bucket notation). The
+ * decision is drawn once per person at symptom onset and holds until recovery. The defaults ({@code 0=1.0},
+ * {@code full}) reproduce the previously hard-coded behaviour, including the random number stream.</p>
  */
 public class PathogenConfigGroup extends ReflectiveConfigGroup {
 
@@ -184,6 +190,8 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private static final String CRITICAL = "criticalProbabilityByAge";
 		private static final String DEATH = "deathProbabilityByAge";
 		private static final String ROUTE_TRANSMISSIBILITY = "routeTransmissibility";
+		private static final String SYMPTOMATIC_ISOLATION = "symptomaticIsolationProbabilityByAge";
+		private static final String SYMPTOMATIC_ISOLATION_STATUS = "symptomaticIsolationStatus";
 
 		private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 		private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
@@ -210,6 +218,16 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		 * {@link ContactTransmissionConfigGroup}. Defaults to respiratory-only.
 		 */
 		private TransmissionWeights routeTransmissibility = TransmissionWeights.parse("respiratory=1.0");
+
+		/**
+		 * Probability that a person isolates at symptom onset, by age. Defaults to everybody (the previous behaviour).
+		 */
+		private final NavigableMap<Integer, Double> symptomaticIsolationProbabilityByAge = new TreeMap<>(Map.of(0, 1.0));
+
+		/**
+		 * Quarantine status of a person who isolates at symptom onset: {@code full} or {@code atHome}.
+		 */
+		private EpisimPerson.QuarantineStatus symptomaticIsolationStatus = EpisimPerson.QuarantineStatus.full;
 
 		PathogenParams() {
 			super(SET_TYPE);
@@ -359,6 +377,63 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			this.routeTransmissibility = Objects.requireNonNull(routeTransmissibility, ROUTE_TRANSMISSIBILITY);
 		}
 
+		@StringGetter(SYMPTOMATIC_ISOLATION)
+		String getSymptomaticIsolationProbabilityByAgeString() {
+			return JOINER.join(symptomaticIsolationProbabilityByAge);
+		}
+
+		@StringSetter(SYMPTOMATIC_ISOLATION)
+		void setSymptomaticIsolationProbabilityByAge(String config) {
+			replace(symptomaticIsolationProbabilityByAge, parse(SYMPTOMATIC_ISOLATION, config));
+		}
+
+		/**
+		 * Set the probability of isolating at symptom onset by age, replacing all previous entries.
+		 */
+		public void setSymptomaticIsolationProbabilityByAge(Map<Integer, Double> values) {
+			replace(symptomaticIsolationProbabilityByAge, validated(SYMPTOMATIC_ISOLATION, values));
+		}
+
+		public NavigableMap<Integer, Double> getSymptomaticIsolationProbabilityByAge() {
+			return symptomaticIsolationProbabilityByAge;
+		}
+
+		/**
+		 * Probability that a person of the given age isolates at symptom onset.
+		 */
+		public double getSymptomaticIsolationProbability(int age) {
+			return forAge(SYMPTOMATIC_ISOLATION, symptomaticIsolationProbabilityByAge, age);
+		}
+
+		@StringGetter(SYMPTOMATIC_ISOLATION_STATUS)
+		String getSymptomaticIsolationStatusString() {
+			return symptomaticIsolationStatus.name();
+		}
+
+		@StringSetter(SYMPTOMATIC_ISOLATION_STATUS)
+		void setSymptomaticIsolationStatusString(String status) {
+			setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.valueOf(status.trim()));
+		}
+
+		/**
+		 * Quarantine status of a person who isolates at symptom onset.
+		 */
+		public EpisimPerson.QuarantineStatus getSymptomaticIsolationStatus() {
+			return symptomaticIsolationStatus;
+		}
+
+		/**
+		 * Set the quarantine status used for isolation at symptom onset; only {@code full} and {@code atHome} are
+		 * allowed. Disable isolation with a probability of 0 instead.
+		 */
+		public void setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus status) {
+			Objects.requireNonNull(status, SYMPTOMATIC_ISOLATION_STATUS);
+			if (status != EpisimPerson.QuarantineStatus.full && status != EpisimPerson.QuarantineStatus.atHome)
+				throw new IllegalArgumentException("'" + SYMPTOMATIC_ISOLATION_STATUS + "' must be 'full' or 'atHome' but was '"
+						+ status + "'; set '" + SYMPTOMATIC_ISOLATION + "' to 0 to disable isolation.");
+			this.symptomaticIsolationStatus = status;
+		}
+
 		/**
 		 * Set the {@code showingSymptoms} age profile, replacing all previous entries.
 		 */
@@ -440,6 +515,7 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			requireNonEmpty(groupName, SERIOUSLY_SICK, seriouslySickProbabilityByAge);
 			requireNonEmpty(groupName, CRITICAL, criticalProbabilityByAge);
 			requireNonEmpty(groupName, DEATH, deathProbabilityByAge);
+			requireNonEmpty(groupName, SYMPTOMATIC_ISOLATION, symptomaticIsolationProbabilityByAge);
 			if (routeTransmissibility.isZero())
 				throw new IllegalStateException("pathogen '" + pathogen.getName() + "' in config group '" + groupName
 						+ "' has an all-zero '" + ROUTE_TRANSMISSIBILITY + "'; it cannot transmit by any route.");

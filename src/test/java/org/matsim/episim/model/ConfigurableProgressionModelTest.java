@@ -12,6 +12,7 @@ import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -69,7 +70,7 @@ public class ConfigurableProgressionModelTest {
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
-		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, vaccinationConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
+		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, vaccinationConfig, pathogenConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
 		model.setIteration(1);
 	}
 
@@ -322,7 +323,7 @@ public class ConfigurableProgressionModelTest {
 				.build());
 
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
-		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
+		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, pathogenConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
 
 		List<Double> recoveredDays = new ArrayList<>();
 
@@ -352,6 +353,109 @@ public class ConfigurableProgressionModelTest {
 		// In average persons should recover on day 14
 		assertThat(new Mean().evaluate(Doubles.toArray(recoveredDays)))
 				.isCloseTo(14, Percentage.withPercentage(1));
+	}
+
+	@Test
+	public void symptomaticIsolationDefaultsToFull() {
+
+		List<EpisimPerson> symptomatic = symptomaticPersons(1_000);
+
+		assertThat(symptomatic).isNotEmpty();
+		assertThat(symptomatic).allMatch(p -> p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full);
+	}
+
+	@Test
+	public void symptomaticIsolationCanBeDisabled() {
+
+		pathogenConfig.getParams(Pathogen.SARS_COV_2).setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.0));
+
+		List<EpisimPerson> symptomatic = symptomaticPersons(1_000);
+
+		assertThat(symptomatic).isNotEmpty();
+		assertThat(symptomatic).allMatch(p -> p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no);
+	}
+
+	@Test
+	public void symptomaticIsolationIsPartialAndAtHome() {
+
+		PathogenConfigGroup.PathogenParams params = pathogenConfig.getParams(Pathogen.SARS_COV_2);
+		params.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.25));
+		params.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
+
+		List<EpisimPerson> symptomatic = symptomaticPersons(10_000);
+		long atHome = symptomatic.stream().filter(p -> p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome).count();
+
+		assertThat(symptomatic).noneMatch(p -> p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full);
+		assertThat(symptomatic).allMatch(p -> p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome
+				|| p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no);
+		assertThat((double) atHome / symptomatic.size()).isCloseTo(0.25, org.assertj.core.data.Offset.offset(0.02));
+	}
+
+	@Test
+	public void deceasedIsTerminal() {
+
+		// force the whole severe branch: every step to the more severe state, death out of ICU
+		PathogenConfigGroup.PathogenParams sars = pathogenConfig.getParams(Pathogen.SARS_COV_2, false);
+		sars.setShowingSymptomsProbabilityByAge(Map.of(0, 1.0));
+		sars.setSeriouslySickProbabilityByAge(Map.of(0, 1.0));
+		sars.setCriticalProbabilityByAge(Map.of(0, 1.0));
+		sars.setDeathProbabilityByAge(Map.of(0, 1.0));
+
+		EpisimConfigGroup config = new EpisimConfigGroup();
+		config.setProgressionConfig(Transition.config()
+				.from(DiseaseStatus.infectedButNotContagious,
+						to(DiseaseStatus.contagious, Transition.fixed(1)))
+				.from(DiseaseStatus.contagious,
+						to(DiseaseStatus.showingSymptoms, Transition.fixed(1)),
+						to(DiseaseStatus.recovered, Transition.fixed(1)))
+				.from(DiseaseStatus.showingSymptoms,
+						to(DiseaseStatus.seriouslySick, Transition.fixed(1)),
+						to(DiseaseStatus.recovered, Transition.fixed(1)))
+				.from(DiseaseStatus.seriouslySick,
+						to(DiseaseStatus.critical, Transition.fixed(1)),
+						to(DiseaseStatus.recovered, Transition.fixed(1)))
+				.from(DiseaseStatus.critical,
+						to(DiseaseStatus.deceased, Transition.fixed(1)),
+						to(DiseaseStatus.seriouslySickAfterCritical, Transition.fixed(1)))
+				.from(DiseaseStatus.seriouslySickAfterCritical,
+						to(DiseaseStatus.recovered, Transition.fixed(1)))
+				.from(DiseaseStatus.recovered,
+						to(DiseaseStatus.susceptible, Transition.fixed(1)))
+				.build());
+
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
+		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, pathogenConfig,
+				new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
+		model.setIteration(1);
+
+		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
+		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+
+		// deceased on day 5; further updates must neither throw nor change the state
+		for (int day = 0; day <= 20; day++) {
+			model.updateState(p, day);
+		}
+
+		assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.deceased);
+		assertThat(p.getQuarantineStatus()).isEqualTo(EpisimPerson.QuarantineStatus.no);
+		assertThat(model.getNextTransitionDays(p.getPersonId())).isEqualTo(-1);
+	}
+
+	/**
+	 * Runs {@code n} fresh infections to day 6 of {@link #TEST_CONFIG} and returns those showing symptoms.
+	 */
+	private List<EpisimPerson> symptomaticPersons(int n) {
+		List<EpisimPerson> result = new ArrayList<>();
+		for (int i = 0; i < n; i++) {
+			EpisimPerson p = EpisimTestUtils.createPerson(reporting);
+			p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+			for (int day = 0; day <= 6; day++) {
+				model.updateState(p, day);
+			}
+			if (p.getDiseaseStatus() == DiseaseStatus.showingSymptoms)
+				result.add(p);
+		}
+		return result;
 	}
 
 

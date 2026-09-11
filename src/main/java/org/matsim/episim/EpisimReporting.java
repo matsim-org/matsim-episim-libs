@@ -413,6 +413,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 						district.nTotalInfectedVaccinated++;
 					}
 					break;
+				case deceased:
+					// no longer part of the living population; counted cumulatively in nDeceasedCumulative
+					break;
 				case recovered:
 					report.nRecovered++;
 					district.nRecovered++;

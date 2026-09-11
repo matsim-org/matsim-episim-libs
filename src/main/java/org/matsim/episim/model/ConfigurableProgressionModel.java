@@ -85,6 +85,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
+	private final PathogenConfigGroup pathogenConfig;
 
 	/**
 	 * Counts how many infections occurred at each location.
@@ -139,10 +140,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	@Inject
 	public ConfigurableProgressionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-	                                    VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
+	                                    VaccinationConfigGroup vaccinationConfig, PathogenConfigGroup pathogenConfig,
+	                                    DiseaseStatusTransitionModel statusTransitionModel) {
 		super(rnd, episimConfig, statusTransitionModel);
 		this.tracingConfig = tracingConfig;
 		this.vaccinationConfig = vaccinationConfig;
+		this.pathogenConfig = pathogenConfig;
 
 		Config config = episimConfig.getProgressionConfig();
 
@@ -240,7 +243,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		if (to == DiseaseStatus.showingSymptoms) {
 
-			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
+			isolateSymptomatic(person, day);
 			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
 			if (tracingDelay == 0) {
 				performTracing(person, now, day);
@@ -259,6 +262,19 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Isolation at symptom onset, configured per pathogen in {@link PathogenConfigGroup.PathogenParams}. Decided once per
+	 * person; a person who does not isolate keeps any quarantine status it already has (e.g. from tracing). With a
+	 * probability of 1 (the default) no random number is drawn, so the random stream is unchanged.
+	 */
+	private void isolateSymptomatic(EpisimPerson person, int day) {
+		PathogenConfigGroup.PathogenParams params = pathogenConfig.getParams(person.getVirusStrain().getPathogen());
+		double probability = params.getSymptomaticIsolationProbability(person.getAgeOrDefault(0));
+
+		if (probability >= 1.0 || (probability > 0.0 && rnd.nextDouble() < probability))
+			person.setQuarantineStatus(params.getSymptomaticIsolationStatus(), day);
 	}
 
 	@Override
