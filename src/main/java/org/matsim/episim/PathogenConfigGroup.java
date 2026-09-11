@@ -84,10 +84,19 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Get the age-independent parameter set for a pathogen.
+	 * Get the parameter set for a pathogen.
 	 */
 	public PathogenParams getParams(Pathogen pathogen) {
-		return getParams(pathogen, false);
+		if (store(false).get(pathogen)!= null){
+			return getParams(pathogen, false);
+		} else if (store(true).get(pathogen)!=null){
+			return getParams(pathogen, true);
+		} else {
+			throw new IllegalStateException("No "
+				+ "pathogen configuration for '" + pathogen.getName() + "'. Add a '" + PathogenParams.SET_TYPE
+				+ "' parameter set for this pathogen to the '" + GROUPNAME + "' config group.");
+		}
+
 	}
 
 	/**

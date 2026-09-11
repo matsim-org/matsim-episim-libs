@@ -55,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * copied into test sources. Skeleton: numbers in {@link #configureRsv} are placeholders;
  * {@link #runsOnCologneScenario()} is disabled (downloads the Cologne input set).</p>
  *
- * <p><b>Known limitation</b> (see {@code docs/multi-pathogen-refactor.md}): the antibody / individual
+ * <p><b>Known limitation</b> the antibody / individual
  * immunity model is still SARS-CoV-2 specific. These templates seed only RSV (the SARS-CoV-2 disease
  * import is cleared); co-circulation needs the immunity model reworked first.</p>
  */
@@ -93,12 +93,12 @@ public class RsvCologneScenarioTest {
 		strain.setInfectiousness(1.0);                       // TODO calibrate
 
 		// 2. natural history + per-route transmissibility (age-independent variant)
-		PathogenConfigGroup.PathogenParams flat = pathogenConfig.getOrAddParams(RSV, false);
-		flat.setShowingSymptomsProbabilityByAge(Map.of(0, 0.50));   // TODO
-		flat.setSeriouslySickProbabilityByAge(Map.of(0, 0.020));    // TODO
-		flat.setCriticalProbabilityByAge(Map.of(0, 0.050));         // TODO
-		flat.setDeathProbabilityByAge(Map.of(0, 0.0));              // TODO
-		flat.setRouteTransmissibility(TransmissionWeights.parse(RSV_ROUTE_TRANSMISSIBILITY));
+		//PathogenConfigGroup.PathogenParams flat = pathogenConfig.getOrAddParams(RSV, false);
+		//flat.setShowingSymptomsProbabilityByAge(Map.of(0, 0.50));   // TODO
+		//flat.setSeriouslySickProbabilityByAge(Map.of(0, 0.020));    // TODO
+		//flat.setCriticalProbabilityByAge(Map.of(0, 0.050));         // TODO
+		//flat.setDeathProbabilityByAge(Map.of(0, 0.0));              // TODO
+		//flat.setRouteTransmissibility(TransmissionWeights.parse(RSV_ROUTE_TRANSMISSIBILITY));
 
 		// 3. natural history - age-dependent variant. RSV skews hard to infants and the elderly.
 		PathogenConfigGroup.PathogenParams byAge = pathogenConfig.getOrAddParams(RSV, true);
@@ -165,7 +165,7 @@ public class RsvCologneScenarioTest {
 
 		assertThat(virusStrainConfig.getParams(RSV_STRAIN).getPathogen()).isEqualTo(RSV);
 
-		TransmissionWeights routes = pathogenConfig.getParams(RSV, false).getRouteTransmissibility();
+		TransmissionWeights routes = pathogenConfig.getParams(RSV, true).getRouteTransmissibility();
 		assertThat(routes.getRespiratory()).isEqualTo(1.0);
 		assertThat(routes.getDirectContact()).isGreaterThan(0.0);
 
@@ -189,7 +189,7 @@ public class RsvCologneScenarioTest {
 	 * Skeleton for the real thing: the full Cologne open scenario with RSV as the only circulating virus.
 	 */
 	@Test
-	@Disabled("template: downloads the full Cologne input set from the VSP SVN; provide real parameters and assertions")
+	//@Disabled("template: downloads the full Cologne input set from the VSP SVN; provide real parameters and assertions")
 	public void runsOnCologneScenario() throws Exception {
 
 		OutputDirectoryLogging.catchLogEntries();
