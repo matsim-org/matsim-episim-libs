@@ -39,10 +39,15 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.run.modules.SnzCologneOpenProductionScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -97,7 +102,11 @@ public class InfluenzaCologneScenarioTest {
 	/** Log-normal sigma of the ICU stay: median 4 d, IQR 1-8 d (doi:10.3390/v17111467); ln(8/1) / (2 * 0.6745). */
 	private static final double ICU_LOS_SIGMA = Math.log(8.0 / 1.0) / (2 * 0.6745);
 
-	private static final int ITERATIONS = 10;
+	/** Columns of {@code infectionEvents.txt}: time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability. */
+	private static final int DATE_COLUMN = 4;
+	private static final int VIRUS_STRAIN_COLUMN = 7;
+
+	private static final int ITERATIONS = 100;
 
 	@RegisterExtension
 	public MatsimTestUtils utils = new MatsimTestUtils();
@@ -331,14 +340,39 @@ public class InfluenzaCologneScenarioTest {
 
 		injector.getInstance(EpisimRunner.class).run(ITERATIONS);
 
+		Path infectionEvents = output.runOutput().resolve(output.runId() + ".infectionEvents.txt");
 		assertThat(output.runOutput().resolve(output.runId() + ".infections.txt")).exists();
+		assertThat(infectionEvents).exists();
 
 		output.pack(config, "cologne", "influenza", ITERATIONS, "Köln");
 		assertThat(output.visualizationWithSeeds().resolve("summaries/" + output.runId() + ".zip")).exists();
 		assertThat(output.visualizationWithoutSeeds().resolve("summaries/0.zip")).exists();
 
-		// TODO assert influenza actually circulated:
-		//  - infectionEvents.txt has rows with virusStrain == "influenza", none with SARS_CoV_2
-		//  - infections grow over the run
+		List<String> strains;
+		Map<String, Long> infectionsPerDay;
+		try (Stream<String> lines = Files.lines(infectionEvents)) {
+			List<String[]> rows = lines.skip(1)
+					.map(line -> line.split("\t"))
+					.filter(row -> row.length > VIRUS_STRAIN_COLUMN)
+					.toList();
+
+			strains = rows.stream().map(row -> row[VIRUS_STRAIN_COLUMN]).distinct().toList();
+			infectionsPerDay = rows.stream().collect(
+					Collectors.groupingBy(row -> row[DATE_COLUMN], TreeMap::new, Collectors.counting()));
+		}
+
+		// influenza circulated, and it was the only strain that did
+		assertThat(strains).containsExactly(INFLUENZA_STRAIN.toString());
+
+		// infections grow over the run: the epidemic lifts off the seeded trickle to a far larger peak.
+		// Not half against half - over enough iterations the run spans the whole curve and the second half is the decline.
+		List<Long> daily = List.copyOf(infectionsPerDay.values());
+		assertThat(daily).as("simulated days carrying infections").hasSizeGreaterThan(1);
+
+		long peak = daily.stream().mapToLong(Long::longValue).max().orElseThrow();
+		long opening = daily.stream().limit(5).mapToLong(Long::longValue).sum();
+
+		assertThat(daily.indexOf(peak)).as("peak falls after the first simulated day").isPositive();
+		assertThat(peak).as("peak daily infections against the first five days").isGreaterThan(opening);
 	}
 }
