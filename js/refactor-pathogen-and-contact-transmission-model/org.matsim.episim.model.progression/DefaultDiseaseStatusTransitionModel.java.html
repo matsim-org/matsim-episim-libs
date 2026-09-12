@@ -70,8 +70,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 
 			case critical:
 <span class="fc" id="L72">				double proba = getProbaOfTransitioningToDeceased(person);</span>
-<span class="pc bpc" id="L73" title="3 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
-<span class="nc" id="L74">					return DiseaseStatus.deceased;</span>
+<span class="pc bpc" id="L73" title="1 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
+<span class="fc" id="L74">					return DiseaseStatus.deceased;</span>
 				else
 <span class="fc" id="L76">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
 

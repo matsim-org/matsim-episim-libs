@@ -572,9 +572,9 @@ public final class Restriction {
 <span class="pc bpc" id="L572" title="1 of 2 branches missed.">		else if (vaccinatedRf == null)</span>
 <span class="fc" id="L573">			vaccinatedRf = otherVRf;</span>
 
-<span class="pc bpc" id="L575" title="3 of 6 branches missed.">		if (!maskUsage.isEmpty() &amp;&amp; !otherMasks.isEmpty() &amp;&amp; !maskUsage.equals(otherMasks)) {</span>
-<span class="nc" id="L576">			log.warn(&quot;Duplicated mask usage; existing value=&quot; + maskUsage + &quot;; new value=&quot; + otherMasks + &quot;; keeping existing value.&quot;);</span>
-<span class="nc" id="L577">			log.warn(&quot;(full new restriction=&quot; + restriction + &quot;)&quot;);</span>
+<span class="pc bpc" id="L575" title="1 of 6 branches missed.">		if (!maskUsage.isEmpty() &amp;&amp; !otherMasks.isEmpty() &amp;&amp; !maskUsage.equals(otherMasks)) {</span>
+<span class="fc" id="L576">			log.warn(&quot;Duplicated mask usage; existing value=&quot; + maskUsage + &quot;; new value=&quot; + otherMasks + &quot;; keeping existing value.&quot;);</span>
+<span class="fc" id="L577">			log.warn(&quot;(full new restriction=&quot; + restriction + &quot;)&quot;);</span>
 <span class="fc bfc" id="L578" title="All 2 branches covered.">		} else if (maskUsage.isEmpty())</span>
 <span class="fc" id="L579">			maskUsage.putAll(otherMasks);</span>
 

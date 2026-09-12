@@ -53,6 +53,12 @@ import java.util.TreeMap;
  * by direct contact is written as e.g. {@code respiratory=1.0;directContact=0.4} (note the sum exceeds 1,
  * which is allowed). Only finite, non-negative weights are accepted, and a pathogen whose weights are all
  * zero &amp;mdash; it could not transmit at all &amp;mdash; is rejected on config finalisation.&lt;/p&gt;
+ *
+ * &lt;p&gt;Each {@link PathogenParams} also defines the &lt;b&gt;isolation at symptom onset&lt;/b&gt;. A person who starts showing
+ * symptoms goes into {@code symptomaticIsolationStatus} ({@code full}: no contacts at all; {@code atHome}: home
+ * activities only) with probability {@code symptomaticIsolationProbabilityByAge} (same age-bucket notation). The
+ * decision is drawn once per person at symptom onset and holds until recovery. The defaults ({@code 0=1.0},
+ * {@code full}) reproduce the previously hard-coded behaviour, including the random number stream.&lt;/p&gt;
  */
 public class PathogenConfigGroup extends ReflectiveConfigGroup {
 
@@ -61,33 +67,42 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Base probabilities that are looked up independently of age (a single {@code 0=value} bucket).
 	 */
-<span class="fc" id="L64">	private final Map&lt;Pathogen, PathogenParams&gt; ageIndependentParams = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L70">	private final Map&lt;Pathogen, PathogenParams&gt; ageIndependentParams = new LinkedHashMap&lt;&gt;();</span>
 
 	/**
 	 * Base probabilities that carry a full age profile.
 	 */
-<span class="fc" id="L69">	private final Map&lt;Pathogen, PathogenParams&gt; ageDependentParams = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L75">	private final Map&lt;Pathogen, PathogenParams&gt; ageDependentParams = new LinkedHashMap&lt;&gt;();</span>
 
 	/**
 	 * Default constructor. Registers the SARS-CoV-2 defaults so that existing COVID configurations without an
 	 * explicit {@code pathogen} section keep behaving exactly as before.
 	 */
 	public PathogenConfigGroup() {
-<span class="fc" id="L76">		super(GROUPNAME);</span>
+<span class="fc" id="L82">		super(GROUPNAME);</span>
 
-<span class="fc" id="L78">		addParameterSet(PathogenParams.sarsCov2AgeIndependentDefault());</span>
-<span class="fc" id="L79">		addParameterSet(PathogenParams.sarsCov2AgeDependentDefault());</span>
-<span class="fc" id="L80">	}</span>
+<span class="fc" id="L84">		addParameterSet(PathogenParams.sarsCov2AgeIndependentDefault());</span>
+<span class="fc" id="L85">		addParameterSet(PathogenParams.sarsCov2AgeDependentDefault());</span>
+<span class="fc" id="L86">	}</span>
 
 	private Map&lt;Pathogen, PathogenParams&gt; store(boolean ageDependent) {
-<span class="fc bfc" id="L83" title="All 2 branches covered.">		return ageDependent ? ageDependentParams : ageIndependentParams;</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">		return ageDependent ? ageDependentParams : ageIndependentParams;</span>
 	}
 
 	/**
-	 * Get the age-independent parameter set for a pathogen.
+	 * Get the parameter set for a pathogen.
 	 */
 	public PathogenParams getParams(Pathogen pathogen) {
-<span class="fc" id="L90">		return getParams(pathogen, false);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">		if (store(false).get(pathogen)!= null){</span>
+<span class="fc" id="L97">			return getParams(pathogen, false);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">		} else if (store(true).get(pathogen)!=null){</span>
+<span class="fc" id="L99">			return getParams(pathogen, true);</span>
+		} else {
+<span class="fc" id="L101">			throw new IllegalStateException(&quot;No &quot;</span>
+<span class="fc" id="L102">				+ &quot;pathogen configuration for '&quot; + pathogen.getName() + &quot;'. Add a '&quot; + PathogenParams.SET_TYPE</span>
+				+ &quot;' parameter set for this pathogen to the '&quot; + GROUPNAME + &quot;' config group.&quot;);
+		}
+
 	}
 
 	/**
@@ -96,70 +111,70 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 	 * @throws IllegalStateException if the pathogen (in the requested variant) has not been configured
 	 */
 	public PathogenParams getParams(Pathogen pathogen, boolean ageDependent) {
-<span class="fc" id="L99">		PathogenParams params = store(ageDependent).get(pathogen);</span>
-<span class="fc bfc" id="L100" title="All 2 branches covered.">		if (params == null) {</span>
-<span class="pc bpc" id="L101" title="1 of 2 branches missed.">			throw new IllegalStateException(&quot;No &quot; + (ageDependent ? &quot;age-dependent &quot; : &quot;&quot;)</span>
-<span class="fc" id="L102">					+ &quot;pathogen configuration for '&quot; + pathogen.getName() + &quot;'. Add a '&quot; + PathogenParams.SET_TYPE</span>
+<span class="fc" id="L114">		PathogenParams params = store(ageDependent).get(pathogen);</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">		if (params == null) {</span>
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">			throw new IllegalStateException(&quot;No &quot; + (ageDependent ? &quot;age-dependent &quot; : &quot;&quot;)</span>
+<span class="fc" id="L117">					+ &quot;pathogen configuration for '&quot; + pathogen.getName() + &quot;'. Add a '&quot; + PathogenParams.SET_TYPE</span>
 					+ &quot;' parameter set for this pathogen to the '&quot; + GROUPNAME + &quot;' config group&quot;
-<span class="pc bpc" id="L104" title="1 of 2 branches missed.">					+ (ageDependent ? &quot; with ageDependent=true&quot; : &quot;&quot;) + &quot;.&quot;);</span>
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">					+ (ageDependent ? &quot; with ageDependent=true&quot; : &quot;&quot;) + &quot;.&quot;);</span>
 		}
-<span class="fc" id="L106">		return params;</span>
+<span class="fc" id="L121">		return params;</span>
 	}
 
 	/**
 	 * Whether a parameter set for the pathogen (in the given variant) is present.
 	 */
 	public boolean hasParams(Pathogen pathogen, boolean ageDependent) {
-<span class="fc" id="L113">		return store(ageDependent).containsKey(pathogen);</span>
+<span class="fc" id="L128">		return store(ageDependent).containsKey(pathogen);</span>
 	}
 
 	/**
 	 * Get an existing or add a new (empty) parameter set for the given pathogen and variant.
 	 */
 	public PathogenParams getOrAddParams(Pathogen pathogen, boolean ageDependent) {
-<span class="fc" id="L120">		PathogenParams existing = store(ageDependent).get(pathogen);</span>
-<span class="pc bpc" id="L121" title="1 of 2 branches missed.">		if (existing != null)</span>
-<span class="nc" id="L122">			return existing;</span>
+<span class="fc" id="L135">		PathogenParams existing = store(ageDependent).get(pathogen);</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">		if (existing != null)</span>
+<span class="nc" id="L137">			return existing;</span>
 
-<span class="fc" id="L124">		PathogenParams p = new PathogenParams();</span>
-<span class="fc" id="L125">		p.setPathogen(pathogen);</span>
-<span class="fc" id="L126">		p.setAgeDependent(ageDependent);</span>
-<span class="fc" id="L127">		addParameterSet(p);</span>
-<span class="fc" id="L128">		return p;</span>
+<span class="fc" id="L139">		PathogenParams p = new PathogenParams();</span>
+<span class="fc" id="L140">		p.setPathogen(pathogen);</span>
+<span class="fc" id="L141">		p.setAgeDependent(ageDependent);</span>
+<span class="fc" id="L142">		addParameterSet(p);</span>
+<span class="fc" id="L143">		return p;</span>
 	}
 
 	@Override
 	protected void checkConsistency(Config config) {
-<span class="fc" id="L133">		super.checkConsistency(config);</span>
+<span class="fc" id="L148">		super.checkConsistency(config);</span>
 
-<span class="fc bfc" id="L135" title="All 2 branches covered.">		for (ConfigGroup set : getParameterSets(PathogenParams.SET_TYPE)) {</span>
-<span class="fc" id="L136">			((PathogenParams) set).validateComplete(getName());</span>
-<span class="fc" id="L137">		}</span>
-<span class="fc" id="L138">	}</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">		for (ConfigGroup set : getParameterSets(PathogenParams.SET_TYPE)) {</span>
+<span class="fc" id="L151">			((PathogenParams) set).validateComplete(getName());</span>
+<span class="fc" id="L152">		}</span>
+<span class="fc" id="L153">	}</span>
 
 	@Override
 	public ConfigGroup createParameterSet(String type) {
-<span class="pc bpc" id="L142" title="1 of 2 branches missed.">		if (PathogenParams.SET_TYPE.equals(type))</span>
-<span class="fc" id="L143">			return new PathogenParams();</span>
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">		if (PathogenParams.SET_TYPE.equals(type))</span>
+<span class="fc" id="L158">			return new PathogenParams();</span>
 
-<span class="nc" id="L145">		throw new IllegalArgumentException(&quot;Unknown parameter set type: &quot; + type);</span>
+<span class="nc" id="L160">		throw new IllegalArgumentException(&quot;Unknown parameter set type: &quot; + type);</span>
 	}
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
-<span class="pc bpc" id="L150" title="1 of 2 branches missed.">		if (!PathogenParams.SET_TYPE.equals(set.getName()))</span>
-<span class="nc" id="L151">			throw new IllegalStateException(&quot;Unknown parameter set type: &quot; + set.getName());</span>
+<span class="pc bpc" id="L165" title="1 of 2 branches missed.">		if (!PathogenParams.SET_TYPE.equals(set.getName()))</span>
+<span class="nc" id="L166">			throw new IllegalStateException(&quot;Unknown parameter set type: &quot; + set.getName());</span>
 
-<span class="fc" id="L153">		PathogenParams p = (PathogenParams) set;</span>
+<span class="fc" id="L168">		PathogenParams p = (PathogenParams) set;</span>
 
-<span class="fc" id="L155">		PathogenParams previous = store(p.isAgeDependent()).put(p.getPathogen(), p);</span>
+<span class="fc" id="L170">		PathogenParams previous = store(p.isAgeDependent()).put(p.getPathogen(), p);</span>
 
 		// Replace a previously registered set (e.g. the auto-added SARS-CoV-2 default) instead of keeping a stale duplicate.
-<span class="fc bfc" id="L158" title="All 2 branches covered.">		if (previous != null)</span>
-<span class="fc" id="L159">			super.removeParameterSet(previous);</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">		if (previous != null)</span>
+<span class="fc" id="L174">			super.removeParameterSet(previous);</span>
 
-<span class="fc" id="L161">		super.addParameterSet(set);</span>
-<span class="fc" id="L162">	}</span>
+<span class="fc" id="L176">		super.addParameterSet(set);</span>
+<span class="fc" id="L177">	}</span>
 
 	/**
 	 * Base disease-progression probabilities for a single {@link Pathogen}.
@@ -175,52 +190,64 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private static final String CRITICAL = &quot;criticalProbabilityByAge&quot;;
 		private static final String DEATH = &quot;deathProbabilityByAge&quot;;
 		private static final String ROUTE_TRANSMISSIBILITY = &quot;routeTransmissibility&quot;;
+		private static final String SYMPTOMATIC_ISOLATION = &quot;symptomaticIsolationProbabilityByAge&quot;;
+		private static final String SYMPTOMATIC_ISOLATION_STATUS = &quot;symptomaticIsolationStatus&quot;;
 
-<span class="fc" id="L179">		private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
-<span class="fc" id="L180">		private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L196">		private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L197">		private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
 
 		/**
 		 * Pathogen this parameter set applies to.
 		 */
-<span class="fc" id="L185">		private Pathogen pathogen = Pathogen.SARS_COV_2;</span>
+<span class="fc" id="L202">		private Pathogen pathogen = Pathogen.SARS_COV_2;</span>
 
 		/**
 		 * Whether this parameter set carries a full age profile. Age-independent sets and age-dependent sets are
 		 * stored separately so a pathogen can keep both the flat base values and the age tables.
 		 */
-<span class="fc" id="L191">		private boolean ageDependent = false;</span>
+<span class="fc" id="L208">		private boolean ageDependent = false;</span>
 
-<span class="fc" id="L193">		private final NavigableMap&lt;Integer, Double&gt; showingSymptomsProbabilityByAge = new TreeMap&lt;&gt;();</span>
-<span class="fc" id="L194">		private final NavigableMap&lt;Integer, Double&gt; seriouslySickProbabilityByAge = new TreeMap&lt;&gt;();</span>
-<span class="fc" id="L195">		private final NavigableMap&lt;Integer, Double&gt; criticalProbabilityByAge = new TreeMap&lt;&gt;();</span>
-<span class="fc" id="L196">		private final NavigableMap&lt;Integer, Double&gt; deathProbabilityByAge = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L210">		private final NavigableMap&lt;Integer, Double&gt; showingSymptomsProbabilityByAge = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L211">		private final NavigableMap&lt;Integer, Double&gt; seriouslySickProbabilityByAge = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L212">		private final NavigableMap&lt;Integer, Double&gt; criticalProbabilityByAge = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L213">		private final NavigableMap&lt;Integer, Double&gt; deathProbabilityByAge = new TreeMap&lt;&gt;();</span>
 
 		/**
 		 * Per-route transmissibility of this pathogen. Relative, additive weights (no sum constraint);
 		 * the infection model multiplies them route by route with the contact-side split from
 		 * {@link ContactTransmissionConfigGroup}. Defaults to respiratory-only.
 		 */
-<span class="fc" id="L203">		private TransmissionWeights routeTransmissibility = TransmissionWeights.parse(&quot;respiratory=1.0&quot;);</span>
+<span class="fc" id="L220">		private TransmissionWeights routeTransmissibility = TransmissionWeights.parse(&quot;respiratory=1.0&quot;);</span>
+
+		/**
+		 * Probability that a person isolates at symptom onset, by age. Defaults to everybody (the previous behaviour).
+		 */
+<span class="fc" id="L225">		private final NavigableMap&lt;Integer, Double&gt; symptomaticIsolationProbabilityByAge = new TreeMap&lt;&gt;(Map.of(0, 1.0));</span>
+
+		/**
+		 * Quarantine status of a person who isolates at symptom onset: {@code full} or {@code atHome}.
+		 */
+<span class="fc" id="L230">		private EpisimPerson.QuarantineStatus symptomaticIsolationStatus = EpisimPerson.QuarantineStatus.full;</span>
 
 		PathogenParams() {
-<span class="fc" id="L206">			super(SET_TYPE);</span>
-<span class="fc" id="L207">		}</span>
+<span class="fc" id="L233">			super(SET_TYPE);</span>
+<span class="fc" id="L234">		}</span>
 
 		/**
 		 * SARS-CoV-2 defaults for the age-independent transition models
 		 * ({@code DefaultDiseaseStatusTransitionModel}, {@code AntibodyDependentTransitionModel}).
 		 */
 		static PathogenParams sarsCov2AgeIndependentDefault() {
-<span class="fc" id="L214">			PathogenParams p = new PathogenParams();</span>
-<span class="fc" id="L215">			p.setPathogen(Pathogen.SARS_COV_2);</span>
-<span class="fc" id="L216">			p.setAgeDependent(false);</span>
-<span class="fc" id="L217">			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));</span>
-<span class="fc" id="L218">			p.setSeriouslySickProbabilityByAge(Map.of(0, 0.05625));</span>
-<span class="fc" id="L219">			p.setCriticalProbabilityByAge(Map.of(0, 0.25));</span>
-<span class="fc" id="L220">			p.setDeathProbabilityByAge(Map.of(0, 0.0));</span>
+<span class="fc" id="L241">			PathogenParams p = new PathogenParams();</span>
+<span class="fc" id="L242">			p.setPathogen(Pathogen.SARS_COV_2);</span>
+<span class="fc" id="L243">			p.setAgeDependent(false);</span>
+<span class="fc" id="L244">			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));</span>
+<span class="fc" id="L245">			p.setSeriouslySickProbabilityByAge(Map.of(0, 0.05625));</span>
+<span class="fc" id="L246">			p.setCriticalProbabilityByAge(Map.of(0, 0.25));</span>
+<span class="fc" id="L247">			p.setDeathProbabilityByAge(Map.of(0, 0.0));</span>
 			// SARS-CoV-2 is treated as respiratory-only, matching the pre-route behaviour.
-<span class="fc" id="L222">			p.setRouteTransmissibility(TransmissionWeights.parse(&quot;respiratory=1.0&quot;));</span>
-<span class="fc" id="L223">			return p;</span>
+<span class="fc" id="L249">			p.setRouteTransmissibility(TransmissionWeights.parse(&quot;respiratory=1.0&quot;));</span>
+<span class="fc" id="L250">			return p;</span>
 		}
 
 		/**
@@ -228,198 +255,255 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		 * are taken verbatim from that model; the {@code hospitalFactor} multiplier stays in the model.
 		 */
 		static PathogenParams sarsCov2AgeDependentDefault() {
-<span class="fc" id="L231">			PathogenParams p = new PathogenParams();</span>
-<span class="fc" id="L232">			p.setPathogen(Pathogen.SARS_COV_2);</span>
-<span class="fc" id="L233">			p.setAgeDependent(true);</span>
-<span class="fc" id="L234">			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));</span>
+<span class="fc" id="L258">			PathogenParams p = new PathogenParams();</span>
+<span class="fc" id="L259">			p.setPathogen(Pathogen.SARS_COV_2);</span>
+<span class="fc" id="L260">			p.setAgeDependent(true);</span>
+<span class="fc" id="L261">			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));</span>
 
-<span class="fc" id="L236">			NavigableMap&lt;Integer, Double&gt; seriouslySick = new TreeMap&lt;&gt;();</span>
-<span class="fc" id="L237">			seriouslySick.put(0, 4.0 / 100);</span>
-<span class="fc" id="L238">			seriouslySick.put(5, 1.1 / 100);</span>
-<span class="fc" id="L239">			seriouslySick.put(15, 2.4 / 100);</span>
-<span class="fc" id="L240">			seriouslySick.put(35, 5.6 / 100);</span>
-<span class="fc" id="L241">			seriouslySick.put(60, 23. / 100);</span>
-<span class="fc" id="L242">			seriouslySick.put(80, 36. / 100);</span>
-<span class="fc" id="L243">			p.setSeriouslySickProbabilityByAge(seriouslySick);</span>
+<span class="fc" id="L263">			NavigableMap&lt;Integer, Double&gt; seriouslySick = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L264">			seriouslySick.put(0, 4.0 / 100);</span>
+<span class="fc" id="L265">			seriouslySick.put(5, 1.1 / 100);</span>
+<span class="fc" id="L266">			seriouslySick.put(15, 2.4 / 100);</span>
+<span class="fc" id="L267">			seriouslySick.put(35, 5.6 / 100);</span>
+<span class="fc" id="L268">			seriouslySick.put(60, 23. / 100);</span>
+<span class="fc" id="L269">			seriouslySick.put(80, 36. / 100);</span>
+<span class="fc" id="L270">			p.setSeriouslySickProbabilityByAge(seriouslySick);</span>
 
-<span class="fc" id="L245">			NavigableMap&lt;Integer, Double&gt; critical = new TreeMap&lt;&gt;();</span>
-<span class="fc" id="L246">			critical.put(0, 7.0 / 100);</span>
-<span class="fc" id="L247">			critical.put(5, 0.0 / 100);</span>
-<span class="fc" id="L248">			critical.put(15, 15.0 / 100);</span>
-<span class="fc" id="L249">			critical.put(35, 30.0 / 100);</span>
-<span class="fc" id="L250">			critical.put(60, 41. / 100);</span>
-<span class="fc" id="L251">			critical.put(80, 27. / 100);</span>
-<span class="fc" id="L252">			p.setCriticalProbabilityByAge(critical);</span>
+<span class="fc" id="L272">			NavigableMap&lt;Integer, Double&gt; critical = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L273">			critical.put(0, 7.0 / 100);</span>
+<span class="fc" id="L274">			critical.put(5, 0.0 / 100);</span>
+<span class="fc" id="L275">			critical.put(15, 15.0 / 100);</span>
+<span class="fc" id="L276">			critical.put(35, 30.0 / 100);</span>
+<span class="fc" id="L277">			critical.put(60, 41. / 100);</span>
+<span class="fc" id="L278">			critical.put(80, 27. / 100);</span>
+<span class="fc" id="L279">			p.setCriticalProbabilityByAge(critical);</span>
 
-<span class="fc" id="L254">			p.setDeathProbabilityByAge(Map.of(0, 0.0));</span>
+<span class="fc" id="L281">			p.setDeathProbabilityByAge(Map.of(0, 0.0));</span>
 			// SARS-CoV-2 is treated as respiratory-only, matching the pre-route behaviour.
-<span class="fc" id="L256">			p.setRouteTransmissibility(TransmissionWeights.parse(&quot;respiratory=1.0&quot;));</span>
-<span class="fc" id="L257">			return p;</span>
+<span class="fc" id="L283">			p.setRouteTransmissibility(TransmissionWeights.parse(&quot;respiratory=1.0&quot;));</span>
+<span class="fc" id="L284">			return p;</span>
 		}
 
 		@StringGetter(PATHOGEN)
 		public String getPathogenName() {
-<span class="fc" id="L262">			return pathogen.getName();</span>
+<span class="fc" id="L289">			return pathogen.getName();</span>
 		}
 
 		public Pathogen getPathogen() {
-<span class="fc" id="L266">			return pathogen;</span>
+<span class="fc" id="L293">			return pathogen;</span>
 		}
 
 		@StringSetter(PATHOGEN)
 		public void setPathogen(String pathogen) {
-<span class="fc" id="L271">			setPathogen(new Pathogen(pathogen));</span>
-<span class="fc" id="L272">		}</span>
+<span class="fc" id="L298">			setPathogen(new Pathogen(pathogen));</span>
+<span class="fc" id="L299">		}</span>
 
 		public void setPathogen(Pathogen pathogen) {
-<span class="fc" id="L275">			this.pathogen = java.util.Objects.requireNonNull(pathogen, &quot;Pathogen must not be null&quot;);</span>
-<span class="fc" id="L276">		}</span>
+<span class="fc" id="L302">			this.pathogen = java.util.Objects.requireNonNull(pathogen, &quot;Pathogen must not be null&quot;);</span>
+<span class="fc" id="L303">		}</span>
 
 		@StringGetter(AGE_DEPENDENT)
 		public boolean isAgeDependent() {
-<span class="fc" id="L280">			return ageDependent;</span>
+<span class="fc" id="L307">			return ageDependent;</span>
 		}
 
 		@StringSetter(AGE_DEPENDENT)
 		public void setAgeDependent(boolean ageDependent) {
-<span class="fc" id="L285">			this.ageDependent = ageDependent;</span>
-<span class="fc" id="L286">		}</span>
+<span class="fc" id="L312">			this.ageDependent = ageDependent;</span>
+<span class="fc" id="L313">		}</span>
 
 		@StringGetter(SHOWING_SYMPTOMS)
 		String getShowingSymptomsProbabilityByAgeString() {
-<span class="fc" id="L290">			return JOINER.join(showingSymptomsProbabilityByAge);</span>
+<span class="fc" id="L317">			return JOINER.join(showingSymptomsProbabilityByAge);</span>
 		}
 
 		@StringSetter(SHOWING_SYMPTOMS)
 		void setShowingSymptomsProbabilityByAge(String config) {
-<span class="fc" id="L295">			replace(showingSymptomsProbabilityByAge, parse(SHOWING_SYMPTOMS, config));</span>
-<span class="fc" id="L296">		}</span>
+<span class="fc" id="L322">			replace(showingSymptomsProbabilityByAge, parse(SHOWING_SYMPTOMS, config));</span>
+<span class="fc" id="L323">		}</span>
 
 		@StringGetter(SERIOUSLY_SICK)
 		String getSeriouslySickProbabilityByAgeString() {
-<span class="fc" id="L300">			return JOINER.join(seriouslySickProbabilityByAge);</span>
+<span class="fc" id="L327">			return JOINER.join(seriouslySickProbabilityByAge);</span>
 		}
 
 		@StringSetter(SERIOUSLY_SICK)
 		void setSeriouslySickProbabilityByAge(String config) {
-<span class="fc" id="L305">			replace(seriouslySickProbabilityByAge, parse(SERIOUSLY_SICK, config));</span>
-<span class="fc" id="L306">		}</span>
+<span class="fc" id="L332">			replace(seriouslySickProbabilityByAge, parse(SERIOUSLY_SICK, config));</span>
+<span class="fc" id="L333">		}</span>
 
 		@StringGetter(CRITICAL)
 		String getCriticalProbabilityByAgeString() {
-<span class="fc" id="L310">			return JOINER.join(criticalProbabilityByAge);</span>
+<span class="fc" id="L337">			return JOINER.join(criticalProbabilityByAge);</span>
 		}
 
 		@StringSetter(CRITICAL)
 		void setCriticalProbabilityByAge(String config) {
-<span class="fc" id="L315">			replace(criticalProbabilityByAge, parse(CRITICAL, config));</span>
-<span class="fc" id="L316">		}</span>
+<span class="fc" id="L342">			replace(criticalProbabilityByAge, parse(CRITICAL, config));</span>
+<span class="fc" id="L343">		}</span>
 
 		@StringGetter(DEATH)
 		String getDeathProbabilityByAgeString() {
-<span class="fc" id="L320">			return JOINER.join(deathProbabilityByAge);</span>
+<span class="fc" id="L347">			return JOINER.join(deathProbabilityByAge);</span>
 		}
 
 		@StringSetter(DEATH)
 		void setDeathProbabilityByAge(String config) {
-<span class="fc" id="L325">			replace(deathProbabilityByAge, parse(DEATH, config));</span>
-<span class="fc" id="L326">		}</span>
+<span class="fc" id="L352">			replace(deathProbabilityByAge, parse(DEATH, config));</span>
+<span class="fc" id="L353">		}</span>
 
 		@StringGetter(ROUTE_TRANSMISSIBILITY)
 		String getRouteTransmissibilityString() {
-<span class="fc" id="L330">			return routeTransmissibility.toToken();</span>
+<span class="fc" id="L357">			return routeTransmissibility.toToken();</span>
 		}
 
 		@StringSetter(ROUTE_TRANSMISSIBILITY)
 		void setRouteTransmissibilityString(String config) {
-<span class="fc" id="L335">			this.routeTransmissibility = TransmissionWeights.parse(config);</span>
-<span class="fc" id="L336">		}</span>
+<span class="fc" id="L362">			this.routeTransmissibility = TransmissionWeights.parse(config);</span>
+<span class="fc" id="L363">		}</span>
 
 		/**
 		 * Per-route transmissibility of this pathogen (respiratory / direct contact) &amp;mdash; relative,
 		 * additive weights, {@code respiratory=1.0} by default.
 		 */
 		public TransmissionWeights getRouteTransmissibility() {
-<span class="fc" id="L343">			return routeTransmissibility;</span>
+<span class="fc" id="L370">			return routeTransmissibility;</span>
 		}
 
 		/**
 		 * Set the per-route transmissibility of this pathogen, replacing the previous value.
 		 */
 		public void setRouteTransmissibility(TransmissionWeights routeTransmissibility) {
-<span class="fc" id="L350">			this.routeTransmissibility = Objects.requireNonNull(routeTransmissibility, ROUTE_TRANSMISSIBILITY);</span>
-<span class="fc" id="L351">		}</span>
+<span class="fc" id="L377">			this.routeTransmissibility = Objects.requireNonNull(routeTransmissibility, ROUTE_TRANSMISSIBILITY);</span>
+<span class="fc" id="L378">		}</span>
+
+		@StringGetter(SYMPTOMATIC_ISOLATION)
+		String getSymptomaticIsolationProbabilityByAgeString() {
+<span class="fc" id="L382">			return JOINER.join(symptomaticIsolationProbabilityByAge);</span>
+		}
+
+		@StringSetter(SYMPTOMATIC_ISOLATION)
+		void setSymptomaticIsolationProbabilityByAge(String config) {
+<span class="fc" id="L387">			replace(symptomaticIsolationProbabilityByAge, parse(SYMPTOMATIC_ISOLATION, config));</span>
+<span class="fc" id="L388">		}</span>
+
+		/**
+		 * Set the probability of isolating at symptom onset by age, replacing all previous entries.
+		 */
+		public void setSymptomaticIsolationProbabilityByAge(Map&lt;Integer, Double&gt; values) {
+<span class="fc" id="L394">			replace(symptomaticIsolationProbabilityByAge, validated(SYMPTOMATIC_ISOLATION, values));</span>
+<span class="fc" id="L395">		}</span>
+
+		public NavigableMap&lt;Integer, Double&gt; getSymptomaticIsolationProbabilityByAge() {
+<span class="nc" id="L398">			return symptomaticIsolationProbabilityByAge;</span>
+		}
+
+		/**
+		 * Probability that a person of the given age isolates at symptom onset.
+		 */
+		public double getSymptomaticIsolationProbability(int age) {
+<span class="fc" id="L405">			return forAge(SYMPTOMATIC_ISOLATION, symptomaticIsolationProbabilityByAge, age);</span>
+		}
+
+		@StringGetter(SYMPTOMATIC_ISOLATION_STATUS)
+		String getSymptomaticIsolationStatusString() {
+<span class="fc" id="L410">			return symptomaticIsolationStatus.name();</span>
+		}
+
+		@StringSetter(SYMPTOMATIC_ISOLATION_STATUS)
+		void setSymptomaticIsolationStatusString(String status) {
+<span class="fc" id="L415">			setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.valueOf(status.trim()));</span>
+<span class="fc" id="L416">		}</span>
+
+		/**
+		 * Quarantine status of a person who isolates at symptom onset.
+		 */
+		public EpisimPerson.QuarantineStatus getSymptomaticIsolationStatus() {
+<span class="fc" id="L422">			return symptomaticIsolationStatus;</span>
+		}
+
+		/**
+		 * Set the quarantine status used for isolation at symptom onset; only {@code full} and {@code atHome} are
+		 * allowed. Disable isolation with a probability of 0 instead.
+		 */
+		public void setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus status) {
+<span class="fc" id="L430">			Objects.requireNonNull(status, SYMPTOMATIC_ISOLATION_STATUS);</span>
+<span class="fc bfc" id="L431" title="All 4 branches covered.">			if (status != EpisimPerson.QuarantineStatus.full &amp;&amp; status != EpisimPerson.QuarantineStatus.atHome)</span>
+<span class="fc" id="L432">				throw new IllegalArgumentException(&quot;'&quot; + SYMPTOMATIC_ISOLATION_STATUS + &quot;' must be 'full' or 'atHome' but was '&quot;</span>
+						+ status + &quot;'; set '&quot; + SYMPTOMATIC_ISOLATION + &quot;' to 0 to disable isolation.&quot;);
+<span class="fc" id="L434">			this.symptomaticIsolationStatus = status;</span>
+<span class="fc" id="L435">		}</span>
 
 		/**
 		 * Set the {@code showingSymptoms} age profile, replacing all previous entries.
 		 */
 		public void setShowingSymptomsProbabilityByAge(Map&lt;Integer, Double&gt; values) {
-<span class="fc" id="L357">			replace(showingSymptomsProbabilityByAge, validated(SHOWING_SYMPTOMS, values));</span>
-<span class="fc" id="L358">		}</span>
+<span class="fc" id="L441">			replace(showingSymptomsProbabilityByAge, validated(SHOWING_SYMPTOMS, values));</span>
+<span class="fc" id="L442">		}</span>
 
 		/**
 		 * Set the {@code seriouslySick} age profile, replacing all previous entries.
 		 */
 		public void setSeriouslySickProbabilityByAge(Map&lt;Integer, Double&gt; values) {
-<span class="fc" id="L364">			replace(seriouslySickProbabilityByAge, validated(SERIOUSLY_SICK, values));</span>
-<span class="fc" id="L365">		}</span>
+<span class="fc" id="L448">			replace(seriouslySickProbabilityByAge, validated(SERIOUSLY_SICK, values));</span>
+<span class="fc" id="L449">		}</span>
 
 		/**
 		 * Set the {@code critical} age profile, replacing all previous entries.
 		 */
 		public void setCriticalProbabilityByAge(Map&lt;Integer, Double&gt; values) {
-<span class="fc" id="L371">			replace(criticalProbabilityByAge, validated(CRITICAL, values));</span>
-<span class="fc" id="L372">		}</span>
+<span class="fc" id="L455">			replace(criticalProbabilityByAge, validated(CRITICAL, values));</span>
+<span class="fc" id="L456">		}</span>
 
 		/**
 		 * Set the {@code deceased} age profile, replacing all previous entries.
 		 */
 		public void setDeathProbabilityByAge(Map&lt;Integer, Double&gt; values) {
-<span class="fc" id="L378">			replace(deathProbabilityByAge, validated(DEATH, values));</span>
-<span class="fc" id="L379">		}</span>
+<span class="fc" id="L462">			replace(deathProbabilityByAge, validated(DEATH, values));</span>
+<span class="fc" id="L463">		}</span>
 
 		public NavigableMap&lt;Integer, Double&gt; getShowingSymptomsProbabilityByAge() {
-<span class="nc" id="L382">			return showingSymptomsProbabilityByAge;</span>
+<span class="nc" id="L466">			return showingSymptomsProbabilityByAge;</span>
 		}
 
 		public NavigableMap&lt;Integer, Double&gt; getSeriouslySickProbabilityByAge() {
-<span class="nc" id="L386">			return seriouslySickProbabilityByAge;</span>
+<span class="nc" id="L470">			return seriouslySickProbabilityByAge;</span>
 		}
 
 		public NavigableMap&lt;Integer, Double&gt; getCriticalProbabilityByAge() {
-<span class="nc" id="L390">			return criticalProbabilityByAge;</span>
+<span class="nc" id="L474">			return criticalProbabilityByAge;</span>
 		}
 
 		public NavigableMap&lt;Integer, Double&gt; getDeathProbabilityByAge() {
-<span class="nc" id="L394">			return deathProbabilityByAge;</span>
+<span class="nc" id="L478">			return deathProbabilityByAge;</span>
 		}
 
 		/**
 		 * Probability of transitioning {@code contagious -&gt; showingSymptoms} for a person of the given age.
 		 */
 		public double getShowingSymptomsProbability(int age) {
-<span class="fc" id="L401">			return forAge(SHOWING_SYMPTOMS, showingSymptomsProbabilityByAge, age);</span>
+<span class="fc" id="L485">			return forAge(SHOWING_SYMPTOMS, showingSymptomsProbabilityByAge, age);</span>
 		}
 
 		/**
 		 * Probability of transitioning {@code showingSymptoms -&gt; seriouslySick} for a person of the given age.
 		 */
 		public double getSeriouslySickProbability(int age) {
-<span class="fc" id="L408">			return forAge(SERIOUSLY_SICK, seriouslySickProbabilityByAge, age);</span>
+<span class="fc" id="L492">			return forAge(SERIOUSLY_SICK, seriouslySickProbabilityByAge, age);</span>
 		}
 
 		/**
 		 * Probability of transitioning {@code seriouslySick -&gt; critical} for a person of the given age.
 		 */
 		public double getCriticalProbability(int age) {
-<span class="fc" id="L415">			return forAge(CRITICAL, criticalProbabilityByAge, age);</span>
+<span class="fc" id="L499">			return forAge(CRITICAL, criticalProbabilityByAge, age);</span>
 		}
 
 		/**
 		 * Probability of transitioning {@code critical -&gt; deceased} for a person of the given age.
 		 */
 		public double getDeathProbability(int age) {
-<span class="fc" id="L422">			return forAge(DEATH, deathProbabilityByAge, age);</span>
+<span class="fc" id="L506">			return forAge(DEATH, deathProbabilityByAge, age);</span>
 		}
 
 		/**
@@ -427,59 +511,60 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		 * {@code addParameterSet}, so that sets can still be filled in after being registered.
 		 */
 		void validateComplete(String groupName) {
-<span class="fc" id="L430">			requireNonEmpty(groupName, SHOWING_SYMPTOMS, showingSymptomsProbabilityByAge);</span>
-<span class="fc" id="L431">			requireNonEmpty(groupName, SERIOUSLY_SICK, seriouslySickProbabilityByAge);</span>
-<span class="fc" id="L432">			requireNonEmpty(groupName, CRITICAL, criticalProbabilityByAge);</span>
-<span class="fc" id="L433">			requireNonEmpty(groupName, DEATH, deathProbabilityByAge);</span>
-<span class="fc bfc" id="L434" title="All 2 branches covered.">			if (routeTransmissibility.isZero())</span>
-<span class="fc" id="L435">				throw new IllegalStateException(&quot;pathogen '&quot; + pathogen.getName() + &quot;' in config group '&quot; + groupName</span>
+<span class="fc" id="L514">			requireNonEmpty(groupName, SHOWING_SYMPTOMS, showingSymptomsProbabilityByAge);</span>
+<span class="fc" id="L515">			requireNonEmpty(groupName, SERIOUSLY_SICK, seriouslySickProbabilityByAge);</span>
+<span class="fc" id="L516">			requireNonEmpty(groupName, CRITICAL, criticalProbabilityByAge);</span>
+<span class="fc" id="L517">			requireNonEmpty(groupName, DEATH, deathProbabilityByAge);</span>
+<span class="fc" id="L518">			requireNonEmpty(groupName, SYMPTOMATIC_ISOLATION, symptomaticIsolationProbabilityByAge);</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">			if (routeTransmissibility.isZero())</span>
+<span class="fc" id="L520">				throw new IllegalStateException(&quot;pathogen '&quot; + pathogen.getName() + &quot;' in config group '&quot; + groupName</span>
 						+ &quot;' has an all-zero '&quot; + ROUTE_TRANSMISSIBILITY + &quot;'; it cannot transmit by any route.&quot;);
-<span class="fc" id="L437">		}</span>
+<span class="fc" id="L522">		}</span>
 
 		private void requireNonEmpty(String groupName, String param, NavigableMap&lt;Integer, Double&gt; map) {
-<span class="pc bpc" id="L440" title="1 of 2 branches missed.">			if (map.isEmpty())</span>
-<span class="nc" id="L441">				throw new IllegalStateException(&quot;pathogen '&quot; + pathogen.getName() + &quot;' in config group '&quot; + groupName</span>
+<span class="pc bpc" id="L525" title="1 of 2 branches missed.">			if (map.isEmpty())</span>
+<span class="nc" id="L526">				throw new IllegalStateException(&quot;pathogen '&quot; + pathogen.getName() + &quot;' in config group '&quot; + groupName</span>
 						+ &quot;' is missing an age profile for '&quot; + param + &quot;'.&quot;);
-<span class="fc" id="L443">		}</span>
+<span class="fc" id="L528">		}</span>
 
 		private static double forAge(String param, NavigableMap&lt;Integer, Double&gt; map, int age) {
-<span class="fc" id="L446">			Map.Entry&lt;Integer, Double&gt; entry = map.floorEntry(age);</span>
-<span class="pc bpc" id="L447" title="1 of 2 branches missed.">			if (entry == null)</span>
-<span class="nc" id="L448">				entry = map.firstEntry();</span>
-<span class="pc bpc" id="L449" title="1 of 2 branches missed.">			if (entry == null)</span>
-<span class="nc" id="L450">				throw new IllegalStateException(&quot;No age profile configured for '&quot; + param + &quot;'.&quot;);</span>
-<span class="fc" id="L451">			return entry.getValue();</span>
+<span class="fc" id="L531">			Map.Entry&lt;Integer, Double&gt; entry = map.floorEntry(age);</span>
+<span class="pc bpc" id="L532" title="1 of 2 branches missed.">			if (entry == null)</span>
+<span class="nc" id="L533">				entry = map.firstEntry();</span>
+<span class="pc bpc" id="L534" title="1 of 2 branches missed.">			if (entry == null)</span>
+<span class="nc" id="L535">				throw new IllegalStateException(&quot;No age profile configured for '&quot; + param + &quot;'.&quot;);</span>
+<span class="fc" id="L536">			return entry.getValue();</span>
 		}
 
 		private static void replace(NavigableMap&lt;Integer, Double&gt; target, NavigableMap&lt;Integer, Double&gt; values) {
-<span class="fc" id="L455">			target.clear();</span>
-<span class="fc" id="L456">			target.putAll(values);</span>
-<span class="fc" id="L457">		}</span>
+<span class="fc" id="L540">			target.clear();</span>
+<span class="fc" id="L541">			target.putAll(values);</span>
+<span class="fc" id="L542">		}</span>
 
 		private static NavigableMap&lt;Integer, Double&gt; parse(String param, String config) {
-<span class="fc" id="L460">			NavigableMap&lt;Integer, Double&gt; parsed = new TreeMap&lt;&gt;();</span>
-<span class="fc bfc" id="L461" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(config).entrySet()) {</span>
-<span class="fc" id="L462">				parsed.put(Integer.parseInt(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));</span>
-<span class="fc" id="L463">			}</span>
-<span class="fc" id="L464">			return validated(param, parsed);</span>
+<span class="fc" id="L545">			NavigableMap&lt;Integer, Double&gt; parsed = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L546" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(config).entrySet()) {</span>
+<span class="fc" id="L547">				parsed.put(Integer.parseInt(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));</span>
+<span class="fc" id="L548">			}</span>
+<span class="fc" id="L549">			return validated(param, parsed);</span>
 		}
 
 		private static NavigableMap&lt;Integer, Double&gt; validated(String param, Map&lt;Integer, Double&gt; values) {
-<span class="pc bpc" id="L468" title="1 of 2 branches missed.">			if (values.isEmpty())</span>
-<span class="nc" id="L469">				throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' needs at least one age bucket.&quot;);</span>
+<span class="pc bpc" id="L553" title="1 of 2 branches missed.">			if (values.isEmpty())</span>
+<span class="nc" id="L554">				throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' needs at least one age bucket.&quot;);</span>
 
-<span class="fc" id="L471">			NavigableMap&lt;Integer, Double&gt; out = new TreeMap&lt;&gt;();</span>
-<span class="fc bfc" id="L472" title="All 2 branches covered.">			for (Map.Entry&lt;Integer, Double&gt; e : values.entrySet()) {</span>
-<span class="fc" id="L473">				int age = e.getKey();</span>
-<span class="fc" id="L474">				double p = e.getValue();</span>
-<span class="pc bpc" id="L475" title="1 of 2 branches missed.">				if (age &lt; 0)</span>
-<span class="nc" id="L476">					throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' age bucket must not be negative but was &quot; + age + &quot;.&quot;);</span>
-<span class="pc bpc" id="L477" title="1 of 6 branches missed.">				if (Double.isNaN(p) || p &lt; 0.0 || p &gt; 1.0)</span>
-<span class="fc" id="L478">					throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' probability for age &quot; + age</span>
+<span class="fc" id="L556">			NavigableMap&lt;Integer, Double&gt; out = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L557" title="All 2 branches covered.">			for (Map.Entry&lt;Integer, Double&gt; e : values.entrySet()) {</span>
+<span class="fc" id="L558">				int age = e.getKey();</span>
+<span class="fc" id="L559">				double p = e.getValue();</span>
+<span class="pc bpc" id="L560" title="1 of 2 branches missed.">				if (age &lt; 0)</span>
+<span class="nc" id="L561">					throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' age bucket must not be negative but was &quot; + age + &quot;.&quot;);</span>
+<span class="pc bpc" id="L562" title="1 of 6 branches missed.">				if (Double.isNaN(p) || p &lt; 0.0 || p &gt; 1.0)</span>
+<span class="fc" id="L563">					throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' probability for age &quot; + age</span>
 							+ &quot; must be within [0, 1] but was &quot; + p + &quot;.&quot;);
-<span class="fc" id="L480">				out.put(age, p);</span>
-<span class="fc" id="L481">			}</span>
-<span class="fc" id="L482">			return out;</span>
+<span class="fc" id="L565">				out.put(age, p);</span>
+<span class="fc" id="L566">			}</span>
+<span class="fc" id="L567">			return out;</span>
 		}
 	}
 }

@@ -396,7 +396,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 <span class="fc" id="L396">		this.status = status;</span>
 
 		// when person goes back to susceptible, old states are removed
-<span class="pc bpc" id="L399" title="1 of 4 branches missed.">		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {</span>
+<span class="fc bfc" id="L399" title="All 4 branches covered.">		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {</span>
 <span class="fc bfc" id="L400" title="All 2 branches covered.">			statusChanges.keySet().removeIf(p -&gt; p != DiseaseStatus.recovered);</span>
 		}
 
@@ -568,8 +568,8 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	}
 
 	public void setSusceptibility(double susceptibility) {
-<span class="nc" id="L571">		this.susceptibility = susceptibility;</span>
-<span class="nc" id="L572">	}</span>
+<span class="fc" id="L571">		this.susceptibility = susceptibility;</span>
+<span class="fc" id="L572">	}</span>
 
 	/**
 	 * Immunity factor based on antibody level at infection.
@@ -673,7 +673,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Return whether a person was infected with certain virus strain.
 	 */
 	public boolean hadStrain(VirusStrain strain) {
-<span class="nc" id="L676">		return virusStrains.contains(strain);</span>
+<span class="fc" id="L676">		return virusStrains.contains(strain);</span>
 	}
 
 	/**
