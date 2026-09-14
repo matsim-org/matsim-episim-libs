@@ -142,6 +142,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter antibodiesPerPerson;
 	private BufferedWriter vaccinationsPerType;
 	private BufferedWriter vaccinationsPerTypeAndNumber;
+	/**
+	 * Writer of persons and infection episodes, null if events are not written.
+	 */
+	private final InfectionEpisodeWriter episodes;
 	private String memorizedDate = null;
 
 	@Inject
@@ -202,6 +206,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
 
+		if (writeEvents != EpisimConfigGroup.WriteEvents.none) {
+			episodes = new InfectionEpisodeWriter(writer, base, episimConfig.getStartDate());
+			episodes.open(false);
+		} else
+			episodes = null;
+
 		// Init cumulative cases
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
@@ -253,7 +263,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-				"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv", "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar")) {
+				"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv", "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar",
+				"infectionEpisodes.tsv", "persons.tsv")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -270,6 +281,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv");
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv");
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv");
+		if (episodes != null)
+			episodes.open(true);
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
@@ -647,6 +660,13 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		manager.processEvent(ev);
 
+		if (episodes != null) {
+			if (ev instanceof EpisimInfectionEvent)
+				episodes.openContact((EpisimInfectionEvent) ev, getDay(ev.getTime()));
+			else if (ev instanceof EpisimInitialInfectionEvent)
+				episodes.openInitial((EpisimInitialInfectionEvent) ev, getDay(ev.getTime()));
+		}
+
 		EpisimInfectionEvent event;
 		// Potential infections are not written to .txt file
 		if (!(ev instanceof EpisimInfectionEvent)) {
@@ -762,6 +782,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		EpisimPerson.DiseaseStatus newStatus = event.getDiseaseStatus();
 
+		if (episodes != null)
+			episodes.reportStatus(person.getPersonId(), newStatus, getDay(event.getTime()));
+
 		if (newStatus == EpisimPerson.DiseaseStatus.infectedButNotContagious || newStatus == EpisimPerson.DiseaseStatus.seriouslySick ||
 			newStatus == EpisimPerson.DiseaseStatus.contagious || newStatus == EpisimPerson.DiseaseStatus.showingSymptoms ||
 			newStatus == EpisimPerson.DiseaseStatus.critical || newStatus == EpisimPerson.DiseaseStatus.recovered) {
@@ -773,6 +796,32 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		}
 
 		manager.processEvent(event);
+	}
+
+	/**
+	 * Day of an event. This is the current iteration while the simulation is running. Before the first iteration,
+	 * i.e. when replaying an immunization history, it is derived from the event time and can be negative.
+	 */
+	private int getDay(double time) {
+		return iteration > 0 ? iteration : (int) Math.floor(time / EpisimUtils.DAY);
+	}
+
+	/**
+	 * Write static information of all persons to {@code persons.tsv}.
+	 *
+	 * @see InfectionEpisodeWriter
+	 */
+	void reportPersons(Map<Id<Person>, EpisimPerson> persons) {
+		if (episodes != null)
+			episodes.writePersons(base + "persons.tsv", persons);
+	}
+
+	/**
+	 * Restore infection episodes that were open when the snapshot has been written.
+	 */
+	void restoreInfectionEpisodes(Collection<EpisimPerson> persons, int iteration) {
+		if (episodes != null)
+			episodes.restore(persons, iteration);
 	}
 
 	/**
@@ -925,6 +974,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(cpuTime);
 		writer.close(vaccinationsPerType);
 		writer.close(vaccinationsPerTypeAndNumber);
+
+		if (episodes != null)
+			episodes.close();
 
 		for (BufferedWriter v : externalWriters.values()) {
 			writer.close(v);

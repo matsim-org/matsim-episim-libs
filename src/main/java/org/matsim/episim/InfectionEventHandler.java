@@ -288,6 +288,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 		createTrajectoryHandlers();
 
+		reporting.reportPersons(personMap);
+
 		init = true;
 	}
 
@@ -571,6 +573,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Called when a snapshot has been loaded.
 	 */
 	void onSnapshotLoaded(int iteration) {
+
+		reporting.restoreInfectionEpisodes(personMap.values(), iteration);
 
 		// Listener and vaccinations should already be present
 
