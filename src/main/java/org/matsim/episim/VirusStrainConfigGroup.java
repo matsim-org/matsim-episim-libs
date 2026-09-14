@@ -26,6 +26,11 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	private final Map<VirusStrain, StrainParams> strains = new LinkedHashMap<>();
 
 	/**
+	 * Cached result of {@link #getVirusStrains()}, null if it needs to be rebuilt.
+	 */
+	private volatile Collection<VirusStrain> virusStrains;
+
+	/**
 	 * Default constructor.
 	 */
 	public VirusStrainConfigGroup() {
@@ -70,9 +75,15 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	 * Returns the standard virus strains followed by strains added through this configuration.
 	 */
 	public Collection<VirusStrain> getVirusStrains() {
-		Set<VirusStrain> result = new LinkedHashSet<>(VirusStrain.getAllStandardOptions());
-		result.addAll(strains.keySet());
-		return Collections.unmodifiableSet(result);
+		// cached, because this is called on hot paths; reset whenever a strain is added
+		Collection<VirusStrain> result = virusStrains;
+		if (result == null) {
+			Set<VirusStrain> set = new LinkedHashSet<>(VirusStrain.getAllStandardOptions());
+			set.addAll(strains.keySet());
+			result = Collections.unmodifiableSet(set);
+			virusStrains = result;
+		}
+		return result;
 	}
 
 	@Override
@@ -87,8 +98,12 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	public void addParameterSet(final ConfigGroup set) {
 		if (StrainParams.SET_TYPE.equals(set.getName())) {
 			StrainParams p = (StrainParams) set;
-			strains.put(p.getStrain(), p);
+			StrainParams previous = strains.put(p.getStrain(), p);
+			// replace a previously registered set (e.g. the auto-added SARS-CoV-2 default) instead of keeping a stale duplicate
+			if (previous != null)
+				super.removeParameterSet(previous);
 			super.addParameterSet(set);
+			virusStrains = null;
 
 		} else
 			throw new IllegalStateException("Unknown set type " + set.getName());

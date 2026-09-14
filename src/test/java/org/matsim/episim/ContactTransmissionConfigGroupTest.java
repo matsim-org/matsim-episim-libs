@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,12 +52,27 @@ public class ContactTransmissionConfigGroupTest {
 	}
 
 	@Test
+	public void duplicateContactPairReplacesPrevious() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+
+		for (String weights : List.of("respiratory=0.4", "respiratory=0.9")) {
+			ContactPairParams pair = (ContactPairParams) group.createParameterSet(ContactPairParams.SET_TYPE);
+			pair.setActivityA("work");
+			pair.setActivityB("home");
+			pair.setTransmissionWeights(TransmissionWeights.parse(weights));
+			group.addParameterSet(pair);
+		}
+
+		assertThat(group.getParameterSets(ContactPairParams.SET_TYPE)).hasSize(1);
+		assertThat(group.getContactPair("home", "work").getTransmissionWeights().getRespiratory()).isEqualTo(0.9);
+	}
+
+	@Test
 	public void resolverPriority() throws IOException {
-		File matrix = writeCsv("matrix.csv",
+		File matrix = writeCsv("matrix.csv", completeMatrix(Arrays.asList(0, 6, 15, 20, 30),
 				"# route weights by age band\n"
-						+ "ageA,ageB,respiratory,directContact\n"
 						+ "6,30,0.55,0.35\n"
-						+ "15,20,0.65,0.30\n");
+						+ "15,20,0.65,0.30\n"));
 		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
 		group.setAgeBands(Arrays.asList(0, 6, 15, 20, 30));
 		group.getOrAddContactPair("home", "work").setTransmissionWeights(
@@ -77,14 +93,50 @@ public class ContactTransmissionConfigGroupTest {
 		assertThat(covered.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(0.55);
 		assertThat(covered.get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.35);
 
-		TransmissionWeights uncovered = resolver.resolve("school", "leisure", 16, 34);
-		assertThat(uncovered).isSameAs(TransmissionWeights.ZERO);
-		assertThat(uncovered.isZero()).isTrue();
+		TransmissionWeights zeroCell = resolver.resolve("school", "leisure", 16, 34);
+		assertThat(zeroCell.isZero()).isTrue();
 		assertThat(resolver.bandIndex(0)).isEqualTo(0);
 		assertThat(resolver.bandIndex(5)).isEqualTo(0);
 		assertThat(resolver.bandIndex(6)).isEqualTo(1);
 		assertThat(resolver.bandIndex(19)).isEqualTo(2);
 		assertThat(resolver.bandIndex(100)).isEqualTo(4);
+	}
+
+	@Test
+	public void relativeFileIsResolvedAgainstContext() throws IOException {
+		File matrix = writeCsv("relative-matrix.csv",
+				"ageA,ageB,respiratory,directContact\n"
+						+ "0,0,0.1,0.9\n");
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactPair("edu", "edu").setFile(matrix.getName());
+		group.setContext(new File(matrix.getParentFile(), "config.xml").toURI().toURL());
+
+		Resolver resolver = group.createResolver();
+
+		assertThat(resolver.resolve("edu", "edu", 5, 5).getDirectContact()).isEqualTo(0.9);
+	}
+
+	@Test
+	public void incompleteMatrixIsRejected() throws IOException {
+		File matrix = writeCsv("sparse.csv", "ageA,ageB,respiratory\n0,0,1.0\n0,20,1.0\n");
+		ContactTransmissionConfigGroup group = fileGroup(matrix);
+
+		assertThatThrownBy(group::createResolver)
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("(20,20)");
+	}
+
+	@Test
+	public void unknownAgeUsesDefaultWeights() throws IOException {
+		File matrix = writeCsv("ages.csv", "ageA,ageB,respiratory,directContact\n0,0,0.0,0.0\n0,20,0.0,0.0\n20,20,1.0,0.9\n");
+		ContactTransmissionConfigGroup group = fileGroup(matrix);
+		group.setDefaultTransmissionWeights(TransmissionWeights.parse("respiratory=0.5;directContact=0.1"));
+
+		Resolver resolver = group.createResolver();
+
+		assertThat(resolver.resolve("home", "work", 30, 30).getDirectContact()).isEqualTo(0.9);
+		assertThat(resolver.resolve("home", "work", -1, 30)).isSameAs(group.getDefaultTransmissionWeights());
+		assertThat(resolver.resolve("home", "work", 30, -1)).isSameAs(group.getDefaultTransmissionWeights());
 	}
 
 	@Test
@@ -150,7 +202,7 @@ public class ContactTransmissionConfigGroupTest {
 	public void csvWeightsAreNotNormalised() throws IOException {
 		// routes are independent, additive channels -> a per-cell weight sum above 1 is allowed
 		File matrix = writeCsv("unnormalised.csv",
-				"ageA,ageB,respiratory,directContact\n0,0,1.0,0.5\n");
+				"ageA,ageB,respiratory,directContact\n0,0,1.0,0.5\n0,20,1.0,0.5\n20,20,1.0,0.5\n");
 		ContactTransmissionConfigGroup group = fileGroup(matrix);
 
 		Resolver resolver = group.createResolver();
@@ -272,6 +324,22 @@ public class ContactTransmissionConfigGroupTest {
 		group.setAgeBands(Arrays.asList(0, 20));
 		group.getOrAddContactPair("home", "work").setFile(matrix.toString());
 		return group;
+	}
+
+	/**
+	 * CSV header plus the given rows, filled up with zero-weight rows for every other pair of age bands.
+	 */
+	private static String completeMatrix(List<Integer> bands, String rows) {
+		StringBuilder csv = new StringBuilder("ageA,ageB,respiratory,directContact\n").append(rows);
+		for (int i = 0; i < bands.size(); i++) {
+			for (int j = i; j < bands.size(); j++) {
+				String cell = bands.get(i) + "," + bands.get(j) + ",";
+				if (!rows.contains("\n" + cell) && !rows.startsWith(cell)) {
+					csv.append(cell).append("0.0,0.0\n");
+				}
+			}
+		}
+		return csv.toString();
 	}
 
 	private File writeCsv(String name, String content) throws IOException {

@@ -151,7 +151,8 @@ public class RsvCologneScenarioTest {
 
 		// 2. natural history (age-dependent); seriouslySick = effective target / hospitalFactor
 		double hospitalFactor = episimConfig.getHospitalFactor();
-		PathogenConfigGroup.PathogenParams byAge = pathogenConfig.getOrAddParams(RSV, true);
+		PathogenConfigGroup.PathogenParams rsv = pathogenConfig.getOrAddParams(RSV);
+		PathogenConfigGroup.ProgressionParams byAge = rsv.getOrAddProgressionParams(true);
 		// P(symptomatic|infected): PHIRST South Africa by age, band 5 pools 5-12/13-18/19-44/45-64 (doi:10.1038/s41467-023-44275-y)
 		byAge.setShowingSymptomsProbabilityByAge(Map.of(0, 0.67, 1, 0.48, 5, 0.26, 60, 0.35, 80, 0.45));
 		byAge.setSeriouslySickProbabilityByAge(Map.of(       // P(hosp|symptomatic); chained derivation, doc section 4.2
@@ -173,11 +174,11 @@ public class RsvCologneScenarioTest {
 				60, 0.15,     // assumption bridging Falsey 2005 in-hospital 8% and a ~19% ICU-cohort comparator
 				80, 0.22));   // assumption, rising with age
 		// RSV spreads by droplets AND direct/self-inoculation contact, aerosols "less important" than for influenza (doi:10.1111/irv.70270)
-		byAge.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0;directContact=0.6"));
+		rsv.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0;directContact=0.6"));
 		// atHome (not full): a sick child still infects their own household, the dominant real RSV transmission situation.
 		// Low-confidence, age-graded assumption (doc section 3.1): informal Kita-exclusion norm vs. adult presenteeism.
-		byAge.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.85, 1, 0.70, 5, 0.30, 60, 0.40, 80, 0.50));
-		byAge.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
+		rsv.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.85, 1, 0.70, 5, 0.30, 60, 0.40, 80, 0.50));
+		rsv.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
 		// 3. disease progression (replaces the COVID progressionConfig of SnzCologneOpenProductionScenario)
 		episimConfig.setProgressionConfig(rsvProgressionConfig(Transition.config()).build());
@@ -314,14 +315,14 @@ public class RsvCologneScenarioTest {
 
 		assertThat(virusStrainConfig.getParams(RSV_STRAIN).getPathogen()).isEqualTo(RSV);
 
-		TransmissionWeights routes = pathogenConfig.getParams(RSV, true).getRouteTransmissibility();
+		TransmissionWeights routes = pathogenConfig.getParams(RSV).getRouteTransmissibility();
 		assertThat(routes.getRespiratory()).isEqualTo(1.0);
 		assertThat(routes.getDirectContact()).isGreaterThan(0.0);
 
 		// infants (age 0) are the most severe age band, and the most susceptible age band is toddlers (age 1)
-		assertThat(pathogenConfig.getParams(RSV, true).getSeriouslySickProbability(0))
-				.isGreaterThan(pathogenConfig.getParams(RSV, true).getSeriouslySickProbability(10));
-		assertThat(pathogenConfig.getParams(RSV, true).getSymptomaticIsolationStatus())
+		assertThat(pathogenConfig.getProgressionParams(RSV, true).getSeriouslySickProbability(0))
+				.isGreaterThan(pathogenConfig.getProgressionParams(RSV, true).getSeriouslySickProbability(10));
+		assertThat(pathogenConfig.getParams(RSV).getSymptomaticIsolationStatus())
 				.isEqualTo(EpisimPerson.QuarantineStatus.atHome);
 
 		assertThat(episimConfig.getInfections_pers_per_day()).containsOnlyKeys(RSV_STRAIN);
@@ -338,12 +339,16 @@ public class RsvCologneScenarioTest {
 		assertThat(resolver.resolve("educ_kiga", "educ_kiga", 4, 3).getDirectContact()).isGreaterThan(0.0);
 
 		// SARS-CoV-2 defaults untouched
-		assertThat(pathogenConfig.getParams(Pathogen.SARS_COV_2, false).getRouteTransmissibility().getDirectContact())
+		assertThat(pathogenConfig.getParams(Pathogen.SARS_COV_2).getRouteTransmissibility().getDirectContact())
 				.isEqualTo(0.0);
 	}
 
 	/**
 	 * The real thing: the full Cologne open scenario with RSV as the only circulating virus.
+	 *
+	 * <p>Heavy on purpose: downloads the full Cologne input set (25% sample) from the VSP SVN and simulates
+	 * {@value #ITERATIONS} days. It is run locally on a laptop, which is fine; it is intentionally not disabled,
+	 * so expect a long runtime when running the whole test suite.</p>
 	 */
 	@Test
 	public void runsOnCologneScenario() throws Exception {

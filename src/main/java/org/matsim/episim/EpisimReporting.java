@@ -116,6 +116,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
+	/**
+	 * Vaccination types known at start, fixes the columns of {@code vaccinations.tsv}.
+	 */
+	private final List<VaccinationType> vaccinationTypes = VaccinationType.getAllOptions();
 	private final Map<String, BufferedWriter> externalWriters = new HashMap<>();
 	/**
 	 * flag to ensure only one threads writes certain outputs.
@@ -200,7 +204,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", virusStrainConfig.getVirusStrains().toArray());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", virusStrainConfig.getVirusStrains().toArray());
-		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.getAllOptions().toArray());
+		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) vaccinationTypes.toArray());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 
 		sampleSize = episimConfig.getSampleSize();
@@ -573,11 +577,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.append(virusStrains, strainOut);
 		strains.clear();
 
-		String[] vacOut = new String[VaccinationType.getAllOptions().size() + 2];
+		String[] vacOut = new String[vaccinationTypes.size() + 2];
 		vacOut[0] = String.valueOf(iteration);
 		vacOut[1] = date;
-		for (int i = 0; i < VaccinationType.getAllOptions().size(); i++) {
-			vacOut[i + 2] = String.valueOf(vaccinations.getOrDefault(VaccinationType.getAllOptions().get(i), 0) * (1 / sampleSize));
+		for (int i = 0; i < vaccinationTypes.size(); i++) {
+			vacOut[i + 2] = String.valueOf(vaccinations.getOrDefault(vaccinationTypes.get(i), 0) * (1 / sampleSize));
 		}
 		writer.append(vaccinationsPerType, vacOut);
 		vaccinations.clear();

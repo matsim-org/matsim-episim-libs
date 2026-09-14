@@ -32,8 +32,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	/**
 	 * Age-independent base disease-progression probabilities of the pathogen the person is infected with.
 	 */
-	private PathogenConfigGroup.PathogenParams pathogenParams(EpisimPerson person) {
-		return pathogenConfig.getParams(person.getVirusStrain().getPathogen(), false);
+	private PathogenConfigGroup.ProgressionParams progressionParams(EpisimPerson person) {
+		return pathogenConfig.getProgressionParams(person.getVirusStrain().getPathogen(), false);
 	}
 
 	@Override
@@ -101,22 +101,22 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
-		return pathogenParams(person).getSeriouslySickProbability(person.getAgeOrDefault(0));
+		return progressionParams(person).getSeriouslySickProbability(person.getAgeOrDefault(0));
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
 	 */
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
-		return pathogenParams(person).getCriticalProbability(person.getAgeOrDefault(0));
+		return progressionParams(person).getCriticalProbability(person.getAgeOrDefault(0));
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-		return pathogenParams(person).getShowingSymptomsProbability(person.getAgeOrDefault(0));
+		return progressionParams(person).getShowingSymptomsProbability(person.getAgeOrDefault(0));
 	}
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-		return pathogenParams(person).getDeathProbability(person.getAgeOrDefault(0));
+		return progressionParams(person).getDeathProbability(person.getAgeOrDefault(0));
 	}
 
 }

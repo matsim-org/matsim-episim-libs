@@ -26,7 +26,7 @@ The other three:
 
 Confidence: **H** = high, **M** = medium, **L** = low, **NE** = no evidence found (explicit assumption). "Eff." means the value after `hospitalFactor` (0.5 in Cologne); the code divides by `hospitalFactor` so that the effective value equals the table value.
 
-### 3.1 `PathogenConfigGroup.PathogenParams` (age-dependent)
+### 3.1 `PathogenConfigGroup.PathogenParams` with its age-dependent `ProgressionParams`
 
 | Java API | Proposed | Plausible range | Denominator / notes | Source | Conf. |
 |---|---|---|---|---|---|
@@ -314,7 +314,8 @@ static void configureInfluenza(Config config) {
 
 	// 2. natural history (age-dependent); seriouslySick = effective target / hospitalFactor
 	double hospitalFactor = episimConfig.getHospitalFactor();
-	PathogenConfigGroup.PathogenParams byAge = pathogenConfig.getOrAddParams(INFLUENZA, true);
+	PathogenConfigGroup.PathogenParams influenza = pathogenConfig.getOrAddParams(INFLUENZA);
+	PathogenConfigGroup.ProgressionParams byAge = influenza.getOrAddProgressionParams(true);
 	byAge.setShowingSymptomsProbabilityByAge(Map.of(0, 0.56));   // 268/478 PCR infections symptomatic (doi:10.1016/S2214-109X(21)00141-8)
 	byAge.setSeriouslySickProbabilityByAge(Map.of(                // CDC 2018-19 hospitalisations / symptomatic illnesses
 			0, 0.00697 / hospitalFactor,     // 21,046 / 3,018,815
@@ -324,10 +325,10 @@ static void configureInfluenza(Config config) {
 			65, 0.09091 / hospitalFactor));  // 204,326 / 2,247,586
 	byAge.setCriticalProbabilityByAge(Map.of(0, 0.044, 18, 0.099, 60, 0.113));   // ICU share DE 2022/23 (doi:10.1007/s40121-026-01384-7)
 	byAge.setDeathProbabilityByAge(Map.of(0, 0.24));                              // European ICU mortality 0.24 (doi:10.1111/irv.70073)
-	byAge.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0")); // doi:10.1038/ncomms2922, doi:10.1017/S095026881400003X
+	influenza.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0")); // doi:10.1038/ncomms2922, doi:10.1017/S095026881400003X
 	// isolation at symptom onset: illness cut R to ~1/4, mostly outside the home (doi:10.1093/aje/kwt196) -> 1 - p = 0.25
-	byAge.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.75));
-	byAge.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
+	influenza.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.75));
+	influenza.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
 	// 3. disease progression
 	episimConfig.setProgressionConfig(influenzaProgressionConfig(Transition.config()).build());

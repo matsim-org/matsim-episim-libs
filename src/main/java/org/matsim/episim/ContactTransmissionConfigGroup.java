@@ -5,6 +5,8 @@ import com.google.common.base.Splitter;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.ContactTransmissionType;
@@ -28,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Per-contact split of infectious exposure across {@link ContactTransmissionType} routes
@@ -57,7 +60,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *       (default {@code respiratory=1.0}).</li>
  *   <li>{@code contactPair} &mdash; one unordered activity-type pair; sets either inline
  *       {@code transmissionWeights}, a {@code file} with an age-band CSV
- *       ({@code ageA,ageB,<route>,&hellip;}, rows keyed by the {@code ageBands} lower bounds), or
+ *       ({@code ageA,ageB,<route>,&hellip;}, rows keyed by the {@code ageBands} lower bounds; every unordered pair
+ *       of age bands needs a row, contacts involving a person without age use {@code defaultTransmissionWeights}), or
  *       {@code forbidden=true} to block the pair entirely. The two activity types are prefixes of
  *       container names, as in {@code contactGroup} ({@code edu} covers {@code educ_primary}); when several
  *       pairs match, the one with the longest combined prefix wins, ties go to the pair configured first.</li>
@@ -66,6 +70,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  */
 public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
+
+	private static final Logger log = LogManager.getLogger(ContactTransmissionConfigGroup.class);
 
 	/** Name of this config group. */
 	public static final String GROUPNAME = "contactTransmission";
@@ -78,6 +84,11 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	private List<Integer> ageBands = new ArrayList<>(Collections.singletonList(0));
 	private TransmissionWeights defaultTransmissionWeights = TransmissionWeights.parse("respiratory=1.0");
 	private URL context;
+
+	/**
+	 * Whether a contact with a person without age has already been reported by a resolver of this group.
+	 */
+	private final AtomicBoolean unknownAgeWarned = new AtomicBoolean(false);
 
 	/**
 	 * Creates a contact-transmission configuration pre-populated with the historical cross-activity
@@ -267,7 +278,11 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	public void addParameterSet(ConfigGroup set) {
 		if (ContactPairParams.SET_TYPE.equals(set.getName())) {
 			ContactPairParams params = (ContactPairParams) set;
-			contactPairs.put(pairKey(params.activityA, params.activityB), params);
+			ContactPairParams previous = contactPairs.put(pairKey(params.activityA, params.activityB), params);
+			// replace a previously registered pair instead of keeping a stale duplicate
+			if (previous != null) {
+				super.removeParameterSet(previous);
+			}
 			super.addParameterSet(set);
 		} else if (ContactGroupParams.SET_TYPE.equals(set.getName())) {
 			ContactGroupParams params = (ContactGroupParams) set;
@@ -307,7 +322,7 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 				String resolvedPath = url.toExternalForm();
 				TransmissionWeights[][] table = loadedFiles.get(resolvedPath);
 				if (table == null) {
-					table = readAgeMatrix(url, params.file, bands.size(), bandIndices);
+					table = readAgeMatrix(url, params.file, bands, bandIndices);
 					loadedFiles.put(resolvedPath, table);
 				}
 				resolved = new ResolvedPair(null, table, false);
@@ -323,10 +338,15 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			groupWhitelist.put(group.getActivity(), new ArrayList<>(group.getAllowedPartners()));
 		}
 
-		return new Resolver(bands, defaultTransmissionWeights, pairRules, groupWhitelist);
+		return new Resolver(bands, defaultTransmissionWeights, pairRules, groupWhitelist, unknownAgeWarned);
 	}
 
-	void setContext(URL context) {
+	/**
+	 * Sets the context against which relative {@code file} paths of contact pairs are resolved, usually
+	 * {@link org.matsim.core.config.Config#getContext()}. Without a context, relative paths are resolved against
+	 * the working directory.
+	 */
+	public void setContext(URL context) {
 		this.context = context;
 	}
 
@@ -345,8 +365,9 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
-	private static TransmissionWeights[][] readAgeMatrix(URL url, String file, int bandCount,
+	private static TransmissionWeights[][] readAgeMatrix(URL url, String file, List<Integer> bands,
 			Map<Integer, Integer> bandIndices) {
+		int bandCount = bands.size();
 		TransmissionWeights[][] table = new TransmissionWeights[bandCount][bandCount];
 		try (Reader reader = new InputStreamReader(url.openStream(), StandardCharsets.UTF_8);
 			 CSVParser csv = new CSVParser(reader,
@@ -404,9 +425,30 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 				}
 				table[lower][upper] = new TransmissionWeights(weights);
 			}
+			requireComplete(table, bands, file);
 			return table;
 		} catch (IOException e) {
 			throw new UncheckedIOException("Could not read contact transmission file '" + file + "'.", e);
+		}
+	}
+
+	/**
+	 * A missing cell would silently block transmission for that age pair, so every unordered pair of age bands needs a row.
+	 */
+	private static void requireComplete(TransmissionWeights[][] table, List<Integer> bands, String file) {
+		List<String> missing = new ArrayList<>();
+		for (int i = 0; i < bands.size(); i++) {
+			for (int j = i; j < bands.size(); j++) {
+				if (table[i][j] == null) {
+					missing.add("(" + bands.get(i) + "," + bands.get(j) + ")");
+				}
+			}
+		}
+		if (!missing.isEmpty()) {
+			throw new IllegalArgumentException("CSV file '" + file + "' does not cover all ageBands pairs, missing (ageA,ageB): "
+					+ String.join(", ", missing.subList(0, Math.min(missing.size(), 20)))
+					+ (missing.size() > 20 ? " and " + (missing.size() - 20) + " more" : "")
+					+ ". Add a row for every pair, with 0 weights where no transmission is intended.");
 		}
 	}
 
@@ -666,9 +708,15 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private final Map<String, ResolvedPair> matchCache = new ConcurrentHashMap<>();
 
+		/**
+		 * Shared by all resolvers of the same config group, so that the warning is logged once per run.
+		 */
+		private final AtomicBoolean unknownAgeWarned;
+
 		private Resolver(List<Integer> bands, TransmissionWeights defaultWeights, List<PairRule> pairRules,
-				Map<String, List<String>> groupWhitelist) {
+				Map<String, List<String>> groupWhitelist, AtomicBoolean unknownAgeWarned) {
 			this.bands = bands;
+			this.unknownAgeWarned = unknownAgeWarned;
 			this.defaultWeights = defaultWeights;
 			this.pairRules = Collections.unmodifiableList(new ArrayList<>(pairRules));
 			this.groupWhitelist = Collections.unmodifiableMap(new LinkedHashMap<>(groupWhitelist));
@@ -719,10 +767,20 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 				return pair.inlineWeights;
 			}
 
+			// an unknown age cannot be placed in an age band: treat the contact as not covered by the pair
+			if (ageA < 0 || ageB < 0) {
+				if (unknownAgeWarned.compareAndSet(false, true)) {
+					log.warn("Contact {}/{} involves a person without age, but the matching contactPair uses an age matrix. "
+							+ "Default transmission weights {} are used for such contacts; this is logged only once. "
+							+ "The number of persons without age is reported by the household check.",
+							activityA, activityB, defaultWeights.toToken());
+				}
+				return defaultWeights;
+			}
+
 			int indexA = bandIndex(ageA);
 			int indexB = bandIndex(ageB);
-			TransmissionWeights weights = pair.table[Math.min(indexA, indexB)][Math.max(indexA, indexB)];
-			return weights == null ? TransmissionWeights.ZERO : weights;
+			return pair.table[Math.min(indexA, indexB)][Math.max(indexA, indexB)];
 		}
 
 		/**

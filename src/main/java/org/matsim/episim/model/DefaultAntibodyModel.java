@@ -132,7 +132,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		if (firstImmunization) {
 
 			for (VirusStrain strain2 : virusStrains) {
-				double antibodies = initialAntibodiesForEvent.get(strain2);
+				// no entry: this immunity event does not induce antibodies against the strain (e.g. another pathogen)
+				double antibodies = initialAntibodiesForEvent.getOrDefault(strain2, 0.0);
 
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
@@ -148,7 +149,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			Map<VirusStrain, Double> refreshFactorsForEvent = antibodyConfig.getParams(immunityEventType).getAntibodyRefreshFactors();
 
 			for (VirusStrain strain2 : virusStrains) {
-				double refreshFactor = refreshFactorsForEvent.get(strain2);
+				// no entry: the existing antibody level against the strain is not refreshed
+				double refreshFactor = refreshFactorsForEvent.getOrDefault(strain2, 1.0);
 
 				// antibodies before refresh
 				double antibodies = person.getAntibodies(strain2);
@@ -157,7 +159,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				antibodies = antibodies * refreshFactor;
 
 				// check that new antibody level at least as high as initial antibodies
-				double initialAntibodies = initialAntibodiesForEvent.get(strain2) * person.getImmuneResponseMultiplier();
+				double initialAntibodies = initialAntibodiesForEvent.getOrDefault(strain2, 0.0) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
 				// check that new antibody level is at most 150

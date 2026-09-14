@@ -68,7 +68,7 @@ As with influenza, `strain.setInfectiousness(...)` and `episimConfig.setCalibrat
 
 Confidence: **H** = high, **M** = medium, **L** = low, **NE** = no evidence found (explicit assumption). "Eff." means the value after `hospitalFactor` (0.5 in Cologne); the code value = eff. / `hospitalFactor`, same convention as the influenza doc.
 
-### 3.1 `PathogenConfigGroup.PathogenParams` (age-dependent)
+### 3.1 `PathogenConfigGroup.PathogenParams` with its age-dependent `ProgressionParams`
 
 Age bands: **0** (infants), **1** (ages 1–4, toddlers), **5** (ages 5–59, a broad low-risk band — see the note below on why this band is coarser than influenza's), **60** (60–79), **80** (80+).
 
@@ -346,7 +346,8 @@ static void configureRsv(Config config) {
 
 	// 2. natural history (age-dependent); seriouslySick = effective target / hospitalFactor
 	double hospitalFactor = episimConfig.getHospitalFactor();
-	PathogenConfigGroup.PathogenParams byAge = pathogenConfig.getOrAddParams(RSV, true);
+	PathogenConfigGroup.PathogenParams rsv = pathogenConfig.getOrAddParams(RSV);
+	PathogenConfigGroup.ProgressionParams byAge = rsv.getOrAddProgressionParams(true);
 	// P(symptomatic|infected): PHIRST South Africa by age, band 5 pools 5-12/13-18/19-44/45-64 (doi:10.1038/s41467-023-44275-y)
 	byAge.setShowingSymptomsProbabilityByAge(Map.of(0, 0.67, 1, 0.48, 5, 0.26, 60, 0.35, 80, 0.45));
 	byAge.setSeriouslySickProbabilityByAge(Map.of(       // P(hosp|symptomatic); chained derivation, doc section 4.2
@@ -368,11 +369,11 @@ static void configureRsv(Config config) {
 			60, 0.15,     // assumption bridging Falsey 2005 in-hospital 8% and a ~19% ICU-cohort comparator
 			80, 0.22));   // assumption, rising with age
 	// RSV spreads by droplets AND direct/self-inoculation contact, aerosols "less important" than for influenza (doi:10.1111/irv.70270)
-	byAge.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0;directContact=0.6"));
+	rsv.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0;directContact=0.6"));
 	// atHome (not full): a sick child still infects their own household, the dominant real RSV transmission situation.
 	// Low-confidence, age-graded assumption (doc section 3.1): informal Kita-exclusion norm vs. adult presenteeism.
-	byAge.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.85, 1, 0.70, 5, 0.30, 60, 0.40, 80, 0.50));
-	byAge.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
+	rsv.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.85, 1, 0.70, 5, 0.30, 60, 0.40, 80, 0.50));
+	rsv.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
 	// 3. disease progression
 	episimConfig.setProgressionConfig(rsvProgressionConfig(Transition.config()).build());

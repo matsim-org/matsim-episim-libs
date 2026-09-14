@@ -4,7 +4,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
-import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ImmunityEvent;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
@@ -25,9 +24,11 @@ import java.util.Objects;
  *     when the same immunity event happens again ({@code NaN} where no refresh is defined).</li>
  * </ul>
  *
- * <p>The default constructor fills both maps with exactly the values that {@link AntibodyModel.Config} sets up
- * today, so a configuration without an explicit {@code antibodies} section keeps behaving as before. This
- * config group does not yet feed into the simulation; it only mirrors the current hard-coded default.</p>
+ * <p>A strain without an entry is not affected by the immunity event: no antibodies are induced against it and an
+ * existing level is not refreshed. This allows strains of other pathogens to be configured independently.</p>
+ *
+ * <p>The default constructor fills both maps with the values of the former hard-coded {@code AntibodyModel.Config},
+ * so a configuration without an explicit {@code antibodies} section keeps behaving as before.</p>
  */
 @SuppressWarnings({"checkstyle:MethodName", "checkstyle:AbbreviationAsWordInName"})
 public class AntibodyConfigGroup extends ReflectiveConfigGroup {
@@ -59,7 +60,7 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Default constructor. Registers the same initial-antibody and refresh-factor values that
-	 * {@link AntibodyModel.Config} hard-codes today.
+	 * the former hard-coded {@code AntibodyModel.Config} used.
 	 */
 	public AntibodyConfigGroup() {
 		super(GROUPNAME);
@@ -82,7 +83,8 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public AntibodyParams getParams(ImmunityEvent immunityEvent) {
 		if (!params.containsKey(immunityEvent))
-			throw new IllegalStateException("Immunity event " + immunityEvent + " is not configured.");
+			throw new IllegalStateException("Immunity event " + immunityEvent + " is not configured. Add an '"
+					+ AntibodyParams.SET_TYPE + "' parameter set for it to the '" + GROUPNAME + "' config group.");
 
 		return params.get(immunityEvent);
 	}
@@ -110,7 +112,7 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Initial antibody levels for every configured immunity event, in the same nested-map shape as
-	 * {@link AntibodyModel.Config}.
+	 * the former {@code AntibodyModel.Config}.
 	 */
 	public Map<ImmunityEvent, Map<VirusStrain, Double>> getInitialAntibodies() {
 		Map<ImmunityEvent, Map<VirusStrain, Double>> result = new LinkedHashMap<>();
@@ -122,7 +124,7 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Antibody refresh factors for every configured immunity event, in the same nested-map shape as
-	 * {@link AntibodyModel.Config}.
+	 * the former {@code AntibodyModel.Config}.
 	 */
 	public Map<ImmunityEvent, Map<VirusStrain, Double>> getAntibodyRefreshFactors() {
 		Map<ImmunityEvent, Map<VirusStrain, Double>> result = new LinkedHashMap<>();
@@ -164,7 +166,10 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 	public void addParameterSet(final ConfigGroup set) {
 		if (AntibodyParams.SET_TYPE.equals(set.getName())) {
 			AntibodyParams p = (AntibodyParams) set;
-			params.put(p.getImmunityEvent(), p);
+			AntibodyParams previous = params.put(p.getImmunityEvent(), p);
+			// replace a previously registered set (e.g. an auto-added default) instead of keeping a stale duplicate
+			if (previous != null){
+				super.removeParameterSet(previous);}
 			super.addParameterSet(set);
 
 		} else
@@ -173,7 +178,7 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Builds the default initial-antibody map. Ported verbatim (values-wise) from
-	 * {@link AntibodyModel.Config}; only the map implementation is swapped for a deterministic
+	 * the former {@code AntibodyModel.Config}; only the map implementation is swapped for a deterministic
 	 * {@link LinkedHashMap}.
 	 */
 	private static Map<ImmunityEvent, Map<VirusStrain, Double>> defaultInitialAntibodies() {
@@ -290,7 +295,7 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Builds the default antibody-refresh-factor map. Ported verbatim (values-wise) from
-	 * {@link AntibodyModel.Config}.
+	 * the former {@code AntibodyModel.Config}.
 	 */
 	private static Map<ImmunityEvent, Map<VirusStrain, Double>> defaultAntibodyRefreshFactors() {
 

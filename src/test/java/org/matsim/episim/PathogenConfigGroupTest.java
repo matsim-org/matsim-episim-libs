@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.PathogenConfigGroup.PathogenParams;
+import org.matsim.episim.PathogenConfigGroup.ProgressionParams;
 import org.matsim.episim.model.ContactTransmissionType;
 import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.TransmissionWeights;
@@ -32,7 +33,7 @@ public class PathogenConfigGroupTest {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 
 		// age-independent variant -> DefaultDiseaseStatusTransitionModel / AntibodyDependentTransitionModel
-		PathogenParams flat = group.getParams(Pathogen.SARS_COV_2, false);
+		ProgressionParams flat = group.getProgressionParams(Pathogen.SARS_COV_2, false);
 		for (int age : new int[]{0, 20, 42, 80, 120}) {
 			assertThat(flat.getShowingSymptomsProbability(age)).isEqualTo(0.8);
 			assertThat(flat.getSeriouslySickProbability(age)).isEqualTo(0.05625);
@@ -41,7 +42,7 @@ public class PathogenConfigGroupTest {
 		}
 
 		// age-dependent variant -> AgeDependentDiseaseStatusTransitionModel (pre-hospitalFactor)
-		PathogenParams byAge = group.getParams(Pathogen.SARS_COV_2, true);
+		ProgressionParams byAge = group.getProgressionParams(Pathogen.SARS_COV_2, true);
 		assertThat(byAge.getShowingSymptomsProbability(30)).isEqualTo(0.8);
 		assertThat(byAge.getDeathProbability(30)).isEqualTo(0.0);
 
@@ -71,8 +72,7 @@ public class PathogenConfigGroupTest {
 	 */
 	@Test
 	public void ageBucketSelectionIsAStepFunction() {
-		PathogenParams p = new PathogenParams();
-		p.setPathogen(INFLUENZA);
+		ProgressionParams p = new ProgressionParams();
 		p.setSeriouslySickProbabilityByAge(Map.of(0, 0.5, 5, 0.6, 18, 0.7, 65, 0.8));
 
 		assertThat(p.getSeriouslySickProbability(0)).isEqualTo(0.5);
@@ -96,7 +96,7 @@ public class PathogenConfigGroupTest {
 	 */
 	@Test
 	public void probabilitiesOutsideUnitIntervalAreRejected() {
-		PathogenParams p = new PathogenParams();
+		ProgressionParams p = new ProgressionParams();
 
 		assertThatThrownBy(() -> p.setCriticalProbabilityByAge("0=1.5"))
 				.isInstanceOf(IllegalArgumentException.class);
@@ -124,30 +124,26 @@ public class PathogenConfigGroupTest {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 		Config config = ConfigUtils.createConfig(group);
 
-		PathogenParams flu = group.getOrAddParams(INFLUENZA, false);
+		ProgressionParams flu = group.getOrAddParams(INFLUENZA).getOrAddProgressionParams(false);
 		flu.setShowingSymptomsProbabilityByAge(Map.of(0, 0.4, 60, 0.55));
 		flu.setSeriouslySickProbabilityByAge(Map.of(0, 0.01, 70, 0.2));
 		flu.setCriticalProbabilityByAge(Map.of(0, 0.05));
 		flu.setDeathProbabilityByAge(Map.of(0, 0.0, 80, 0.1));
 
-		File tmp = File.createTempFile("matsim", "config");
-		tmp.deleteOnExit();
-		ConfigUtils.writeConfig(config, tmp.toString());
-
-		PathogenConfigGroup copy = new PathogenConfigGroup();
-		ConfigUtils.loadConfig(tmp.toString(), copy);
+		PathogenConfigGroup copy = roundTrip(config);
 
 		// SARS-CoV-2 defaults still there, both variants
-		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getSeriouslySickProbability(30)).isEqualTo(0.05625);
-		assertThat(copy.getParams(Pathogen.SARS_COV_2, true).getSeriouslySickProbability(80)).isEqualTo(36. / 100);
+		assertThat(copy.getProgressionParams(Pathogen.SARS_COV_2, false).getSeriouslySickProbability(30)).isEqualTo(0.05625);
+		assertThat(copy.getProgressionParams(Pathogen.SARS_COV_2, true).getSeriouslySickProbability(80)).isEqualTo(36. / 100);
 
-		PathogenParams reloaded = copy.getParams(INFLUENZA, false);
+		ProgressionParams reloaded = copy.getProgressionParams(INFLUENZA, false);
 		assertThat(reloaded.getShowingSymptomsProbability(10)).isEqualTo(0.4);
 		assertThat(reloaded.getShowingSymptomsProbability(60)).isEqualTo(0.55);
 		assertThat(reloaded.getSeriouslySickProbability(69)).isEqualTo(0.01);
 		assertThat(reloaded.getSeriouslySickProbability(70)).isEqualTo(0.2);
 		assertThat(reloaded.getCriticalProbability(50)).isEqualTo(0.05);
 		assertThat(reloaded.getDeathProbability(80)).isEqualTo(0.1);
+		assertThat(copy.getParams(INFLUENZA).hasProgressionParams(true)).isFalse();
 	}
 
 	/**
@@ -157,14 +153,14 @@ public class PathogenConfigGroupTest {
 	public void newPathogenCanBeAddedThroughConfigurationOnly() {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 
-		assertThat(group.hasParams(INFLUENZA, false)).isFalse();
+		assertThat(group.hasParams(INFLUENZA)).isFalse();
 
-		group.getOrAddParams(INFLUENZA, false)
+		group.getOrAddParams(INFLUENZA).getOrAddProgressionParams(false)
 				.setShowingSymptomsProbabilityByAge(Map.of(0, 0.3, 60, 0.6));
 
-		assertThat(group.hasParams(INFLUENZA, false)).isTrue();
-		assertThat(group.getParams(INFLUENZA).getShowingSymptomsProbability(15)).isEqualTo(0.3);
-		assertThat(group.getParams(INFLUENZA).getShowingSymptomsProbability(70)).isEqualTo(0.6);
+		assertThat(group.hasParams(INFLUENZA)).isTrue();
+		assertThat(group.getProgressionParams(INFLUENZA, false).getShowingSymptomsProbability(15)).isEqualTo(0.3);
+		assertThat(group.getProgressionParams(INFLUENZA, false).getShowingSymptomsProbability(70)).isEqualTo(0.6);
 	}
 
 	/**
@@ -177,8 +173,9 @@ public class PathogenConfigGroupTest {
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 
 		PathogenConfigGroup pathogenConfig = new PathogenConfigGroup();
-		pathogenConfig.getOrAddParams(INFLUENZA, false).setSeriouslySickProbabilityByAge(Map.of(0, 0.42));
-		pathogenConfig.getOrAddParams(INFLUENZA, true).setSeriouslySickProbabilityByAge(Map.of(0, 0.1, 60, 0.9));
+		PathogenParams influenza = pathogenConfig.getOrAddParams(INFLUENZA);
+		influenza.getOrAddProgressionParams(false).setSeriouslySickProbabilityByAge(Map.of(0, 0.42));
+		influenza.getOrAddProgressionParams(true).setSeriouslySickProbabilityByAge(Map.of(0, 0.1, 60, 0.9));
 
 		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
 		VaccinationConfigGroup vaccinationConfig = new VaccinationConfigGroup();
@@ -232,7 +229,21 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (8) Strain / vaccination / antibody modifiers still apply on top of the configured base probability.
+	 * (8) A pathogen configured without the variant a transition model needs fails with a message naming the variant.
+	 */
+	@Test
+	public void missingProgressionVariantFailsClearly() {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		group.getOrAddParams(INFLUENZA).getOrAddProgressionParams(true);
+
+		assertThatThrownBy(() -> group.getProgressionParams(INFLUENZA, false))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("INFLUENZA")
+				.hasMessageContaining("ageDependent=false");
+	}
+
+	/**
+	 * (9) Strain / vaccination / antibody modifiers still apply on top of the configured base probability.
 	 */
 	@Test
 	public void strainAndImmunityModifiersStillApply() {
@@ -253,57 +264,62 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (9) Route transmissibility defaults to respiratory-only, for the SARS-CoV-2 defaults and for a
+	 * (10) Route transmissibility defaults to respiratory-only, for the SARS-CoV-2 defaults and for a
 	 * pathogen added through configuration.
 	 */
 	@Test
 	public void routeTransmissibilityDefaultsToRespiratoryOnly() {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 
-		for (boolean ageDependent : new boolean[]{false, true}) {
-			TransmissionWeights w = group.getParams(Pathogen.SARS_COV_2, ageDependent).getRouteTransmissibility();
-			assertThat(w.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(1.0);
-			assertThat(w.get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.0);
-		}
+		TransmissionWeights w = group.getParams(Pathogen.SARS_COV_2).getRouteTransmissibility();
+		assertThat(w.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(1.0);
+		assertThat(w.get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.0);
 
-		TransmissionWeights fresh = group.getOrAddParams(INFLUENZA, false).getRouteTransmissibility();
+		TransmissionWeights fresh = group.getOrAddParams(INFLUENZA).getRouteTransmissibility();
 		assertThat(fresh.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(1.0);
 		assertThat(fresh.sum()).isEqualTo(1.0);
 	}
 
 	/**
-	 * (10) A non-default route mix survives an XML round-trip.
+	 * (11) A non-default route mix survives an XML round-trip.
 	 */
 	@Test
 	public void routeTransmissibilitySurvivesXmlRoundTrip() throws IOException {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 		Config config = ConfigUtils.createConfig(group);
 
-		PathogenParams flu = group.getOrAddParams(INFLUENZA, false);
-		flu.setShowingSymptomsProbabilityByAge(Map.of(0, 0.4));
-		flu.setSeriouslySickProbabilityByAge(Map.of(0, 0.01));
-		flu.setCriticalProbabilityByAge(Map.of(0, 0.05));
-		flu.setDeathProbabilityByAge(Map.of(0, 0.0));
+		PathogenParams flu = group.getOrAddParams(INFLUENZA);
+		completeProgression(flu.getOrAddProgressionParams(false));
 		flu.setRouteTransmissibility(TransmissionWeights.parse("respiratory=0.6;directContact=0.2"));
 
-		File tmp = File.createTempFile("matsim", "config");
-		tmp.deleteOnExit();
-		ConfigUtils.writeConfig(config, tmp.toString());
+		PathogenConfigGroup copy = roundTrip(config);
 
-		PathogenConfigGroup copy = new PathogenConfigGroup();
-		ConfigUtils.loadConfig(tmp.toString(), copy);
-
-		// SARS-CoV-2 default unchanged and not duplicated
-		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getRouteTransmissibility().toToken())
+		// SARS-CoV-2 default unchanged
+		assertThat(copy.getParams(Pathogen.SARS_COV_2).getRouteTransmissibility().toToken())
 				.isEqualTo("respiratory=1.0;directContact=0.0");
 
-		TransmissionWeights reloaded = copy.getParams(INFLUENZA, false).getRouteTransmissibility();
+		TransmissionWeights reloaded = copy.getParams(INFLUENZA).getRouteTransmissibility();
 		assertThat(reloaded.get(ContactTransmissionType.RESPIRATORY)).isEqualTo(0.6);
 		assertThat(reloaded.get(ContactTransmissionType.DIRECT_CONTACT)).isEqualTo(0.2);
 	}
 
 	/**
-	 * (11) Route weights are relative and additive: a sum above 1 is accepted; only non-finite or
+	 * (12) Reloading a written config replaces the auto-added SARS-CoV-2 default instead of duplicating it, on both
+	 * levels of parameter sets.
+	 */
+	@Test
+	public void xmlRoundTripDoesNotDuplicateParameterSets() throws IOException {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		Config config = ConfigUtils.createConfig(group);
+
+		PathogenConfigGroup copy = roundTrip(config);
+
+		assertThat(copy.getParameterSets(PathogenParams.SET_TYPE)).hasSize(1);
+		assertThat(copy.getParams(Pathogen.SARS_COV_2).getParameterSets(ProgressionParams.SET_TYPE)).hasSize(2);
+	}
+
+	/**
+	 * (13) Route weights are relative and additive: a sum above 1 is accepted; only non-finite or
 	 * negative weights are rejected.
 	 */
 	@Test
@@ -318,16 +334,13 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (12) A pathogen that cannot transmit by any route is rejected on config finalisation.
+	 * (14) A pathogen that cannot transmit by any route is rejected on config finalisation.
 	 */
 	@Test
 	public void allZeroRouteTransmissibilityIsRejected() {
 		PathogenParams p = new PathogenParams();
 		p.setPathogen(INFLUENZA);
-		p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.4));
-		p.setSeriouslySickProbabilityByAge(Map.of(0, 0.01));
-		p.setCriticalProbabilityByAge(Map.of(0, 0.05));
-		p.setDeathProbabilityByAge(Map.of(0, 0.0));
+		completeProgression(p.getOrAddProgressionParams(false));
 		p.setRouteTransmissibility(TransmissionWeights.ZERO);
 
 		assertThatThrownBy(() -> p.validateComplete("pathogen"))
@@ -336,25 +349,43 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (13) Isolation at symptom onset defaults to the previously hard-coded behaviour: everybody, full quarantine.
+	 * (15) A pathogen needs at least one progression variant, and each present variant must be complete.
+	 */
+	@Test
+	public void incompleteProgressionIsRejected() {
+		PathogenParams p = new PathogenParams();
+		p.setPathogen(INFLUENZA);
+
+		assertThatThrownBy(() -> p.validateComplete("pathogen"))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("progressionParams");
+
+		p.getOrAddProgressionParams(true).setShowingSymptomsProbabilityByAge(Map.of(0, 0.5));
+
+		assertThatThrownBy(() -> p.validateComplete("pathogen"))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("ageDependent=true")
+				.hasMessageContaining("seriouslySickProbabilityByAge");
+	}
+
+	/**
+	 * (16) Isolation at symptom onset defaults to the previously hard-coded behaviour: everybody, full quarantine.
 	 */
 	@Test
 	public void symptomaticIsolationDefaultsToFullForEveryone() {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 
-		for (boolean ageDependent : new boolean[]{false, true}) {
-			PathogenParams p = group.getParams(Pathogen.SARS_COV_2, ageDependent);
-			assertThat(p.getSymptomaticIsolationProbability(30)).isEqualTo(1.0);
-			assertThat(p.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.full);
-		}
+		PathogenParams sars = group.getParams(Pathogen.SARS_COV_2);
+		assertThat(sars.getSymptomaticIsolationProbability(30)).isEqualTo(1.0);
+		assertThat(sars.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.full);
 
-		PathogenParams fresh = group.getOrAddParams(INFLUENZA, true);
+		PathogenParams fresh = group.getOrAddParams(INFLUENZA);
 		assertThat(fresh.getSymptomaticIsolationProbability(5)).isEqualTo(1.0);
 		assertThat(fresh.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.full);
 	}
 
 	/**
-	 * (14) Isolation probabilities are age buckets within [0, 1]; only 'full' and 'atHome' are valid statuses.
+	 * (17) Isolation probabilities are age buckets within [0, 1]; only 'full' and 'atHome' are valid statuses.
 	 */
 	@Test
 	public void symptomaticIsolationIsValidated() {
@@ -376,36 +407,45 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (15) The isolation settings survive an XML round-trip; the SARS-CoV-2 defaults stay untouched.
+	 * (18) The isolation settings survive an XML round-trip; the SARS-CoV-2 defaults stay untouched.
 	 */
 	@Test
 	public void symptomaticIsolationSurvivesXmlRoundTrip() throws IOException {
 		PathogenConfigGroup group = new PathogenConfigGroup();
 		Config config = ConfigUtils.createConfig(group);
 
-		PathogenParams flu = group.getOrAddParams(INFLUENZA, false);
-		flu.setShowingSymptomsProbabilityByAge(Map.of(0, 0.4));
-		flu.setSeriouslySickProbabilityByAge(Map.of(0, 0.01));
-		flu.setCriticalProbabilityByAge(Map.of(0, 0.05));
-		flu.setDeathProbabilityByAge(Map.of(0, 0.0));
+		PathogenParams flu = group.getOrAddParams(INFLUENZA);
+		completeProgression(flu.getOrAddProgressionParams(false));
 		flu.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.5, 18, 0.25));
 		flu.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
+		PathogenConfigGroup copy = roundTrip(config);
+
+		PathogenParams reloaded = copy.getParams(INFLUENZA);
+		assertThat(reloaded.getSymptomaticIsolationProbability(10)).isEqualTo(0.5);
+		assertThat(reloaded.getSymptomaticIsolationProbability(40)).isEqualTo(0.25);
+		assertThat(reloaded.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.atHome);
+
+		assertThat(copy.getParams(Pathogen.SARS_COV_2).getSymptomaticIsolationProbability(40)).isEqualTo(1.0);
+		assertThat(copy.getParams(Pathogen.SARS_COV_2).getSymptomaticIsolationStatus())
+				.isEqualTo(EpisimPerson.QuarantineStatus.full);
+	}
+
+	private static PathogenConfigGroup roundTrip(Config config) throws IOException {
 		File tmp = File.createTempFile("matsim", "config");
 		tmp.deleteOnExit();
 		ConfigUtils.writeConfig(config, tmp.toString());
 
 		PathogenConfigGroup copy = new PathogenConfigGroup();
 		ConfigUtils.loadConfig(tmp.toString(), copy);
+		return copy;
+	}
 
-		PathogenParams reloaded = copy.getParams(INFLUENZA, false);
-		assertThat(reloaded.getSymptomaticIsolationProbability(10)).isEqualTo(0.5);
-		assertThat(reloaded.getSymptomaticIsolationProbability(40)).isEqualTo(0.25);
-		assertThat(reloaded.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.atHome);
-
-		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getSymptomaticIsolationProbability(40)).isEqualTo(1.0);
-		assertThat(copy.getParams(Pathogen.SARS_COV_2, false).getSymptomaticIsolationStatus())
-				.isEqualTo(EpisimPerson.QuarantineStatus.full);
+	private static void completeProgression(ProgressionParams p) {
+		p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.4));
+		p.setSeriouslySickProbabilityByAge(Map.of(0, 0.01));
+		p.setCriticalProbabilityByAge(Map.of(0, 0.05));
+		p.setDeathProbabilityByAge(Map.of(0, 0.0));
 	}
 
 	private static int countSeriouslySick(EpisimSplittableRandom rnd, PathogenConfigGroup pathogenConfig,

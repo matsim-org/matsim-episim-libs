@@ -45,4 +45,30 @@ public class VirusStrainTest {
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("already registered for pathogen 'influenza'");
 	}
+
+	@Test
+	public void provisionalStrainTakesOverDeclaredPathogen() {
+		Pathogen influenza = new Pathogen("influenza");
+
+		// referenced by name first, e.g. by a config group that is read before virusStrains
+		VirusStrain provisional = VirusStrain.of("H3N2_PROVISIONAL_TEST");
+		assertThat(provisional.getPathogen()).isEqualTo(Pathogen.SARS_COV_2);
+
+		VirusStrain declared = VirusStrain.of(influenza, "H3N2_PROVISIONAL_TEST");
+		assertThat(declared).isSameAs(provisional);
+		assertThat(provisional.getPathogen()).isEqualTo(influenza);
+
+		// once declared, the pathogen is fixed
+		assertThatThrownBy(() -> VirusStrain.of(Pathogen.SARS_COV_2, "H3N2_PROVISIONAL_TEST"))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("already registered for pathogen 'influenza'");
+	}
+
+	@Test
+	public void standardStrainsHaveDeclaredPathogen() {
+		assertThatThrownBy(() -> VirusStrain.of(new Pathogen("influenza"), "B_1"))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> VirusStrain.of(new Pathogen("influenza"), "DELTA"))
+			.isInstanceOf(IllegalArgumentException.class);
+	}
 }

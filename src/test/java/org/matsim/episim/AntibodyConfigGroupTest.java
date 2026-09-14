@@ -143,6 +143,9 @@ public class AntibodyConfigGroupTest {
 
 		assertThat(copy.getParams(VaccinationType.mRNA).getInitialAntibodies().get(VirusStrain.SARS_CoV_2)).isEqualTo(29.2);
 		assertThat(copy.getParams(VaccinationType.generic).getAntibodyRefreshFactors().get(VirusStrain.SARS_CoV_2)).isNaN();
+
+		// loaded sets replace the auto-added defaults instead of being appended as duplicates
+		assertThat(copy.getParameterSets(AntibodyParams.SET_TYPE)).hasSameSizeAs(group.getParameterSets(AntibodyParams.SET_TYPE));
 	}
 
 	/**

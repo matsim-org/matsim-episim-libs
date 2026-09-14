@@ -48,9 +48,16 @@ public class VaccinationType implements ImmunityEvent {
 		return STANDARD_OPTIONS;
 	}
 
-	public static List<VaccinationType> getAllOptions(){
-		ArrayList<VaccinationType> vaccinationTypes = new ArrayList<>(VACCINATIONS_BY_NAME.values());
-		vaccinationTypes.sort(Comparator.comparing(VaccinationType::getId));
+	/**
+	 * Returns the standard vaccination types in declaration order, followed by all further registered types sorted by id.
+	 * The standard order is kept so that outputs like {@code vaccinations.tsv} stay unchanged.
+	 */
+	public static List<VaccinationType> getAllOptions() {
+		List<VaccinationType> vaccinationTypes = new ArrayList<>(STANDARD_OPTIONS);
+		VACCINATIONS_BY_NAME.values().stream()
+			.filter(t -> !STANDARD_OPTIONS.contains(t))
+			.sorted(Comparator.comparing(VaccinationType::getId))
+			.forEach(vaccinationTypes::add);
 		return vaccinationTypes;
 	}
 

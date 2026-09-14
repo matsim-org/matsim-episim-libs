@@ -16,63 +16,63 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 /**
- * Configuration of the base (natural history) disease-progression probabilities of a {@link Pathogen}.
+ * Configuration of the properties of a {@link Pathogen}.
  *
- * <p>Each {@link PathogenParams} parameter set describes, for one pathogen, the conditional probability of
- * moving on to the more severe branch of a disease-status transition, given that the person is currently in
- * the preceding state and given the person's age:</p>
+ * <p>There is exactly one {@link PathogenParams} parameter set per pathogen. It holds everything that is a property
+ * of the pathogen itself, independent of how disease progression is modelled:</p>
+ * <ul>
+ *     <li>{@code routeTransmissibility} &mdash; how well the pathogen transmits per {@link ContactTransmissionType}
+ *     route (respiratory / direct contact), in the {@code route=weight;route=weight} notation of
+ *     {@link ContactTransmissionConfigGroup};</li>
+ *     <li>the <b>isolation at symptom onset</b> ({@code symptomaticIsolationProbabilityByAge},
+ *     {@code symptomaticIsolationStatus});</li>
+ *     <li>one or two nested {@link ProgressionParams} with the base disease-progression probabilities, one per
+ *     variant ({@code ageDependent=false} for {@code DefaultDiseaseStatusTransitionModel} /
+ *     {@code AntibodyDependentTransitionModel}, {@code ageDependent=true} for
+ *     {@code AgeDependentDiseaseStatusTransitionModel}).</li>
+ * </ul>
+ *
+ * <p>Route weights are independent, <b>additive</b> channels: they are relative and not normalised, so raising one
+ * route's transmissibility does not lower another's. The infection model multiplies them, route by route, with the
+ * contact-side split from {@link ContactTransmissionConfigGroup} and sums the products under the exponent
+ * ({@code via[route] = contactWeight[route] &middot; routeTransmissibility[route] &middot; routeModifiers}).
+ * {@code respiratory=1.0} is the conventional anchor &mdash; with it (and the default contact-side weights) the
+ * formula reduces to the previous respiratory-only model, so SARS-CoV-2 behaves exactly as before. A pathogen that
+ * also spreads by direct contact is written as e.g. {@code respiratory=1.0;directContact=0.4} (a sum above 1 is
+ * allowed). A pathogen whose weights are all zero is rejected on config finalisation.</p>
+ *
+ * <p>A person who starts showing symptoms goes into {@code symptomaticIsolationStatus} ({@code full}: no contacts at
+ * all; {@code atHome}: home activities only) with probability {@code symptomaticIsolationProbabilityByAge}. The
+ * decision is drawn once per person at symptom onset and holds until recovery. The defaults ({@code 0=1.0},
+ * {@code full}) reproduce the previously hard-coded behaviour, including the random number stream.</p>
+ *
+ * <p>Each {@link ProgressionParams} describes the conditional probability of moving on to the more severe branch
+ * of a disease-status transition, given the preceding state and the person's age:</p>
  * <ul>
  *     <li>{@code P(showingSymptoms | contagious, age)}</li>
  *     <li>{@code P(seriouslySick | showingSymptoms, age)}</li>
  *     <li>{@code P(critical | seriouslySick, age)}</li>
  *     <li>{@code P(deceased | critical, age)}</li>
  * </ul>
- *
  * <p>The remaining probability mass corresponds to the existing alternative branch (usually {@code recovered},
- * or {@code seriouslySickAfterCritical} for the {@code critical} transition).</p>
+ * or {@code seriouslySickAfterCritical} for the {@code critical} transition). Strain-relative differences,
+ * vaccination and antibody effects, the {@code hospitalFactor} and every other modifier stay in the models.</p>
  *
- * <p>Age profiles use the same {@code age=value;age=value} bucket notation as
- * {@link VirusStrainConfigGroup}. A value applies from the given age (inclusive) up to the next boundary; a
- * single entry such as {@code 0=0.8} therefore yields a constant probability for all ages.</p>
- *
- * <p>Strain-relative differences, vaccination effects, antibody/immunity effects, the {@code hospitalFactor}
- * and every other existing modifier stay where they are today. This config group replaces the base
- * probability that used to be hard-coded in the transition models.</p>
- *
- * <p>Each {@link PathogenParams} also carries {@code routeTransmissibility} &mdash; how well the pathogen
- * transmits per {@link ContactTransmissionType} route (respiratory / direct contact), written in the same
- * {@code route=weight;route=weight} notation as {@link ContactTransmissionConfigGroup}. The infection
- * model multiplies it, route by route, with the contact-side split from
- * {@link ContactTransmissionConfigGroup} and sums the products under the exponent
- * ({@code via[route] = contactWeight[route] &middot; routeTransmissibility[route] &middot; routeModifiers}).</p>
- *
- * <p>The routes are independent, <b>additive</b> channels: the weights are relative and not normalised,
- * so raising one route's transmissibility does not lower another's. {@code respiratory=1.0} is the
- * conventional anchor &mdash; with it (and the default contact-side weights) the formula reduces to the
- * previous respiratory-only model, so SARS-CoV-2 behaves exactly as before. A pathogen that also spreads
- * by direct contact is written as e.g. {@code respiratory=1.0;directContact=0.4} (note the sum exceeds 1,
- * which is allowed). Only finite, non-negative weights are accepted, and a pathogen whose weights are all
- * zero &mdash; it could not transmit at all &mdash; is rejected on config finalisation.</p>
- *
- * <p>Each {@link PathogenParams} also defines the <b>isolation at symptom onset</b>. A person who starts showing
- * symptoms goes into {@code symptomaticIsolationStatus} ({@code full}: no contacts at all; {@code atHome}: home
- * activities only) with probability {@code symptomaticIsolationProbabilityByAge} (same age-bucket notation). The
- * decision is drawn once per person at symptom onset and holds until recovery. The defaults ({@code 0=1.0},
- * {@code full}) reproduce the previously hard-coded behaviour, including the random number stream.</p>
+ * <p>All age profiles use the {@code age=value;age=value} bucket notation of {@link VirusStrainConfigGroup}. A value
+ * applies from the given age (inclusive) up to the next boundary; a single entry such as {@code 0=0.8} yields a
+ * constant for all ages.</p>
  */
 public class PathogenConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String GROUPNAME = "pathogen";
 
-	/**
-	 * Base probabilities that are looked up independently of age (a single {@code 0=value} bucket).
-	 */
-	private final Map<Pathogen, PathogenParams> ageIndependentParams = new LinkedHashMap<>();
+	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
+	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
 	/**
-	 * Base probabilities that carry a full age profile.
+	 * Parameters per pathogen.
 	 */
-	private final Map<Pathogen, PathogenParams> ageDependentParams = new LinkedHashMap<>();
+	private final Map<Pathogen, PathogenParams> params = new LinkedHashMap<>();
 
 	/**
 	 * Default constructor. Registers the SARS-CoV-2 defaults so that existing COVID configurations without an
@@ -81,64 +81,49 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 	public PathogenConfigGroup() {
 		super(GROUPNAME);
 
-		addParameterSet(PathogenParams.sarsCov2AgeIndependentDefault());
-		addParameterSet(PathogenParams.sarsCov2AgeDependentDefault());
-	}
-
-	private Map<Pathogen, PathogenParams> store(boolean ageDependent) {
-		return ageDependent ? ageDependentParams : ageIndependentParams;
+		addParameterSet(PathogenParams.sarsCov2Default());
 	}
 
 	/**
-	 * Get the parameter set for a pathogen.
+	 * Get the parameter set of a pathogen.
+	 *
+	 * @throws IllegalStateException if the pathogen has not been configured
 	 */
 	public PathogenParams getParams(Pathogen pathogen) {
-		if (store(false).get(pathogen)!= null){
-			return getParams(pathogen, false);
-		} else if (store(true).get(pathogen)!=null){
-			return getParams(pathogen, true);
-		} else {
-			throw new IllegalStateException("No "
-				+ "pathogen configuration for '" + pathogen.getName() + "'. Add a '" + PathogenParams.SET_TYPE
-				+ "' parameter set for this pathogen to the '" + GROUPNAME + "' config group.");
-		}
-
+		PathogenParams p = params.get(pathogen);
+		if (p == null)
+			throw new IllegalStateException("No pathogen configuration for '" + pathogen.getName() + "'. Add a '"
+					+ PathogenParams.SET_TYPE + "' parameter set for this pathogen to the '" + GROUPNAME + "' config group.");
+		return p;
 	}
 
 	/**
-	 * Get the parameter set for a pathogen, selecting the age-dependent or age-independent variant.
+	 * Get the disease-progression probabilities of a pathogen in the requested variant.
 	 *
-	 * @throws IllegalStateException if the pathogen (in the requested variant) has not been configured
+	 * @throws IllegalStateException if the pathogen or the requested variant has not been configured
 	 */
-	public PathogenParams getParams(Pathogen pathogen, boolean ageDependent) {
-		PathogenParams params = store(ageDependent).get(pathogen);
-		if (params == null) {
-			throw new IllegalStateException("No " + (ageDependent ? "age-dependent " : "")
-					+ "pathogen configuration for '" + pathogen.getName() + "'. Add a '" + PathogenParams.SET_TYPE
-					+ "' parameter set for this pathogen to the '" + GROUPNAME + "' config group"
-					+ (ageDependent ? " with ageDependent=true" : "") + ".");
-		}
-		return params;
+	public ProgressionParams getProgressionParams(Pathogen pathogen, boolean ageDependent) {
+		return getParams(pathogen).getProgressionParams(ageDependent);
 	}
 
 	/**
-	 * Whether a parameter set for the pathogen (in the given variant) is present.
+	 * Whether a parameter set for the pathogen is present.
 	 */
-	public boolean hasParams(Pathogen pathogen, boolean ageDependent) {
-		return store(ageDependent).containsKey(pathogen);
+	public boolean hasParams(Pathogen pathogen) {
+		return params.containsKey(pathogen);
 	}
 
 	/**
-	 * Get an existing or add a new (empty) parameter set for the given pathogen and variant.
+	 * Get an existing or add a new parameter set for the given pathogen. A new set carries the defaults
+	 * (respiratory-only, isolation of everybody) and no progression variant yet.
 	 */
-	public PathogenParams getOrAddParams(Pathogen pathogen, boolean ageDependent) {
-		PathogenParams existing = store(ageDependent).get(pathogen);
+	public PathogenParams getOrAddParams(Pathogen pathogen) {
+		PathogenParams existing = params.get(pathogen);
 		if (existing != null)
 			return existing;
 
 		PathogenParams p = new PathogenParams();
 		p.setPathogen(pathogen);
-		p.setAgeDependent(ageDependent);
 		addParameterSet(p);
 		return p;
 	}
@@ -147,8 +132,8 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 	protected void checkConsistency(Config config) {
 		super.checkConsistency(config);
 
-		for (ConfigGroup set : getParameterSets(PathogenParams.SET_TYPE)) {
-			((PathogenParams) set).validateComplete(getName());
+		for (PathogenParams p : params.values()) {
+			p.validateComplete(getName());
 		}
 	}
 
@@ -166,8 +151,7 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			throw new IllegalStateException("Unknown parameter set type: " + set.getName());
 
 		PathogenParams p = (PathogenParams) set;
-
-		PathogenParams previous = store(p.isAgeDependent()).put(p.getPathogen(), p);
+		PathogenParams previous = params.put(p.getPathogen(), p);
 
 		// Replace a previously registered set (e.g. the auto-added SARS-CoV-2 default) instead of keeping a stale duplicate.
 		if (previous != null)
@@ -177,24 +161,65 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Base disease-progression probabilities for a single {@link Pathogen}.
+	 * Value of an age profile for the given age; ages below the first bucket use the first bucket.
+	 */
+	private static double forAge(String param, NavigableMap<Integer, Double> map, int age) {
+		Map.Entry<Integer, Double> entry = map.floorEntry(age);
+		if (entry == null)
+			entry = map.firstEntry();
+		if (entry == null)
+			throw new IllegalStateException("No age profile configured for '" + param + "'.");
+		return entry.getValue();
+	}
+
+	private static void replace(NavigableMap<Integer, Double> target, NavigableMap<Integer, Double> values) {
+		target.clear();
+		target.putAll(values);
+	}
+
+	private static NavigableMap<Integer, Double> parse(String param, String config) {
+		NavigableMap<Integer, Double> parsed = new TreeMap<>();
+		for (Map.Entry<String, String> e : SPLITTER.split(config).entrySet()) {
+			parsed.put(Integer.parseInt(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));
+		}
+		return validated(param, parsed);
+	}
+
+	private static NavigableMap<Integer, Double> validated(String param, Map<Integer, Double> values) {
+		if (values.isEmpty())
+			throw new IllegalArgumentException("'" + param + "' needs at least one age bucket.");
+
+		NavigableMap<Integer, Double> out = new TreeMap<>();
+		for (Map.Entry<Integer, Double> e : values.entrySet()) {
+			int age = e.getKey();
+			double p = e.getValue();
+			if (age < 0)
+				throw new IllegalArgumentException("'" + param + "' age bucket must not be negative but was " + age + ".");
+			if (Double.isNaN(p) || p < 0.0 || p > 1.0)
+				throw new IllegalArgumentException("'" + param + "' probability for age " + age
+						+ " must be within [0, 1] but was " + p + ".");
+			out.put(age, p);
+		}
+		return out;
+	}
+
+	private static void requireNonEmpty(String owner, String param, NavigableMap<Integer, Double> map) {
+		if (map.isEmpty())
+			throw new IllegalStateException(owner + " is missing an age profile for '" + param + "'.");
+	}
+
+	/**
+	 * Properties of a single {@link Pathogen}: transmission routes, isolation at symptom onset and the nested
+	 * disease-progression variants.
 	 */
 	public static final class PathogenParams extends ReflectiveConfigGroup {
 
 		static final String SET_TYPE = "pathogenParams";
 
 		private static final String PATHOGEN = "pathogen";
-		private static final String AGE_DEPENDENT = "ageDependent";
-		private static final String SHOWING_SYMPTOMS = "showingSymptomsProbabilityByAge";
-		private static final String SERIOUSLY_SICK = "seriouslySickProbabilityByAge";
-		private static final String CRITICAL = "criticalProbabilityByAge";
-		private static final String DEATH = "deathProbabilityByAge";
 		private static final String ROUTE_TRANSMISSIBILITY = "routeTransmissibility";
 		private static final String SYMPTOMATIC_ISOLATION = "symptomaticIsolationProbabilityByAge";
 		private static final String SYMPTOMATIC_ISOLATION_STATUS = "symptomaticIsolationStatus";
-
-		private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
-		private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
 		/**
 		 * Pathogen this parameter set applies to.
@@ -202,22 +227,11 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private Pathogen pathogen = Pathogen.SARS_COV_2;
 
 		/**
-		 * Whether this parameter set carries a full age profile. Age-independent sets and age-dependent sets are
-		 * stored separately so a pathogen can keep both the flat base values and the age tables.
-		 */
-		private boolean ageDependent = false;
-
-		private final NavigableMap<Integer, Double> showingSymptomsProbabilityByAge = new TreeMap<>();
-		private final NavigableMap<Integer, Double> seriouslySickProbabilityByAge = new TreeMap<>();
-		private final NavigableMap<Integer, Double> criticalProbabilityByAge = new TreeMap<>();
-		private final NavigableMap<Integer, Double> deathProbabilityByAge = new TreeMap<>();
-
-		/**
 		 * Per-route transmissibility of this pathogen. Relative, additive weights (no sum constraint);
 		 * the infection model multiplies them route by route with the contact-side split from
 		 * {@link ContactTransmissionConfigGroup}. Defaults to respiratory-only.
 		 */
-		private TransmissionWeights routeTransmissibility = TransmissionWeights.parse("respiratory=1.0");
+		private TransmissionWeights routeTransmissibility = TransmissionWeights.RESPIRATORY_ONLY;
 
 		/**
 		 * Probability that a person isolates at symptom onset, by age. Defaults to everybody (the previous behaviour).
@@ -229,58 +243,24 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private EpisimPerson.QuarantineStatus symptomaticIsolationStatus = EpisimPerson.QuarantineStatus.full;
 
+		/**
+		 * Disease-progression variants; index 0 is age-independent, index 1 age-dependent.
+		 */
+		private final ProgressionParams[] progression = new ProgressionParams[2];
+
 		PathogenParams() {
 			super(SET_TYPE);
 		}
 
 		/**
-		 * SARS-CoV-2 defaults for the age-independent transition models
-		 * ({@code DefaultDiseaseStatusTransitionModel}, {@code AntibodyDependentTransitionModel}).
+		 * SARS-CoV-2 defaults: respiratory-only, isolation of everybody, and both progression variants with the values
+		 * that used to be hard-coded in the transition models.
 		 */
-		static PathogenParams sarsCov2AgeIndependentDefault() {
+		static PathogenParams sarsCov2Default() {
 			PathogenParams p = new PathogenParams();
 			p.setPathogen(Pathogen.SARS_COV_2);
-			p.setAgeDependent(false);
-			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));
-			p.setSeriouslySickProbabilityByAge(Map.of(0, 0.05625));
-			p.setCriticalProbabilityByAge(Map.of(0, 0.25));
-			p.setDeathProbabilityByAge(Map.of(0, 0.0));
-			// SARS-CoV-2 is treated as respiratory-only, matching the pre-route behaviour.
-			p.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
-			return p;
-		}
-
-		/**
-		 * SARS-CoV-2 defaults for {@code AgeDependentDiseaseStatusTransitionModel}. The values and age boundaries
-		 * are taken verbatim from that model; the {@code hospitalFactor} multiplier stays in the model.
-		 */
-		static PathogenParams sarsCov2AgeDependentDefault() {
-			PathogenParams p = new PathogenParams();
-			p.setPathogen(Pathogen.SARS_COV_2);
-			p.setAgeDependent(true);
-			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));
-
-			NavigableMap<Integer, Double> seriouslySick = new TreeMap<>();
-			seriouslySick.put(0, 4.0 / 100);
-			seriouslySick.put(5, 1.1 / 100);
-			seriouslySick.put(15, 2.4 / 100);
-			seriouslySick.put(35, 5.6 / 100);
-			seriouslySick.put(60, 23. / 100);
-			seriouslySick.put(80, 36. / 100);
-			p.setSeriouslySickProbabilityByAge(seriouslySick);
-
-			NavigableMap<Integer, Double> critical = new TreeMap<>();
-			critical.put(0, 7.0 / 100);
-			critical.put(5, 0.0 / 100);
-			critical.put(15, 15.0 / 100);
-			critical.put(35, 30.0 / 100);
-			critical.put(60, 41. / 100);
-			critical.put(80, 27. / 100);
-			p.setCriticalProbabilityByAge(critical);
-
-			p.setDeathProbabilityByAge(Map.of(0, 0.0));
-			// SARS-CoV-2 is treated as respiratory-only, matching the pre-route behaviour.
-			p.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
+			p.addParameterSet(ProgressionParams.sarsCov2AgeIndependentDefault());
+			p.addParameterSet(ProgressionParams.sarsCov2AgeDependentDefault());
 			return p;
 		}
 
@@ -289,67 +269,81 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			return pathogen.getName();
 		}
 
-		public Pathogen getPathogen() {
-			return pathogen;
-		}
-
 		@StringSetter(PATHOGEN)
 		public void setPathogen(String pathogen) {
 			setPathogen(new Pathogen(pathogen));
 		}
 
+		public Pathogen getPathogen() {
+			return pathogen;
+		}
+
 		public void setPathogen(Pathogen pathogen) {
-			this.pathogen = java.util.Objects.requireNonNull(pathogen, "Pathogen must not be null");
+			this.pathogen = Objects.requireNonNull(pathogen, "Pathogen must not be null");
 		}
 
-		@StringGetter(AGE_DEPENDENT)
-		public boolean isAgeDependent() {
-			return ageDependent;
+		/**
+		 * Disease-progression probabilities in the requested variant.
+		 *
+		 * @throws IllegalStateException if this variant has not been configured
+		 */
+		public ProgressionParams getProgressionParams(boolean ageDependent) {
+			ProgressionParams p = progression[index(ageDependent)];
+			if (p == null)
+				throw new IllegalStateException("No " + (ageDependent ? "age-dependent" : "age-independent")
+						+ " disease progression for pathogen '" + pathogen.getName() + "'. Add a '" + ProgressionParams.SET_TYPE
+						+ "' parameter set with ageDependent=" + ageDependent + " to its '" + SET_TYPE + "'.");
+			return p;
 		}
 
-		@StringSetter(AGE_DEPENDENT)
-		public void setAgeDependent(boolean ageDependent) {
-			this.ageDependent = ageDependent;
+		/**
+		 * Whether the progression variant is present.
+		 */
+		public boolean hasProgressionParams(boolean ageDependent) {
+			return progression[index(ageDependent)] != null;
 		}
 
-		@StringGetter(SHOWING_SYMPTOMS)
-		String getShowingSymptomsProbabilityByAgeString() {
-			return JOINER.join(showingSymptomsProbabilityByAge);
+		/**
+		 * Get an existing or add a new (empty) progression variant.
+		 */
+		public ProgressionParams getOrAddProgressionParams(boolean ageDependent) {
+			ProgressionParams existing = progression[index(ageDependent)];
+			if (existing != null)
+				return existing;
+
+			ProgressionParams p = new ProgressionParams();
+			p.setAgeDependent(ageDependent);
+			addParameterSet(p);
+			return p;
 		}
 
-		@StringSetter(SHOWING_SYMPTOMS)
-		void setShowingSymptomsProbabilityByAge(String config) {
-			replace(showingSymptomsProbabilityByAge, parse(SHOWING_SYMPTOMS, config));
+		@Override
+		public ConfigGroup createParameterSet(String type) {
+			if (ProgressionParams.SET_TYPE.equals(type))
+				return new ProgressionParams();
+
+			throw new IllegalArgumentException("Unknown parameter set type: " + type);
 		}
 
-		@StringGetter(SERIOUSLY_SICK)
-		String getSeriouslySickProbabilityByAgeString() {
-			return JOINER.join(seriouslySickProbabilityByAge);
+		@Override
+		public void addParameterSet(final ConfigGroup set) {
+			if (!ProgressionParams.SET_TYPE.equals(set.getName()))
+				throw new IllegalStateException("Unknown parameter set type: " + set.getName());
+
+			ProgressionParams p = (ProgressionParams) set;
+			int idx = index(p.isAgeDependent());
+			ProgressionParams previous = progression[idx];
+			progression[idx] = p;
+
+			// replace a previously registered variant instead of keeping a stale duplicate
+			if (previous != null)
+				super.removeParameterSet(previous);
+
+			super.addParameterSet(set);
 		}
 
-		@StringSetter(SERIOUSLY_SICK)
-		void setSeriouslySickProbabilityByAge(String config) {
-			replace(seriouslySickProbabilityByAge, parse(SERIOUSLY_SICK, config));
-		}
-
-		@StringGetter(CRITICAL)
-		String getCriticalProbabilityByAgeString() {
-			return JOINER.join(criticalProbabilityByAge);
-		}
-
-		@StringSetter(CRITICAL)
-		void setCriticalProbabilityByAge(String config) {
-			replace(criticalProbabilityByAge, parse(CRITICAL, config));
-		}
-
-		@StringGetter(DEATH)
-		String getDeathProbabilityByAgeString() {
-			return JOINER.join(deathProbabilityByAge);
-		}
-
-		@StringSetter(DEATH)
-		void setDeathProbabilityByAge(String config) {
-			replace(deathProbabilityByAge, parse(DEATH, config));
+		private static int index(boolean ageDependent) {
+			return ageDependent ? 1 : 0;
 		}
 
 		@StringGetter(ROUTE_TRANSMISSIBILITY)
@@ -435,10 +429,138 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
+		 * Ensure the pathogen can transmit, has an isolation profile and at least one complete progression variant.
+		 * Called on config finalisation, not on every {@code addParameterSet}, so that sets can still be filled in after
+		 * being registered.
+		 */
+		void validateComplete(String groupName) {
+			String owner = "pathogen '" + pathogen.getName() + "' in config group '" + groupName + "'";
+
+			requireNonEmpty(owner, SYMPTOMATIC_ISOLATION, symptomaticIsolationProbabilityByAge);
+			if (routeTransmissibility.isZero())
+				throw new IllegalStateException(owner + " has an all-zero '" + ROUTE_TRANSMISSIBILITY
+						+ "'; it cannot transmit by any route.");
+
+			if (progression[0] == null && progression[1] == null)
+				throw new IllegalStateException(owner + " has no '" + ProgressionParams.SET_TYPE + "' parameter set.");
+
+			for (ProgressionParams p : progression) {
+				if (p != null)
+					p.validateComplete(owner);
+			}
+		}
+	}
+
+	/**
+	 * Base disease-progression probabilities of a pathogen in one variant (age-dependent or age-independent).
+	 */
+	public static final class ProgressionParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = "progressionParams";
+
+		private static final String AGE_DEPENDENT = "ageDependent";
+		private static final String SHOWING_SYMPTOMS = "showingSymptomsProbabilityByAge";
+		private static final String SERIOUSLY_SICK = "seriouslySickProbabilityByAge";
+		private static final String CRITICAL = "criticalProbabilityByAge";
+		private static final String DEATH = "deathProbabilityByAge";
+
+		/**
+		 * Whether this variant is used by the age-dependent transition model.
+		 */
+		private boolean ageDependent = false;
+
+		private final NavigableMap<Integer, Double> showingSymptomsProbabilityByAge = new TreeMap<>();
+		private final NavigableMap<Integer, Double> seriouslySickProbabilityByAge = new TreeMap<>();
+		private final NavigableMap<Integer, Double> criticalProbabilityByAge = new TreeMap<>();
+		private final NavigableMap<Integer, Double> deathProbabilityByAge = new TreeMap<>();
+
+		ProgressionParams() {
+			super(SET_TYPE);
+		}
+
+		/**
+		 * SARS-CoV-2 defaults for the age-independent transition models
+		 * ({@code DefaultDiseaseStatusTransitionModel}, {@code AntibodyDependentTransitionModel}).
+		 */
+		static ProgressionParams sarsCov2AgeIndependentDefault() {
+			ProgressionParams p = new ProgressionParams();
+			p.setAgeDependent(false);
+			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));
+			p.setSeriouslySickProbabilityByAge(Map.of(0, 0.05625));
+			p.setCriticalProbabilityByAge(Map.of(0, 0.25));
+			p.setDeathProbabilityByAge(Map.of(0, 0.0));
+			return p;
+		}
+
+		/**
+		 * SARS-CoV-2 defaults for {@code AgeDependentDiseaseStatusTransitionModel}. The values and age boundaries
+		 * are taken verbatim from that model; the {@code hospitalFactor} multiplier stays in the model.
+		 */
+		static ProgressionParams sarsCov2AgeDependentDefault() {
+			ProgressionParams p = new ProgressionParams();
+			p.setAgeDependent(true);
+			p.setShowingSymptomsProbabilityByAge(Map.of(0, 0.8));
+
+			NavigableMap<Integer, Double> seriouslySick = new TreeMap<>();
+			seriouslySick.put(0, 4.0 / 100);
+			seriouslySick.put(5, 1.1 / 100);
+			seriouslySick.put(15, 2.4 / 100);
+			seriouslySick.put(35, 5.6 / 100);
+			seriouslySick.put(60, 23. / 100);
+			seriouslySick.put(80, 36. / 100);
+			p.setSeriouslySickProbabilityByAge(seriouslySick);
+
+			NavigableMap<Integer, Double> critical = new TreeMap<>();
+			critical.put(0, 7.0 / 100);
+			critical.put(5, 0.0 / 100);
+			critical.put(15, 15.0 / 100);
+			critical.put(35, 30.0 / 100);
+			critical.put(60, 41. / 100);
+			critical.put(80, 27. / 100);
+			p.setCriticalProbabilityByAge(critical);
+
+			p.setDeathProbabilityByAge(Map.of(0, 0.0));
+			return p;
+		}
+
+		@StringGetter(AGE_DEPENDENT)
+		public boolean isAgeDependent() {
+			return ageDependent;
+		}
+
+		/**
+		 * Set the variant. Must be set before the parameter set is added to its {@link PathogenParams}.
+		 */
+		@StringSetter(AGE_DEPENDENT)
+		public void setAgeDependent(boolean ageDependent) {
+			this.ageDependent = ageDependent;
+		}
+
+		@StringGetter(SHOWING_SYMPTOMS)
+		String getShowingSymptomsProbabilityByAgeString() {
+			return JOINER.join(showingSymptomsProbabilityByAge);
+		}
+
+		@StringSetter(SHOWING_SYMPTOMS)
+		void setShowingSymptomsProbabilityByAge(String config) {
+			replace(showingSymptomsProbabilityByAge, parse(SHOWING_SYMPTOMS, config));
+		}
+
+		/**
 		 * Set the {@code showingSymptoms} age profile, replacing all previous entries.
 		 */
 		public void setShowingSymptomsProbabilityByAge(Map<Integer, Double> values) {
 			replace(showingSymptomsProbabilityByAge, validated(SHOWING_SYMPTOMS, values));
+		}
+
+		@StringGetter(SERIOUSLY_SICK)
+		String getSeriouslySickProbabilityByAgeString() {
+			return JOINER.join(seriouslySickProbabilityByAge);
+		}
+
+		@StringSetter(SERIOUSLY_SICK)
+		void setSeriouslySickProbabilityByAge(String config) {
+			replace(seriouslySickProbabilityByAge, parse(SERIOUSLY_SICK, config));
 		}
 
 		/**
@@ -448,11 +570,31 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 			replace(seriouslySickProbabilityByAge, validated(SERIOUSLY_SICK, values));
 		}
 
+		@StringGetter(CRITICAL)
+		String getCriticalProbabilityByAgeString() {
+			return JOINER.join(criticalProbabilityByAge);
+		}
+
+		@StringSetter(CRITICAL)
+		void setCriticalProbabilityByAge(String config) {
+			replace(criticalProbabilityByAge, parse(CRITICAL, config));
+		}
+
 		/**
 		 * Set the {@code critical} age profile, replacing all previous entries.
 		 */
 		public void setCriticalProbabilityByAge(Map<Integer, Double> values) {
 			replace(criticalProbabilityByAge, validated(CRITICAL, values));
+		}
+
+		@StringGetter(DEATH)
+		String getDeathProbabilityByAgeString() {
+			return JOINER.join(deathProbabilityByAge);
+		}
+
+		@StringSetter(DEATH)
+		void setDeathProbabilityByAge(String config) {
+			replace(deathProbabilityByAge, parse(DEATH, config));
 		}
 
 		/**
@@ -507,64 +649,14 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
-		 * Ensure every transition has an age profile. Called on config finalisation, not on every
-		 * {@code addParameterSet}, so that sets can still be filled in after being registered.
+		 * Ensure every transition has an age profile.
 		 */
-		void validateComplete(String groupName) {
-			requireNonEmpty(groupName, SHOWING_SYMPTOMS, showingSymptomsProbabilityByAge);
-			requireNonEmpty(groupName, SERIOUSLY_SICK, seriouslySickProbabilityByAge);
-			requireNonEmpty(groupName, CRITICAL, criticalProbabilityByAge);
-			requireNonEmpty(groupName, DEATH, deathProbabilityByAge);
-			requireNonEmpty(groupName, SYMPTOMATIC_ISOLATION, symptomaticIsolationProbabilityByAge);
-			if (routeTransmissibility.isZero())
-				throw new IllegalStateException("pathogen '" + pathogen.getName() + "' in config group '" + groupName
-						+ "' has an all-zero '" + ROUTE_TRANSMISSIBILITY + "'; it cannot transmit by any route.");
-		}
-
-		private void requireNonEmpty(String groupName, String param, NavigableMap<Integer, Double> map) {
-			if (map.isEmpty())
-				throw new IllegalStateException("pathogen '" + pathogen.getName() + "' in config group '" + groupName
-						+ "' is missing an age profile for '" + param + "'.");
-		}
-
-		private static double forAge(String param, NavigableMap<Integer, Double> map, int age) {
-			Map.Entry<Integer, Double> entry = map.floorEntry(age);
-			if (entry == null)
-				entry = map.firstEntry();
-			if (entry == null)
-				throw new IllegalStateException("No age profile configured for '" + param + "'.");
-			return entry.getValue();
-		}
-
-		private static void replace(NavigableMap<Integer, Double> target, NavigableMap<Integer, Double> values) {
-			target.clear();
-			target.putAll(values);
-		}
-
-		private static NavigableMap<Integer, Double> parse(String param, String config) {
-			NavigableMap<Integer, Double> parsed = new TreeMap<>();
-			for (Map.Entry<String, String> e : SPLITTER.split(config).entrySet()) {
-				parsed.put(Integer.parseInt(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));
-			}
-			return validated(param, parsed);
-		}
-
-		private static NavigableMap<Integer, Double> validated(String param, Map<Integer, Double> values) {
-			if (values.isEmpty())
-				throw new IllegalArgumentException("'" + param + "' needs at least one age bucket.");
-
-			NavigableMap<Integer, Double> out = new TreeMap<>();
-			for (Map.Entry<Integer, Double> e : values.entrySet()) {
-				int age = e.getKey();
-				double p = e.getValue();
-				if (age < 0)
-					throw new IllegalArgumentException("'" + param + "' age bucket must not be negative but was " + age + ".");
-				if (Double.isNaN(p) || p < 0.0 || p > 1.0)
-					throw new IllegalArgumentException("'" + param + "' probability for age " + age
-							+ " must be within [0, 1] but was " + p + ".");
-				out.put(age, p);
-			}
-			return out;
+		void validateComplete(String owner) {
+			String variant = owner + " (" + SET_TYPE + " ageDependent=" + ageDependent + ")";
+			requireNonEmpty(variant, SHOWING_SYMPTOMS, showingSymptomsProbabilityByAge);
+			requireNonEmpty(variant, SERIOUSLY_SICK, seriouslySickProbabilityByAge);
+			requireNonEmpty(variant, CRITICAL, criticalProbabilityByAge);
+			requireNonEmpty(variant, DEATH, deathProbabilityByAge);
 		}
 	}
 }

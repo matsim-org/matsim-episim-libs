@@ -395,7 +395,7 @@ public class ConfigurableProgressionModelTest {
 	public void deceasedIsTerminal() {
 
 		// force the whole severe branch: every step to the more severe state, death out of ICU
-		PathogenConfigGroup.PathogenParams sars = pathogenConfig.getParams(Pathogen.SARS_COV_2, false);
+		PathogenConfigGroup.ProgressionParams sars = pathogenConfig.getProgressionParams(Pathogen.SARS_COV_2, false);
 		sars.setShowingSymptomsProbabilityByAge(Map.of(0, 1.0));
 		sars.setSeriouslySickProbabilityByAge(Map.of(0, 1.0));
 		sars.setCriticalProbabilityByAge(Map.of(0, 1.0));

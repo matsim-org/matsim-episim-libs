@@ -452,6 +452,17 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			prob.put(t, sum);
 		}
 
+		// custom vaccination types follow the standard ones in a deterministic order, so standard results are unchanged
+		List<VaccinationType> custom = share.keySet().stream()
+			.filter(t -> !prob.containsKey(t))
+			.sorted(Comparator.comparing(VaccinationType::getId))
+			.collect(Collectors.toList());
+
+		for (VaccinationType t : custom) {
+			sum += share.get(t);
+			prob.put(t, sum);
+		}
+
 		return prob;
 	}
 

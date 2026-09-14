@@ -123,7 +123,14 @@ public final class Restriction {
 			double sum = 1 - total;
 			this.maskUsage.put(FaceMask.NONE, sum);
 
-			for (FaceMask m : FaceMask.getAllStandardOptions()) {
+			// custom masks follow the standard ones in a deterministic order, so standard results are unchanged
+			List<FaceMask> masks = new ArrayList<>(FaceMask.getAllStandardOptions());
+			maskUsage.keySet().stream()
+					.filter(m -> !masks.contains(m))
+					.sorted(Comparator.comparing(FaceMask::getName))
+					.forEach(masks::add);
+
+			for (FaceMask m : masks) {
 				if (maskUsage.containsKey(m)) {
 					sum += maskUsage.get(m);
 					if (Double.isNaN(sum))

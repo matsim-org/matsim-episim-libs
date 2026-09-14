@@ -150,6 +150,40 @@ public class DefaultAntibodyModelTest {
 
 
 	/**
+	 * A strain of another pathogen is only configured as its own immunity event. Immunity events without an entry
+	 * for a strain neither induce nor refresh antibodies against it, instead of failing.
+	 */
+	@Test
+	public void missingCrossImmunityEntriesHaveNoEffect() {
+
+		VirusStrain flu = VirusStrain.of(new Pathogen("influenza"), "FLU_CROSS_IMMUNITY_TEST");
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		strainConfig.getOrAddParams(flu);
+		antibodyConfig.getOrAddParams(flu).setInitialAntibodies(Map.of(flu, 2.0));
+		model = new DefaultAntibodyModel(antibodyConfig, strainConfig);
+
+		EpisimPerson person = EpisimTestUtils.createPerson();
+		person.setImmuneResponseMultiplier(1.0);
+
+		// first immunization: mRNA has no entry for the flu strain
+		person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 1);
+		model.updateAntibodies(person, 2);
+
+		assertThat(person.getAntibodies(flu)).isEqualTo(0.0);
+		double sarsAntibodies = person.getAntibodies(VirusStrain.SARS_CoV_2);
+		assertThat(sarsAntibodies).isGreaterThan(0.0);
+
+		// refresh: the flu infection has no entry for SARS-CoV-2, so that level is kept
+		EpisimTestUtils.infectPerson(person, flu, 24 * 60 * 60 * 3);
+		person.setDiseaseStatus(24 * 60 * 60 * 3, EpisimPerson.DiseaseStatus.recovered);
+		model.updateAntibodies(person, 4);
+
+		assertThat(person.getAntibodies(flu)).isEqualTo(2.0);
+		assertThat(person.getAntibodies(VirusStrain.SARS_CoV_2)).isEqualTo(sarsAntibodies);
+	}
+
+	/**
 	 * Tests when there are no immunity events. Antibodies should remain 0.
 	 */
 	@Test

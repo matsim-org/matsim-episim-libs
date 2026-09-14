@@ -145,7 +145,8 @@ public class InfluenzaCologneScenarioTest {
 		// 2. natural history, age-dependent variant (Cologne uses AgeDependentDiseaseStatusTransitionModel).
 		//    The seriouslySick values are the effective targets divided by hospitalFactor, which the model multiplies back in.
 		double hospitalFactor = episimConfig.getHospitalFactor();
-		PathogenConfigGroup.PathogenParams byAge = pathogenConfig.getOrAddParams(INFLUENZA, true);
+		PathogenConfigGroup.PathogenParams influenza = pathogenConfig.getOrAddParams(INFLUENZA);
+		PathogenConfigGroup.ProgressionParams byAge = influenza.getOrAddProgressionParams(true);
 		// P(showingSymptoms | contagious): 268 of 478 PCR-confirmed infections symptomatic (PHIRST, Cohen 2021,
 		// doi:10.1016/S2214-109X(21)00141-8); no age-stratified estimate found
 		byAge.setShowingSymptomsProbabilityByAge(Map.of(0, 0.56));
@@ -165,12 +166,12 @@ public class InfluenzaCologneScenarioTest {
 		byAge.setDeathProbabilityByAge(Map.of(0, 0.24));
 		// respiratory only: aerosols ~ half of household transmission (Cowling 2013, doi:10.1038/ncomms2922); hand hygiene
 		// alone showed no significant effect (Wong 2014, doi:10.1017/S095026881400003X)
-		byAge.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
+		influenza.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0"));
 		// isolation at symptom onset: illness cut contacts, mostly outside the home, so that R fell to about 1/4
 		// (Van Kerckhove 2013, doi:10.1093/aje/kwt196). atHome removes all non-home contacts, so 1 - p = 0.25 -> p = 0.75.
 		// Low confidence: ILI cases in England 2009, sicker than all symptomatic infections; no age-specific estimate.
-		byAge.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.75));
-		byAge.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
+		influenza.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.75));
+		influenza.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
 		// 3. disease progression timing (replaces the COVID progressionConfig of SnzCologneOpenProductionScenario)
 		episimConfig.setProgressionConfig(influenzaProgressionConfig(Transition.config()).build());
@@ -297,16 +298,16 @@ public class InfluenzaCologneScenarioTest {
 		VirusStrainConfigGroup virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 		assertThat(virusStrainConfig.getParams(INFLUENZA_STRAIN).getPathogen()).isEqualTo(INFLUENZA);
-		assertThat(pathogenConfig.hasParams(INFLUENZA, true)).isTrue();
-		assertThat(pathogenConfig.getParams(INFLUENZA, true).getRouteTransmissibility().getRespiratory()).isEqualTo(1.0);
-		assertThat(pathogenConfig.getParams(INFLUENZA, true).getRouteTransmissibility().getDirectContact()).isEqualTo(0.0);
-		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSeriouslySickProbability(85)).isGreaterThan(0.0);
-		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSymptomaticIsolationProbability(30)).isEqualTo(0.75);
-		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSymptomaticIsolationStatus())
+		assertThat(pathogenConfig.getParams(INFLUENZA).hasProgressionParams(true)).isTrue();
+		assertThat(pathogenConfig.getParams(INFLUENZA).getRouteTransmissibility().getRespiratory()).isEqualTo(1.0);
+		assertThat(pathogenConfig.getParams(INFLUENZA).getRouteTransmissibility().getDirectContact()).isEqualTo(0.0);
+		assertThat(pathogenConfig.getProgressionParams(INFLUENZA, true).getSeriouslySickProbability(85)).isGreaterThan(0.0);
+		assertThat(pathogenConfig.getParams(INFLUENZA).getSymptomaticIsolationProbability(30)).isEqualTo(0.75);
+		assertThat(pathogenConfig.getParams(INFLUENZA).getSymptomaticIsolationStatus())
 				.isEqualTo(EpisimPerson.QuarantineStatus.atHome);
 
 		// effective (after hospitalFactor) hospitalisation risk of a symptomatic 70-year-old equals the CDC ratio
-		assertThat(pathogenConfig.getParams(INFLUENZA, true).getSeriouslySickProbability(70) * episimConfig.getHospitalFactor())
+		assertThat(pathogenConfig.getProgressionParams(INFLUENZA, true).getSeriouslySickProbability(70) * episimConfig.getHospitalFactor())
 				.isCloseTo(0.09091, within(1e-9));
 
 		assertThat(episimConfig.getStartDate()).isEqualTo(SEASON_START);
@@ -316,12 +317,16 @@ public class InfluenzaCologneScenarioTest {
 		// validation (PathogenConfigGroup.checkConsistency) runs inside the scenario in runsOnCologneScenario().
 
 		// SARS-CoV-2 defaults untouched
-		assertThat(pathogenConfig.getParams(Pathogen.SARS_COV_2, false).getRouteTransmissibility().getDirectContact())
+		assertThat(pathogenConfig.getParams(Pathogen.SARS_COV_2).getRouteTransmissibility().getDirectContact())
 				.isEqualTo(0.0);
 	}
 
 	/**
 	 * The real thing: the full Cologne open scenario with influenza as the only circulating virus.
+	 *
+	 * <p>Heavy on purpose: downloads the full Cologne input set (25% sample) from the VSP SVN and simulates
+	 * {@value #ITERATIONS} days. It is run locally on a laptop, which is fine; it is intentionally not disabled,
+	 * so expect a long runtime when running the whole test suite.</p>
 	 */
 	@Test
 	public void runsOnCologneScenario() throws Exception {

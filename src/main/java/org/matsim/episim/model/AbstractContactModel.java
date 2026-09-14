@@ -109,6 +109,8 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.qhParams = episimConfig.selectInfectionParams(QUARANTINE_HOME);
 		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();
 		ContactTransmissionConfigGroup contactTransmissionConfig = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
+		// relative contact matrix files are resolved against the config location
+		contactTransmissionConfig.setContext(config.getContext());
 		this.contactTransmission = contactTransmissionConfig.createResolver();
 		List<String> containerNames = episimConfig.getInfectionParams().stream()
 				.map(EpisimConfigGroup.InfectionParams::getContainerName)

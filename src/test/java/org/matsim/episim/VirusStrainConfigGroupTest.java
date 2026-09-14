@@ -8,6 +8,7 @@ import org.matsim.episim.model.VirusStrain;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,6 +55,45 @@ public class VirusStrainConfigGroupTest {
 			.contains(custom, h1n1)
 			.hasSize(VirusStrain.getAllStandardOptions().size() + 2);
 
+	}
+
+	/**
+	 * MATSim writes config modules in alphabetical order, so {@code antibodies} (and {@code episim}) reference a
+	 * custom strain by name before {@code virusStrains} declares its pathogen. Loading must not depend on that order.
+	 */
+	@Test
+	public void loadsCustomPathogenStrainReferencedBeforeVirusStrains() throws IOException {
+
+		File tmp = File.createTempFile("matsim", "config.xml");
+		tmp.deleteOnExit();
+
+		Files.writeString(tmp.toPath(), String.join("\n",
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+			"<!DOCTYPE config SYSTEM \"http://www.matsim.org/files/dtd/config_v2.dtd\">",
+			"<config>",
+			"	<module name=\"antibodies\" >",
+			"		<parameterset type=\"antibodyParams\" >",
+			"			<param name=\"immunityEvent\" value=\"FLU_ORDER_TEST\" />",
+			"			<param name=\"immunityEventKind\" value=\"strain\" />",
+			"			<param name=\"initialAntibodies\" value=\"FLU_ORDER_TEST=1.0\" />",
+			"		</parameterset>",
+			"	</module>",
+			"	<module name=\"virusStrains\" >",
+			"		<parameterset type=\"strainParams\" >",
+			"			<param name=\"pathogen\" value=\"influenza\" />",
+			"			<param name=\"strain\" value=\"FLU_ORDER_TEST\" />",
+			"		</parameterset>",
+			"	</module>",
+			"</config>"));
+
+		AntibodyConfigGroup antibodies = new AntibodyConfigGroup();
+		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
+		ConfigUtils.loadConfig(tmp.toString(), antibodies, strains);
+
+		VirusStrain flu = VirusStrain.of("FLU_ORDER_TEST");
+		assertThat(flu.getPathogen()).isEqualTo(new Pathogen("influenza"));
+		assertThat(strains.getParams(flu).getPathogen()).isEqualTo(new Pathogen("influenza"));
+		assertThat(antibodies.getParams(flu).getInitialAntibodies()).containsEntry(flu, 1.0);
 	}
 
 	@Test
