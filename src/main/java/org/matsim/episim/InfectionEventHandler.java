@@ -245,6 +245,14 @@ public final class InfectionEventHandler implements Externalizable {
 
 		updateEvents(events);
 
+		String householdWarning = checkHouseholds(personMap.values());
+		if (householdWarning != null) {
+			log.warn(householdWarning);
+		}
+		else {
+			log.info("Household check: all {} persons have a homeId attribute, no households with minors but without adults", personMap.size());
+		}
+
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
 
 		// Clear time-use after first iteration
@@ -688,13 +696,87 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Creates the home facility of a person.
 	 */
 	private EpisimFacility createHomeFacility(EpisimPerson person) {
+		Id<ActivityFacility> facilityId = Id.create(getHomeId(person), ActivityFacility.class);
+		// add facility that might not exist yet
+		return this.pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
+	}
+
+	/**
+	 * Home id of a person, persons without the homeId attribute get their own household.
+	 */
+	private static String getHomeId(EpisimPerson person) {
 		String homeId = (String) person.getAttributes().getAttribute("homeId");
 		if (homeId == null)
 			homeId = "home_of_" + person.getPersonId().toString();
 
-		Id<ActivityFacility> facilityId = Id.create(homeId, ActivityFacility.class);
-		// add facility that might not exist yet
-		return this.pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
+		return homeId;
+	}
+
+	/**
+	 * Checks the households formed by the homeId attribute for suspicious compositions.
+	 *
+	 * @return warning message, or null if nothing suspicious was found
+	 */
+	static String checkHouseholds(Collection<EpisimPerson> persons) {
+
+		// members, minors, adults, unknown age, age 0
+		Object2ObjectMap<String, int[]> households = new Object2ObjectOpenHashMap<>();
+
+		int missingHomeId = 0;
+		int unknownAge = 0;
+
+		for (EpisimPerson person : persons) {
+			if (person.getAttributes().getAttribute("homeId") == null)
+				missingHomeId++;
+
+			int[] hh = households.computeIfAbsent(getHomeId(person), k -> new int[5]);
+			int age = person.getAgeOrDefault(-1);
+
+			hh[0]++;
+			if (age < 0) {
+				hh[3]++;
+				unknownAge++;
+			} else if (age < 18) {
+				hh[1]++;
+				if (age == 0)
+					hh[4]++;
+			} else
+				hh[2]++;
+		}
+
+		int singleHouseholds = 0;
+		int noAdultHouseholds = 0;
+		int noAdultPersons = 0;
+		int noAdultInfants = 0;
+
+		for (int[] hh : households.values()) {
+			if (hh[0] == 1)
+				singleHouseholds++;
+
+			if (hh[1] > 0 && hh[2] == 0 && hh[3] == 0) {
+				noAdultHouseholds++;
+				noAdultPersons += hh[0];
+				noAdultInfants += hh[4];
+			}
+		}
+
+		if (missingHomeId == 0 && noAdultHouseholds == 0)
+			return null;
+
+		int total = persons.size();
+
+		return String.format(Locale.ROOT, "Suspicious households in the input population (this is a property of the input data, not an EpiSim error; " +
+						"households are formed from the person attribute 'homeId'):%n" +
+						"  persons without 'homeId' attribute, placed alone in a fallback household: %d of %d (%.2f%%)%n" +
+						"  households of size 1 (including fallback households): %d of %d%n" +
+						"  households with minors but no adult (age >= 18): %d, persons living in them: %d%n" +
+						"  persons of age 0 in a household without adult: %d%n" +
+						"  persons without age attribute (households containing them are not counted as without adult): %d",
+				missingHomeId, total, total == 0 ? 0. : missingHomeId * 100.0 / total,
+				singleHouseholds, households.size(),
+				noAdultHouseholds, noAdultPersons,
+				noAdultInfants,
+				unknownAge);
 	}
 
 	private EpisimConfigGroup.InfectionParams createActivityType(String actType) {
