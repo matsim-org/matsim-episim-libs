@@ -188,9 +188,9 @@ public final class DefaultContactModel extends AbstractContactModel {
 
 <span class="fc" id="L189">			double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());</span>
 
-			// transmission-route weights for this activity/age pair (symmetric in person order)
+			// transmission-route weights for this activity/age pair (symmetric in person order); -1 marks an unknown age
 <span class="fc" id="L192">			TransmissionWeights transmissionWeights = contactTransmission.resolve(leavingPersonsActivity, otherPersonsActivity,</span>
-<span class="fc" id="L193">					personLeavingContainer.getAgeOrDefault(0), contactPerson.getAgeOrDefault(0));</span>
+<span class="fc" id="L193">					personLeavingContainer.getAgeOrDefault(-1), contactPerson.getAgeOrDefault(-1));</span>
 
 			// need to differentiate which person might be the infector
 <span class="fc bfc" id="L196" title="All 2 branches covered.">			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {</span>

@@ -116,11 +116,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
-<span class="fc" id="L119">	private final Map&lt;String, BufferedWriter&gt; externalWriters = new HashMap&lt;&gt;();</span>
+	/**
+	 * Vaccination types known at start, fixes the columns of {@code vaccinations.tsv}.
+	 */
+<span class="fc" id="L122">	private final List&lt;VaccinationType&gt; vaccinationTypes = VaccinationType.getAllOptions();</span>
+<span class="fc" id="L123">	private final Map&lt;String, BufferedWriter&gt; externalWriters = new HashMap&lt;&gt;();</span>
 	/**
 	 * flag to ensure only one threads writes certain outputs.
 	 */
-<span class="fc" id="L123">	private final AtomicBoolean writeFlag = new AtomicBoolean(false);</span>
+<span class="fc" id="L127">	private final AtomicBoolean writeFlag = new AtomicBoolean(false);</span>
 	private int totalContacts;
 	/**
 	 * Zip output stream, when single events is true.
@@ -142,108 +146,118 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter antibodiesPerPerson;
 	private BufferedWriter vaccinationsPerType;
 	private BufferedWriter vaccinationsPerTypeAndNumber;
-<span class="fc" id="L145">	private String memorizedDate = null;</span>
+	/**
+	 * Writer of persons and infection episodes, null if events are not written.
+	 */
+	private final InfectionEpisodeWriter episodes;
+<span class="fc" id="L153">	private String memorizedDate = null;</span>
 
 	@Inject
-<span class="fc" id="L148">	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {</span>
-<span class="fc" id="L149">		outDir = config.controller().getOutputDirectory();</span>
+<span class="fc" id="L156">	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {</span>
+<span class="fc" id="L157">		outDir = config.controller().getOutputDirectory();</span>
 
 		// file names depend on the run name
-<span class="fc bfc" id="L152" title="All 2 branches covered.">		if (config.controller().getRunId() != null) {</span>
-<span class="fc" id="L153">			base = outDir + &quot;/&quot; + config.controller().getRunId() + &quot;.&quot;;</span>
-<span class="pc bpc" id="L154" title="1 of 2 branches missed.">		} else if (!outDir.endsWith(&quot;/&quot;)) {</span>
-<span class="nc" id="L155">			base = outDir + &quot;/&quot;;</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">		if (config.controller().getRunId() != null) {</span>
+<span class="fc" id="L161">			base = outDir + &quot;/&quot; + config.controller().getRunId() + &quot;.&quot;;</span>
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">		} else if (!outDir.endsWith(&quot;/&quot;)) {</span>
+<span class="nc" id="L163">			base = outDir + &quot;/&quot;;</span>
 		} else
-<span class="fc" id="L157">			base = outDir;</span>
+<span class="fc" id="L165">			base = outDir;</span>
 
-<span class="fc" id="L159">		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
-<span class="pc bpc" id="L160" title="1 of 2 branches missed.">		singleEvents = episimConfig.getSingleEventFile() == EpisimConfigGroup.SingleEventFile.yes;</span>
+<span class="fc" id="L167">		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">		singleEvents = episimConfig.getSingleEventFile() == EpisimConfigGroup.SingleEventFile.yes;</span>
 
 		try {
-<span class="pc bpc" id="L163" title="1 of 2 branches missed.">			if (singleEvents) {</span>
-<span class="fc" id="L164">				eventPath = Path.of(base + &quot;events.tar&quot;);</span>
-<span class="fc bfc" id="L165" title="All 2 branches covered.">				if (!Files.exists(eventPath.getParent()))</span>
-<span class="fc" id="L166">					Files.createDirectories(eventPath.getParent());</span>
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">			if (singleEvents) {</span>
+<span class="fc" id="L172">				eventPath = Path.of(base + &quot;events.tar&quot;);</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">				if (!Files.exists(eventPath.getParent()))</span>
+<span class="fc" id="L174">					Files.createDirectories(eventPath.getParent());</span>
 
-<span class="fc" id="L168">				zipOut = new TarArchiveOutputStream(Files.newOutputStream(eventPath));</span>
-<span class="fc" id="L169">				os = new ByteArrayOutputStream(1024);</span>
+<span class="fc" id="L176">				zipOut = new TarArchiveOutputStream(Files.newOutputStream(eventPath));</span>
+<span class="fc" id="L177">				os = new ByteArrayOutputStream(1024);</span>
 			} else {
-<span class="nc" id="L171">				eventPath = Path.of(outDir, &quot;events&quot;);</span>
-<span class="nc" id="L172">				os = null;</span>
-<span class="nc bnc" id="L173" title="All 2 branches missed.">				if (!Files.exists(eventPath))</span>
-<span class="nc" id="L174">					Files.createDirectories(eventPath);</span>
+<span class="nc" id="L179">				eventPath = Path.of(outDir, &quot;events&quot;);</span>
+<span class="nc" id="L180">				os = null;</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">				if (!Files.exists(eventPath))</span>
+<span class="nc" id="L182">					Files.createDirectories(eventPath);</span>
 			}
 
-<span class="nc" id="L177">		} catch (IOException e) {</span>
-<span class="nc" id="L178">			log.error(&quot;Could not create output directory&quot;, e);</span>
-<span class="nc" id="L179">			throw new UncheckedIOException(e);</span>
-<span class="fc" id="L180">		}</span>
+<span class="nc" id="L185">		} catch (IOException e) {</span>
+<span class="nc" id="L186">			log.error(&quot;Could not create output directory&quot;, e);</span>
+<span class="nc" id="L187">			throw new UncheckedIOException(e);</span>
+<span class="fc" id="L188">		}</span>
 
-<span class="fc" id="L182">		this.config = config;</span>
-<span class="fc" id="L183">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
-<span class="fc" id="L184">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
-<span class="fc" id="L185">		this.writer = writer;</span>
-<span class="fc" id="L186">		this.manager = manager;</span>
+<span class="fc" id="L190">		this.config = config;</span>
+<span class="fc" id="L191">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="fc" id="L192">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="fc" id="L193">		this.writer = writer;</span>
+<span class="fc" id="L194">		this.manager = manager;</span>
 
-<span class="fc" id="L188">		infectionReport = EpisimWriter.prepare(base + &quot;infections.txt&quot;, InfectionsWriterFields.class);</span>
-<span class="fc" id="L189">		infectionEvents = EpisimWriter.prepare(base + &quot;infectionEvents.txt&quot;, InfectionEventsWriterFields.class);</span>
-<span class="fc" id="L190">		restrictionReport = EpisimWriter.prepare(base + &quot;restrictions.txt&quot;,</span>
-<span class="fc" id="L191">			&quot;day&quot;, &quot;date&quot;, episimConfig.createInitialRestrictions().keySet().toArray());</span>
-<span class="fc" id="L192">		timeUse = EpisimWriter.prepare(base + &quot;timeUse.txt&quot;,</span>
-<span class="fc" id="L193">			&quot;day&quot;, &quot;date&quot;, episimConfig.createInitialRestrictions().keySet().toArray());</span>
-<span class="fc" id="L194">		diseaseImport = EpisimWriter.prepare(base + &quot;diseaseImport.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;strain&quot;, &quot;n&quot;);</span>
-<span class="fc" id="L195">		outdoorFraction = EpisimWriter.prepare(base + &quot;outdoorFraction.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;outdoorFraction&quot;);</span>
-<span class="fc" id="L196">		virusStrains = EpisimWriter.prepare(base + &quot;strains.tsv&quot;, &quot;day&quot;, &quot;date&quot;, virusStrainConfig.getVirusStrains().toArray());</span>
-<span class="fc" id="L197">		cpuTime = EpisimWriter.prepare(base + &quot;cputime.tsv&quot;, &quot;iteration&quot;, &quot;where&quot;, &quot;what&quot;, &quot;when&quot;, &quot;thread&quot;);</span>
-<span class="fc" id="L198">		antibodiesPerPerson = EpisimWriter.prepare(base + &quot;antibodies.tsv&quot;, &quot;day&quot;, &quot;date&quot;, virusStrainConfig.getVirusStrains().toArray());</span>
-<span class="fc" id="L199">		vaccinationsPerType = EpisimWriter.prepare(base + &quot;vaccinations.tsv&quot;, &quot;day&quot;, &quot;date&quot;, (Object[]) VaccinationType.getAllOptions().toArray());</span>
-<span class="fc" id="L200">		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + &quot;vaccinationsDetailed.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;type&quot;, &quot;number&quot;, &quot;amount&quot;);</span>
+<span class="fc" id="L196">		infectionReport = EpisimWriter.prepare(base + &quot;infections.txt&quot;, InfectionsWriterFields.class);</span>
+<span class="fc" id="L197">		infectionEvents = EpisimWriter.prepare(base + &quot;infectionEvents.txt&quot;, InfectionEventsWriterFields.class);</span>
+<span class="fc" id="L198">		restrictionReport = EpisimWriter.prepare(base + &quot;restrictions.txt&quot;,</span>
+<span class="fc" id="L199">			&quot;day&quot;, &quot;date&quot;, episimConfig.createInitialRestrictions().keySet().toArray());</span>
+<span class="fc" id="L200">		timeUse = EpisimWriter.prepare(base + &quot;timeUse.txt&quot;,</span>
+<span class="fc" id="L201">			&quot;day&quot;, &quot;date&quot;, episimConfig.createInitialRestrictions().keySet().toArray());</span>
+<span class="fc" id="L202">		diseaseImport = EpisimWriter.prepare(base + &quot;diseaseImport.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;strain&quot;, &quot;n&quot;);</span>
+<span class="fc" id="L203">		outdoorFraction = EpisimWriter.prepare(base + &quot;outdoorFraction.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;outdoorFraction&quot;);</span>
+<span class="fc" id="L204">		virusStrains = EpisimWriter.prepare(base + &quot;strains.tsv&quot;, &quot;day&quot;, &quot;date&quot;, virusStrainConfig.getVirusStrains().toArray());</span>
+<span class="fc" id="L205">		cpuTime = EpisimWriter.prepare(base + &quot;cputime.tsv&quot;, &quot;iteration&quot;, &quot;where&quot;, &quot;what&quot;, &quot;when&quot;, &quot;thread&quot;);</span>
+<span class="fc" id="L206">		antibodiesPerPerson = EpisimWriter.prepare(base + &quot;antibodies.tsv&quot;, &quot;day&quot;, &quot;date&quot;, virusStrainConfig.getVirusStrains().toArray());</span>
+<span class="fc" id="L207">		vaccinationsPerType = EpisimWriter.prepare(base + &quot;vaccinations.tsv&quot;, &quot;day&quot;, &quot;date&quot;, (Object[]) vaccinationTypes.toArray());</span>
+<span class="fc" id="L208">		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + &quot;vaccinationsDetailed.tsv&quot;, &quot;day&quot;, &quot;date&quot;, &quot;type&quot;, &quot;number&quot;, &quot;amount&quot;);</span>
 
-<span class="fc" id="L202">		sampleSize = episimConfig.getSampleSize();</span>
-<span class="fc" id="L203">		writeEvents = episimConfig.getWriteEvents();</span>
+<span class="fc" id="L210">		sampleSize = episimConfig.getSampleSize();</span>
+<span class="fc" id="L211">		writeEvents = episimConfig.getWriteEvents();</span>
+
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">		if (writeEvents != EpisimConfigGroup.WriteEvents.none) {</span>
+<span class="fc" id="L214">			episodes = new InfectionEpisodeWriter(writer, base, episimConfig.getStartDate());</span>
+<span class="fc" id="L215">			episodes.open(false);</span>
+		} else
+<span class="nc" id="L217">			episodes = null;</span>
 
 		// Init cumulative cases
-<span class="fc" id="L206">		cumulativeCases.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L207">		cumulativeCases.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L208">		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L209">		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L210">		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L211">		cumulativeCases.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L212">		cumulativeCases.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L220">		cumulativeCases.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L221">		cumulativeCases.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L222">		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L223">		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L224">		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L225">		cumulativeCases.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L226">		cumulativeCases.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap&lt;&gt;());</span>
 
-<span class="fc" id="L214">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L215">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L216">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L217">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L218">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L219">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap&lt;&gt;());</span>
-<span class="fc" id="L220">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L228">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.infectedButNotContagious, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L229">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L230">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L231">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L232">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L233">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.recovered, new Object2IntOpenHashMap&lt;&gt;());</span>
+<span class="fc" id="L234">		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.deceased, new Object2IntOpenHashMap&lt;&gt;());</span>
 
-<span class="fc" id="L222">		writeConfigFiles();</span>
-<span class="fc" id="L223">	}</span>
+<span class="fc" id="L236">		writeConfigFiles();</span>
+<span class="fc" id="L237">	}</span>
 
 	private void writeConfigFiles() {
 		try {
-<span class="fc" id="L227">			Files.writeString(Paths.get(base + &quot;policy.conf&quot;),</span>
-<span class="fc" id="L228">				episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()</span>
-<span class="fc" id="L229">					.setFormatted(true)</span>
-<span class="fc" id="L230">					.setComments(false)</span>
-<span class="fc" id="L231">					.setOriginComments(false)</span>
-<span class="fc" id="L232">					.setJson(false)));</span>
+<span class="fc" id="L241">			Files.writeString(Paths.get(base + &quot;policy.conf&quot;),</span>
+<span class="fc" id="L242">				episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()</span>
+<span class="fc" id="L243">					.setFormatted(true)</span>
+<span class="fc" id="L244">					.setComments(false)</span>
+<span class="fc" id="L245">					.setOriginComments(false)</span>
+<span class="fc" id="L246">					.setJson(false)));</span>
 
-<span class="fc" id="L234">			Files.writeString(Paths.get(base + &quot;progression.conf&quot;),</span>
-<span class="fc" id="L235">				episimConfig.getProgressionConfig().root().render(ConfigRenderOptions.defaults()</span>
-<span class="fc" id="L236">					.setFormatted(true)</span>
-<span class="fc" id="L237">					.setComments(false)</span>
-<span class="fc" id="L238">					.setOriginComments(false)</span>
-<span class="fc" id="L239">					.setJson(false)));</span>
+<span class="fc" id="L248">			Files.writeString(Paths.get(base + &quot;progression.conf&quot;),</span>
+<span class="fc" id="L249">				episimConfig.getProgressionConfig().root().render(ConfigRenderOptions.defaults()</span>
+<span class="fc" id="L250">					.setFormatted(true)</span>
+<span class="fc" id="L251">					.setComments(false)</span>
+<span class="fc" id="L252">					.setOriginComments(false)</span>
+<span class="fc" id="L253">					.setJson(false)));</span>
 
-<span class="nc" id="L241">		} catch (IOException e) {</span>
-<span class="nc" id="L242">			log.error(&quot;Could not write policy config&quot;, e);</span>
-<span class="fc" id="L243">		}</span>
+<span class="nc" id="L255">		} catch (IOException e) {</span>
+<span class="nc" id="L256">			log.error(&quot;Could not write policy config&quot;, e);</span>
+<span class="fc" id="L257">		}</span>
 
-<span class="fc" id="L245">		ConfigUtils.writeConfig(config, base + &quot;config.xml&quot;);</span>
-<span class="fc" id="L246">	}</span>
+<span class="fc" id="L259">		ConfigUtils.writeConfig(config, base + &quot;config.xml&quot;);</span>
+<span class="fc" id="L260">	}</span>
 
 	/**
 	 * Opens files for output in append mode.
@@ -251,75 +265,78 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void append(String date) throws IOException {
 
 		// Copy non prefixed files to base output
-<span class="pc bpc" id="L254" title="1 of 2 branches missed.">		if (!base.equals(outDir))</span>
-<span class="nc bnc" id="L255" title="All 2 branches missed.">			for (String file : List.of(&quot;infections.txt&quot;, &quot;infectionEvents.txt&quot;, &quot;restrictions.txt&quot;, &quot;timeUse.txt&quot;, &quot;diseaseImport.tsv&quot;,</span>
-				&quot;outdoorFraction.tsv&quot;, &quot;strains.tsv&quot;, &quot;antibodies.tsv&quot;, &quot;vaccinations.tsv&quot;, &quot;vaccinationsDetailed.tsv&quot;, &quot;events.tar&quot;)) {
-<span class="nc" id="L257">				Path path = Path.of(outDir, file);</span>
-<span class="nc bnc" id="L258" title="All 2 branches missed.">				if (Files.exists(path)) {</span>
-<span class="nc" id="L259">					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">		if (!base.equals(outDir))</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">			for (String file : List.of(&quot;infections.txt&quot;, &quot;infectionEvents.txt&quot;, &quot;restrictions.txt&quot;, &quot;timeUse.txt&quot;, &quot;diseaseImport.tsv&quot;,</span>
+				&quot;outdoorFraction.tsv&quot;, &quot;strains.tsv&quot;, &quot;antibodies.tsv&quot;, &quot;vaccinations.tsv&quot;, &quot;vaccinationsDetailed.tsv&quot;, &quot;events.tar&quot;,
+				&quot;infectionEpisodes.tsv&quot;, &quot;persons.tsv&quot;)) {
+<span class="nc" id="L272">				Path path = Path.of(outDir, file);</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">				if (Files.exists(path)) {</span>
+<span class="nc" id="L274">					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);</span>
 				}
-<span class="nc" id="L261">			}</span>
+<span class="nc" id="L276">			}</span>
 
-<span class="fc" id="L263">		infectionReport = EpisimWriter.prepare(base + &quot;infections.txt&quot;);</span>
-<span class="fc" id="L264">		infectionEvents = EpisimWriter.prepare(base + &quot;infectionEvents.txt&quot;);</span>
-<span class="fc" id="L265">		restrictionReport = EpisimWriter.prepare(base + &quot;restrictions.txt&quot;);</span>
-<span class="fc" id="L266">		timeUse = EpisimWriter.prepare(base + &quot;timeUse.txt&quot;);</span>
-<span class="fc" id="L267">		diseaseImport = EpisimWriter.prepare(base + &quot;diseaseImport.tsv&quot;);</span>
-<span class="fc" id="L268">		outdoorFraction = EpisimWriter.prepare(base + &quot;outdoorFraction.tsv&quot;);</span>
-<span class="fc" id="L269">		virusStrains = EpisimWriter.prepare(base + &quot;strains.tsv&quot;);</span>
-<span class="fc" id="L270">		antibodiesPerPerson = EpisimWriter.prepare(base + &quot;antibodies.tsv&quot;);</span>
-<span class="fc" id="L271">		vaccinationsPerType = EpisimWriter.prepare(base + &quot;vaccinations.tsv&quot;);</span>
-<span class="fc" id="L272">		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + &quot;vaccinationsDetailed.tsv&quot;);</span>
+<span class="fc" id="L278">		infectionReport = EpisimWriter.prepare(base + &quot;infections.txt&quot;);</span>
+<span class="fc" id="L279">		infectionEvents = EpisimWriter.prepare(base + &quot;infectionEvents.txt&quot;);</span>
+<span class="fc" id="L280">		restrictionReport = EpisimWriter.prepare(base + &quot;restrictions.txt&quot;);</span>
+<span class="fc" id="L281">		timeUse = EpisimWriter.prepare(base + &quot;timeUse.txt&quot;);</span>
+<span class="fc" id="L282">		diseaseImport = EpisimWriter.prepare(base + &quot;diseaseImport.tsv&quot;);</span>
+<span class="fc" id="L283">		outdoorFraction = EpisimWriter.prepare(base + &quot;outdoorFraction.tsv&quot;);</span>
+<span class="fc" id="L284">		virusStrains = EpisimWriter.prepare(base + &quot;strains.tsv&quot;);</span>
+<span class="fc" id="L285">		antibodiesPerPerson = EpisimWriter.prepare(base + &quot;antibodies.tsv&quot;);</span>
+<span class="fc" id="L286">		vaccinationsPerType = EpisimWriter.prepare(base + &quot;vaccinations.tsv&quot;);</span>
+<span class="fc" id="L287">		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + &quot;vaccinationsDetailed.tsv&quot;);</span>
+<span class="pc bpc" id="L288" title="1 of 2 branches missed.">		if (episodes != null)</span>
+<span class="fc" id="L289">			episodes.open(true);</span>
 		// cpu time is overwritten
-<span class="fc" id="L274">		cpuTime = EpisimWriter.prepare(base + &quot;cputime.tsv&quot;, &quot;iteration&quot;, &quot;where&quot;, &quot;what&quot;, &quot;when&quot;, &quot;thread&quot;);</span>
-<span class="fc" id="L275">		memorizedDate = date;</span>
+<span class="fc" id="L291">		cpuTime = EpisimWriter.prepare(base + &quot;cputime.tsv&quot;, &quot;iteration&quot;, &quot;where&quot;, &quot;what&quot;, &quot;when&quot;, &quot;thread&quot;);</span>
+<span class="fc" id="L292">		memorizedDate = date;</span>
 
-<span class="pc bpc" id="L277" title="1 of 2 branches missed.">		if (singleEvents) {</span>
-<span class="fc" id="L278">			zipOut = new TarArchiveOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND));</span>
+<span class="pc bpc" id="L294" title="1 of 2 branches missed.">		if (singleEvents) {</span>
+<span class="fc" id="L295">			zipOut = new TarArchiveOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND));</span>
 		}
 
 		// Write config files again to overwrite these from snapshot
-<span class="fc" id="L282">		writeConfigFiles();</span>
-<span class="fc" id="L283">	}</span>
+<span class="fc" id="L299">		writeConfigFiles();</span>
+<span class="fc" id="L300">	}</span>
 
 	/**
 	 * Create and registered a new writer. Note that this writer should not be used directly, instead use {@link #writeAsync(BufferedWriter, String)}
 	 */
 	public BufferedWriter registerWriter(String filename) {
 
-<span class="nc bnc" id="L290" title="All 2 branches missed.">		if (externalWriters.containsKey(filename))</span>
-<span class="nc" id="L291">			throw new IllegalStateException(&quot;Writer already registered: &quot; + filename);</span>
+<span class="nc bnc" id="L307" title="All 2 branches missed.">		if (externalWriters.containsKey(filename))</span>
+<span class="nc" id="L308">			throw new IllegalStateException(&quot;Writer already registered: &quot; + filename);</span>
 
-<span class="nc" id="L293">		BufferedWriter writer = EpisimWriter.prepare(base + filename);</span>
-<span class="nc" id="L294">		externalWriters.put(filename, writer);</span>
+<span class="nc" id="L310">		BufferedWriter writer = EpisimWriter.prepare(base + filename);</span>
+<span class="nc" id="L311">		externalWriters.put(filename, writer);</span>
 
-<span class="nc" id="L296">		return writer;</span>
+<span class="nc" id="L313">		return writer;</span>
 	}
 
 	/**
 	 * Appends some content asynchronously to a writer in thread-safe manner.
 	 */
 	public void writeAsync(BufferedWriter writer, String content) {
-<span class="nc" id="L303">		this.writer.append(writer, content);</span>
-<span class="nc" id="L304">	}</span>
+<span class="nc" id="L320">		this.writer.append(writer, content);</span>
+<span class="nc" id="L321">	}</span>
 
 	/**
 	 * Close writer asynchronously.
 	 */
 	public void closeAsync(BufferedWriter writer) {
-<span class="nc bnc" id="L310" title="All 2 branches missed.">		externalWriters.values().removeIf(next -&gt; next == writer);</span>
-<span class="nc" id="L311">		this.writer.close(writer);</span>
-<span class="nc" id="L312">	}</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">		externalWriters.values().removeIf(next -&gt; next == writer);</span>
+<span class="nc" id="L328">		this.writer.close(writer);</span>
+<span class="nc" id="L329">	}</span>
 
 	/**
 	 * Checks whether a person is vaccinated (and has full effectiveness).
 	 */
 	private boolean isVaccinated(EpisimPerson person) {
-<span class="fc bfc" id="L318" title="All 2 branches covered.">		if (person.getVaccinationStatus() != VaccinationStatus.yes)</span>
-<span class="fc" id="L319">			return false;</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">		if (person.getVaccinationStatus() != VaccinationStatus.yes)</span>
+<span class="fc" id="L336">			return false;</span>
 
-<span class="fc" id="L321">		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType(0)).getDaysBeforeFullEffect();</span>
-<span class="pc bpc" id="L322" title="1 of 4 branches missed.">		return person.getNumVaccinations() &gt; 1 || person.daysSince(VaccinationStatus.yes, iteration) &gt;= fullEffect;</span>
+<span class="fc" id="L338">		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType(0)).getDaysBeforeFullEffect();</span>
+<span class="pc bpc" id="L339" title="1 of 4 branches missed.">		return person.getNumVaccinations() &gt; 1 || person.daysSince(VaccinationStatus.yes, iteration) &gt;= fullEffect;</span>
 	}
 
 	/**
@@ -327,201 +344,201 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	Map&lt;String, InfectionReport&gt; createReports(Collection&lt;EpisimPerson&gt; persons, int iteration) {
 
-<span class="fc" id="L330">		Map&lt;String, InfectionReport&gt; reports = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L347">		Map&lt;String, InfectionReport&gt; reports = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc" id="L332">		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);</span>
-<span class="fc" id="L333">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
+<span class="fc" id="L349">		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);</span>
+<span class="fc" id="L350">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
 
-<span class="fc" id="L335">		InfectionReport report = new InfectionReport(&quot;total&quot;, time, date, iteration);</span>
-<span class="fc" id="L336">		reports.put(&quot;total&quot;, report);</span>
+<span class="fc" id="L352">		InfectionReport report = new InfectionReport(&quot;total&quot;, time, date, iteration);</span>
+<span class="fc" id="L353">		reports.put(&quot;total&quot;, report);</span>
 
-<span class="fc bfc" id="L338" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
-<span class="fc" id="L339">			String districtName = (String) person.getAttributes().getAttribute(&quot;district&quot;);</span>
+<span class="fc bfc" id="L355" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
+<span class="fc" id="L356">			String districtName = (String) person.getAttributes().getAttribute(&quot;district&quot;);</span>
 
-<span class="fc" id="L341">			boolean isVaccinated = isVaccinated(person);</span>
+<span class="fc" id="L358">			boolean isVaccinated = isVaccinated(person);</span>
 
 			// Also aggregate by district
-<span class="fc bfc" id="L344" title="All 2 branches covered.">			InfectionReport district = reports.computeIfAbsent(districtName == null ? &quot;unknown&quot;</span>
-<span class="fc" id="L345">				: districtName, name -&gt; new InfectionReport(name, report.time, report.date, report.day));</span>
-<span class="pc bpc" id="L346" title="1 of 9 branches missed.">			switch (person.getDiseaseStatus()) {</span>
+<span class="fc bfc" id="L361" title="All 2 branches covered.">			InfectionReport district = reports.computeIfAbsent(districtName == null ? &quot;unknown&quot;</span>
+<span class="fc" id="L362">				: districtName, name -&gt; new InfectionReport(name, report.time, report.date, report.day));</span>
+<span class="pc bpc" id="L363" title="1 of 9 branches missed.">			switch (person.getDiseaseStatus()) {</span>
 				case susceptible:
-<span class="fc" id="L348">					report.nSusceptible++;</span>
-<span class="fc" id="L349">					district.nSusceptible++;</span>
-<span class="fc bfc" id="L350" title="All 2 branches covered.">					if (isVaccinated) {</span>
-<span class="fc" id="L351">						report.nSusceptibleVaccinated++;</span>
-<span class="fc" id="L352">						district.nSusceptibleVaccinated++;</span>
+<span class="fc" id="L365">					report.nSusceptible++;</span>
+<span class="fc" id="L366">					district.nSusceptible++;</span>
+<span class="fc bfc" id="L367" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L368">						report.nSusceptibleVaccinated++;</span>
+<span class="fc" id="L369">						district.nSusceptibleVaccinated++;</span>
 					}
 					break;
 				case infectedButNotContagious:
-<span class="fc" id="L356">					report.nInfectedButNotContagious++;</span>
-<span class="fc" id="L357">					district.nInfectedButNotContagious++;</span>
-<span class="fc" id="L358">					report.nTotalInfected++;</span>
-<span class="fc" id="L359">					district.nTotalInfected++;</span>
-<span class="pc bpc" id="L360" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
-<span class="nc" id="L361">						report.nInfectedButNotContagiousVaccinated++;</span>
-<span class="nc" id="L362">						district.nInfectedButNotContagiousVaccinated++;</span>
-<span class="nc" id="L363">						report.nTotalInfectedVaccinated++;</span>
-<span class="nc" id="L364">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L373">					report.nInfectedButNotContagious++;</span>
+<span class="fc" id="L374">					district.nInfectedButNotContagious++;</span>
+<span class="fc" id="L375">					report.nTotalInfected++;</span>
+<span class="fc" id="L376">					district.nTotalInfected++;</span>
+<span class="pc bpc" id="L377" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
+<span class="nc" id="L378">						report.nInfectedButNotContagiousVaccinated++;</span>
+<span class="nc" id="L379">						district.nInfectedButNotContagiousVaccinated++;</span>
+<span class="nc" id="L380">						report.nTotalInfectedVaccinated++;</span>
+<span class="nc" id="L381">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case contagious:
-<span class="fc" id="L368">					report.nContagious++;</span>
-<span class="fc" id="L369">					district.nContagious++;</span>
-<span class="fc" id="L370">					report.nTotalInfected++;</span>
-<span class="fc" id="L371">					district.nTotalInfected++;</span>
-<span class="fc bfc" id="L372" title="All 2 branches covered.">					if (isVaccinated) {</span>
-<span class="fc" id="L373">						report.nContagiousVaccinated++;</span>
-<span class="fc" id="L374">						district.nContagiousVaccinated++;</span>
-<span class="fc" id="L375">						report.nTotalInfectedVaccinated++;</span>
-<span class="fc" id="L376">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L385">					report.nContagious++;</span>
+<span class="fc" id="L386">					district.nContagious++;</span>
+<span class="fc" id="L387">					report.nTotalInfected++;</span>
+<span class="fc" id="L388">					district.nTotalInfected++;</span>
+<span class="fc bfc" id="L389" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L390">						report.nContagiousVaccinated++;</span>
+<span class="fc" id="L391">						district.nContagiousVaccinated++;</span>
+<span class="fc" id="L392">						report.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L393">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case showingSymptoms:
-<span class="fc" id="L380">					report.nShowingSymptoms++;</span>
-<span class="fc" id="L381">					district.nShowingSymptoms++;</span>
-<span class="fc" id="L382">					report.nTotalInfected++;</span>
-<span class="fc" id="L383">					district.nTotalInfected++;</span>
-<span class="fc bfc" id="L384" title="All 2 branches covered.">					if (isVaccinated) {</span>
-<span class="fc" id="L385">						report.nShowingSymptomsVaccinated++;</span>
-<span class="fc" id="L386">						district.nShowingSymptomsVaccinated++;</span>
-<span class="fc" id="L387">						report.nTotalInfectedVaccinated++;</span>
-<span class="fc" id="L388">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L397">					report.nShowingSymptoms++;</span>
+<span class="fc" id="L398">					district.nShowingSymptoms++;</span>
+<span class="fc" id="L399">					report.nTotalInfected++;</span>
+<span class="fc" id="L400">					district.nTotalInfected++;</span>
+<span class="fc bfc" id="L401" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L402">						report.nShowingSymptomsVaccinated++;</span>
+<span class="fc" id="L403">						district.nShowingSymptomsVaccinated++;</span>
+<span class="fc" id="L404">						report.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L405">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case seriouslySick:
 				case seriouslySickAfterCritical:
-<span class="fc" id="L393">					report.nSeriouslySick++;</span>
-<span class="fc" id="L394">					district.nSeriouslySick++;</span>
-<span class="fc" id="L395">					report.nTotalInfected++;</span>
-<span class="fc" id="L396">					district.nTotalInfected++;</span>
-<span class="pc bpc" id="L397" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
-<span class="nc" id="L398">						report.nSeriouslySickVaccinated++;</span>
-<span class="nc" id="L399">						district.nSeriouslySickVaccinated++;</span>
-<span class="nc" id="L400">						report.nTotalInfectedVaccinated++;</span>
-<span class="nc" id="L401">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L410">					report.nSeriouslySick++;</span>
+<span class="fc" id="L411">					district.nSeriouslySick++;</span>
+<span class="fc" id="L412">					report.nTotalInfected++;</span>
+<span class="fc" id="L413">					district.nTotalInfected++;</span>
+<span class="pc bpc" id="L414" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
+<span class="nc" id="L415">						report.nSeriouslySickVaccinated++;</span>
+<span class="nc" id="L416">						district.nSeriouslySickVaccinated++;</span>
+<span class="nc" id="L417">						report.nTotalInfectedVaccinated++;</span>
+<span class="nc" id="L418">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case critical:
-<span class="fc" id="L405">					report.nCritical++;</span>
-<span class="fc" id="L406">					district.nCritical++;</span>
-<span class="fc" id="L407">					report.nTotalInfected++;</span>
-<span class="fc" id="L408">					district.nTotalInfected++;</span>
-<span class="pc bpc" id="L409" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
-<span class="nc" id="L410">						report.nCriticalVaccinated++;</span>
-<span class="nc" id="L411">						district.nCriticalVaccinated++;</span>
-<span class="nc" id="L412">						report.nTotalInfectedVaccinated++;</span>
-<span class="nc" id="L413">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L422">					report.nCritical++;</span>
+<span class="fc" id="L423">					district.nCritical++;</span>
+<span class="fc" id="L424">					report.nTotalInfected++;</span>
+<span class="fc" id="L425">					district.nTotalInfected++;</span>
+<span class="pc bpc" id="L426" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
+<span class="nc" id="L427">						report.nCriticalVaccinated++;</span>
+<span class="nc" id="L428">						district.nCriticalVaccinated++;</span>
+<span class="nc" id="L429">						report.nTotalInfectedVaccinated++;</span>
+<span class="nc" id="L430">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case deceased:
 					// no longer part of the living population; counted cumulatively in nDeceasedCumulative
-<span class="fc" id="L418">					break;</span>
+<span class="fc" id="L435">					break;</span>
 				case recovered:
-<span class="fc" id="L420">					report.nRecovered++;</span>
-<span class="fc" id="L421">					district.nRecovered++;</span>
-<span class="fc bfc" id="L422" title="All 2 branches covered.">					if (isVaccinated) {</span>
-<span class="fc" id="L423">						report.nRecoveredVaccinated++;</span>
-<span class="fc" id="L424">						district.nRecoveredVaccinated++;</span>
+<span class="fc" id="L437">					report.nRecovered++;</span>
+<span class="fc" id="L438">					district.nRecovered++;</span>
+<span class="fc bfc" id="L439" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L440">						report.nRecoveredVaccinated++;</span>
+<span class="fc" id="L441">						district.nRecoveredVaccinated++;</span>
 					}
 					break;
 				default:
-<span class="nc" id="L428">					throw new IllegalStateException(&quot;Unexpected value: &quot; + person.getDiseaseStatus());</span>
+<span class="nc" id="L445">					throw new IllegalStateException(&quot;Unexpected value: &quot; + person.getDiseaseStatus());</span>
 			}
-<span class="pc bpc" id="L430" title="1 of 4 branches missed.">			switch (person.getQuarantineStatus()) {</span>
+<span class="pc bpc" id="L447" title="1 of 4 branches missed.">			switch (person.getQuarantineStatus()) {</span>
 				// For now there is no separation in the report between full and home
 				case atHome:
-<span class="fc" id="L433">					report.nInQuarantineHome++;</span>
-<span class="fc" id="L434">					district.nInQuarantineHome++;</span>
-<span class="fc" id="L435">					break;</span>
+<span class="fc" id="L450">					report.nInQuarantineHome++;</span>
+<span class="fc" id="L451">					district.nInQuarantineHome++;</span>
+<span class="fc" id="L452">					break;</span>
 				case full:
-<span class="fc" id="L437">					report.nInQuarantineFull++;</span>
-<span class="fc" id="L438">					district.nInQuarantineFull++;</span>
-<span class="fc" id="L439">					break;</span>
+<span class="fc" id="L454">					report.nInQuarantineFull++;</span>
+<span class="fc" id="L455">					district.nInQuarantineFull++;</span>
+<span class="fc" id="L456">					break;</span>
 				case testing:
 				case no:
-<span class="fc" id="L442">					break;</span>
+<span class="fc" id="L459">					break;</span>
 				default:
-<span class="nc" id="L444">					throw new IllegalStateException(&quot;Unexpected value: &quot; + person.getQuarantineStatus());</span>
+<span class="nc" id="L461">					throw new IllegalStateException(&quot;Unexpected value: &quot; + person.getQuarantineStatus());</span>
 			}
 
-<span class="pc bpc" id="L447" title="1 of 3 branches missed.">			switch (person.getVaccinationStatus()) {</span>
+<span class="pc bpc" id="L464" title="1 of 3 branches missed.">			switch (person.getVaccinationStatus()) {</span>
 				case yes:
-<span class="fc" id="L449">					report.nVaccinated++;</span>
-<span class="fc" id="L450">					district.nVaccinated++;</span>
-<span class="fc" id="L451">					break;</span>
+<span class="fc" id="L466">					report.nVaccinated++;</span>
+<span class="fc" id="L467">					district.nVaccinated++;</span>
+<span class="fc" id="L468">					break;</span>
 				case no:
-<span class="fc" id="L453">					break;</span>
+<span class="fc" id="L470">					break;</span>
 				default:
-<span class="nc" id="L455">					throw new IllegalArgumentException(&quot;Unexpected value: &quot; + person.getVaccinationStatus());</span>
+<span class="nc" id="L472">					throw new IllegalArgumentException(&quot;Unexpected value: &quot; + person.getVaccinationStatus());</span>
 			}
 
-<span class="pc bpc" id="L458" title="2 of 3 branches missed.">			switch (person.getReVaccinationStatus()) {</span>
+<span class="pc bpc" id="L475" title="2 of 3 branches missed.">			switch (person.getReVaccinationStatus()) {</span>
 				case yes:
-<span class="nc" id="L460">					report.nReVaccinated++;</span>
-<span class="nc" id="L461">					district.nReVaccinated++;</span>
-<span class="nc" id="L462">					break;</span>
+<span class="nc" id="L477">					report.nReVaccinated++;</span>
+<span class="nc" id="L478">					district.nReVaccinated++;</span>
+<span class="nc" id="L479">					break;</span>
 				case no:
-<span class="fc" id="L464">					break;</span>
+<span class="fc" id="L481">					break;</span>
 				default:
-<span class="nc" id="L466">					throw new IllegalArgumentException(&quot;Unexpected value: &quot; + person.getReVaccinationStatus());</span>
+<span class="nc" id="L483">					throw new IllegalArgumentException(&quot;Unexpected value: &quot; + person.getReVaccinationStatus());</span>
 			}
 
 			// stats are collected one day after the test has been performed
-<span class="fc bfc" id="L470" title="All 4 branches covered.">			if (person.daysSinceTest(iteration) == 1 &amp;&amp; person.getTestStatus() != EpisimPerson.TestStatus.untested) {</span>
-<span class="fc" id="L471">				report.nTested++;</span>
-<span class="fc" id="L472">				district.nTested++;</span>
+<span class="fc bfc" id="L487" title="All 4 branches covered.">			if (person.daysSinceTest(iteration) == 1 &amp;&amp; person.getTestStatus() != EpisimPerson.TestStatus.untested) {</span>
+<span class="fc" id="L488">				report.nTested++;</span>
+<span class="fc" id="L489">				district.nTested++;</span>
 			}
-<span class="fc" id="L474">		}</span>
+<span class="fc" id="L491">		}</span>
 
-<span class="fc bfc" id="L476" title="All 2 branches covered.">		for (String district : reports.keySet()) {</span>
+<span class="fc bfc" id="L493" title="All 2 branches covered.">		for (String district : reports.keySet()) {</span>
 
-<span class="fc" id="L478">			int nInfected = cumulativeCases.get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);</span>
-<span class="fc" id="L479">			int nContagious = cumulativeCases.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);</span>
-<span class="fc" id="L480">			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);</span>
-<span class="fc" id="L481">			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);</span>
-<span class="fc" id="L482">			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);</span>
-<span class="fc" id="L483">			int nDeceased = cumulativeCases.get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);</span>
+<span class="fc" id="L495">			int nInfected = cumulativeCases.get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);</span>
+<span class="fc" id="L496">			int nContagious = cumulativeCases.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);</span>
+<span class="fc" id="L497">			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);</span>
+<span class="fc" id="L498">			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);</span>
+<span class="fc" id="L499">			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);</span>
+<span class="fc" id="L500">			int nDeceased = cumulativeCases.get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);</span>
 
-<span class="fc" id="L485">			int nInfectedVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);</span>
-<span class="fc" id="L486">			int nContagiousVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);</span>
-<span class="fc" id="L487">			int nShowingSymptomsVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);</span>
-<span class="fc" id="L488">			int nSeriouslySickVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);</span>
-<span class="fc" id="L489">			int nCriticalVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);</span>
-<span class="fc" id="L490">			int nDeceasedVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);</span>
+<span class="fc" id="L502">			int nInfectedVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.infectedButNotContagious).getOrDefault(district, 0);</span>
+<span class="fc" id="L503">			int nContagiousVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);</span>
+<span class="fc" id="L504">			int nShowingSymptomsVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);</span>
+<span class="fc" id="L505">			int nSeriouslySickVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);</span>
+<span class="fc" id="L506">			int nCriticalVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);</span>
+<span class="fc" id="L507">			int nDeceasedVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.deceased).getOrDefault(district, 0);</span>
 
-<span class="fc" id="L492">			reports.get(district).nInfectedCumulative = nInfected;</span>
-<span class="fc" id="L493">			reports.get(district).nContagiousCumulative = nContagious;</span>
-<span class="fc" id="L494">			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;</span>
-<span class="fc" id="L495">			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;</span>
-<span class="fc" id="L496">			reports.get(district).nCriticalCumulative = nCritical;</span>
-<span class="fc" id="L497">			reports.get(district).nDeceasedCumulative = nDeceased;</span>
+<span class="fc" id="L509">			reports.get(district).nInfectedCumulative = nInfected;</span>
+<span class="fc" id="L510">			reports.get(district).nContagiousCumulative = nContagious;</span>
+<span class="fc" id="L511">			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;</span>
+<span class="fc" id="L512">			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;</span>
+<span class="fc" id="L513">			reports.get(district).nCriticalCumulative = nCritical;</span>
+<span class="fc" id="L514">			reports.get(district).nDeceasedCumulative = nDeceased;</span>
 
-<span class="fc" id="L499">			reports.get(district).nInfectedCumulativeVaccinated = nInfectedVaccinated;</span>
-<span class="fc" id="L500">			reports.get(district).nContagiousCumulativeVaccinated = nContagiousVaccinated;</span>
-<span class="fc" id="L501">			reports.get(district).nShowingSymptomsCumulativeVaccinated = nShowingSymptomsVaccinated;</span>
-<span class="fc" id="L502">			reports.get(district).nSeriouslySickCumulativeVaccinated = nSeriouslySickVaccinated;</span>
-<span class="fc" id="L503">			reports.get(district).nCriticalCumulativeVaccinated = nCriticalVaccinated;</span>
-<span class="fc" id="L504">			reports.get(district).nDeceasedCumulativeVaccinated = nDeceasedVaccinated;</span>
+<span class="fc" id="L516">			reports.get(district).nInfectedCumulativeVaccinated = nInfectedVaccinated;</span>
+<span class="fc" id="L517">			reports.get(district).nContagiousCumulativeVaccinated = nContagiousVaccinated;</span>
+<span class="fc" id="L518">			reports.get(district).nShowingSymptomsCumulativeVaccinated = nShowingSymptomsVaccinated;</span>
+<span class="fc" id="L519">			reports.get(district).nSeriouslySickCumulativeVaccinated = nSeriouslySickVaccinated;</span>
+<span class="fc" id="L520">			reports.get(district).nCriticalCumulativeVaccinated = nCriticalVaccinated;</span>
+<span class="fc" id="L521">			reports.get(district).nDeceasedCumulativeVaccinated = nDeceasedVaccinated;</span>
 
 			// Sum for total report
-<span class="fc" id="L507">			report.nInfectedCumulative += nInfected;</span>
-<span class="fc" id="L508">			report.nContagiousCumulative += nContagious;</span>
-<span class="fc" id="L509">			report.nShowingSymptomsCumulative += nShowingSymptoms;</span>
-<span class="fc" id="L510">			report.nSeriouslySickCumulative += nSeriouslySick;</span>
-<span class="fc" id="L511">			report.nCriticalCumulative += nCritical;</span>
-<span class="fc" id="L512">			report.nDeceasedCumulative += nDeceased;</span>
+<span class="fc" id="L524">			report.nInfectedCumulative += nInfected;</span>
+<span class="fc" id="L525">			report.nContagiousCumulative += nContagious;</span>
+<span class="fc" id="L526">			report.nShowingSymptomsCumulative += nShowingSymptoms;</span>
+<span class="fc" id="L527">			report.nSeriouslySickCumulative += nSeriouslySick;</span>
+<span class="fc" id="L528">			report.nCriticalCumulative += nCritical;</span>
+<span class="fc" id="L529">			report.nDeceasedCumulative += nDeceased;</span>
 
-<span class="fc" id="L514">			report.nInfectedCumulativeVaccinated += nInfectedVaccinated;</span>
-<span class="fc" id="L515">			report.nContagiousCumulativeVaccinated += nContagiousVaccinated;</span>
-<span class="fc" id="L516">			report.nShowingSymptomsCumulativeVaccinated += nShowingSymptomsVaccinated;</span>
-<span class="fc" id="L517">			report.nSeriouslySickCumulativeVaccinated += nSeriouslySickVaccinated;</span>
-<span class="fc" id="L518">			report.nCriticalCumulativeVaccinated += nCriticalVaccinated;</span>
-<span class="fc" id="L519">			report.nDeceasedCumulativeVaccinated += nDeceasedVaccinated;</span>
-<span class="fc" id="L520">		}</span>
+<span class="fc" id="L531">			report.nInfectedCumulativeVaccinated += nInfectedVaccinated;</span>
+<span class="fc" id="L532">			report.nContagiousCumulativeVaccinated += nContagiousVaccinated;</span>
+<span class="fc" id="L533">			report.nShowingSymptomsCumulativeVaccinated += nShowingSymptomsVaccinated;</span>
+<span class="fc" id="L534">			report.nSeriouslySickCumulativeVaccinated += nSeriouslySickVaccinated;</span>
+<span class="fc" id="L535">			report.nCriticalCumulativeVaccinated += nCriticalVaccinated;</span>
+<span class="fc" id="L536">			report.nDeceasedCumulativeVaccinated += nDeceasedVaccinated;</span>
+<span class="fc" id="L537">		}</span>
 
-<span class="fc" id="L522">		reports.forEach((k, v) -&gt; v.scale(1 / sampleSize));</span>
+<span class="fc" id="L539">		reports.forEach((k, v) -&gt; v.scale(1 / sampleSize));</span>
 
-<span class="fc" id="L524">		return reports;</span>
+<span class="fc" id="L541">		return reports;</span>
 	}
 
 	/**
@@ -531,112 +548,112 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	void reporting(Map&lt;String, InfectionReport&gt; reports, int iteration, String date) {
 
-<span class="fc" id="L534">		memorizedDate = date;</span>
-<span class="fc" id="L535">		writeFlag.set(false);</span>
+<span class="fc" id="L551">		memorizedDate = date;</span>
+<span class="fc" id="L552">		writeFlag.set(false);</span>
 
-<span class="pc bpc" id="L537" title="1 of 2 branches missed.">		if (iteration == 0) return;</span>
+<span class="pc bpc" id="L554" title="1 of 2 branches missed.">		if (iteration == 0) return;</span>
 
-<span class="fc" id="L539">		InfectionReport t = reports.get(&quot;total&quot;);</span>
+<span class="fc" id="L556">		InfectionReport t = reports.get(&quot;total&quot;);</span>
 
-<span class="fc" id="L541">		log.warn(&quot;===============================&quot;);</span>
-<span class="fc" id="L542">		log.warn(&quot;Beginning day {} ({})&quot;, iteration, date);</span>
-<span class="fc" id="L543">		log.warn(&quot;No of susceptible persons={} / {}%&quot;, decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());</span>
-<span class="fc" id="L544">		log.warn(&quot;No of infected persons={} / {}%&quot;, decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());</span>
-<span class="fc" id="L545">		log.warn(&quot;No of recovered persons={} / {}%&quot;, decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());</span>
-<span class="fc" id="L546">		log.warn(&quot;No of vaccinated persons={} / {}%&quot;, decimalFormat.format(t.nVaccinated), 100 * t.nVaccinated / t.nTotal());</span>
-<span class="fc" id="L547">		log.warn(&quot;---&quot;);</span>
-<span class="fc" id="L548">		log.warn(&quot;No of persons in quarantineFull={} / {}%&quot;, decimalFormat.format(t.nInQuarantineFull), 100 * t.nInQuarantineFull / t.nTotal());</span>
-<span class="fc" id="L549">		log.warn(&quot;No of persons in quarantineHome (through tracing)={} / {}%&quot;, decimalFormat.format(t.nInQuarantineHome), 100 * t.nInQuarantineHome / t.nTotal());</span>
-<span class="fc" id="L550">		log.warn(&quot;100 persons={} agents&quot;, sampleSize * 100);</span>
-<span class="fc" id="L551">		log.warn(&quot;===============================&quot;);</span>
+<span class="fc" id="L558">		log.warn(&quot;===============================&quot;);</span>
+<span class="fc" id="L559">		log.warn(&quot;Beginning day {} ({})&quot;, iteration, date);</span>
+<span class="fc" id="L560">		log.warn(&quot;No of susceptible persons={} / {}%&quot;, decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());</span>
+<span class="fc" id="L561">		log.warn(&quot;No of infected persons={} / {}%&quot;, decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());</span>
+<span class="fc" id="L562">		log.warn(&quot;No of recovered persons={} / {}%&quot;, decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());</span>
+<span class="fc" id="L563">		log.warn(&quot;No of vaccinated persons={} / {}%&quot;, decimalFormat.format(t.nVaccinated), 100 * t.nVaccinated / t.nTotal());</span>
+<span class="fc" id="L564">		log.warn(&quot;---&quot;);</span>
+<span class="fc" id="L565">		log.warn(&quot;No of persons in quarantineFull={} / {}%&quot;, decimalFormat.format(t.nInQuarantineFull), 100 * t.nInQuarantineFull / t.nTotal());</span>
+<span class="fc" id="L566">		log.warn(&quot;No of persons in quarantineHome (through tracing)={} / {}%&quot;, decimalFormat.format(t.nInQuarantineHome), 100 * t.nInQuarantineHome / t.nTotal());</span>
+<span class="fc" id="L567">		log.warn(&quot;100 persons={} agents&quot;, sampleSize * 100);</span>
+<span class="fc" id="L568">		log.warn(&quot;===============================&quot;);</span>
 
-<span class="fc" id="L553">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
-<span class="fc" id="L554">		String[] strainOut = new String[listOfVirusStrains.size() + 2];</span>
-<span class="fc" id="L555">		strainOut[0] = String.valueOf(iteration);</span>
-<span class="fc" id="L556">		strainOut[1] = date;</span>
-<span class="fc bfc" id="L557" title="All 2 branches covered.">		for (int i = 0; i &lt; listOfVirusStrains.size(); i++) {</span>
-<span class="fc" id="L558">			strainOut[i + 2] = String.valueOf(strains.getOrDefault(listOfVirusStrains.get(i), 0) * (1 / sampleSize));</span>
+<span class="fc" id="L570">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
+<span class="fc" id="L571">		String[] strainOut = new String[listOfVirusStrains.size() + 2];</span>
+<span class="fc" id="L572">		strainOut[0] = String.valueOf(iteration);</span>
+<span class="fc" id="L573">		strainOut[1] = date;</span>
+<span class="fc bfc" id="L574" title="All 2 branches covered.">		for (int i = 0; i &lt; listOfVirusStrains.size(); i++) {</span>
+<span class="fc" id="L575">			strainOut[i + 2] = String.valueOf(strains.getOrDefault(listOfVirusStrains.get(i), 0) * (1 / sampleSize));</span>
 		}
-<span class="fc" id="L560">		writer.append(virusStrains, strainOut);</span>
-<span class="fc" id="L561">		strains.clear();</span>
+<span class="fc" id="L577">		writer.append(virusStrains, strainOut);</span>
+<span class="fc" id="L578">		strains.clear();</span>
 
-<span class="fc" id="L563">		String[] vacOut = new String[VaccinationType.getAllOptions().size() + 2];</span>
-<span class="fc" id="L564">		vacOut[0] = String.valueOf(iteration);</span>
-<span class="fc" id="L565">		vacOut[1] = date;</span>
-<span class="fc bfc" id="L566" title="All 2 branches covered.">		for (int i = 0; i &lt; VaccinationType.getAllOptions().size(); i++) {</span>
-<span class="fc" id="L567">			vacOut[i + 2] = String.valueOf(vaccinations.getOrDefault(VaccinationType.getAllOptions().get(i), 0) * (1 / sampleSize));</span>
+<span class="fc" id="L580">		String[] vacOut = new String[vaccinationTypes.size() + 2];</span>
+<span class="fc" id="L581">		vacOut[0] = String.valueOf(iteration);</span>
+<span class="fc" id="L582">		vacOut[1] = date;</span>
+<span class="fc bfc" id="L583" title="All 2 branches covered.">		for (int i = 0; i &lt; vaccinationTypes.size(); i++) {</span>
+<span class="fc" id="L584">			vacOut[i + 2] = String.valueOf(vaccinations.getOrDefault(vaccinationTypes.get(i), 0) * (1 / sampleSize));</span>
 		}
-<span class="fc" id="L569">		writer.append(vaccinationsPerType, vacOut);</span>
-<span class="fc" id="L570">		vaccinations.clear();</span>
+<span class="fc" id="L586">		writer.append(vaccinationsPerType, vacOut);</span>
+<span class="fc" id="L587">		vaccinations.clear();</span>
 
-<span class="fc" id="L572">		vacOut = new String[5];</span>
-<span class="fc" id="L573">		vacOut[0] = String.valueOf(iteration);</span>
-<span class="fc" id="L574">		vacOut[1] = date;</span>
-<span class="fc bfc" id="L575" title="All 2 branches covered.">		for (Object2IntMap.Entry&lt;ObjectIntPair&lt;VaccinationType&gt;&gt; e : vaccinationStats.object2IntEntrySet()) {</span>
+<span class="fc" id="L589">		vacOut = new String[5];</span>
+<span class="fc" id="L590">		vacOut[0] = String.valueOf(iteration);</span>
+<span class="fc" id="L591">		vacOut[1] = date;</span>
+<span class="fc bfc" id="L592" title="All 2 branches covered.">		for (Object2IntMap.Entry&lt;ObjectIntPair&lt;VaccinationType&gt;&gt; e : vaccinationStats.object2IntEntrySet()) {</span>
 
-<span class="fc" id="L577">			vacOut[2] = e.getKey().key().toString();</span>
-<span class="fc" id="L578">			vacOut[3] = Integer.toString(e.getKey().valueInt());</span>
-<span class="fc" id="L579">			vacOut[4] = Integer.toString(e.getIntValue());</span>
+<span class="fc" id="L594">			vacOut[2] = e.getKey().key().toString();</span>
+<span class="fc" id="L595">			vacOut[3] = Integer.toString(e.getKey().valueInt());</span>
+<span class="fc" id="L596">			vacOut[4] = Integer.toString(e.getIntValue());</span>
 
-<span class="fc" id="L581">			writer.append(vaccinationsPerTypeAndNumber, vacOut);</span>
-<span class="fc" id="L582">		}</span>
+<span class="fc" id="L598">			writer.append(vaccinationsPerTypeAndNumber, vacOut);</span>
+<span class="fc" id="L599">		}</span>
 
-<span class="fc" id="L584">		vaccinationStats.clear();</span>
+<span class="fc" id="L601">		vaccinationStats.clear();</span>
 
 		// Write all reports for each district
-<span class="fc bfc" id="L587" title="All 2 branches covered.">		for (InfectionReport r : reports.values()) {</span>
-<span class="fc bfc" id="L588" title="All 2 branches covered.">			if (r.name.equals(&quot;total&quot;)) continue;</span>
+<span class="fc bfc" id="L604" title="All 2 branches covered.">		for (InfectionReport r : reports.values()) {</span>
+<span class="fc bfc" id="L605" title="All 2 branches covered.">			if (r.name.equals(&quot;total&quot;)) continue;</span>
 
-<span class="fc" id="L590">			String[] array = new String[InfectionsWriterFields.values().length];</span>
-<span class="fc" id="L591">			array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);</span>
-<span class="fc" id="L592">			array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);</span>
-<span class="fc" id="L593">			array[InfectionsWriterFields.date.ordinal()] = r.date;</span>
-<span class="fc" id="L594">			array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);</span>
-<span class="fc" id="L595">			array[InfectionsWriterFields.nSusceptibleVaccinated.ordinal()] = Long.toString(r.nSusceptibleVaccinated);</span>
+<span class="fc" id="L607">			String[] array = new String[InfectionsWriterFields.values().length];</span>
+<span class="fc" id="L608">			array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);</span>
+<span class="fc" id="L609">			array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);</span>
+<span class="fc" id="L610">			array[InfectionsWriterFields.date.ordinal()] = r.date;</span>
+<span class="fc" id="L611">			array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);</span>
+<span class="fc" id="L612">			array[InfectionsWriterFields.nSusceptibleVaccinated.ordinal()] = Long.toString(r.nSusceptibleVaccinated);</span>
 
-<span class="fc" id="L597">			array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);</span>
-<span class="fc" id="L598">			array[InfectionsWriterFields.nInfectedButNotContagiousVaccinated.ordinal()] = Long.toString(r.nInfectedButNotContagiousVaccinated);</span>
-<span class="fc" id="L599">			array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);</span>
-<span class="fc" id="L600">			array[InfectionsWriterFields.nContagiousVaccinated.ordinal()] = Long.toString(r.nContagiousVaccinated);</span>
-<span class="fc" id="L601">			array[InfectionsWriterFields.nContagiousCumulative.ordinal()] = Long.toString(r.nContagiousCumulative);</span>
-<span class="fc" id="L602">			array[InfectionsWriterFields.nContagiousCumulativeVaccinated.ordinal()] = Long.toString(r.nContagiousCumulativeVaccinated);</span>
+<span class="fc" id="L614">			array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);</span>
+<span class="fc" id="L615">			array[InfectionsWriterFields.nInfectedButNotContagiousVaccinated.ordinal()] = Long.toString(r.nInfectedButNotContagiousVaccinated);</span>
+<span class="fc" id="L616">			array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);</span>
+<span class="fc" id="L617">			array[InfectionsWriterFields.nContagiousVaccinated.ordinal()] = Long.toString(r.nContagiousVaccinated);</span>
+<span class="fc" id="L618">			array[InfectionsWriterFields.nContagiousCumulative.ordinal()] = Long.toString(r.nContagiousCumulative);</span>
+<span class="fc" id="L619">			array[InfectionsWriterFields.nContagiousCumulativeVaccinated.ordinal()] = Long.toString(r.nContagiousCumulativeVaccinated);</span>
 
-<span class="fc" id="L604">			array[InfectionsWriterFields.nShowingSymptoms.ordinal()] = Long.toString(r.nShowingSymptoms);</span>
-<span class="fc" id="L605">			array[InfectionsWriterFields.nShowingSymptomsVaccinated.ordinal()] = Long.toString(r.nShowingSymptomsVaccinated);</span>
-<span class="fc" id="L606">			array[InfectionsWriterFields.nShowingSymptomsCumulative.ordinal()] = Long.toString(r.nShowingSymptomsCumulative);</span>
-<span class="fc" id="L607">			array[InfectionsWriterFields.nShowingSymptomsCumulativeVaccinated.ordinal()] = Long.toString(r.nShowingSymptomsCumulativeVaccinated);</span>
-<span class="fc" id="L608">			array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);</span>
-<span class="fc" id="L609">			array[InfectionsWriterFields.nRecoveredVaccinated.ordinal()] = Long.toString(r.nRecoveredVaccinated);</span>
+<span class="fc" id="L621">			array[InfectionsWriterFields.nShowingSymptoms.ordinal()] = Long.toString(r.nShowingSymptoms);</span>
+<span class="fc" id="L622">			array[InfectionsWriterFields.nShowingSymptomsVaccinated.ordinal()] = Long.toString(r.nShowingSymptomsVaccinated);</span>
+<span class="fc" id="L623">			array[InfectionsWriterFields.nShowingSymptomsCumulative.ordinal()] = Long.toString(r.nShowingSymptomsCumulative);</span>
+<span class="fc" id="L624">			array[InfectionsWriterFields.nShowingSymptomsCumulativeVaccinated.ordinal()] = Long.toString(r.nShowingSymptomsCumulativeVaccinated);</span>
+<span class="fc" id="L625">			array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);</span>
+<span class="fc" id="L626">			array[InfectionsWriterFields.nRecoveredVaccinated.ordinal()] = Long.toString(r.nRecoveredVaccinated);</span>
 
-<span class="fc" id="L611">			array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));</span>
-<span class="fc" id="L612">			array[InfectionsWriterFields.nTotalInfectedVaccinated.ordinal()] = Long.toString((r.nTotalInfectedVaccinated));</span>
-<span class="fc" id="L613">			array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString(r.nInfectedCumulative);</span>
-<span class="fc" id="L614">			array[InfectionsWriterFields.nInfectedCumulativeVaccinated.ordinal()] = Long.toString(r.nInfectedCumulativeVaccinated);</span>
+<span class="fc" id="L628">			array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));</span>
+<span class="fc" id="L629">			array[InfectionsWriterFields.nTotalInfectedVaccinated.ordinal()] = Long.toString((r.nTotalInfectedVaccinated));</span>
+<span class="fc" id="L630">			array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString(r.nInfectedCumulative);</span>
+<span class="fc" id="L631">			array[InfectionsWriterFields.nInfectedCumulativeVaccinated.ordinal()] = Long.toString(r.nInfectedCumulativeVaccinated);</span>
 
-<span class="fc" id="L616">			array[InfectionsWriterFields.nInQuarantineFull.ordinal()] = Long.toString(r.nInQuarantineFull);</span>
-<span class="fc" id="L617">			array[InfectionsWriterFields.nInQuarantineHome.ordinal()] = Long.toString(r.nInQuarantineHome);</span>
+<span class="fc" id="L633">			array[InfectionsWriterFields.nInQuarantineFull.ordinal()] = Long.toString(r.nInQuarantineFull);</span>
+<span class="fc" id="L634">			array[InfectionsWriterFields.nInQuarantineHome.ordinal()] = Long.toString(r.nInQuarantineHome);</span>
 
-<span class="fc" id="L619">			array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);</span>
-<span class="fc" id="L620">			array[InfectionsWriterFields.nSeriouslySickVaccinated.ordinal()] = Long.toString(r.nSeriouslySickVaccinated);</span>
-<span class="fc" id="L621">			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);</span>
-<span class="fc" id="L622">			array[InfectionsWriterFields.nSeriouslySickCumulativeVaccinated.ordinal()] = Long.toString(r.nSeriouslySickCumulativeVaccinated);</span>
+<span class="fc" id="L636">			array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);</span>
+<span class="fc" id="L637">			array[InfectionsWriterFields.nSeriouslySickVaccinated.ordinal()] = Long.toString(r.nSeriouslySickVaccinated);</span>
+<span class="fc" id="L638">			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);</span>
+<span class="fc" id="L639">			array[InfectionsWriterFields.nSeriouslySickCumulativeVaccinated.ordinal()] = Long.toString(r.nSeriouslySickCumulativeVaccinated);</span>
 
-<span class="fc" id="L624">			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);</span>
-<span class="fc" id="L625">			array[InfectionsWriterFields.nCriticalVaccinated.ordinal()] = Long.toString(r.nCriticalVaccinated);</span>
-<span class="fc" id="L626">			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);</span>
-<span class="fc" id="L627">			array[InfectionsWriterFields.nCriticalCumulativeVaccinated.ordinal()] = Long.toString(r.nCriticalCumulativeVaccinated);</span>
+<span class="fc" id="L641">			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);</span>
+<span class="fc" id="L642">			array[InfectionsWriterFields.nCriticalVaccinated.ordinal()] = Long.toString(r.nCriticalVaccinated);</span>
+<span class="fc" id="L643">			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);</span>
+<span class="fc" id="L644">			array[InfectionsWriterFields.nCriticalCumulativeVaccinated.ordinal()] = Long.toString(r.nCriticalCumulativeVaccinated);</span>
 
-<span class="fc" id="L629">			array[InfectionsWriterFields.nVaccinated.ordinal()] = Long.toString(r.nVaccinated);</span>
-<span class="fc" id="L630">			array[InfectionsWriterFields.nReVaccinated.ordinal()] = Long.toString(r.nReVaccinated);</span>
-<span class="fc" id="L631">			array[InfectionsWriterFields.nTested.ordinal()] = Long.toString(r.nTested);</span>
-<span class="fc" id="L632">			array[InfectionsWriterFields.nDeceasedCumulative.ordinal()] = Long.toString(r.nDeceasedCumulative);</span>
-<span class="fc" id="L633">			array[InfectionsWriterFields.nDeceasedCumulativeVaccinated.ordinal()] = Long.toString(r.nDeceasedCumulativeVaccinated);</span>
+<span class="fc" id="L646">			array[InfectionsWriterFields.nVaccinated.ordinal()] = Long.toString(r.nVaccinated);</span>
+<span class="fc" id="L647">			array[InfectionsWriterFields.nReVaccinated.ordinal()] = Long.toString(r.nReVaccinated);</span>
+<span class="fc" id="L648">			array[InfectionsWriterFields.nTested.ordinal()] = Long.toString(r.nTested);</span>
+<span class="fc" id="L649">			array[InfectionsWriterFields.nDeceasedCumulative.ordinal()] = Long.toString(r.nDeceasedCumulative);</span>
+<span class="fc" id="L650">			array[InfectionsWriterFields.nDeceasedCumulativeVaccinated.ordinal()] = Long.toString(r.nDeceasedCumulativeVaccinated);</span>
 
-<span class="fc" id="L635">			array[InfectionsWriterFields.district.ordinal()] = r.name;</span>
+<span class="fc" id="L652">			array[InfectionsWriterFields.district.ordinal()] = r.name;</span>
 
-<span class="fc" id="L637">			writer.append(infectionReport, array);</span>
-<span class="fc" id="L638">		}</span>
-<span class="fc" id="L639">	}</span>
+<span class="fc" id="L654">			writer.append(infectionReport, array);</span>
+<span class="fc" id="L655">		}</span>
+<span class="fc" id="L656">	}</span>
 
 	/**
 	 * Report the occurrence of an infection.
@@ -645,39 +662,46 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	public void reportInfection(Event ev) {
 
-<span class="fc" id="L648">		manager.processEvent(ev);</span>
+<span class="fc" id="L665">		manager.processEvent(ev);</span>
+
+<span class="pc bpc" id="L667" title="1 of 2 branches missed.">		if (episodes != null) {</span>
+<span class="fc bfc" id="L668" title="All 2 branches covered.">			if (ev instanceof EpisimInfectionEvent)</span>
+<span class="fc" id="L669">				episodes.openContact((EpisimInfectionEvent) ev, getDay(ev.getTime()));</span>
+<span class="pc bpc" id="L670" title="1 of 2 branches missed.">			else if (ev instanceof EpisimInitialInfectionEvent)</span>
+<span class="fc" id="L671">				episodes.openInitial((EpisimInitialInfectionEvent) ev, getDay(ev.getTime()));</span>
+		}
 
 		EpisimInfectionEvent event;
 		// Potential infections are not written to .txt file
-<span class="fc bfc" id="L652" title="All 2 branches covered.">		if (!(ev instanceof EpisimInfectionEvent)) {</span>
-<span class="fc" id="L653">			return;</span>
+<span class="fc bfc" id="L676" title="All 2 branches covered.">		if (!(ev instanceof EpisimInfectionEvent)) {</span>
+<span class="fc" id="L677">			return;</span>
 		}
 
-<span class="fc" id="L656">		event = (EpisimInfectionEvent) ev;</span>
+<span class="fc" id="L680">		event = (EpisimInfectionEvent) ev;</span>
 
-<span class="fc" id="L658">		int cnt = specificInfectionsCnt.getOpaque();</span>
+<span class="fc" id="L682">		int cnt = specificInfectionsCnt.getOpaque();</span>
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
 		// race-conditions will occur, but the state will be eventually where we want it (threads stop logging)
-<span class="fc bfc" id="L661" title="All 2 branches covered.">		if (cnt &gt; 0) {</span>
-<span class="fc" id="L662">			log.warn(&quot;Infection of personId={} by person={} at/in {}&quot;, event.getPersonId(), event.getInfectorId(), event.getInfectionType());</span>
-<span class="fc" id="L663">			specificInfectionsCnt.setOpaque(cnt - 1);</span>
+<span class="fc bfc" id="L685" title="All 2 branches covered.">		if (cnt &gt; 0) {</span>
+<span class="fc" id="L686">			log.warn(&quot;Infection of personId={} by person={} at/in {}&quot;, event.getPersonId(), event.getInfectorId(), event.getInfectionType());</span>
+<span class="fc" id="L687">			specificInfectionsCnt.setOpaque(cnt - 1);</span>
 		}
 
-<span class="fc" id="L666">		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);</span>
+<span class="fc" id="L690">		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);</span>
 
-<span class="fc" id="L668">		String[] array = new String[InfectionEventsWriterFields.values().length];</span>
-<span class="fc" id="L669">		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(event.getTime());</span>
-<span class="fc" id="L670">		array[InfectionEventsWriterFields.infector.ordinal()] = event.getInfectorId().toString();</span>
-<span class="fc" id="L671">		array[InfectionEventsWriterFields.infected.ordinal()] = event.getPersonId().toString();</span>
-<span class="fc" id="L672">		array[InfectionEventsWriterFields.infectionType.ordinal()] = event.getInfectionType();</span>
-<span class="fc" id="L673">		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;</span>
-<span class="fc" id="L674">		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(event.getGroupSize());</span>
-<span class="fc" id="L675">		array[InfectionEventsWriterFields.facility.ordinal()] = event.getContainerId().toString();</span>
-<span class="fc" id="L676">		array[InfectionEventsWriterFields.virusStrain.ordinal()] = event.getVirusStrain().toString();</span>
-<span class="fc" id="L677">		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(event.getProbability());</span>
+<span class="fc" id="L692">		String[] array = new String[InfectionEventsWriterFields.values().length];</span>
+<span class="fc" id="L693">		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(event.getTime());</span>
+<span class="fc" id="L694">		array[InfectionEventsWriterFields.infector.ordinal()] = event.getInfectorId().toString();</span>
+<span class="fc" id="L695">		array[InfectionEventsWriterFields.infected.ordinal()] = event.getPersonId().toString();</span>
+<span class="fc" id="L696">		array[InfectionEventsWriterFields.infectionType.ordinal()] = event.getInfectionType();</span>
+<span class="fc" id="L697">		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;</span>
+<span class="fc" id="L698">		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(event.getGroupSize());</span>
+<span class="fc" id="L699">		array[InfectionEventsWriterFields.facility.ordinal()] = event.getContainerId().toString();</span>
+<span class="fc" id="L700">		array[InfectionEventsWriterFields.virusStrain.ordinal()] = event.getVirusStrain().toString();</span>
+<span class="fc" id="L701">		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(event.getProbability());</span>
 
-<span class="fc" id="L679">		writer.append(infectionEvents, array);</span>
-<span class="fc" id="L680">	}</span>
+<span class="fc" id="L703">		writer.append(infectionEvents, array);</span>
+<span class="fc" id="L704">	}</span>
 
 	/**
 	 * Report the occurrence of an contact between two persons.
@@ -688,12 +712,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer&lt;?&gt; container,
 		StringBuilder actType, double duration) {
 
-<span class="pc bpc" id="L691" title="2 of 4 branches missed.">		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {</span>
-<span class="nc" id="L692">			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),</span>
-<span class="nc" id="L693">				actType.toString(), duration, container.getPersons().size()));</span>
+<span class="pc bpc" id="L715" title="2 of 4 branches missed.">		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {</span>
+<span class="nc" id="L716">			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),</span>
+<span class="nc" id="L717">				actType.toString(), duration, container.getPersons().size()));</span>
 		}
 
-<span class="fc" id="L696">	}</span>
+<span class="fc" id="L720">	}</span>
 
 	/**
 	 * Set number of total contacts.
@@ -701,11 +725,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @param totalContacts total number of contacts
 	 */
 	public void reportTotalContacts(int totalContacts) {
-<span class="fc" id="L704">		this.totalContacts = totalContacts;</span>
-<span class="fc" id="L705">	}</span>
+<span class="fc" id="L728">		this.totalContacts = totalContacts;</span>
+<span class="fc" id="L729">	}</span>
 
 	public int getTotalContacts() {
-<span class="nc" id="L708">		return totalContacts;</span>
+<span class="nc" id="L732">		return totalContacts;</span>
 	}
 
 	/**
@@ -713,78 +737,107 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	void reportTracing(double now, EpisimPerson person, EpisimPerson contactPerson) {
 
-<span class="pc bpc" id="L716" title="2 of 4 branches missed.">		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {</span>
-<span class="nc" id="L717">			manager.processEvent(new EpisimTracingEvent(now, person.getPersonId(), contactPerson.getPersonId()));</span>
+<span class="pc bpc" id="L740" title="2 of 4 branches missed.">		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {</span>
+<span class="nc" id="L741">			manager.processEvent(new EpisimTracingEvent(now, person.getPersonId(), contactPerson.getPersonId()));</span>
 		}
-<span class="fc" id="L719">	}</span>
+<span class="fc" id="L743">	}</span>
 
 	void reportRestrictions(Map&lt;String, Restriction&gt; restrictions, long iteration, String date) {
-<span class="pc bpc" id="L722" title="1 of 2 branches missed.">		if (iteration == 0) return;</span>
+<span class="pc bpc" id="L746" title="1 of 2 branches missed.">		if (iteration == 0) return;</span>
 
-<span class="fc" id="L724">		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, date, restrictions.values().toArray()));</span>
-<span class="fc" id="L725">		writer.append(restrictionReport, &quot;\n&quot;);</span>
-<span class="fc" id="L726">	}</span>
+<span class="fc" id="L748">		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, date, restrictions.values().toArray()));</span>
+<span class="fc" id="L749">		writer.append(restrictionReport, &quot;\n&quot;);</span>
+<span class="fc" id="L750">	}</span>
 
 	void reportTimeUse(Set&lt;String&gt; activities, Collection&lt;EpisimPerson&gt; persons, long iteration, String date) {
-<span class="pc bpc" id="L729" title="2 of 4 branches missed.">		if (iteration == 0 || episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.no) return;</span>
+<span class="pc bpc" id="L753" title="2 of 4 branches missed.">		if (iteration == 0 || episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.no) return;</span>
 
-<span class="nc" id="L731">		Map&lt;String, Double&gt; avg = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="nc" id="L755">		Map&lt;String, Double&gt; avg = new ConcurrentHashMap&lt;&gt;();</span>
 
-<span class="nc" id="L733">		activities.parallelStream().forEach(act -&gt; {</span>
-<span class="nc" id="L734">			int i = 1;</span>
-<span class="nc" id="L735">			double timeSpent = 0;</span>
-<span class="nc bnc" id="L736" title="All 2 branches missed.">			for (EpisimPerson person : persons) {</span>
-<span class="nc" id="L737">				timeSpent += (person.getSpentTime().getDouble(act) - timeSpent) / i;</span>
-<span class="nc" id="L738">				i++;</span>
-<span class="nc" id="L739">			}</span>
-<span class="nc" id="L740">			avg.put(act, timeSpent);</span>
-<span class="nc" id="L741">		});</span>
+<span class="nc" id="L757">		activities.parallelStream().forEach(act -&gt; {</span>
+<span class="nc" id="L758">			int i = 1;</span>
+<span class="nc" id="L759">			double timeSpent = 0;</span>
+<span class="nc bnc" id="L760" title="All 2 branches missed.">			for (EpisimPerson person : persons) {</span>
+<span class="nc" id="L761">				timeSpent += (person.getSpentTime().getDouble(act) - timeSpent) / i;</span>
+<span class="nc" id="L762">				i++;</span>
+<span class="nc" id="L763">			}</span>
+<span class="nc" id="L764">			avg.put(act, timeSpent);</span>
+<span class="nc" id="L765">		});</span>
 
-<span class="nc bnc" id="L743" title="All 2 branches missed.">		for (EpisimPerson person : persons) {</span>
-<span class="nc" id="L744">			person.getSpentTime().clear();</span>
-<span class="nc" id="L745">		}</span>
+<span class="nc bnc" id="L767" title="All 2 branches missed.">		for (EpisimPerson person : persons) {</span>
+<span class="nc" id="L768">			person.getSpentTime().clear();</span>
+<span class="nc" id="L769">		}</span>
 
-<span class="nc" id="L747">		List&lt;String&gt; order = Lists.newArrayList(activities);</span>
-<span class="nc" id="L748">		Object[] array = new String[order.size()];</span>
-<span class="nc" id="L749">		Arrays.fill(array, &quot;&quot;);</span>
+<span class="nc" id="L771">		List&lt;String&gt; order = Lists.newArrayList(activities);</span>
+<span class="nc" id="L772">		Object[] array = new String[order.size()];</span>
+<span class="nc" id="L773">		Arrays.fill(array, &quot;&quot;);</span>
 
 		// report minutes
-<span class="nc" id="L752">		avg.forEach((k, v) -&gt; array[order.indexOf(k)] = String.valueOf(v / 60d));</span>
+<span class="nc" id="L776">		avg.forEach((k, v) -&gt; array[order.indexOf(k)] = String.valueOf(v / 60d));</span>
 
-<span class="nc" id="L754">		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, date, array));</span>
-<span class="nc" id="L755">		writer.append(timeUse, &quot;\n&quot;);</span>
-<span class="nc" id="L756">	}</span>
+<span class="nc" id="L778">		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, date, array));</span>
+<span class="nc" id="L779">		writer.append(timeUse, &quot;\n&quot;);</span>
+<span class="nc" id="L780">	}</span>
 
 	/**
 	 * Report that a person status has changed and publish corresponding event.
 	 */
 	void reportPersonStatus(EpisimPerson person, EpisimPersonStatusEvent event) {
 
-<span class="fc" id="L763">		EpisimPerson.DiseaseStatus newStatus = event.getDiseaseStatus();</span>
+<span class="fc" id="L787">		EpisimPerson.DiseaseStatus newStatus = event.getDiseaseStatus();</span>
 
-<span class="fc bfc" id="L765" title="All 12 branches covered.">		if (newStatus == EpisimPerson.DiseaseStatus.infectedButNotContagious || newStatus == EpisimPerson.DiseaseStatus.seriouslySick ||</span>
+<span class="pc bpc" id="L789" title="1 of 2 branches missed.">		if (episodes != null)</span>
+<span class="fc" id="L790">			episodes.reportStatus(person.getPersonId(), newStatus, getDay(event.getTime()));</span>
+
+<span class="fc bfc" id="L792" title="All 12 branches covered.">		if (newStatus == EpisimPerson.DiseaseStatus.infectedButNotContagious || newStatus == EpisimPerson.DiseaseStatus.seriouslySick ||</span>
 			newStatus == EpisimPerson.DiseaseStatus.contagious || newStatus == EpisimPerson.DiseaseStatus.showingSymptoms ||
 			newStatus == EpisimPerson.DiseaseStatus.critical || newStatus == EpisimPerson.DiseaseStatus.recovered) {
-<span class="fc" id="L768">			String districtName = (String) person.getAttributes().getAttribute(&quot;district&quot;);</span>
-<span class="fc bfc" id="L769" title="All 2 branches covered.">			cumulativeCases.get(newStatus).mergeInt(districtName == null ? &quot;unknown&quot; : districtName, 1, Integer::sum);</span>
+<span class="fc" id="L795">			String districtName = (String) person.getAttributes().getAttribute(&quot;district&quot;);</span>
+<span class="fc bfc" id="L796" title="All 2 branches covered.">			cumulativeCases.get(newStatus).mergeInt(districtName == null ? &quot;unknown&quot; : districtName, 1, Integer::sum);</span>
 
-<span class="fc bfc" id="L771" title="All 2 branches covered.">			if (isVaccinated(person))</span>
-<span class="pc bpc" id="L772" title="1 of 2 branches missed.">				cumulativeCasesVaccinated.get(newStatus).mergeInt(districtName == null ? &quot;unknown&quot; : districtName, 1, Integer::sum);</span>
+<span class="fc bfc" id="L798" title="All 2 branches covered.">			if (isVaccinated(person))</span>
+<span class="pc bpc" id="L799" title="1 of 2 branches missed.">				cumulativeCasesVaccinated.get(newStatus).mergeInt(districtName == null ? &quot;unknown&quot; : districtName, 1, Integer::sum);</span>
 		}
 
-<span class="fc" id="L775">		manager.processEvent(event);</span>
-<span class="fc" id="L776">	}</span>
+<span class="fc" id="L802">		manager.processEvent(event);</span>
+<span class="fc" id="L803">	}</span>
+
+	/**
+	 * Day of an event. This is the current iteration while the simulation is running. Before the first iteration,
+	 * i.e. when replaying an immunization history, it is derived from the event time and can be negative.
+	 */
+	private int getDay(double time) {
+<span class="pc bpc" id="L810" title="1 of 2 branches missed.">		return iteration &gt; 0 ? iteration : (int) Math.floor(time / EpisimUtils.DAY);</span>
+	}
+
+	/**
+	 * Write static information of all persons to {@code persons.tsv}.
+	 *
+	 * @see InfectionEpisodeWriter
+	 */
+	void reportPersons(Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons) {
+<span class="pc bpc" id="L819" title="1 of 2 branches missed.">		if (episodes != null)</span>
+<span class="fc" id="L820">			episodes.writePersons(base + &quot;persons.tsv&quot;, persons);</span>
+<span class="fc" id="L821">	}</span>
+
+	/**
+	 * Restore infection episodes that were open when the snapshot has been written.
+	 */
+	void restoreInfectionEpisodes(Collection&lt;EpisimPerson&gt; persons, int iteration) {
+<span class="pc bpc" id="L827" title="1 of 2 branches missed.">		if (episodes != null)</span>
+<span class="fc" id="L828">			episodes.restore(persons, iteration);</span>
+<span class="fc" id="L829">	}</span>
 
 	/**
 	 * Report the vaccination of a person.
 	 */
 	void reportVaccination(Id&lt;Person&gt; personId, int iteration, VaccinationType type, int n) {
 
-<span class="fc" id="L783">		vaccinations.merge(type, 1, Integer::sum);</span>
-<span class="fc" id="L784">		vaccinationStats.merge(ObjectIntPair.of(type, n), 1, Integer::sum);</span>
+<span class="fc" id="L836">		vaccinations.merge(type, 1, Integer::sum);</span>
+<span class="fc" id="L837">		vaccinationStats.merge(ObjectIntPair.of(type, n), 1, Integer::sum);</span>
 
-<span class="fc" id="L786">		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, n));</span>
-<span class="fc" id="L787">	}</span>
+<span class="fc" id="L839">		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, n));</span>
+<span class="fc" id="L840">	}</span>
 
 	/**
 	 * Write container statistic to file.
@@ -792,153 +845,156 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void reportContainerUsage(Object2IntMap&lt;EpisimContainer&lt;?&gt;&gt; maxGroupSize, Object2IntMap&lt;EpisimContainer&lt;?&gt;&gt; totalUsers,
 		Map&lt;EpisimContainer&lt;?&gt;, Object2IntMap&lt;String&gt;&gt; activityUsage) {
 
-<span class="fc" id="L795">		BufferedWriter out = EpisimWriter.prepare(base + &quot;containerUsage.txt.gz&quot;, &quot;id&quot;, &quot;types&quot;, &quot;totalUsers&quot;, &quot;maxGroupSize&quot;);</span>
+<span class="fc" id="L848">		BufferedWriter out = EpisimWriter.prepare(base + &quot;containerUsage.txt.gz&quot;, &quot;id&quot;, &quot;types&quot;, &quot;totalUsers&quot;, &quot;maxGroupSize&quot;);</span>
 
-<span class="fc bfc" id="L797" title="All 2 branches covered.">		for (Object2IntMap.Entry&lt;EpisimContainer&lt;?&gt;&gt; kv : maxGroupSize.object2IntEntrySet()) {</span>
+<span class="fc bfc" id="L850" title="All 2 branches covered.">		for (Object2IntMap.Entry&lt;EpisimContainer&lt;?&gt;&gt; kv : maxGroupSize.object2IntEntrySet()) {</span>
 
-<span class="fc" id="L799">			double scale = 1 / episimConfig.getSampleSize();</span>
+<span class="fc" id="L852">			double scale = 1 / episimConfig.getSampleSize();</span>
 
-<span class="fc" id="L801">			this.writer.append(out, new String[]{</span>
-<span class="fc" id="L802">				kv.getKey().getContainerId().toString(),</span>
-<span class="fc" id="L803">				String.valueOf(activityUsage.get(kv.getKey())),</span>
-<span class="fc" id="L804">				String.valueOf((int) (totalUsers.getInt(kv.getKey()) * scale)),</span>
-<span class="fc" id="L805">				String.valueOf((int) (kv.getIntValue() * scale))</span>
+<span class="fc" id="L854">			this.writer.append(out, new String[]{</span>
+<span class="fc" id="L855">				kv.getKey().getContainerId().toString(),</span>
+<span class="fc" id="L856">				String.valueOf(activityUsage.get(kv.getKey())),</span>
+<span class="fc" id="L857">				String.valueOf((int) (totalUsers.getInt(kv.getKey()) * scale)),</span>
+<span class="fc" id="L858">				String.valueOf((int) (kv.getIntValue() * scale))</span>
 			});
-<span class="fc" id="L807">		}</span>
+<span class="fc" id="L860">		}</span>
 
-<span class="fc" id="L809">		this.writer.close(out);</span>
-<span class="fc" id="L810">	}</span>
+<span class="fc" id="L862">		this.writer.close(out);</span>
+<span class="fc" id="L863">	}</span>
 
 	/**
 	 * Write number of initially infected persons.
 	 */
 	void reportDiseaseImport(Object2IntMap&lt;VirusStrain&gt; infectedByStrain, int iteration, String date) {
-<span class="fc bfc" id="L816" title="All 2 branches covered.">		for (VirusStrain strain : infectedByStrain.keySet()) {</span>
-<span class="fc" id="L817">			String[] out = new String[4];</span>
-<span class="fc" id="L818">			out[0] = String.valueOf(iteration);</span>
-<span class="fc" id="L819">			out[1] = date;</span>
-<span class="fc" id="L820">			out[2] = strain.toString();</span>
-<span class="fc" id="L821">			out[3] = String.valueOf(infectedByStrain.getInt(strain) / sampleSize);</span>
-<span class="fc" id="L822">			writer.append(diseaseImport, out);</span>
-<span class="fc" id="L823">		}</span>
-<span class="fc" id="L824">	}</span>
+<span class="fc bfc" id="L869" title="All 2 branches covered.">		for (VirusStrain strain : infectedByStrain.keySet()) {</span>
+<span class="fc" id="L870">			String[] out = new String[4];</span>
+<span class="fc" id="L871">			out[0] = String.valueOf(iteration);</span>
+<span class="fc" id="L872">			out[1] = date;</span>
+<span class="fc" id="L873">			out[2] = strain.toString();</span>
+<span class="fc" id="L874">			out[3] = String.valueOf(infectedByStrain.getInt(strain) / sampleSize);</span>
+<span class="fc" id="L875">			writer.append(diseaseImport, out);</span>
+<span class="fc" id="L876">		}</span>
+<span class="fc" id="L877">	}</span>
 
 	/**
 	 * Write average antibody level.
 	 */
 	void reportAntibodyLevel(Object2DoubleMap&lt;VirusStrain&gt; antibodies, int n, int iteration) {
-<span class="fc" id="L830">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
-<span class="fc" id="L831">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
-<span class="fc" id="L832">		String[] out = new String[listOfVirusStrains.size() + 2];</span>
-<span class="fc" id="L833">		out[0] = String.valueOf(iteration);</span>
-<span class="fc" id="L834">		out[1] = date;</span>
+<span class="fc" id="L883">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
+<span class="fc" id="L884">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
+<span class="fc" id="L885">		String[] out = new String[listOfVirusStrains.size() + 2];</span>
+<span class="fc" id="L886">		out[0] = String.valueOf(iteration);</span>
+<span class="fc" id="L887">		out[1] = date;</span>
 
-<span class="fc bfc" id="L836" title="All 2 branches covered.">		for (int i = 0; i &lt; listOfVirusStrains.size(); i++) {</span>
-<span class="fc" id="L837">			out[i + 2] = String.valueOf(antibodies.getDouble(listOfVirusStrains.get(i)) / n);</span>
+<span class="fc bfc" id="L889" title="All 2 branches covered.">		for (int i = 0; i &lt; listOfVirusStrains.size(); i++) {</span>
+<span class="fc" id="L890">			out[i + 2] = String.valueOf(antibodies.getDouble(listOfVirusStrains.get(i)) / n);</span>
 		}
 
-<span class="fc" id="L840">		writer.append(antibodiesPerPerson, out);</span>
-<span class="fc" id="L841">	}</span>
+<span class="fc" id="L893">		writer.append(antibodiesPerPerson, out);</span>
+<span class="fc" id="L894">	}</span>
 
 	/**
 	 * Write detailed person information. Huge files and for debugging only.
 	 */
 	void reportDetailedPersonStats(LocalDate date, Collection&lt;EpisimPerson&gt; persons) {
 
-<span class="nc" id="L848">		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(Path.of(base + &quot;antibodies_&quot; + date + &quot;.tsv&quot;)), CSVFormat.TDF)) {</span>
+<span class="nc" id="L901">		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(Path.of(base + &quot;antibodies_&quot; + date + &quot;.tsv&quot;)), CSVFormat.TDF)) {</span>
 
-<span class="nc" id="L850">			csv.print(&quot;personId&quot;);</span>
-<span class="nc" id="L851">			csv.print(&quot;age&quot;);</span>
-<span class="nc" id="L852">			csv.print(&quot;nVaccinations&quot;);</span>
-<span class="nc" id="L853">			csv.print(&quot;nInfections&quot;);</span>
-<span class="nc" id="L854">			csv.print(&quot;immuneResponseMultiplier&quot;);</span>
-<span class="nc" id="L855">			List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
-<span class="nc bnc" id="L856" title="All 2 branches missed.">			for (VirusStrain strain : listOfVirusStrains) {</span>
-<span class="nc" id="L857">				csv.print(strain.toString());</span>
-<span class="nc" id="L858">			}</span>
-<span class="nc" id="L859">			csv.println();</span>
+<span class="nc" id="L903">			csv.print(&quot;personId&quot;);</span>
+<span class="nc" id="L904">			csv.print(&quot;age&quot;);</span>
+<span class="nc" id="L905">			csv.print(&quot;nVaccinations&quot;);</span>
+<span class="nc" id="L906">			csv.print(&quot;nInfections&quot;);</span>
+<span class="nc" id="L907">			csv.print(&quot;immuneResponseMultiplier&quot;);</span>
+<span class="nc" id="L908">			List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
+<span class="nc bnc" id="L909" title="All 2 branches missed.">			for (VirusStrain strain : listOfVirusStrains) {</span>
+<span class="nc" id="L910">				csv.print(strain.toString());</span>
+<span class="nc" id="L911">			}</span>
+<span class="nc" id="L912">			csv.println();</span>
 
-<span class="nc bnc" id="L861" title="All 2 branches missed.">			for (EpisimPerson person : persons) {</span>
-<span class="nc" id="L862">				csv.print(person.getPersonId().toString());</span>
-<span class="nc" id="L863">				csv.print(person.getAge());</span>
-<span class="nc" id="L864">				csv.print(person.getNumVaccinations());</span>
-<span class="nc" id="L865">				csv.print(person.getNumInfections());</span>
-<span class="nc" id="L866">				csv.print(person.getImmuneResponseMultiplier());</span>
+<span class="nc bnc" id="L914" title="All 2 branches missed.">			for (EpisimPerson person : persons) {</span>
+<span class="nc" id="L915">				csv.print(person.getPersonId().toString());</span>
+<span class="nc" id="L916">				csv.print(person.getAge());</span>
+<span class="nc" id="L917">				csv.print(person.getNumVaccinations());</span>
+<span class="nc" id="L918">				csv.print(person.getNumInfections());</span>
+<span class="nc" id="L919">				csv.print(person.getImmuneResponseMultiplier());</span>
 
-<span class="nc bnc" id="L868" title="All 2 branches missed.">				for (VirusStrain strain : listOfVirusStrains) {</span>
-<span class="nc" id="L869">					csv.print(person.getAntibodies(strain));</span>
-<span class="nc" id="L870">				}</span>
-<span class="nc" id="L871">				csv.println();</span>
+<span class="nc bnc" id="L921" title="All 2 branches missed.">				for (VirusStrain strain : listOfVirusStrains) {</span>
+<span class="nc" id="L922">					csv.print(person.getAntibodies(strain));</span>
+<span class="nc" id="L923">				}</span>
+<span class="nc" id="L924">				csv.println();</span>
 
-<span class="nc" id="L873">			}</span>
-<span class="nc" id="L874">		} catch (IOException e) {</span>
-<span class="nc" id="L875">			e.printStackTrace();</span>
-<span class="nc" id="L876">		}</span>
-<span class="nc" id="L877">	}</span>
+<span class="nc" id="L926">			}</span>
+<span class="nc" id="L927">		} catch (IOException e) {</span>
+<span class="nc" id="L928">			e.printStackTrace();</span>
+<span class="nc" id="L929">		}</span>
+<span class="nc" id="L930">	}</span>
 
 	/**
 	 * Write outdoor fraction for each day.
 	 */
 	public synchronized void reportOutdoorFraction(double outdoorFraction, int iteration) {
-<span class="fc" id="L883">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
+<span class="fc" id="L936">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
 
 		try {
 
 			// ensures only one thread call this once every iteration
-<span class="fc bfc" id="L888" title="All 2 branches covered.">			if (writeFlag.compareAndSet(false, true)) {</span>
-<span class="fc" id="L889">				this.outdoorFraction.flush();</span>
-<span class="fc" id="L890">				writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});</span>
+<span class="fc bfc" id="L941" title="All 2 branches covered.">			if (writeFlag.compareAndSet(false, true)) {</span>
+<span class="fc" id="L942">				this.outdoorFraction.flush();</span>
+<span class="fc" id="L943">				writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});</span>
 			}
-<span class="fc" id="L892">		} catch (IOException e) {</span>
+<span class="fc" id="L945">		} catch (IOException e) {</span>
 			// will only write to the writer if it is still open
 			// when reading snapshot there may be a situation where it is closed
-<span class="fc" id="L895">		}</span>
+<span class="fc" id="L948">		}</span>
 
-<span class="fc" id="L897">	}</span>
+<span class="fc" id="L950">	}</span>
 
 	/**
 	 * Report current cpu time.
 	 */
 	synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
-<span class="fc" id="L903">		writer.append(cpuTime, new String[]{String.valueOf(iteration),</span>
+<span class="fc" id="L956">		writer.append(cpuTime, new String[]{String.valueOf(iteration),</span>
 			where,
 			what,
-<span class="fc" id="L906">			String.valueOf(System.currentTimeMillis()),</span>
-<span class="fc" id="L907">			String.valueOf(taskId)});</span>
-<span class="fc" id="L908">	}</span>
+<span class="fc" id="L959">			String.valueOf(System.currentTimeMillis()),</span>
+<span class="fc" id="L960">			String.valueOf(taskId)});</span>
+<span class="fc" id="L961">	}</span>
 
 	void reportStart(LocalDate startDate, String startFromImmunization) {
-<span class="fc" id="L911">		manager.processEvent(new EpisimStartEvent(startDate, startFromImmunization));</span>
-<span class="fc" id="L912">	}</span>
+<span class="fc" id="L964">		manager.processEvent(new EpisimStartEvent(startDate, startFromImmunization));</span>
+<span class="fc" id="L965">	}</span>
 
 	@Override
 	public void close() {
 
-<span class="fc" id="L917">		writer.close(infectionReport);</span>
-<span class="fc" id="L918">		writer.close(infectionEvents);</span>
-<span class="fc" id="L919">		writer.close(restrictionReport);</span>
-<span class="fc" id="L920">		writer.close(timeUse);</span>
-<span class="fc" id="L921">		writer.close(diseaseImport);</span>
-<span class="fc" id="L922">		writer.close(outdoorFraction);</span>
-<span class="fc" id="L923">		writer.close(virusStrains);</span>
-<span class="fc" id="L924">		writer.close(antibodiesPerPerson);</span>
-<span class="fc" id="L925">		writer.close(cpuTime);</span>
-<span class="fc" id="L926">		writer.close(vaccinationsPerType);</span>
-<span class="fc" id="L927">		writer.close(vaccinationsPerTypeAndNumber);</span>
+<span class="fc" id="L970">		writer.close(infectionReport);</span>
+<span class="fc" id="L971">		writer.close(infectionEvents);</span>
+<span class="fc" id="L972">		writer.close(restrictionReport);</span>
+<span class="fc" id="L973">		writer.close(timeUse);</span>
+<span class="fc" id="L974">		writer.close(diseaseImport);</span>
+<span class="fc" id="L975">		writer.close(outdoorFraction);</span>
+<span class="fc" id="L976">		writer.close(virusStrains);</span>
+<span class="fc" id="L977">		writer.close(antibodiesPerPerson);</span>
+<span class="fc" id="L978">		writer.close(cpuTime);</span>
+<span class="fc" id="L979">		writer.close(vaccinationsPerType);</span>
+<span class="fc" id="L980">		writer.close(vaccinationsPerTypeAndNumber);</span>
 
-<span class="pc bpc" id="L929" title="1 of 2 branches missed.">		for (BufferedWriter v : externalWriters.values()) {</span>
-<span class="nc" id="L930">			writer.close(v);</span>
-<span class="nc" id="L931">		}</span>
+<span class="pc bpc" id="L982" title="1 of 2 branches missed.">		if (episodes != null)</span>
+<span class="fc" id="L983">			episodes.close();</span>
 
-<span class="pc bpc" id="L933" title="1 of 2 branches missed.">		if (singleEvents) {</span>
+<span class="pc bpc" id="L985" title="1 of 2 branches missed.">		for (BufferedWriter v : externalWriters.values()) {</span>
+<span class="nc" id="L986">			writer.close(v);</span>
+<span class="nc" id="L987">		}</span>
+
+<span class="pc bpc" id="L989" title="1 of 2 branches missed.">		if (singleEvents) {</span>
 			try {
-<span class="fc" id="L935">				zipOut.close();</span>
-<span class="nc" id="L936">			} catch (IOException e) {</span>
-<span class="nc" id="L937">				throw new UncheckedIOException(e);</span>
-<span class="fc" id="L938">			}</span>
+<span class="fc" id="L991">				zipOut.close();</span>
+<span class="nc" id="L992">			} catch (IOException e) {</span>
+<span class="nc" id="L993">				throw new UncheckedIOException(e);</span>
+<span class="fc" id="L994">			}</span>
 		}
 
-<span class="fc" id="L941">	}</span>
+<span class="fc" id="L997">	}</span>
 
 	/**
 	 * This method may ever only do event writing, as it can be disabled via config.
@@ -947,161 +1003,161 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public void handleEvent(Event event) {
 
 		// Events on 0th day are not needed
-<span class="pc bpc" id="L950" title="3 of 4 branches missed.">		if (iteration == 0 &amp;&amp; !(event instanceof EpisimStartEvent)) return;</span>
+<span class="pc bpc" id="L1006" title="3 of 4 branches missed.">		if (iteration == 0 &amp;&amp; !(event instanceof EpisimStartEvent)) return;</span>
 
 		// Crucial episim events are always written, others only if enabled
-<span class="pc bpc" id="L953" title="7 of 20 branches missed.">		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent</span>
+<span class="pc bpc" id="L1009" title="7 of 20 branches missed.">		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent</span>
 			|| event instanceof EpisimInitialInfectionEvent || event instanceof EpisimStartEvent
 			|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing &amp;&amp; event instanceof EpisimTracingEvent)
 			|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing &amp;&amp; event instanceof EpisimContactEvent)) {
 
-<span class="fc" id="L958">			writer.append(events, event);</span>
+<span class="fc" id="L1014">			writer.append(events, event);</span>
 
-<span class="pc bpc" id="L960" title="2 of 4 branches missed.">		} else if (writeEvents == EpisimConfigGroup.WriteEvents.all || writeEvents == EpisimConfigGroup.WriteEvents.input) {</span>
+<span class="pc bpc" id="L1016" title="2 of 4 branches missed.">		} else if (writeEvents == EpisimConfigGroup.WriteEvents.all || writeEvents == EpisimConfigGroup.WriteEvents.input) {</span>
 
 			// All non-epism events need a corrected timestamp
-<span class="nc" id="L963">			writer.append(events, event,</span>
-<span class="nc" id="L964">				EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), event.getTime(), iteration));</span>
+<span class="nc" id="L1019">			writer.append(events, event,</span>
+<span class="nc" id="L1020">				EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), event.getTime(), iteration));</span>
 
 		}
 
-<span class="fc" id="L968">	}</span>
+<span class="fc" id="L1024">	}</span>
 
 	@Override
 	public void reset(int iteration) {
-<span class="fc" id="L972">		this.iteration = iteration;</span>
+<span class="fc" id="L1028">		this.iteration = iteration;</span>
 
-<span class="pc bpc" id="L974" title="2 of 4 branches missed.">		if (iteration == 0 || writeEvents == EpisimConfigGroup.WriteEvents.none)</span>
-<span class="nc" id="L975">			return;</span>
+<span class="pc bpc" id="L1030" title="2 of 4 branches missed.">		if (iteration == 0 || writeEvents == EpisimConfigGroup.WriteEvents.none)</span>
+<span class="nc" id="L1031">			return;</span>
 
-<span class="pc bpc" id="L977" title="1 of 2 branches missed.">		if (singleEvents) {</span>
+<span class="pc bpc" id="L1033" title="1 of 2 branches missed.">		if (singleEvents) {</span>
 			try {
 				// each entry is gzipped individually, otherwise we could not easily append files to the archive
-<span class="fc" id="L980">				events = new OutputStreamWriter(new GZIPOutputStream(os));</span>
-<span class="nc" id="L981">			} catch (IOException e) {</span>
-<span class="nc" id="L982">				throw new UncheckedIOException(e);</span>
-<span class="fc" id="L983">			}</span>
+<span class="fc" id="L1036">				events = new OutputStreamWriter(new GZIPOutputStream(os));</span>
+<span class="nc" id="L1037">			} catch (IOException e) {</span>
+<span class="nc" id="L1038">				throw new UncheckedIOException(e);</span>
+<span class="fc" id="L1039">			}</span>
 		} else
-<span class="nc" id="L985">			events = IOUtils.getBufferedWriter(eventPath.resolve(String.format(&quot;day_%03d.xml.gz&quot;, iteration)).toString());</span>
+<span class="nc" id="L1041">			events = IOUtils.getBufferedWriter(eventPath.resolve(String.format(&quot;day_%03d.xml.gz&quot;, iteration)).toString());</span>
 
-<span class="fc" id="L987">		writer.append(events, &quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;utf-8\&quot;?&gt;\n&lt;events version=\&quot;1.0\&quot;&gt;\n&quot;);</span>
-<span class="fc" id="L988">	}</span>
+<span class="fc" id="L1043">		writer.append(events, &quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;utf-8\&quot;?&gt;\n&lt;events version=\&quot;1.0\&quot;&gt;\n&quot;);</span>
+<span class="fc" id="L1044">	}</span>
 
 	/**
 	 * Flush written events.
 	 */
 	void flushEvents() {
-<span class="pc bpc" id="L994" title="1 of 2 branches missed.">		if (events != null) {</span>
-<span class="fc" id="L995">			writer.append(events, &quot;&lt;/events&gt;&quot;);</span>
-<span class="fc" id="L996">			writer.close(events);</span>
+<span class="pc bpc" id="L1050" title="1 of 2 branches missed.">		if (events != null) {</span>
+<span class="fc" id="L1051">			writer.append(events, &quot;&lt;/events&gt;&quot;);</span>
+<span class="fc" id="L1052">			writer.close(events);</span>
 
-<span class="pc bpc" id="L998" title="1 of 2 branches missed.">			if (singleEvents) {</span>
+<span class="pc bpc" id="L1054" title="1 of 2 branches missed.">			if (singleEvents) {</span>
 				try {
-<span class="fc" id="L1000">					TarArchiveEntry entry = new TarArchiveEntry(String.format(&quot;day_%03d.xml.gz&quot;, iteration));</span>
-<span class="fc" id="L1001">					entry.setSize(os.size());</span>
+<span class="fc" id="L1056">					TarArchiveEntry entry = new TarArchiveEntry(String.format(&quot;day_%03d.xml.gz&quot;, iteration));</span>
+<span class="fc" id="L1057">					entry.setSize(os.size());</span>
 
-<span class="fc" id="L1003">					zipOut.putArchiveEntry(entry);</span>
+<span class="fc" id="L1059">					zipOut.putArchiveEntry(entry);</span>
 
-<span class="fc" id="L1005">					os.writeTo(zipOut);</span>
-<span class="fc" id="L1006">					os.reset();</span>
+<span class="fc" id="L1061">					os.writeTo(zipOut);</span>
+<span class="fc" id="L1062">					os.reset();</span>
 
-<span class="fc" id="L1008">					zipOut.closeArchiveEntry();</span>
-<span class="fc" id="L1009">					zipOut.flush();</span>
-<span class="nc" id="L1010">				} catch (IOException e) {</span>
-<span class="nc" id="L1011">					throw new UncheckedIOException(e);</span>
-<span class="fc" id="L1012">				}</span>
+<span class="fc" id="L1064">					zipOut.closeArchiveEntry();</span>
+<span class="fc" id="L1065">					zipOut.flush();</span>
+<span class="nc" id="L1066">				} catch (IOException e) {</span>
+<span class="nc" id="L1067">					throw new UncheckedIOException(e);</span>
+<span class="fc" id="L1068">				}</span>
 			}
 		}
-<span class="fc" id="L1015">	}</span>
+<span class="fc" id="L1071">	}</span>
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 
-<span class="fc" id="L1020">		out.writeInt(cumulativeCases.size());</span>
+<span class="fc" id="L1076">		out.writeInt(cumulativeCases.size());</span>
 
-<span class="fc bfc" id="L1022" title="All 2 branches covered.">		for (Map.Entry&lt;EpisimPerson.DiseaseStatus, Object2IntMap&lt;String&gt;&gt; e : cumulativeCases.entrySet()) {</span>
-<span class="fc" id="L1023">			out.writeInt(e.getKey().ordinal());</span>
-<span class="fc" id="L1024">			Object2IntMap&lt;String&gt; map = e.getValue();</span>
-<span class="fc" id="L1025">			out.writeInt(map.size());</span>
+<span class="fc bfc" id="L1078" title="All 2 branches covered.">		for (Map.Entry&lt;EpisimPerson.DiseaseStatus, Object2IntMap&lt;String&gt;&gt; e : cumulativeCases.entrySet()) {</span>
+<span class="fc" id="L1079">			out.writeInt(e.getKey().ordinal());</span>
+<span class="fc" id="L1080">			Object2IntMap&lt;String&gt; map = e.getValue();</span>
+<span class="fc" id="L1081">			out.writeInt(map.size());</span>
 
-<span class="fc bfc" id="L1027" title="All 2 branches covered.">			for (Object2IntMap.Entry&lt;String&gt; kv : map.object2IntEntrySet()) {</span>
-<span class="fc" id="L1028">				writeChars(out, kv.getKey());</span>
-<span class="fc" id="L1029">				out.writeInt(kv.getIntValue());</span>
-<span class="fc" id="L1030">			}</span>
-<span class="fc" id="L1031">		}</span>
+<span class="fc bfc" id="L1083" title="All 2 branches covered.">			for (Object2IntMap.Entry&lt;String&gt; kv : map.object2IntEntrySet()) {</span>
+<span class="fc" id="L1084">				writeChars(out, kv.getKey());</span>
+<span class="fc" id="L1085">				out.writeInt(kv.getIntValue());</span>
+<span class="fc" id="L1086">			}</span>
+<span class="fc" id="L1087">		}</span>
 
-<span class="fc" id="L1033">		out.writeInt(cumulativeCasesVaccinated.size());</span>
+<span class="fc" id="L1089">		out.writeInt(cumulativeCasesVaccinated.size());</span>
 
-<span class="fc bfc" id="L1035" title="All 2 branches covered.">		for (Map.Entry&lt;EpisimPerson.DiseaseStatus, Object2IntMap&lt;String&gt;&gt; e : cumulativeCasesVaccinated.entrySet()) {</span>
-<span class="fc" id="L1036">			out.writeInt(e.getKey().ordinal());</span>
-<span class="fc" id="L1037">			Object2IntMap&lt;String&gt; map = e.getValue();</span>
-<span class="fc" id="L1038">			out.writeInt(map.size());</span>
+<span class="fc bfc" id="L1091" title="All 2 branches covered.">		for (Map.Entry&lt;EpisimPerson.DiseaseStatus, Object2IntMap&lt;String&gt;&gt; e : cumulativeCasesVaccinated.entrySet()) {</span>
+<span class="fc" id="L1092">			out.writeInt(e.getKey().ordinal());</span>
+<span class="fc" id="L1093">			Object2IntMap&lt;String&gt; map = e.getValue();</span>
+<span class="fc" id="L1094">			out.writeInt(map.size());</span>
 
-<span class="pc bpc" id="L1040" title="1 of 2 branches missed.">			for (Object2IntMap.Entry&lt;String&gt; kv : map.object2IntEntrySet()) {</span>
-<span class="nc" id="L1041">				writeChars(out, kv.getKey());</span>
-<span class="nc" id="L1042">				out.writeInt(kv.getIntValue());</span>
-<span class="nc" id="L1043">			}</span>
-<span class="fc" id="L1044">		}</span>
-<span class="fc" id="L1045">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
+<span class="pc bpc" id="L1096" title="1 of 2 branches missed.">			for (Object2IntMap.Entry&lt;String&gt; kv : map.object2IntEntrySet()) {</span>
+<span class="nc" id="L1097">				writeChars(out, kv.getKey());</span>
+<span class="nc" id="L1098">				out.writeInt(kv.getIntValue());</span>
+<span class="nc" id="L1099">			}</span>
+<span class="fc" id="L1100">		}</span>
+<span class="fc" id="L1101">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
 
-<span class="fc bfc" id="L1047" title="All 2 branches covered.">		for (VirusStrain value : listOfVirusStrains) {</span>
-<span class="fc" id="L1048">			out.writeInt(strains.getInt(value));</span>
-<span class="fc" id="L1049">		}</span>
-<span class="fc" id="L1050">	}</span>
+<span class="fc bfc" id="L1103" title="All 2 branches covered.">		for (VirusStrain value : listOfVirusStrains) {</span>
+<span class="fc" id="L1104">			out.writeInt(strains.getInt(value));</span>
+<span class="fc" id="L1105">		}</span>
+<span class="fc" id="L1106">	}</span>
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException {
 
-<span class="fc" id="L1055">		int states = in.readInt();</span>
-<span class="fc bfc" id="L1056" title="All 2 branches covered.">		for (int i = 0; i &lt; states; i++) {</span>
-<span class="fc" id="L1057">			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];</span>
-<span class="fc" id="L1058">			int size = in.readInt();</span>
-<span class="fc bfc" id="L1059" title="All 2 branches covered.">			for (int j = 0; j &lt; size; j++) {</span>
-<span class="fc" id="L1060">				String key = readChars(in);</span>
-<span class="fc" id="L1061">				cumulativeCases.get(state).put(key, in.readInt());</span>
+<span class="fc" id="L1111">		int states = in.readInt();</span>
+<span class="fc bfc" id="L1112" title="All 2 branches covered.">		for (int i = 0; i &lt; states; i++) {</span>
+<span class="fc" id="L1113">			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];</span>
+<span class="fc" id="L1114">			int size = in.readInt();</span>
+<span class="fc bfc" id="L1115" title="All 2 branches covered.">			for (int j = 0; j &lt; size; j++) {</span>
+<span class="fc" id="L1116">				String key = readChars(in);</span>
+<span class="fc" id="L1117">				cumulativeCases.get(state).put(key, in.readInt());</span>
 			}
 		}
 
-<span class="fc" id="L1065">		int statesVaccinated = in.readInt();</span>
-<span class="fc bfc" id="L1066" title="All 2 branches covered.">		for (int i = 0; i &lt; statesVaccinated; i++) {</span>
-<span class="fc" id="L1067">			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];</span>
-<span class="fc" id="L1068">			int size = in.readInt();</span>
-<span class="pc bpc" id="L1069" title="1 of 2 branches missed.">			for (int j = 0; j &lt; size; j++) {</span>
-<span class="nc" id="L1070">				String key = readChars(in);</span>
-<span class="nc" id="L1071">				cumulativeCasesVaccinated.get(state).put(key, in.readInt());</span>
+<span class="fc" id="L1121">		int statesVaccinated = in.readInt();</span>
+<span class="fc bfc" id="L1122" title="All 2 branches covered.">		for (int i = 0; i &lt; statesVaccinated; i++) {</span>
+<span class="fc" id="L1123">			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];</span>
+<span class="fc" id="L1124">			int size = in.readInt();</span>
+<span class="pc bpc" id="L1125" title="1 of 2 branches missed.">			for (int j = 0; j &lt; size; j++) {</span>
+<span class="nc" id="L1126">				String key = readChars(in);</span>
+<span class="nc" id="L1127">				cumulativeCasesVaccinated.get(state).put(key, in.readInt());</span>
 			}
 		}
-<span class="fc" id="L1074">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
+<span class="fc" id="L1130">		List&lt;VirusStrain&gt; listOfVirusStrains = new ArrayList&lt;&gt;(virusStrainConfig.getVirusStrains());</span>
 
-<span class="fc bfc" id="L1076" title="All 2 branches covered.">		for (VirusStrain value : listOfVirusStrains) {</span>
-<span class="fc" id="L1077">			strains.put(value, in.readInt());</span>
-<span class="fc" id="L1078">		}</span>
-<span class="fc" id="L1079">	}</span>
+<span class="fc bfc" id="L1132" title="All 2 branches covered.">		for (VirusStrain value : listOfVirusStrains) {</span>
+<span class="fc" id="L1133">			strains.put(value, in.readInt());</span>
+<span class="fc" id="L1134">		}</span>
+<span class="fc" id="L1135">	}</span>
 
 	/**
 	 * Age groups used for various outputs. AgeGroup -&gt; minimum age of age group.
 	 * Important: age groups must be in descending order
 	 */
-<span class="nc" id="L1085">	public enum AgeGroup {</span>
-<span class="nc" id="L1086">		age_60_plus(60),</span>
-<span class="nc" id="L1087">		age_18_59(18),</span>
-<span class="nc" id="L1088">		age_12_17(12),</span>
-<span class="nc" id="L1089">		age_0_11(0);</span>
+<span class="nc" id="L1141">	public enum AgeGroup {</span>
+<span class="nc" id="L1142">		age_60_plus(60),</span>
+<span class="nc" id="L1143">		age_18_59(18),</span>
+<span class="nc" id="L1144">		age_12_17(12),</span>
+<span class="nc" id="L1145">		age_0_11(0);</span>
 
 		public final int lowerBoundAge;
 
-<span class="nc" id="L1093">		AgeGroup(int lowerBoundAge) {</span>
-<span class="nc" id="L1094">			this.lowerBoundAge = lowerBoundAge;</span>
-<span class="nc" id="L1095">		}</span>
+<span class="nc" id="L1149">		AgeGroup(int lowerBoundAge) {</span>
+<span class="nc" id="L1150">			this.lowerBoundAge = lowerBoundAge;</span>
+<span class="nc" id="L1151">		}</span>
 	}
 
-<span class="fc" id="L1098">	enum InfectionsWriterFields {</span>
-<span class="fc" id="L1099">		time, day, date, nSusceptible, nSusceptibleVaccinated, nInfectedButNotContagious, nInfectedButNotContagiousVaccinated, nContagious, nContagiousVaccinated, nShowingSymptoms, nShowingSymptomsVaccinated, nSeriouslySick, nSeriouslySickVaccinated, nCritical, nCriticalVaccinated, nTotalInfected,</span>
-<span class="fc" id="L1100">		nTotalInfectedVaccinated, nInfectedCumulative, nInfectedCumulativeVaccinated, nContagiousCumulative, nContagiousCumulativeVaccinated, nShowingSymptomsCumulative, nShowingSymptomsCumulativeVaccinated, nSeriouslySickCumulative, nSeriouslySickCumulativeVaccinated, nCriticalCumulative,</span>
-<span class="fc" id="L1101">		nCriticalCumulativeVaccinated, nRecovered, nRecoveredVaccinated, nInQuarantineFull, nInQuarantineHome, nVaccinated, nReVaccinated, nTested, nDeceasedCumulative, nDeceasedCumulativeVaccinated, district</span>
+<span class="fc" id="L1154">	enum InfectionsWriterFields {</span>
+<span class="fc" id="L1155">		time, day, date, nSusceptible, nSusceptibleVaccinated, nInfectedButNotContagious, nInfectedButNotContagiousVaccinated, nContagious, nContagiousVaccinated, nShowingSymptoms, nShowingSymptomsVaccinated, nSeriouslySick, nSeriouslySickVaccinated, nCritical, nCriticalVaccinated, nTotalInfected,</span>
+<span class="fc" id="L1156">		nTotalInfectedVaccinated, nInfectedCumulative, nInfectedCumulativeVaccinated, nContagiousCumulative, nContagiousCumulativeVaccinated, nShowingSymptomsCumulative, nShowingSymptomsCumulativeVaccinated, nSeriouslySickCumulative, nSeriouslySickCumulativeVaccinated, nCriticalCumulative,</span>
+<span class="fc" id="L1157">		nCriticalCumulativeVaccinated, nRecovered, nRecoveredVaccinated, nInQuarantineFull, nInQuarantineHome, nVaccinated, nReVaccinated, nTested, nDeceasedCumulative, nDeceasedCumulativeVaccinated, district</span>
 	}
 
-<span class="fc" id="L1104">	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}</span>
+<span class="fc" id="L1160">	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}</span>
 
 	/**
 	 * Detailed infection report for the end of a day.
@@ -1114,94 +1170,94 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		public final double time;
 		public final String date;
 		public final long day;
-<span class="fc" id="L1117">		public long nSusceptible = 0;</span>
-<span class="fc" id="L1118">		public long nInfectedButNotContagious = 0;</span>
-<span class="fc" id="L1119">		public long nContagious = 0;</span>
-<span class="fc" id="L1120">		public long nContagiousCumulative = 0;</span>
-<span class="fc" id="L1121">		public long nShowingSymptoms = 0;</span>
-<span class="fc" id="L1122">		public long nShowingSymptomsCumulative = 0;</span>
-<span class="fc" id="L1123">		public long nSeriouslySick = 0;</span>
-<span class="fc" id="L1124">		public long nSeriouslySickCumulative = 0;</span>
-<span class="fc" id="L1125">		public long nCritical = 0;</span>
-<span class="fc" id="L1126">		public long nCriticalCumulative = 0;</span>
-<span class="fc" id="L1127">		public long nTotalInfected = 0;</span>
-<span class="fc" id="L1128">		public long nRecovered = 0;</span>
-<span class="fc" id="L1129">		public long nSusceptibleVaccinated = 0;</span>
-<span class="fc" id="L1130">		public long nInfectedButNotContagiousVaccinated = 0;</span>
-<span class="fc" id="L1131">		public long nContagiousVaccinated = 0;</span>
-<span class="fc" id="L1132">		public long nContagiousCumulativeVaccinated = 0;</span>
-<span class="fc" id="L1133">		public long nShowingSymptomsVaccinated = 0;</span>
-<span class="fc" id="L1134">		public long nShowingSymptomsCumulativeVaccinated = 0;</span>
-<span class="fc" id="L1135">		public long nSeriouslySickVaccinated = 0;</span>
-<span class="fc" id="L1136">		public long nSeriouslySickCumulativeVaccinated = 0;</span>
-<span class="fc" id="L1137">		public long nCriticalVaccinated = 0;</span>
-<span class="fc" id="L1138">		public long nCriticalCumulativeVaccinated = 0;</span>
-<span class="fc" id="L1139">		public long nTotalInfectedVaccinated = 0;</span>
-<span class="fc" id="L1140">		public long nRecoveredVaccinated = 0;</span>
-<span class="fc" id="L1141">		public long nInQuarantineFull = 0;</span>
-<span class="fc" id="L1142">		public long nInQuarantineHome = 0;</span>
-<span class="fc" id="L1143">		public long nVaccinated = 0;</span>
-<span class="fc" id="L1144">		public long nReVaccinated = 0;</span>
-<span class="fc" id="L1145">		public long nTested = 0;</span>
+<span class="fc" id="L1173">		public long nSusceptible = 0;</span>
+<span class="fc" id="L1174">		public long nInfectedButNotContagious = 0;</span>
+<span class="fc" id="L1175">		public long nContagious = 0;</span>
+<span class="fc" id="L1176">		public long nContagiousCumulative = 0;</span>
+<span class="fc" id="L1177">		public long nShowingSymptoms = 0;</span>
+<span class="fc" id="L1178">		public long nShowingSymptomsCumulative = 0;</span>
+<span class="fc" id="L1179">		public long nSeriouslySick = 0;</span>
+<span class="fc" id="L1180">		public long nSeriouslySickCumulative = 0;</span>
+<span class="fc" id="L1181">		public long nCritical = 0;</span>
+<span class="fc" id="L1182">		public long nCriticalCumulative = 0;</span>
+<span class="fc" id="L1183">		public long nTotalInfected = 0;</span>
+<span class="fc" id="L1184">		public long nRecovered = 0;</span>
+<span class="fc" id="L1185">		public long nSusceptibleVaccinated = 0;</span>
+<span class="fc" id="L1186">		public long nInfectedButNotContagiousVaccinated = 0;</span>
+<span class="fc" id="L1187">		public long nContagiousVaccinated = 0;</span>
+<span class="fc" id="L1188">		public long nContagiousCumulativeVaccinated = 0;</span>
+<span class="fc" id="L1189">		public long nShowingSymptomsVaccinated = 0;</span>
+<span class="fc" id="L1190">		public long nShowingSymptomsCumulativeVaccinated = 0;</span>
+<span class="fc" id="L1191">		public long nSeriouslySickVaccinated = 0;</span>
+<span class="fc" id="L1192">		public long nSeriouslySickCumulativeVaccinated = 0;</span>
+<span class="fc" id="L1193">		public long nCriticalVaccinated = 0;</span>
+<span class="fc" id="L1194">		public long nCriticalCumulativeVaccinated = 0;</span>
+<span class="fc" id="L1195">		public long nTotalInfectedVaccinated = 0;</span>
+<span class="fc" id="L1196">		public long nRecoveredVaccinated = 0;</span>
+<span class="fc" id="L1197">		public long nInQuarantineFull = 0;</span>
+<span class="fc" id="L1198">		public long nInQuarantineHome = 0;</span>
+<span class="fc" id="L1199">		public long nVaccinated = 0;</span>
+<span class="fc" id="L1200">		public long nReVaccinated = 0;</span>
+<span class="fc" id="L1201">		public long nTested = 0;</span>
 
-<span class="fc" id="L1147">		public long nInfectedCumulative = 0;</span>
-<span class="fc" id="L1148">		public long nInfectedCumulativeVaccinated = 0;</span>
+<span class="fc" id="L1203">		public long nInfectedCumulative = 0;</span>
+<span class="fc" id="L1204">		public long nInfectedCumulativeVaccinated = 0;</span>
 
-<span class="fc" id="L1150">		public long nDeceasedCumulative = 0;</span>
-<span class="fc" id="L1151">		public long nDeceasedCumulativeVaccinated = 0;</span>
+<span class="fc" id="L1206">		public long nDeceasedCumulative = 0;</span>
+<span class="fc" id="L1207">		public long nDeceasedCumulativeVaccinated = 0;</span>
 
 		/**
 		 * Constructor.
 		 */
-<span class="fc" id="L1156">		public InfectionReport(String name, double time, String date, long day) {</span>
-<span class="fc" id="L1157">			this.name = name;</span>
-<span class="fc" id="L1158">			this.time = time;</span>
-<span class="fc" id="L1159">			this.date = date;</span>
-<span class="fc" id="L1160">			this.day = day;</span>
-<span class="fc" id="L1161">		}</span>
+<span class="fc" id="L1212">		public InfectionReport(String name, double time, String date, long day) {</span>
+<span class="fc" id="L1213">			this.name = name;</span>
+<span class="fc" id="L1214">			this.time = time;</span>
+<span class="fc" id="L1215">			this.date = date;</span>
+<span class="fc" id="L1216">			this.day = day;</span>
+<span class="fc" id="L1217">		}</span>
 
 		/**
 		 * Total number of persons in the simulation.
 		 */
 		public long nTotal() {
-<span class="fc" id="L1167">			return nSusceptible + nTotalInfected + nRecovered;</span>
+<span class="fc" id="L1223">			return nSusceptible + nTotalInfected + nRecovered;</span>
 		}
 
 		void scale(double factor) {
-<span class="fc" id="L1171">			nSusceptible *= factor;</span>
-<span class="fc" id="L1172">			nInfectedButNotContagious *= factor;</span>
-<span class="fc" id="L1173">			nContagious *= factor;</span>
-<span class="fc" id="L1174">			nContagiousCumulative *= factor;</span>
-<span class="fc" id="L1175">			nShowingSymptoms *= factor;</span>
-<span class="fc" id="L1176">			nShowingSymptomsCumulative *= factor;</span>
-<span class="fc" id="L1177">			nSeriouslySick *= factor;</span>
-<span class="fc" id="L1178">			nSeriouslySickCumulative *= factor;</span>
-<span class="fc" id="L1179">			nCritical *= factor;</span>
-<span class="fc" id="L1180">			nCriticalCumulative *= factor;</span>
-<span class="fc" id="L1181">			nTotalInfected *= factor;</span>
-<span class="fc" id="L1182">			nRecovered *= factor;</span>
-<span class="fc" id="L1183">			nSusceptibleVaccinated *= factor;</span>
-<span class="fc" id="L1184">			nInfectedButNotContagiousVaccinated *= factor;</span>
-<span class="fc" id="L1185">			nContagiousVaccinated *= factor;</span>
-<span class="fc" id="L1186">			nContagiousCumulativeVaccinated *= factor;</span>
-<span class="fc" id="L1187">			nShowingSymptomsVaccinated *= factor;</span>
-<span class="fc" id="L1188">			nShowingSymptomsCumulativeVaccinated *= factor;</span>
-<span class="fc" id="L1189">			nSeriouslySickVaccinated *= factor;</span>
-<span class="fc" id="L1190">			nSeriouslySickCumulativeVaccinated *= factor;</span>
-<span class="fc" id="L1191">			nCriticalVaccinated *= factor;</span>
-<span class="fc" id="L1192">			nCriticalCumulativeVaccinated *= factor;</span>
-<span class="fc" id="L1193">			nTotalInfectedVaccinated *= factor;</span>
-<span class="fc" id="L1194">			nRecoveredVaccinated *= factor;</span>
-<span class="fc" id="L1195">			nInQuarantineFull *= factor;</span>
-<span class="fc" id="L1196">			nInQuarantineHome *= factor;</span>
-<span class="fc" id="L1197">			nVaccinated *= factor;</span>
-<span class="fc" id="L1198">			nReVaccinated *= factor;</span>
-<span class="fc" id="L1199">			nTested *= factor;</span>
-<span class="fc" id="L1200">			nInfectedCumulative *= factor;</span>
-<span class="fc" id="L1201">			nInfectedCumulativeVaccinated *= factor;</span>
-<span class="fc" id="L1202">			nDeceasedCumulative *= factor;</span>
-<span class="fc" id="L1203">			nDeceasedCumulativeVaccinated *= factor;</span>
-<span class="fc" id="L1204">		}</span>
+<span class="fc" id="L1227">			nSusceptible *= factor;</span>
+<span class="fc" id="L1228">			nInfectedButNotContagious *= factor;</span>
+<span class="fc" id="L1229">			nContagious *= factor;</span>
+<span class="fc" id="L1230">			nContagiousCumulative *= factor;</span>
+<span class="fc" id="L1231">			nShowingSymptoms *= factor;</span>
+<span class="fc" id="L1232">			nShowingSymptomsCumulative *= factor;</span>
+<span class="fc" id="L1233">			nSeriouslySick *= factor;</span>
+<span class="fc" id="L1234">			nSeriouslySickCumulative *= factor;</span>
+<span class="fc" id="L1235">			nCritical *= factor;</span>
+<span class="fc" id="L1236">			nCriticalCumulative *= factor;</span>
+<span class="fc" id="L1237">			nTotalInfected *= factor;</span>
+<span class="fc" id="L1238">			nRecovered *= factor;</span>
+<span class="fc" id="L1239">			nSusceptibleVaccinated *= factor;</span>
+<span class="fc" id="L1240">			nInfectedButNotContagiousVaccinated *= factor;</span>
+<span class="fc" id="L1241">			nContagiousVaccinated *= factor;</span>
+<span class="fc" id="L1242">			nContagiousCumulativeVaccinated *= factor;</span>
+<span class="fc" id="L1243">			nShowingSymptomsVaccinated *= factor;</span>
+<span class="fc" id="L1244">			nShowingSymptomsCumulativeVaccinated *= factor;</span>
+<span class="fc" id="L1245">			nSeriouslySickVaccinated *= factor;</span>
+<span class="fc" id="L1246">			nSeriouslySickCumulativeVaccinated *= factor;</span>
+<span class="fc" id="L1247">			nCriticalVaccinated *= factor;</span>
+<span class="fc" id="L1248">			nCriticalCumulativeVaccinated *= factor;</span>
+<span class="fc" id="L1249">			nTotalInfectedVaccinated *= factor;</span>
+<span class="fc" id="L1250">			nRecoveredVaccinated *= factor;</span>
+<span class="fc" id="L1251">			nInQuarantineFull *= factor;</span>
+<span class="fc" id="L1252">			nInQuarantineHome *= factor;</span>
+<span class="fc" id="L1253">			nVaccinated *= factor;</span>
+<span class="fc" id="L1254">			nReVaccinated *= factor;</span>
+<span class="fc" id="L1255">			nTested *= factor;</span>
+<span class="fc" id="L1256">			nInfectedCumulative *= factor;</span>
+<span class="fc" id="L1257">			nInfectedCumulativeVaccinated *= factor;</span>
+<span class="fc" id="L1258">			nDeceasedCumulative *= factor;</span>
+<span class="fc" id="L1259">			nDeceasedCumulativeVaccinated *= factor;</span>
+<span class="fc" id="L1260">		}</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

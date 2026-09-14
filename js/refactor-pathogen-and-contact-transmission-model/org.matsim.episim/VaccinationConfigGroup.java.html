@@ -452,15 +452,26 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 <span class="fc" id="L452">			prob.put(t, sum);</span>
 <span class="fc" id="L453">		}</span>
 
-<span class="fc" id="L455">		return prob;</span>
+		// custom vaccination types follow the standard ones in a deterministic order, so standard results are unchanged
+<span class="fc" id="L456">		List&lt;VaccinationType&gt; custom = share.keySet().stream()</span>
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">			.filter(t -&gt; !prob.containsKey(t))</span>
+<span class="fc" id="L458">			.sorted(Comparator.comparing(VaccinationType::getId))</span>
+<span class="fc" id="L459">			.collect(Collectors.toList());</span>
+
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">		for (VaccinationType t : custom) {</span>
+<span class="nc" id="L462">			sum += share.get(t);</span>
+<span class="nc" id="L463">			prob.put(t, sum);</span>
+<span class="nc" id="L464">		}</span>
+
+<span class="fc" id="L466">		return prob;</span>
 	}
 
 	@StringGetter(SHARE)
 	String getVaccinationShareString() {
-<span class="fc" id="L460">		Map&lt;LocalDate, String&gt; collect =</span>
-<span class="fc" id="L461">			vaccinationShare.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -&gt; JOINER.join(e.getValue())));</span>
+<span class="fc" id="L471">		Map&lt;LocalDate, String&gt; collect =</span>
+<span class="fc" id="L472">			vaccinationShare.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -&gt; JOINER.join(e.getValue())));</span>
 
-<span class="fc" id="L463">		return Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).join(collect);</span>
+<span class="fc" id="L474">		return Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).join(collect);</span>
 	}
 
 	/**
@@ -486,139 +497,139 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Number of days until vaccination goes into full effect.
 		 */
-<span class="fc" id="L489">		private int daysBeforeFullEffect = 28;</span>
+<span class="fc" id="L500">		private int daysBeforeFullEffect = 28;</span>
 
 		/**
 		 * Wait period before boost can be applied.
 		 */
-<span class="fc" id="L494">		private int boostWaitPeriod = 5 * 30;</span>
+<span class="fc" id="L505">		private int boostWaitPeriod = 5 * 30;</span>
 
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
 		 */
-<span class="fc" id="L499">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; effectiveness = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
-<span class="fc" id="L500">			forStrain(VirusStrain.SARS_CoV_2)</span>
-<span class="fc" id="L501">				.atDay(4, 0)</span>
-<span class="fc" id="L502">				.atDay(5, 0.45)</span>
-<span class="fc" id="L503">				.atFullEffect(0.9)</span>
+<span class="fc" id="L510">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; effectiveness = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L511">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L512">				.atDay(4, 0)</span>
+<span class="fc" id="L513">				.atDay(5, 0.45)</span>
+<span class="fc" id="L514">				.atFullEffect(0.9)</span>
 		));
 
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-<span class="fc" id="L509">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; infectivity = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
-<span class="fc" id="L510">			forStrain(VirusStrain.SARS_CoV_2)</span>
-<span class="fc" id="L511">				.atDay(0, 1)</span>
-<span class="fc" id="L512">				.atFullEffect(1.0)</span>
+<span class="fc" id="L520">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; infectivity = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L521">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L522">				.atDay(0, 1)</span>
+<span class="fc" id="L523">				.atFullEffect(1.0)</span>
 		));
 
 		/**
 		 * Effectiveness after booster shot.
 		 */
-<span class="fc" id="L518">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; boostEffectiveness = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L529">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; boostEffectiveness = new HashMap&lt;&gt;();</span>
 
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-<span class="fc" id="L523">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; boostInfectivity = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
-<span class="fc" id="L524">			forStrain(VirusStrain.SARS_CoV_2)</span>
-<span class="fc" id="L525">				.atDay(0, 1)</span>
-<span class="fc" id="L526">				.atFullEffect(1.0)</span>
+<span class="fc" id="L534">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; boostInfectivity = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L535">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L536">				.atDay(0, 1)</span>
+<span class="fc" id="L537">				.atFullEffect(1.0)</span>
 		));
 
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-<span class="fc" id="L532">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorShowingSymptoms = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
-<span class="fc" id="L533">			forStrain(VirusStrain.SARS_CoV_2)</span>
-<span class="fc" id="L534">				.atDay(5, 0.5)</span>
+<span class="fc" id="L543">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorShowingSymptoms = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L544">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L545">				.atDay(5, 0.5)</span>
 		));
 
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-<span class="fc" id="L540">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorSeriouslySick = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
-<span class="fc" id="L541">			forStrain(VirusStrain.SARS_CoV_2)</span>
-<span class="fc" id="L542">				.atDay(5, 0.5)</span>
+<span class="fc" id="L551">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorSeriouslySick = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L552">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L553">				.atDay(5, 0.5)</span>
 		));
 
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-<span class="fc" id="L548">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorCritical = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
-<span class="fc" id="L549">			forStrain(VirusStrain.SARS_CoV_2)</span>
-<span class="fc" id="L550">				.atDay(0, 1)</span>
+<span class="fc" id="L559">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorCritical = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L560">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L561">				.atDay(0, 1)</span>
 		));
 
 		VaccinationParams() {
-<span class="fc" id="L554">			super(SET_TYPE);</span>
-<span class="fc" id="L555">		}</span>
+<span class="fc" id="L565">			super(SET_TYPE);</span>
+<span class="fc" id="L566">		}</span>
 
 		@StringGetter(TYPE)
 		String getTypeName() {
-<span class="pc bpc" id="L559" title="1 of 2 branches missed.">			return type == null ? null : type.getName();</span>
+<span class="pc bpc" id="L570" title="1 of 2 branches missed.">			return type == null ? null : type.getName();</span>
 		}
 
 		@StringSetter(TYPE)
 		void setType(String type) {
-<span class="fc" id="L564">			this.type = VaccinationType.of(type);</span>
-<span class="fc" id="L565">		}</span>
+<span class="fc" id="L575">			this.type = VaccinationType.of(type);</span>
+<span class="fc" id="L576">		}</span>
 
 		/**
 		 * Vaccination type this parameter set applies to.
 		 */
 		public VaccinationType getType() {
-<span class="nc" id="L571">			return type;</span>
+<span class="nc" id="L582">			return type;</span>
 		}
 
 		public void setType(VaccinationType type) {
-<span class="nc" id="L575">			this.type = type;</span>
-<span class="nc" id="L576">		}</span>
+<span class="nc" id="L586">			this.type = type;</span>
+<span class="nc" id="L587">		}</span>
 
 		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
 		public int getDaysBeforeFullEffect() {
-<span class="fc" id="L580">			return daysBeforeFullEffect;</span>
+<span class="fc" id="L591">			return daysBeforeFullEffect;</span>
 		}
 
 		@StringSetter(DAYS_BEFORE_FULL_EFFECT)
 		public VaccinationParams setDaysBeforeFullEffect(int daysBeforeFullEffect) {
-<span class="fc" id="L585">			this.daysBeforeFullEffect = daysBeforeFullEffect;</span>
-<span class="fc" id="L586">			return this;</span>
+<span class="fc" id="L596">			this.daysBeforeFullEffect = daysBeforeFullEffect;</span>
+<span class="fc" id="L597">			return this;</span>
 		}
 
 		@StringGetter(BOOST_WAIT_PERIOD)
 		public int getBoostWaitPeriod() {
-<span class="fc" id="L591">			return boostWaitPeriod;</span>
+<span class="fc" id="L602">			return boostWaitPeriod;</span>
 		}
 
 		@StringSetter(BOOST_WAIT_PERIOD)
 		public VaccinationParams setBoostWaitPeriod(int boostWaitPeriod) {
-<span class="fc" id="L596">			this.boostWaitPeriod = boostWaitPeriod;</span>
-<span class="fc" id="L597">			return this;</span>
+<span class="fc" id="L607">			this.boostWaitPeriod = boostWaitPeriod;</span>
+<span class="fc" id="L608">			return this;</span>
 		}
 
 		private VaccinationParams setParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map, VaccinationConfigGroupParameter[] params) {
-<span class="fc bfc" id="L601" title="All 2 branches covered.">			for (VaccinationConfigGroupParameter p : params) {</span>
-<span class="fc bfc" id="L602" title="All 2 branches covered.">				for (VirusStrain s : p.strain) {</span>
-<span class="fc" id="L603">					p.setDaysBeforeFullEffect(getDaysBeforeFullEffect());</span>
-<span class="fc" id="L604">					map.put(s, p);</span>
+<span class="fc bfc" id="L612" title="All 2 branches covered.">			for (VaccinationConfigGroupParameter p : params) {</span>
+<span class="fc bfc" id="L613" title="All 2 branches covered.">				for (VirusStrain s : p.strain) {</span>
+<span class="fc" id="L614">					p.setDaysBeforeFullEffect(getDaysBeforeFullEffect());</span>
+<span class="fc" id="L615">					map.put(s, p);</span>
 				}
 			}
-<span class="fc" id="L607">			return this;</span>
+<span class="fc" id="L618">			return this;</span>
 		}
 
 		/**
 		 * Load serialized parameters.
 		 */
 		private void setParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map, String value) {
-<span class="fc" id="L614">			map.clear();</span>
-<span class="fc bfc" id="L615" title="All 2 branches covered.">			if (value.isBlank()) return;</span>
+<span class="fc" id="L625">			map.clear();</span>
+<span class="fc bfc" id="L626" title="All 2 branches covered.">			if (value.isBlank()) return;</span>
 
-<span class="fc" id="L617">			map.clear();</span>
-<span class="fc bfc" id="L618" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(value).entrySet()) {</span>
-<span class="fc" id="L619">				map.put(VirusStrain.of(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));</span>
-<span class="fc" id="L620">			}</span>
-<span class="fc" id="L621">		}</span>
+<span class="fc" id="L628">			map.clear();</span>
+<span class="fc bfc" id="L629" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(value).entrySet()) {</span>
+<span class="fc" id="L630">				map.put(VirusStrain.of(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));</span>
+<span class="fc" id="L631">			}</span>
+<span class="fc" id="L632">		}</span>
 
 		/**
 		 * Interpolate parameter for day after vaccination.
@@ -629,31 +640,31 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * @return interpolated factor
 		 */
 		private double getParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map, VirusStrain strain, int day) {
-<span class="fc" id="L632">			VaccinationConfigGroupParameter p = map.getOrDefault(strain, map.get(VirusStrain.SARS_CoV_2));</span>
-<span class="fc" id="L633">			return p.get(day);</span>
+<span class="fc" id="L643">			VaccinationConfigGroupParameter p = map.getOrDefault(strain, map.get(VirusStrain.SARS_CoV_2));</span>
+<span class="fc" id="L644">			return p.get(day);</span>
 		}
 
 		private String getParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map) {
 
-<span class="fc" id="L638">			Map&lt;VirusStrain, String&gt; result = map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L649">			Map&lt;VirusStrain, String&gt; result = map.entrySet().stream().collect(Collectors.toMap(</span>
 				Map.Entry::getKey,
-<span class="fc" id="L640">				e -&gt; e.getValue().toString()</span>
+<span class="fc" id="L651">				e -&gt; e.getValue().toString()</span>
 			));
 
-<span class="fc" id="L643">			return JOINER.join(result);</span>
+<span class="fc" id="L654">			return JOINER.join(result);</span>
 		}
 
 		public VaccinationParams setBoostEffectiveness(VaccinationConfigGroupParameter... parameters) {
-<span class="fc" id="L647">			return setParamsInternal(boostEffectiveness, parameters);</span>
+<span class="fc" id="L658">			return setParamsInternal(boostEffectiveness, parameters);</span>
 		}
 
 		@StringSetter(BOOST_EFFECTIVENESS)
 		void setBoostEffectiveness(String value) {
-<span class="fc" id="L652">			setParamsInternal(boostEffectiveness, value);</span>
-<span class="fc" id="L653">		}</span>
+<span class="fc" id="L663">			setParamsInternal(boostEffectiveness, value);</span>
+<span class="fc" id="L664">		}</span>
 
 		public double getEffectiveness(VirusStrain strain, int day) {
-<span class="fc" id="L656">			return getParamsInternal(effectiveness, strain, day);</span>
+<span class="fc" id="L667">			return getParamsInternal(effectiveness, strain, day);</span>
 		}
 
 		/**
@@ -663,131 +674,131 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 */
 		@Deprecated
 		public double getEffectiveness() {
-<span class="nc" id="L666">			return getEffectiveness(VirusStrain.SARS_CoV_2, getDaysBeforeFullEffect());</span>
+<span class="nc" id="L677">			return getEffectiveness(VirusStrain.SARS_CoV_2, getDaysBeforeFullEffect());</span>
 		}
 
 		public double getInfectivity(VirusStrain strain, int day) {
-<span class="fc" id="L670">			return getParamsInternal(infectivity, strain, day);</span>
+<span class="fc" id="L681">			return getParamsInternal(infectivity, strain, day);</span>
 		}
 
 		@StringGetter(INFECTIVITY)
 		public String getInfectivity() {
-<span class="fc" id="L675">			return getParamsInternal(infectivity);</span>
+<span class="fc" id="L686">			return getParamsInternal(infectivity);</span>
 		}
 
 		public double getBoostInfectivity(VirusStrain strain, int day) {
-<span class="fc" id="L679">			return getParamsInternal(boostInfectivity, strain, day);</span>
+<span class="fc" id="L690">			return getParamsInternal(boostInfectivity, strain, day);</span>
 		}
 
 		@StringGetter(BOOST_INFECTIVITY)
 		public String getBoostInfectivity() {
-<span class="fc" id="L684">			return getParamsInternal(boostInfectivity);</span>
+<span class="fc" id="L695">			return getParamsInternal(boostInfectivity);</span>
 		}
 
 		public double getBoostEffectiveness(VirusStrain strain, int day) {
-<span class="pc bpc" id="L688" title="1 of 2 branches missed.">			return getParamsInternal(boostEffectiveness.containsKey(strain) ? boostEffectiveness : effectiveness, strain, day);</span>
+<span class="pc bpc" id="L699" title="1 of 2 branches missed.">			return getParamsInternal(boostEffectiveness.containsKey(strain) ? boostEffectiveness : effectiveness, strain, day);</span>
 		}
 
 		public double getFactorShowingSymptoms(VirusStrain strain, int day) {
-<span class="fc" id="L692">			return getParamsInternal(factorShowingSymptoms, strain, day);</span>
+<span class="fc" id="L703">			return getParamsInternal(factorShowingSymptoms, strain, day);</span>
 		}
 
 		@StringGetter(FACTOR_SHOWINGS_SYMPTOMS)
 		String getFactorShowingSymptoms() {
-<span class="fc" id="L697">			return getParamsInternal(factorShowingSymptoms);</span>
+<span class="fc" id="L708">			return getParamsInternal(factorShowingSymptoms);</span>
 		}
 
 		public double getFactorSeriouslySick(VirusStrain strain, int day) {
-<span class="fc" id="L701">			return getParamsInternal(factorSeriouslySick, strain, day);</span>
+<span class="fc" id="L712">			return getParamsInternal(factorSeriouslySick, strain, day);</span>
 		}
 
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
 		String getFactorSeriouslySick() {
-<span class="fc" id="L706">			return getParamsInternal(factorSeriouslySick);</span>
+<span class="fc" id="L717">			return getParamsInternal(factorSeriouslySick);</span>
 		}
 
 		public double getFactorCritical(VirusStrain strain, int day) {
-<span class="nc" id="L710">			return getParamsInternal(factorCritical, strain, day);</span>
+<span class="nc" id="L721">			return getParamsInternal(factorCritical, strain, day);</span>
 		}
 
 		@StringGetter(FACTOR_CRITICAL)
 		public String getFactorCritical() {
-<span class="fc" id="L715">			return getParamsInternal(factorCritical);</span>
+<span class="fc" id="L726">			return getParamsInternal(factorCritical);</span>
 		}
 
 		@StringGetter(EFFECTIVENESS)
 		String getEffectivenessString() {
-<span class="fc" id="L720">			return getParamsInternal(effectiveness);</span>
+<span class="fc" id="L731">			return getParamsInternal(effectiveness);</span>
 		}
 
 		@StringGetter(BOOST_EFFECTIVENESS)
 		String getBoostEffectivenessString() {
-<span class="fc" id="L725">			return getParamsInternal(boostEffectiveness);</span>
+<span class="fc" id="L736">			return getParamsInternal(boostEffectiveness);</span>
 		}
 
 		public VaccinationParams setFactorShowingSymptoms(VaccinationConfigGroupParameter... parameters) {
-<span class="fc" id="L729">			return setParamsInternal(factorShowingSymptoms, parameters);</span>
+<span class="fc" id="L740">			return setParamsInternal(factorShowingSymptoms, parameters);</span>
 		}
 
 		@StringSetter(FACTOR_SHOWINGS_SYMPTOMS)
 		void setFactorShowingSymptoms(String value) {
-<span class="fc" id="L734">			setParamsInternal(factorShowingSymptoms, value);</span>
-<span class="fc" id="L735">		}</span>
+<span class="fc" id="L745">			setParamsInternal(factorShowingSymptoms, value);</span>
+<span class="fc" id="L746">		}</span>
 
 		@Deprecated
 		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
-<span class="nc" id="L739">			throw new UnsupportedOperationException(&quot;Use .setFactorShowingSymptoms(VaccinationConfigGroupParameter ...)&quot;);</span>
+<span class="nc" id="L750">			throw new UnsupportedOperationException(&quot;Use .setFactorShowingSymptoms(VaccinationConfigGroupParameter ...)&quot;);</span>
 		}
 
 		public VaccinationParams setFactorSeriouslySick(VaccinationConfigGroupParameter... parameters) {
-<span class="fc" id="L743">			return setParamsInternal(factorSeriouslySick, parameters);</span>
+<span class="fc" id="L754">			return setParamsInternal(factorSeriouslySick, parameters);</span>
 		}
 
 		@StringSetter(FACTOR_SERIOUSLY_SICK)
 		void setFactorSeriouslySick(String value) {
-<span class="fc" id="L748">			setParamsInternal(factorSeriouslySick, value);</span>
-<span class="fc" id="L749">		}</span>
+<span class="fc" id="L759">			setParamsInternal(factorSeriouslySick, value);</span>
+<span class="fc" id="L760">		}</span>
 
 		@Deprecated
 		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
-<span class="nc" id="L753">			throw new UnsupportedOperationException(&quot;Use .setFactorSeriouslySick(VaccinationConfigGroupParameter ...)&quot;);</span>
+<span class="nc" id="L764">			throw new UnsupportedOperationException(&quot;Use .setFactorSeriouslySick(VaccinationConfigGroupParameter ...)&quot;);</span>
 		}
 
 		public VaccinationParams setFactorCritical(VaccinationConfigGroupParameter... parameters) {
-<span class="nc" id="L757">			return setParamsInternal(factorCritical, parameters);</span>
+<span class="nc" id="L768">			return setParamsInternal(factorCritical, parameters);</span>
 		}
 
 		@StringSetter(FACTOR_CRITICAL)
 		void setFactorCritical(String value) {
-<span class="fc" id="L762">			setParamsInternal(factorCritical, value);</span>
-<span class="fc" id="L763">		}</span>
+<span class="fc" id="L773">			setParamsInternal(factorCritical, value);</span>
+<span class="fc" id="L774">		}</span>
 
 		public VaccinationParams setInfectivity(VaccinationConfigGroupParameter... parameters) {
-<span class="fc" id="L766">			return setParamsInternal(infectivity, parameters);</span>
+<span class="fc" id="L777">			return setParamsInternal(infectivity, parameters);</span>
 		}
 
 		@StringSetter(INFECTIVITY)
 		void setInfectivity(String value) {
-<span class="fc" id="L771">			setParamsInternal(infectivity, value);</span>
-<span class="fc" id="L772">		}</span>
+<span class="fc" id="L782">			setParamsInternal(infectivity, value);</span>
+<span class="fc" id="L783">		}</span>
 
 		public VaccinationParams setBoostInfectivity(VaccinationConfigGroupParameter... parameters) {
-<span class="fc" id="L775">			return setParamsInternal(boostInfectivity, parameters);</span>
+<span class="fc" id="L786">			return setParamsInternal(boostInfectivity, parameters);</span>
 		}
 
 		@StringSetter(BOOST_INFECTIVITY)
 		void setBoostInfectivity(String value) {
-<span class="fc" id="L780">			setParamsInternal(boostInfectivity, value);</span>
-<span class="fc" id="L781">		}</span>
+<span class="fc" id="L791">			setParamsInternal(boostInfectivity, value);</span>
+<span class="fc" id="L792">		}</span>
 
 		public VaccinationParams setEffectiveness(VaccinationConfigGroupParameter... parameters) {
-<span class="fc" id="L784">			return setParamsInternal(effectiveness, parameters);</span>
+<span class="fc" id="L795">			return setParamsInternal(effectiveness, parameters);</span>
 		}
 
 		@StringSetter(EFFECTIVENESS)
 		void setEffectiveness(String value) {
-<span class="fc" id="L789">			setParamsInternal(effectiveness, value);</span>
-<span class="fc" id="L790">		}</span>
+<span class="fc" id="L800">			setParamsInternal(effectiveness, value);</span>
+<span class="fc" id="L801">		}</span>
 
 		/**
 		 * Return effectiveness against base variant.
@@ -796,7 +807,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 */
 		@Deprecated
 		public void setEffectiveness(double effectiveness) {
-<span class="nc" id="L799">			throw new UnsupportedOperationException(&quot;Use .setEffectiveness(VaccinationConfigGroupParameter ...)&quot;);</span>
+<span class="nc" id="L810">			throw new UnsupportedOperationException(&quot;Use .setEffectiveness(VaccinationConfigGroupParameter ...)&quot;);</span>
 		}
 
 	}
@@ -806,35 +817,35 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public static final class VaccinationConfigGroupParameter {
 
-<span class="fc" id="L809">		private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;);</span>
-<span class="fc" id="L810">		private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;);</span>
+<span class="fc" id="L820">		private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;);</span>
+<span class="fc" id="L821">		private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;);</span>
 
 		private final VirusStrain[] strain;
-<span class="fc" id="L813">		private final NavigableMap&lt;Integer, Double&gt; map = new TreeMap&lt;&gt;();</span>
+<span class="fc" id="L824">		private final NavigableMap&lt;Integer, Double&gt; map = new TreeMap&lt;&gt;();</span>
 
-<span class="fc" id="L815">		private VaccinationConfigGroupParameter(VirusStrain[] strain) {</span>
-<span class="fc" id="L816">			this.strain = strain;</span>
-<span class="fc" id="L817">		}</span>
+<span class="fc" id="L826">		private VaccinationConfigGroupParameter(VirusStrain[] strain) {</span>
+<span class="fc" id="L827">			this.strain = strain;</span>
+<span class="fc" id="L828">		}</span>
 
-<span class="fc" id="L819">		private VaccinationConfigGroupParameter(Map&lt;String, String&gt; map) {</span>
-<span class="fc" id="L820">			this.strain = new VirusStrain[0];</span>
-<span class="fc bfc" id="L821" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : map.entrySet()) {</span>
-<span class="fc" id="L822">				this.map.put(Integer.parseInt(e.getKey()), Double.parseDouble(e.getValue()));</span>
-<span class="fc" id="L823">			}</span>
+<span class="fc" id="L830">		private VaccinationConfigGroupParameter(Map&lt;String, String&gt; map) {</span>
+<span class="fc" id="L831">			this.strain = new VirusStrain[0];</span>
+<span class="fc bfc" id="L832" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : map.entrySet()) {</span>
+<span class="fc" id="L833">				this.map.put(Integer.parseInt(e.getKey()), Double.parseDouble(e.getValue()));</span>
+<span class="fc" id="L834">			}</span>
 
-<span class="fc" id="L825">		}</span>
+<span class="fc" id="L836">		}</span>
 
 		private static VaccinationConfigGroupParameter parse(String value) {
-<span class="fc" id="L828">			Map&lt;String, String&gt; m = SPLITTER.split(value);</span>
-<span class="fc" id="L829">			return new VaccinationConfigGroupParameter(m);</span>
+<span class="fc" id="L839">			Map&lt;String, String&gt; m = SPLITTER.split(value);</span>
+<span class="fc" id="L840">			return new VaccinationConfigGroupParameter(m);</span>
 		}
 
 		/**
 		 * Sets the value for a parameter at a specific day.
 		 */
 		public VaccinationConfigGroupParameter atDay(int day, double value) {
-<span class="fc" id="L836">			map.put(day, value);</span>
-<span class="fc" id="L837">			return this;</span>
+<span class="fc" id="L847">			map.put(day, value);</span>
+<span class="fc" id="L848">			return this;</span>
 		}
 
 		/**
@@ -842,8 +853,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * {@link VaccinationParams#setDaysBeforeFullEffect(int)} has to be set before calling this method!
 		 */
 		public VaccinationConfigGroupParameter atFullEffect(double value) {
-<span class="fc" id="L845">			map.put(Integer.MAX_VALUE, value);</span>
-<span class="fc" id="L846">			return this;</span>
+<span class="fc" id="L856">			map.put(Integer.MAX_VALUE, value);</span>
+<span class="fc" id="L857">			return this;</span>
 		}
 
 		/**
@@ -851,33 +862,33 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private double get(int day) {
 
-<span class="fc" id="L854">			Map.Entry&lt;Integer, Double&gt; floor = map.floorEntry(day);</span>
+<span class="fc" id="L865">			Map.Entry&lt;Integer, Double&gt; floor = map.floorEntry(day);</span>
 
-<span class="fc bfc" id="L856" title="All 2 branches covered.">			if (floor == null)</span>
-<span class="fc" id="L857">				return map.firstEntry().getValue();</span>
+<span class="fc bfc" id="L867" title="All 2 branches covered.">			if (floor == null)</span>
+<span class="fc" id="L868">				return map.firstEntry().getValue();</span>
 
-<span class="fc bfc" id="L859" title="All 2 branches covered.">			if (floor.getKey().equals(day))</span>
-<span class="fc" id="L860">				return floor.getValue();</span>
+<span class="fc bfc" id="L870" title="All 2 branches covered.">			if (floor.getKey().equals(day))</span>
+<span class="fc" id="L871">				return floor.getValue();</span>
 
-<span class="fc" id="L862">			Map.Entry&lt;Integer, Double&gt; ceil = map.ceilingEntry(day);</span>
+<span class="fc" id="L873">			Map.Entry&lt;Integer, Double&gt; ceil = map.ceilingEntry(day);</span>
 
 			// there is no higher entry to interpolate
-<span class="fc bfc" id="L865" title="All 2 branches covered.">			if (ceil == null)</span>
-<span class="fc" id="L866">				return floor.getValue();</span>
+<span class="fc bfc" id="L876" title="All 2 branches covered.">			if (ceil == null)</span>
+<span class="fc" id="L877">				return floor.getValue();</span>
 
-<span class="fc" id="L868">			double between = ceil.getKey() - floor.getKey();</span>
-<span class="fc" id="L869">			double diff = day - floor.getKey();</span>
-<span class="fc" id="L870">			return floor.getValue() + diff * (ceil.getValue() - floor.getValue()) / between;</span>
+<span class="fc" id="L879">			double between = ceil.getKey() - floor.getKey();</span>
+<span class="fc" id="L880">			double diff = day - floor.getKey();</span>
+<span class="fc" id="L881">			return floor.getValue() + diff * (ceil.getValue() - floor.getValue()) / between;</span>
 		}
 
 		private void setDaysBeforeFullEffect(int daysBeforeFullEffect) {
-<span class="fc bfc" id="L874" title="All 2 branches covered.">			if (map.containsKey(Integer.MAX_VALUE))</span>
-<span class="fc" id="L875">				map.put(daysBeforeFullEffect, map.remove(Integer.MAX_VALUE));</span>
-<span class="fc" id="L876">		}</span>
+<span class="fc bfc" id="L885" title="All 2 branches covered.">			if (map.containsKey(Integer.MAX_VALUE))</span>
+<span class="fc" id="L886">				map.put(daysBeforeFullEffect, map.remove(Integer.MAX_VALUE));</span>
+<span class="fc" id="L887">		}</span>
 
 		@Override
 		public String toString() {
-<span class="fc" id="L880">			return JOINER.join(map);</span>
+<span class="fc" id="L891">			return JOINER.join(map);</span>
 		}
 	}
 

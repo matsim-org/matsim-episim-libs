@@ -32,8 +32,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	/**
 	 * Age-independent base disease-progression probabilities of the pathogen the person is infected with.
 	 */
-	private PathogenConfigGroup.PathogenParams pathogenParams(EpisimPerson person) {
-<span class="fc" id="L36">		return pathogenConfig.getParams(person.getVirusStrain().getPathogen(), false);</span>
+	private PathogenConfigGroup.ProgressionParams progressionParams(EpisimPerson person) {
+<span class="fc" id="L36">		return pathogenConfig.getProgressionParams(person.getVirusStrain().getPathogen(), false);</span>
 	}
 
 	@Override
@@ -101,22 +101,22 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
-<span class="fc" id="L104">		return pathogenParams(person).getSeriouslySickProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L104">		return progressionParams(person).getSeriouslySickProbability(person.getAgeOrDefault(0));</span>
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
 	 */
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
-<span class="fc" id="L111">		return pathogenParams(person).getCriticalProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L111">		return progressionParams(person).getCriticalProbability(person.getAgeOrDefault(0));</span>
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-<span class="fc" id="L115">		return pathogenParams(person).getShowingSymptomsProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L115">		return progressionParams(person).getShowingSymptomsProbability(person.getAgeOrDefault(0));</span>
 	}
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-<span class="fc" id="L119">		return pathogenParams(person).getDeathProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L119">		return progressionParams(person).getDeathProbability(person.getAgeOrDefault(0));</span>
 	}
 
 }

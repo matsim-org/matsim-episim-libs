@@ -48,47 +48,54 @@ public class VaccinationType implements ImmunityEvent {
 <span class="fc" id="L48">		return STANDARD_OPTIONS;</span>
 	}
 
-	public static List&lt;VaccinationType&gt; getAllOptions(){
-<span class="fc" id="L52">		ArrayList&lt;VaccinationType&gt; vaccinationTypes = new ArrayList&lt;&gt;(VACCINATIONS_BY_NAME.values());</span>
-<span class="fc" id="L53">		vaccinationTypes.sort(Comparator.comparing(VaccinationType::getId));</span>
-<span class="fc" id="L54">		return vaccinationTypes;</span>
+	/**
+	 * Returns the standard vaccination types in declaration order, followed by all further registered types sorted by id.
+	 * The standard order is kept so that outputs like {@code vaccinations.tsv} stay unchanged.
+	 */
+	public static List&lt;VaccinationType&gt; getAllOptions() {
+<span class="fc" id="L56">		List&lt;VaccinationType&gt; vaccinationTypes = new ArrayList&lt;&gt;(STANDARD_OPTIONS);</span>
+<span class="fc" id="L57">		VACCINATIONS_BY_NAME.values().stream()</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">			.filter(t -&gt; !STANDARD_OPTIONS.contains(t))</span>
+<span class="fc" id="L59">			.sorted(Comparator.comparing(VaccinationType::getId))</span>
+<span class="fc" id="L60">			.forEach(vaccinationTypes::add);</span>
+<span class="fc" id="L61">		return vaccinationTypes;</span>
 	}
 
 	/**
 	 * Returns the canonical instance for the given name, registering a new one when the name is first seen.
 	 */
 	public static VaccinationType of(String name) {
-<span class="fc" id="L61">		Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
-<span class="fc" id="L62">		return VACCINATIONS_BY_NAME.computeIfAbsent(name, VaccinationType::new);</span>
+<span class="fc" id="L68">		Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
+<span class="fc" id="L69">		return VACCINATIONS_BY_NAME.computeIfAbsent(name, VaccinationType::new);</span>
 	}
 
 	public static VaccinationType ofId(String s) {
-<span class="nc" id="L66">		return of(s);//in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
+<span class="nc" id="L73">		return of(s);//in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
 	}
 
 	public String getName() {
-<span class="fc" id="L70">		return name;</span>
+<span class="fc" id="L77">		return name;</span>
 	}
 
 	@Override
 	public boolean equals(Object o) {
-<span class="pc bpc" id="L75" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
-<span class="fc" id="L76">		VaccinationType that = (VaccinationType) o;</span>
-<span class="fc" id="L77">		return Objects.equals(name, that.name);</span>
+<span class="pc bpc" id="L82" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L83">		VaccinationType that = (VaccinationType) o;</span>
+<span class="fc" id="L84">		return Objects.equals(name, that.name);</span>
 	}
 
 	@Override
 	public int hashCode() {
-<span class="fc" id="L82">		return Objects.hashCode(name);</span>
+<span class="fc" id="L89">		return Objects.hashCode(name);</span>
 	}
 
 	public String getId() {
-<span class="fc" id="L86">		return getName(); //in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
+<span class="fc" id="L93">		return getName(); //in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
 	}
 
 	@Override
 	public String toString() {
-<span class="fc" id="L91">		return getId();</span>
+<span class="fc" id="L98">		return getId();</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

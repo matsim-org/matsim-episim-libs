@@ -4,7 +4,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
-import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ImmunityEvent;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
@@ -25,15 +24,17 @@ import java.util.Objects;
  *     when the same immunity event happens again ({@code NaN} where no refresh is defined).&lt;/li&gt;
  * &lt;/ul&gt;
  *
- * &lt;p&gt;The default constructor fills both maps with exactly the values that {@link AntibodyModel.Config} sets up
- * today, so a configuration without an explicit {@code antibodies} section keeps behaving as before. This
- * config group does not yet feed into the simulation; it only mirrors the current hard-coded default.&lt;/p&gt;
+ * &lt;p&gt;A strain without an entry is not affected by the immunity event: no antibodies are induced against it and an
+ * existing level is not refreshed. This allows strains of other pathogens to be configured independently.&lt;/p&gt;
+ *
+ * &lt;p&gt;The default constructor fills both maps with the values of the former hard-coded {@code AntibodyModel.Config},
+ * so a configuration without an explicit {@code antibodies} section keeps behaving as before.&lt;/p&gt;
  */
 @SuppressWarnings({&quot;checkstyle:MethodName&quot;, &quot;checkstyle:AbbreviationAsWordInName&quot;})
 public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 
-<span class="fc" id="L35">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
-<span class="fc" id="L36">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L36">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L37">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
 
 	private static final String GROUPNAME = &quot;antibodies&quot;;
 
@@ -44,285 +45,289 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 	 * Sigma of the log-normal distribution used to draw a person's individual immune-response multiplier.
 	 * {@code 0} means every person reacts identically.
 	 */
-<span class="fc" id="L47">	private double immuneResponseSigma = 0.;</span>
+<span class="fc" id="L48">	private double immuneResponseSigma = 0.;</span>
 
 	/**
 	 * Half-life multiplier applied to the antibody decay of persons that gained their immunity through
 	 * infection (as opposed to vaccination).
 	 */
-<span class="fc" id="L53">	private double hlMultiplierForInfected = 1.0;</span>
+<span class="fc" id="L54">	private double hlMultiplierForInfected = 1.0;</span>
 
 	/**
 	 * Holds all immunity-event specific params, keyed by the triggering {@link ImmunityEvent}.
 	 */
-<span class="fc" id="L58">	private final Map&lt;ImmunityEvent, AntibodyParams&gt; params = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L59">	private final Map&lt;ImmunityEvent, AntibodyParams&gt; params = new LinkedHashMap&lt;&gt;();</span>
 
 	/**
 	 * Default constructor. Registers the same initial-antibody and refresh-factor values that
-	 * {@link AntibodyModel.Config} hard-codes today.
+	 * the former hard-coded {@code AntibodyModel.Config} used.
 	 */
 	public AntibodyConfigGroup() {
-<span class="fc" id="L65">		super(GROUPNAME);</span>
+<span class="fc" id="L66">		super(GROUPNAME);</span>
 
-<span class="fc" id="L67">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; initialAntibodies = defaultInitialAntibodies();</span>
-<span class="fc" id="L68">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; antibodyRefreshFactors = defaultAntibodyRefreshFactors();</span>
+<span class="fc" id="L68">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; initialAntibodies = defaultInitialAntibodies();</span>
+<span class="fc" id="L69">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; antibodyRefreshFactors = defaultAntibodyRefreshFactors();</span>
 
-<span class="fc bfc" id="L70" title="All 2 branches covered.">		for (Map.Entry&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; e : initialAntibodies.entrySet()) {</span>
-<span class="fc" id="L71">			ImmunityEvent immunityEvent = e.getKey();</span>
-<span class="fc" id="L72">			AntibodyParams p = new AntibodyParams();</span>
-<span class="fc" id="L73">			p.setImmunityEvent(immunityEvent);</span>
-<span class="fc" id="L74">			p.setInitialAntibodies(e.getValue());</span>
-<span class="fc" id="L75">			p.setAntibodyRefreshFactors(antibodyRefreshFactors.getOrDefault(immunityEvent, Map.of()));</span>
-<span class="fc" id="L76">			addParameterSet(p);</span>
-<span class="fc" id="L77">		}</span>
-<span class="fc" id="L78">	}</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">		for (Map.Entry&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; e : initialAntibodies.entrySet()) {</span>
+<span class="fc" id="L72">			ImmunityEvent immunityEvent = e.getKey();</span>
+<span class="fc" id="L73">			AntibodyParams p = new AntibodyParams();</span>
+<span class="fc" id="L74">			p.setImmunityEvent(immunityEvent);</span>
+<span class="fc" id="L75">			p.setInitialAntibodies(e.getValue());</span>
+<span class="fc" id="L76">			p.setAntibodyRefreshFactors(antibodyRefreshFactors.getOrDefault(immunityEvent, Map.of()));</span>
+<span class="fc" id="L77">			addParameterSet(p);</span>
+<span class="fc" id="L78">		}</span>
+<span class="fc" id="L79">	}</span>
 
 	/**
 	 * Get config parameter for a specific immunity event.
 	 */
 	public AntibodyParams getParams(ImmunityEvent immunityEvent) {
-<span class="pc bpc" id="L84" title="1 of 2 branches missed.">		if (!params.containsKey(immunityEvent))</span>
-<span class="nc" id="L85">			throw new IllegalStateException(&quot;Immunity event &quot; + immunityEvent + &quot; is not configured.&quot;);</span>
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">		if (!params.containsKey(immunityEvent))</span>
+<span class="nc" id="L86">			throw new IllegalStateException(&quot;Immunity event &quot; + immunityEvent + &quot; is not configured. Add an '&quot;</span>
+					+ AntibodyParams.SET_TYPE + &quot;' parameter set for it to the '&quot; + GROUPNAME + &quot;' config group.&quot;);
 
-<span class="fc" id="L87">		return params.get(immunityEvent);</span>
+<span class="fc" id="L89">		return params.get(immunityEvent);</span>
 	}
 
 	/**
 	 * Whether params for the given immunity event are present.
 	 */
 	public boolean hasParams(ImmunityEvent immunityEvent) {
-<span class="fc" id="L94">		return params.containsKey(immunityEvent);</span>
+<span class="fc" id="L96">		return params.containsKey(immunityEvent);</span>
 	}
 
 	/**
 	 * Get an existing or add a new (empty) parameter set for the given immunity event.
 	 */
 	public AntibodyParams getOrAddParams(ImmunityEvent immunityEvent) {
-<span class="pc bpc" id="L101" title="1 of 2 branches missed.">		if (!params.containsKey(immunityEvent)) {</span>
-<span class="fc" id="L102">			AntibodyParams p = new AntibodyParams();</span>
-<span class="fc" id="L103">			p.setImmunityEvent(immunityEvent);</span>
-<span class="fc" id="L104">			addParameterSet(p);</span>
-<span class="fc" id="L105">			return p;</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">		if (!params.containsKey(immunityEvent)) {</span>
+<span class="fc" id="L104">			AntibodyParams p = new AntibodyParams();</span>
+<span class="fc" id="L105">			p.setImmunityEvent(immunityEvent);</span>
+<span class="fc" id="L106">			addParameterSet(p);</span>
+<span class="fc" id="L107">			return p;</span>
 		}
 
-<span class="nc" id="L108">		return params.get(immunityEvent);</span>
+<span class="nc" id="L110">		return params.get(immunityEvent);</span>
 	}
 
 	/**
 	 * Initial antibody levels for every configured immunity event, in the same nested-map shape as
-	 * {@link AntibodyModel.Config}.
+	 * the former {@code AntibodyModel.Config}.
 	 */
 	public Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; getInitialAntibodies() {
-<span class="fc" id="L116">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; result = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L117" title="All 2 branches covered.">		for (Map.Entry&lt;ImmunityEvent, AntibodyParams&gt; e : params.entrySet())</span>
-<span class="fc" id="L118">			result.put(e.getKey(), new LinkedHashMap&lt;&gt;(e.getValue().getInitialAntibodies()));</span>
+<span class="fc" id="L118">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">		for (Map.Entry&lt;ImmunityEvent, AntibodyParams&gt; e : params.entrySet())</span>
+<span class="fc" id="L120">			result.put(e.getKey(), new LinkedHashMap&lt;&gt;(e.getValue().getInitialAntibodies()));</span>
 
-<span class="fc" id="L120">		return result;</span>
+<span class="fc" id="L122">		return result;</span>
 	}
 
 	/**
 	 * Antibody refresh factors for every configured immunity event, in the same nested-map shape as
-	 * {@link AntibodyModel.Config}.
+	 * the former {@code AntibodyModel.Config}.
 	 */
 	public Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; getAntibodyRefreshFactors() {
-<span class="fc" id="L128">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; result = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L129" title="All 2 branches covered.">		for (Map.Entry&lt;ImmunityEvent, AntibodyParams&gt; e : params.entrySet())</span>
-<span class="fc" id="L130">			result.put(e.getKey(), new LinkedHashMap&lt;&gt;(e.getValue().getAntibodyRefreshFactors()));</span>
+<span class="fc" id="L130">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">		for (Map.Entry&lt;ImmunityEvent, AntibodyParams&gt; e : params.entrySet())</span>
+<span class="fc" id="L132">			result.put(e.getKey(), new LinkedHashMap&lt;&gt;(e.getValue().getAntibodyRefreshFactors()));</span>
 
-<span class="fc" id="L132">		return result;</span>
+<span class="fc" id="L134">		return result;</span>
 	}
 
 	@StringGetter(IMMUNE_RESPONSE_SIGMA)
 	public double getImmuneResponseSigma() {
-<span class="fc" id="L137">		return immuneResponseSigma;</span>
+<span class="fc" id="L139">		return immuneResponseSigma;</span>
 	}
 
 	@StringSetter(IMMUNE_RESPONSE_SIGMA)
 	public void setImmuneResponseSigma(double immuneResponseSigma) {
-<span class="fc" id="L142">		this.immuneResponseSigma = immuneResponseSigma;</span>
-<span class="fc" id="L143">	}</span>
+<span class="fc" id="L144">		this.immuneResponseSigma = immuneResponseSigma;</span>
+<span class="fc" id="L145">	}</span>
 
 	@StringGetter(HL_MULTIPLIER_FOR_INFECTED)
 	public double getHlMultiplierForInfected() {
-<span class="fc" id="L147">		return hlMultiplierForInfected;</span>
+<span class="fc" id="L149">		return hlMultiplierForInfected;</span>
 	}
 
 	@StringSetter(HL_MULTIPLIER_FOR_INFECTED)
 	public void setHlMultiplierForInfected(double hlMultiplierForInfected) {
-<span class="fc" id="L152">		this.hlMultiplierForInfected = hlMultiplierForInfected;</span>
-<span class="fc" id="L153">	}</span>
+<span class="fc" id="L154">		this.hlMultiplierForInfected = hlMultiplierForInfected;</span>
+<span class="fc" id="L155">	}</span>
 
 	@Override
 	public ConfigGroup createParameterSet(String type) {
-<span class="pc bpc" id="L157" title="1 of 2 branches missed.">		if (AntibodyParams.SET_TYPE.equals(type)) {</span>
-<span class="fc" id="L158">			return new AntibodyParams();</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">		if (AntibodyParams.SET_TYPE.equals(type)) {</span>
+<span class="fc" id="L160">			return new AntibodyParams();</span>
 		}
-<span class="nc" id="L160">		throw new IllegalArgumentException(&quot;Unknown type &quot; + type);</span>
+<span class="nc" id="L162">		throw new IllegalArgumentException(&quot;Unknown type &quot; + type);</span>
 	}
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
-<span class="pc bpc" id="L165" title="1 of 2 branches missed.">		if (AntibodyParams.SET_TYPE.equals(set.getName())) {</span>
-<span class="fc" id="L166">			AntibodyParams p = (AntibodyParams) set;</span>
-<span class="fc" id="L167">			params.put(p.getImmunityEvent(), p);</span>
-<span class="fc" id="L168">			super.addParameterSet(set);</span>
+<span class="pc bpc" id="L167" title="1 of 2 branches missed.">		if (AntibodyParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L168">			AntibodyParams p = (AntibodyParams) set;</span>
+<span class="fc" id="L169">			AntibodyParams previous = params.put(p.getImmunityEvent(), p);</span>
+			// replace a previously registered set (e.g. an auto-added default) instead of keeping a stale duplicate
+<span class="fc bfc" id="L171" title="All 2 branches covered.">			if (previous != null){</span>
+<span class="fc" id="L172">				super.removeParameterSet(previous);}</span>
+<span class="fc" id="L173">			super.addParameterSet(set);</span>
 
-<span class="fc" id="L170">		} else</span>
-<span class="nc" id="L171">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
-<span class="fc" id="L172">	}</span>
+<span class="fc" id="L175">		} else</span>
+<span class="nc" id="L176">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
+<span class="fc" id="L177">	}</span>
 
 	/**
 	 * Builds the default initial-antibody map. Ported verbatim (values-wise) from
-	 * {@link AntibodyModel.Config}; only the map implementation is swapped for a deterministic
+	 * the former {@code AntibodyModel.Config}; only the map implementation is swapped for a deterministic
 	 * {@link LinkedHashMap}.
 	 */
 	private static Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; defaultInitialAntibodies() {
 
-<span class="fc" id="L181">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; initialAntibodies = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L186">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; initialAntibodies = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc bfc" id="L183" title="All 2 branches covered.">		for (VaccinationType immunityType : VaccinationType.getAllStandardOptions()) {</span>
-<span class="fc" id="L184">			initialAntibodies.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
-<span class="fc bfc" id="L185" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">		for (VaccinationType immunityType : VaccinationType.getAllStandardOptions()) {</span>
+<span class="fc" id="L189">			initialAntibodies.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
+<span class="fc bfc" id="L190" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
 
-<span class="fc bfc" id="L187" title="All 2 branches covered.">				if (immunityType == VaccinationType.mRNA) {</span>
-<span class="fc" id="L188">					initialAntibodies.get(immunityType).put(virusStrain, 29.2); //10.0</span>
-<span class="fc bfc" id="L189" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.vector) {</span>
-<span class="fc" id="L190">					initialAntibodies.get(immunityType).put(virusStrain, 6.8);  //2.5</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">				if (immunityType == VaccinationType.mRNA) {</span>
+<span class="fc" id="L193">					initialAntibodies.get(immunityType).put(virusStrain, 29.2); //10.0</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.vector) {</span>
+<span class="fc" id="L195">					initialAntibodies.get(immunityType).put(virusStrain, 6.8);  //2.5</span>
 				} else {
-<span class="fc" id="L192">					initialAntibodies.get(immunityType).put(virusStrain, 5.0);</span>
+<span class="fc" id="L197">					initialAntibodies.get(immunityType).put(virusStrain, 5.0);</span>
 				}
-<span class="fc" id="L194">			}</span>
-<span class="fc" id="L195">		}</span>
+<span class="fc" id="L199">			}</span>
+<span class="fc" id="L200">		}</span>
 
-<span class="fc bfc" id="L197" title="All 2 branches covered.">		for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {</span>
-<span class="fc" id="L198">			initialAntibodies.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
-<span class="fc bfc" id="L199" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
-<span class="fc" id="L200">				initialAntibodies.get(immunityType).put(virusStrain, 5.0);</span>
-<span class="fc" id="L201">			}</span>
-<span class="fc" id="L202">		}</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">		for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {</span>
+<span class="fc" id="L203">			initialAntibodies.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
+<span class="fc" id="L205">				initialAntibodies.get(immunityType).put(virusStrain, 5.0);</span>
+<span class="fc" id="L206">			}</span>
+<span class="fc" id="L207">		}</span>
 
 		//mRNAAlpha, mRNADelta, mRNABA1 comes from Sydney's calibration.
 		//The other values come from Rössler et al.
 
-<span class="fc" id="L207">		double mutEscDelta = 29.2 / 10.9;</span>
-<span class="fc" id="L208">		double mutEscBa1 = 10.9 / 1.9;</span>
-<span class="fc" id="L209">		double mutEscBa5 = 2.9;</span>
+<span class="fc" id="L212">		double mutEscDelta = 29.2 / 10.9;</span>
+<span class="fc" id="L213">		double mutEscBa1 = 10.9 / 1.9;</span>
+<span class="fc" id="L214">		double mutEscBa5 = 2.9;</span>
 
 		//Wildtype
-<span class="fc" id="L212">		double mRNAAlpha = 29.2;</span>
-<span class="fc" id="L213">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.SARS_CoV_2, mRNAAlpha);</span>
-<span class="fc" id="L214">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);</span>
-<span class="fc" id="L215">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);</span>
-<span class="fc" id="L216">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);</span>
-<span class="fc" id="L217">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);</span>
-<span class="fc" id="L218">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.SARS_CoV_2, 0.01);</span>
-<span class="fc" id="L219">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.SARS_CoV_2, 0.01);</span>
-<span class="fc" id="L220">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.SARS_CoV_2, 0.01);</span>
-<span class="fc" id="L221">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscDelta / mutEscBa1);</span>
-<span class="fc" id="L222">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);</span>
+<span class="fc" id="L217">		double mRNAAlpha = 29.2;</span>
+<span class="fc" id="L218">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.SARS_CoV_2, mRNAAlpha);</span>
+<span class="fc" id="L219">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);</span>
+<span class="fc" id="L220">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);</span>
+<span class="fc" id="L221">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);</span>
+<span class="fc" id="L222">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);</span>
+<span class="fc" id="L223">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.SARS_CoV_2, 0.01);</span>
+<span class="fc" id="L224">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.SARS_CoV_2, 0.01);</span>
+<span class="fc" id="L225">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.SARS_CoV_2, 0.01);</span>
+<span class="fc" id="L226">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscDelta / mutEscBa1);</span>
+<span class="fc" id="L227">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);</span>
 
 		//Alpha
-<span class="fc" id="L225">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.ALPHA, mRNAAlpha);</span>
-<span class="fc" id="L226">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);</span>
-<span class="fc" id="L227">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);</span>
-<span class="fc" id="L228">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);</span>
-<span class="fc" id="L229">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);</span>
-<span class="fc" id="L230">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.ALPHA, 0.01);</span>
-<span class="fc" id="L231">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.ALPHA, 0.01);</span>
-<span class="fc" id="L232">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.ALPHA, 0.01);</span>
-<span class="fc" id="L233">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1);</span>
-<span class="fc" id="L234">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);</span>
+<span class="fc" id="L230">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.ALPHA, mRNAAlpha);</span>
+<span class="fc" id="L231">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);</span>
+<span class="fc" id="L232">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);</span>
+<span class="fc" id="L233">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);</span>
+<span class="fc" id="L234">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);</span>
+<span class="fc" id="L235">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.ALPHA, 0.01);</span>
+<span class="fc" id="L236">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.ALPHA, 0.01);</span>
+<span class="fc" id="L237">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.ALPHA, 0.01);</span>
+<span class="fc" id="L238">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1);</span>
+<span class="fc" id="L239">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);</span>
 
 		//DELTA
-<span class="fc" id="L237">		double mRNADelta = mRNAAlpha / mutEscDelta;</span>
-<span class="fc" id="L238">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, mRNADelta);</span>
-<span class="fc" id="L239">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, mRNADelta * 150. / 300.);</span>
-<span class="fc" id="L240">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, mRNADelta * 64. / 300.);</span>
-<span class="fc" id="L241">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, mRNADelta * 64. / 300.);</span>
-<span class="fc" id="L242">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, mRNADelta * 450. / 300.);</span>
-<span class="fc" id="L243">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 0.01);</span>
-<span class="fc" id="L244">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 0.01);</span>
-<span class="fc" id="L245">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.DELTA, 0.01);</span>
-<span class="fc" id="L246">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1);</span>
-<span class="fc" id="L247">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1 / mutEscBa5);</span>
+<span class="fc" id="L242">		double mRNADelta = mRNAAlpha / mutEscDelta;</span>
+<span class="fc" id="L243">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, mRNADelta);</span>
+<span class="fc" id="L244">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, mRNADelta * 150. / 300.);</span>
+<span class="fc" id="L245">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, mRNADelta * 64. / 300.);</span>
+<span class="fc" id="L246">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, mRNADelta * 64. / 300.);</span>
+<span class="fc" id="L247">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, mRNADelta * 450. / 300.);</span>
+<span class="fc" id="L248">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 0.01);</span>
+<span class="fc" id="L249">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 0.01);</span>
+<span class="fc" id="L250">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.DELTA, 0.01);</span>
+<span class="fc" id="L251">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1);</span>
+<span class="fc" id="L252">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1 / mutEscBa5);</span>
 
 		//BA.1
-<span class="fc" id="L250">		double mRNABA1 = mRNADelta / mutEscBa1;</span>
-<span class="fc" id="L251">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, mRNABA1);</span>
-<span class="fc" id="L252">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, mRNABA1 * 4. / 20.); //???</span>
-<span class="fc" id="L253">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6. / 20.);</span>
-<span class="fc" id="L254">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6. / 20.);</span>
-<span class="fc" id="L255">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 8. / 20.);</span>
-<span class="fc" id="L256">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 64.0 / 300.);</span>
-<span class="fc" id="L257">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);</span>
-<span class="fc" id="L258">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / mutEscBa5); //todo: is 1.4</span>
-<span class="fc" id="L259">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha);</span>
-<span class="fc" id="L260">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha / mutEscBa5);</span>
+<span class="fc" id="L255">		double mRNABA1 = mRNADelta / mutEscBa1;</span>
+<span class="fc" id="L256">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, mRNABA1);</span>
+<span class="fc" id="L257">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, mRNABA1 * 4. / 20.); //???</span>
+<span class="fc" id="L258">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6. / 20.);</span>
+<span class="fc" id="L259">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6. / 20.);</span>
+<span class="fc" id="L260">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 8. / 20.);</span>
+<span class="fc" id="L261">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 64.0 / 300.);</span>
+<span class="fc" id="L262">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);</span>
+<span class="fc" id="L263">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / mutEscBa5); //todo: is 1.4</span>
+<span class="fc" id="L264">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha);</span>
+<span class="fc" id="L265">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha / mutEscBa5);</span>
 
 		//BA.2
-<span class="fc" id="L263">		double mRNABA2 = mRNABA1;</span>
-<span class="fc" id="L264">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, mRNABA2);</span>
-<span class="fc" id="L265">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA2, mRNABA2 * 4. / 20.);</span>
-<span class="fc" id="L266">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6. / 20.);</span>
-<span class="fc" id="L267">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6. / 20.);</span>
-<span class="fc" id="L268">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 8. / 20.);</span>
-<span class="fc" id="L269">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);</span>
-<span class="fc" id="L270">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);</span>
-<span class="fc" id="L271">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / mutEscBa5);</span>
-<span class="fc" id="L272">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha);</span>
-<span class="fc" id="L273">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha / mutEscBa5);</span>
+<span class="fc" id="L268">		double mRNABA2 = mRNABA1;</span>
+<span class="fc" id="L269">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, mRNABA2);</span>
+<span class="fc" id="L270">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA2, mRNABA2 * 4. / 20.);</span>
+<span class="fc" id="L271">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6. / 20.);</span>
+<span class="fc" id="L272">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6. / 20.);</span>
+<span class="fc" id="L273">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 8. / 20.);</span>
+<span class="fc" id="L274">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);</span>
+<span class="fc" id="L275">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);</span>
+<span class="fc" id="L276">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / mutEscBa5);</span>
+<span class="fc" id="L277">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha);</span>
+<span class="fc" id="L278">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha / mutEscBa5);</span>
 
 		//BA.5
-<span class="fc" id="L276">		double mRNABa5 = mRNABA2 / mutEscBa5;</span>
-<span class="fc" id="L277">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA5, mRNABa5);</span>
-<span class="fc" id="L278">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA5, mRNABa5 * 4. / 20.);</span>
-<span class="fc" id="L279">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6. / 20.);</span>
-<span class="fc" id="L280">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6. / 20.);</span>
-<span class="fc" id="L281">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 8. / 20.);</span>
-<span class="fc" id="L282">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / mutEscBa5); // todo: do we need 1.4?</span>
-<span class="fc" id="L283">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / mutEscBa5);</span>
-<span class="fc" id="L284">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);</span>
-<span class="fc" id="L285">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha / mutEscBa5);</span>
-<span class="fc" id="L286">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha);</span>
+<span class="fc" id="L281">		double mRNABa5 = mRNABA2 / mutEscBa5;</span>
+<span class="fc" id="L282">		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA5, mRNABa5);</span>
+<span class="fc" id="L283">		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA5, mRNABa5 * 4. / 20.);</span>
+<span class="fc" id="L284">		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6. / 20.);</span>
+<span class="fc" id="L285">		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6. / 20.);</span>
+<span class="fc" id="L286">		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 8. / 20.);</span>
+<span class="fc" id="L287">		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / mutEscBa5); // todo: do we need 1.4?</span>
+<span class="fc" id="L288">		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / mutEscBa5);</span>
+<span class="fc" id="L289">		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);</span>
+<span class="fc" id="L290">		initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha / mutEscBa5);</span>
+<span class="fc" id="L291">		initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha);</span>
 
-<span class="fc" id="L288">		return initialAntibodies;</span>
+<span class="fc" id="L293">		return initialAntibodies;</span>
 	}
 
 	/**
 	 * Builds the default antibody-refresh-factor map. Ported verbatim (values-wise) from
-	 * {@link AntibodyModel.Config}.
+	 * the former {@code AntibodyModel.Config}.
 	 */
 	private static Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; defaultAntibodyRefreshFactors() {
 
-<span class="fc" id="L297">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; antibodyRefreshFactors = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L302">		Map&lt;ImmunityEvent, Map&lt;VirusStrain, Double&gt;&gt; antibodyRefreshFactors = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc bfc" id="L299" title="All 2 branches covered.">		for (VaccinationType immunityType : VaccinationType.getAllStandardOptions()) {</span>
-<span class="fc" id="L300">			antibodyRefreshFactors.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
-<span class="fc bfc" id="L301" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
+<span class="fc bfc" id="L304" title="All 2 branches covered.">		for (VaccinationType immunityType : VaccinationType.getAllStandardOptions()) {</span>
+<span class="fc" id="L305">			antibodyRefreshFactors.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
+<span class="fc bfc" id="L306" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
 
-<span class="fc bfc" id="L303" title="All 2 branches covered.">				if (immunityType == VaccinationType.mRNA) {</span>
-<span class="fc" id="L304">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
-<span class="fc bfc" id="L305" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.vector) {</span>
-<span class="fc" id="L306">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);</span>
-<span class="fc bfc" id="L307" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.ba1Update) {</span>
-<span class="fc" id="L308">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
-<span class="fc bfc" id="L309" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.ba5Update) {</span>
-<span class="fc" id="L310">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
+<span class="fc bfc" id="L308" title="All 2 branches covered.">				if (immunityType == VaccinationType.mRNA) {</span>
+<span class="fc" id="L309">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
+<span class="fc bfc" id="L310" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.vector) {</span>
+<span class="fc" id="L311">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);</span>
+<span class="fc bfc" id="L312" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.ba1Update) {</span>
+<span class="fc" id="L313">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
+<span class="fc bfc" id="L314" title="All 2 branches covered.">				} else if (immunityType == VaccinationType.ba5Update) {</span>
+<span class="fc" id="L315">					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
 				} else {
-<span class="fc" id="L312">					antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);</span>
+<span class="fc" id="L317">					antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);</span>
 				}
 
-<span class="fc" id="L315">			}</span>
-<span class="fc" id="L316">		}</span>
+<span class="fc" id="L320">			}</span>
+<span class="fc" id="L321">		}</span>
 
-<span class="fc bfc" id="L318" title="All 2 branches covered.">		for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {</span>
-<span class="fc" id="L319">			antibodyRefreshFactors.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
-<span class="fc bfc" id="L320" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
-<span class="fc" id="L321">				antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
-<span class="fc" id="L322">			}</span>
-<span class="fc" id="L323">		}</span>
+<span class="fc bfc" id="L323" title="All 2 branches covered.">		for (VirusStrain immunityType : VirusStrain.getAllStandardOptions()) {</span>
+<span class="fc" id="L324">			antibodyRefreshFactors.put(immunityType, new LinkedHashMap&lt;&gt;());</span>
+<span class="fc bfc" id="L325" title="All 2 branches covered.">			for (VirusStrain virusStrain : VirusStrain.getAllStandardOptions()) {</span>
+<span class="fc" id="L326">				antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);</span>
+<span class="fc" id="L327">			}</span>
+<span class="fc" id="L328">		}</span>
 
-<span class="fc" id="L325">		return antibodyRefreshFactors;</span>
+<span class="fc" id="L330">		return antibodyRefreshFactors;</span>
 	}
 
 	/**
@@ -353,51 +358,51 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Antibody level reached against each strain right after this immunity event.
 		 */
-<span class="fc" id="L356">		private final Map&lt;VirusStrain, Double&gt; initialAntibodies = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L361">		private final Map&lt;VirusStrain, Double&gt; initialAntibodies = new LinkedHashMap&lt;&gt;();</span>
 
 		/**
 		 * Refresh factor applied against each strain when this immunity event repeats.
 		 */
-<span class="fc" id="L361">		private final Map&lt;VirusStrain, Double&gt; antibodyRefreshFactors = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L366">		private final Map&lt;VirusStrain, Double&gt; antibodyRefreshFactors = new LinkedHashMap&lt;&gt;();</span>
 
 		AntibodyParams() {
-<span class="fc" id="L364">			super(SET_TYPE);</span>
-<span class="fc" id="L365">		}</span>
+<span class="fc" id="L369">			super(SET_TYPE);</span>
+<span class="fc" id="L370">		}</span>
 
 		@StringGetter(IMMUNITY_EVENT)
 		public String getImmunityEventName() {
-<span class="fc" id="L369">			return immunityEventName;</span>
+<span class="fc" id="L374">			return immunityEventName;</span>
 		}
 
 		@StringSetter(IMMUNITY_EVENT)
 		public void setImmunityEventName(String immunityEventName) {
-<span class="fc" id="L374">			this.immunityEventName = immunityEventName;</span>
-<span class="fc" id="L375">		}</span>
+<span class="fc" id="L379">			this.immunityEventName = immunityEventName;</span>
+<span class="fc" id="L380">		}</span>
 
 		@StringGetter(IMMUNITY_EVENT_KIND)
 		public String getImmunityEventKind() {
-<span class="fc" id="L379">			return immunityEventKind;</span>
+<span class="fc" id="L384">			return immunityEventKind;</span>
 		}
 
 		@StringSetter(IMMUNITY_EVENT_KIND)
 		public void setImmunityEventKind(String immunityEventKind) {
-<span class="fc" id="L384">			this.immunityEventKind = immunityEventKind;</span>
-<span class="fc" id="L385">		}</span>
+<span class="fc" id="L389">			this.immunityEventKind = immunityEventKind;</span>
+<span class="fc" id="L390">		}</span>
 
 		/**
 		 * Resolve the configured {@link ImmunityEvent}.
 		 */
 		public ImmunityEvent getImmunityEvent() {
-<span class="fc" id="L391">			Objects.requireNonNull(immunityEventKind, IMMUNITY_EVENT_KIND + &quot; must be set&quot;);</span>
-<span class="fc" id="L392">			Objects.requireNonNull(immunityEventName, IMMUNITY_EVENT + &quot; must be set&quot;);</span>
+<span class="fc" id="L396">			Objects.requireNonNull(immunityEventKind, IMMUNITY_EVENT_KIND + &quot; must be set&quot;);</span>
+<span class="fc" id="L397">			Objects.requireNonNull(immunityEventName, IMMUNITY_EVENT + &quot; must be set&quot;);</span>
 
-<span class="pc bpc" id="L394" title="1 of 3 branches missed.">			switch (immunityEventKind) {</span>
+<span class="pc bpc" id="L399" title="1 of 3 branches missed.">			switch (immunityEventKind) {</span>
 				case KIND_VACCINATION:
-<span class="fc" id="L396">					return VaccinationType.of(immunityEventName);</span>
+<span class="fc" id="L401">					return VaccinationType.of(immunityEventName);</span>
 				case KIND_STRAIN:
-<span class="fc" id="L398">					return VirusStrain.of(immunityEventName);</span>
+<span class="fc" id="L403">					return VirusStrain.of(immunityEventName);</span>
 				default:
-<span class="nc" id="L400">					throw new IllegalStateException(&quot;Unknown &quot; + IMMUNITY_EVENT_KIND + &quot; '&quot; + immunityEventKind + &quot;'&quot;);</span>
+<span class="nc" id="L405">					throw new IllegalStateException(&quot;Unknown &quot; + IMMUNITY_EVENT_KIND + &quot; '&quot; + immunityEventKind + &quot;'&quot;);</span>
 			}
 		}
 
@@ -405,92 +410,92 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 		 * Set the immunity event this parameter set applies to.
 		 */
 		public void setImmunityEvent(ImmunityEvent immunityEvent) {
-<span class="fc" id="L408">			Objects.requireNonNull(immunityEvent, &quot;immunityEvent must not be null&quot;);</span>
+<span class="fc" id="L413">			Objects.requireNonNull(immunityEvent, &quot;immunityEvent must not be null&quot;);</span>
 
-<span class="fc bfc" id="L410" title="All 2 branches covered.">			if (immunityEvent instanceof VaccinationType) {</span>
-<span class="fc" id="L411">				this.immunityEventKind = KIND_VACCINATION;</span>
-<span class="fc" id="L412">				this.immunityEventName = ((VaccinationType) immunityEvent).getName();</span>
-<span class="pc bpc" id="L413" title="1 of 2 branches missed.">			} else if (immunityEvent instanceof VirusStrain) {</span>
-<span class="fc" id="L414">				this.immunityEventKind = KIND_STRAIN;</span>
-<span class="fc" id="L415">				this.immunityEventName = ((VirusStrain) immunityEvent).getVirusStrainName();</span>
+<span class="fc bfc" id="L415" title="All 2 branches covered.">			if (immunityEvent instanceof VaccinationType) {</span>
+<span class="fc" id="L416">				this.immunityEventKind = KIND_VACCINATION;</span>
+<span class="fc" id="L417">				this.immunityEventName = ((VaccinationType) immunityEvent).getName();</span>
+<span class="pc bpc" id="L418" title="1 of 2 branches missed.">			} else if (immunityEvent instanceof VirusStrain) {</span>
+<span class="fc" id="L419">				this.immunityEventKind = KIND_STRAIN;</span>
+<span class="fc" id="L420">				this.immunityEventName = ((VirusStrain) immunityEvent).getVirusStrainName();</span>
 			} else {
-<span class="nc" id="L417">				throw new IllegalArgumentException(&quot;Unsupported immunity event type: &quot; + immunityEvent.getClass());</span>
+<span class="nc" id="L422">				throw new IllegalArgumentException(&quot;Unsupported immunity event type: &quot; + immunityEvent.getClass());</span>
 			}
-<span class="fc" id="L419">		}</span>
+<span class="fc" id="L424">		}</span>
 
 		@StringGetter(INITIAL_ANTIBODIES)
 		String getInitialAntibodiesString() {
-<span class="fc" id="L423">			return join(initialAntibodies);</span>
+<span class="fc" id="L428">			return join(initialAntibodies);</span>
 		}
 
 		@StringSetter(INITIAL_ANTIBODIES)
 		void setInitialAntibodiesString(String config) {
-<span class="fc" id="L428">			replace(initialAntibodies, parse(config));</span>
-<span class="fc" id="L429">		}</span>
+<span class="fc" id="L433">			replace(initialAntibodies, parse(config));</span>
+<span class="fc" id="L434">		}</span>
 
 		@StringGetter(ANTIBODY_REFRESH_FACTORS)
 		String getAntibodyRefreshFactorsString() {
-<span class="fc" id="L433">			return join(antibodyRefreshFactors);</span>
+<span class="fc" id="L438">			return join(antibodyRefreshFactors);</span>
 		}
 
 		@StringSetter(ANTIBODY_REFRESH_FACTORS)
 		void setAntibodyRefreshFactorsString(String config) {
-<span class="fc" id="L438">			replace(antibodyRefreshFactors, parse(config));</span>
-<span class="fc" id="L439">		}</span>
+<span class="fc" id="L443">			replace(antibodyRefreshFactors, parse(config));</span>
+<span class="fc" id="L444">		}</span>
 
 		/**
 		 * Initial antibody level per strain (live map).
 		 */
 		public Map&lt;VirusStrain, Double&gt; getInitialAntibodies() {
-<span class="fc" id="L445">			return initialAntibodies;</span>
+<span class="fc" id="L450">			return initialAntibodies;</span>
 		}
 
 		/**
 		 * Antibody refresh factor per strain (live map).
 		 */
 		public Map&lt;VirusStrain, Double&gt; getAntibodyRefreshFactors() {
-<span class="fc" id="L452">			return antibodyRefreshFactors;</span>
+<span class="fc" id="L457">			return antibodyRefreshFactors;</span>
 		}
 
 		/**
 		 * Set the initial antibody levels per strain, replacing all previous entries.
 		 */
 		public AntibodyParams setInitialAntibodies(Map&lt;VirusStrain, Double&gt; values) {
-<span class="fc" id="L459">			replace(initialAntibodies, values);</span>
-<span class="fc" id="L460">			return this;</span>
+<span class="fc" id="L464">			replace(initialAntibodies, values);</span>
+<span class="fc" id="L465">			return this;</span>
 		}
 
 		/**
 		 * Set the antibody refresh factors per strain, replacing all previous entries.
 		 */
 		public AntibodyParams setAntibodyRefreshFactors(Map&lt;VirusStrain, Double&gt; values) {
-<span class="fc" id="L467">			replace(antibodyRefreshFactors, values);</span>
-<span class="fc" id="L468">			return this;</span>
+<span class="fc" id="L472">			replace(antibodyRefreshFactors, values);</span>
+<span class="fc" id="L473">			return this;</span>
 		}
 
 		private static String join(Map&lt;VirusStrain, Double&gt; map) {
-<span class="fc" id="L472">			Map&lt;String, Double&gt; byName = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L473" title="All 2 branches covered.">			for (Map.Entry&lt;VirusStrain, Double&gt; e : map.entrySet())</span>
-<span class="fc" id="L474">				byName.put(e.getKey().getVirusStrainName(), e.getValue());</span>
+<span class="fc" id="L477">			Map&lt;String, Double&gt; byName = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L478" title="All 2 branches covered.">			for (Map.Entry&lt;VirusStrain, Double&gt; e : map.entrySet())</span>
+<span class="fc" id="L479">				byName.put(e.getKey().getVirusStrainName(), e.getValue());</span>
 
-<span class="fc" id="L476">			return JOINER.join(byName);</span>
+<span class="fc" id="L481">			return JOINER.join(byName);</span>
 		}
 
 		private static Map&lt;VirusStrain, Double&gt; parse(String config) {
-<span class="fc" id="L480">			Map&lt;VirusStrain, Double&gt; parsed = new LinkedHashMap&lt;&gt;();</span>
-<span class="pc bpc" id="L481" title="2 of 4 branches missed.">			if (config == null || config.isBlank())</span>
-<span class="nc" id="L482">				return parsed;</span>
+<span class="fc" id="L485">			Map&lt;VirusStrain, Double&gt; parsed = new LinkedHashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L486" title="2 of 4 branches missed.">			if (config == null || config.isBlank())</span>
+<span class="nc" id="L487">				return parsed;</span>
 
-<span class="fc bfc" id="L484" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(config).entrySet()) {</span>
-<span class="fc" id="L485">				parsed.put(VirusStrain.of(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));</span>
-<span class="fc" id="L486">			}</span>
-<span class="fc" id="L487">			return parsed;</span>
+<span class="fc bfc" id="L489" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(config).entrySet()) {</span>
+<span class="fc" id="L490">				parsed.put(VirusStrain.of(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));</span>
+<span class="fc" id="L491">			}</span>
+<span class="fc" id="L492">			return parsed;</span>
 		}
 
 		private static void replace(Map&lt;VirusStrain, Double&gt; target, Map&lt;VirusStrain, Double&gt; values) {
-<span class="fc" id="L491">			target.clear();</span>
-<span class="fc" id="L492">			target.putAll(values);</span>
-<span class="fc" id="L493">		}</span>
+<span class="fc" id="L496">			target.clear();</span>
+<span class="fc" id="L497">			target.putAll(values);</span>
+<span class="fc" id="L498">		}</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
