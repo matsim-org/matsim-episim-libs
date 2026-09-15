@@ -111,10 +111,11 @@ public abstract class AbstractContactModel implements ContactModel {
 		ContactTransmissionConfigGroup contactTransmissionConfig = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
 		// relative contact matrix files are resolved against the config location
 		contactTransmissionConfig.setContext(config.getContext());
-		this.contactTransmission = contactTransmissionConfig.createResolver();
 		List<String> containerNames = episimConfig.getInfectionParams().stream()
 				.map(EpisimConfigGroup.InfectionParams::getContainerName)
 				.collect(Collectors.toList());
+		// rules for all known containers are precomputed, the contact loop then avoids string operations
+		this.contactTransmission = contactTransmissionConfig.createResolver(containerNames);
 		for (String pair : contactTransmissionConfig.unmatchedContactPairs(containerNames)) {
 			log.warn("contactPair {} matches no infection container and will never apply; check the activity-type prefixes", pair);
 		}

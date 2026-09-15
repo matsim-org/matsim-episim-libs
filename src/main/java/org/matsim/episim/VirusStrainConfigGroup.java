@@ -2,11 +2,13 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.VirusStrain;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -84,6 +86,31 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 			virusStrains = result;
 		}
 		return result;
+	}
+
+	/**
+	 * Every strain that is imported with a positive number of infections needs a parameter set. Since strain names are
+	 * resolved leniently while the config is read, this catches misspelled strain names before the simulation starts.
+	 */
+	@Override
+	protected void checkConsistency(Config config) {
+		super.checkConsistency(config);
+
+		ConfigGroup episim = config.getModules().get("episim");
+		if (!(episim instanceof EpisimConfigGroup))
+			return;
+
+		List<String> missing = new ArrayList<>();
+		for (Map.Entry<VirusStrain, NavigableMap<LocalDate, Integer>> e : ((EpisimConfigGroup) episim).getInfections_pers_per_day().entrySet()) {
+			boolean imported = e.getValue().values().stream().anyMatch(n -> n > 0);
+			if (imported && !strains.containsKey(e.getKey()))
+				missing.add(e.getKey().getVirusStrainName());
+		}
+
+		if (!missing.isEmpty())
+			throw new IllegalStateException("Virus strains " + missing + " are imported via 'infections_pers_per_day' of config group "
+					+ "'episim', but have no '" + StrainParams.SET_TYPE + "' in config group '" + GROUPNAME + "'. "
+					+ "Check the strain names for typos or add parameter sets for these strains.");
 	}
 
 	@Override
@@ -201,11 +228,15 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 
 		@StringGetter(PATHOGEN)
 		public String getPathogenName() {
-			return pathogen.getName();
+			return getPathogen().getName();
 		}
 
+		/**
+		 * Pathogen of this strain. Once the strain is known, its pathogen is used, which may have been declared after this
+		 * parameter set was created (see {@link VirusStrain#of(Pathogen, String)}).
+		 */
 		public Pathogen getPathogen() {
-			return pathogen;
+			return strain != null ? strain.getPathogen() : pathogen;
 		}
 
 		@StringSetter(PATHOGEN)

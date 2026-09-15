@@ -2,6 +2,8 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -301,6 +303,15 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	 * Validates this configuration and builds an immutable runtime resolver.
 	 */
 	public Resolver createResolver() {
+		return createResolver(Collections.emptyList());
+	}
+
+	/**
+	 * Validates this configuration and builds an immutable runtime resolver with precomputed rules for the given
+	 * container names. Lookups for these names avoid string operations on the hot path; other names are still
+	 * resolved, but through the slower prefix matching.
+	 */
+	public Resolver createResolver(Collection<String> containerNames) {
 		validateAgeBands(ageBands);
 		requireNonNull(defaultTransmissionWeights, DEFAULT_TRANSMISSION_WEIGHTS);
 
@@ -338,7 +349,7 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			groupWhitelist.put(group.getActivity(), new ArrayList<>(group.getAllowedPartners()));
 		}
 
-		return new Resolver(bands, defaultTransmissionWeights, pairRules, groupWhitelist, unknownAgeWarned);
+		return new Resolver(bands, defaultTransmissionWeights, pairRules, groupWhitelist, unknownAgeWarned, containerNames);
 	}
 
 	/**
@@ -713,13 +724,63 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private final AtomicBoolean unknownAgeWarned;
 
+		/**
+		 * Index of the precomputed container names; -1 for other names. Only read after construction.
+		 */
+		private final Object2IntOpenHashMap<String> nameIndex = new Object2IntOpenHashMap<>();
+
+		/**
+		 * Number of precomputed container names.
+		 */
+		private final int numNames;
+
+		/**
+		 * Precomputed {@link #isContactAllowed} for all pairs of precomputed names, indexed {@code i * numNames + j}.
+		 */
+		private final boolean[] allowedTable;
+
+		/**
+		 * Precomputed {@link #match} result for all pairs of precomputed names ({@code null} if no pair matches).
+		 */
+		private final ResolvedPair[] matchTable;
+
+		/**
+		 * Band index for ages {@code 0 .. ageToBand.length - 1}; larger ages use a binary search.
+		 */
+		private final int[] ageToBand;
+
+		private final int[] bandBounds;
+
 		private Resolver(List<Integer> bands, TransmissionWeights defaultWeights, List<PairRule> pairRules,
-				Map<String, List<String>> groupWhitelist, AtomicBoolean unknownAgeWarned) {
+				Map<String, List<String>> groupWhitelist, AtomicBoolean unknownAgeWarned, Collection<String> containerNames) {
 			this.bands = bands;
 			this.unknownAgeWarned = unknownAgeWarned;
 			this.defaultWeights = defaultWeights;
 			this.pairRules = Collections.unmodifiableList(new ArrayList<>(pairRules));
 			this.groupWhitelist = Collections.unmodifiableMap(new LinkedHashMap<>(groupWhitelist));
+
+			this.bandBounds = bands.stream().mapToInt(Integer::intValue).toArray();
+			this.ageToBand = new int[128];
+			for (int age = 0; age < ageToBand.length; age++) {
+				ageToBand[age] = searchBand(age);
+			}
+
+			nameIndex.defaultReturnValue(-1);
+			for (String name : containerNames) {
+				if (!nameIndex.containsKey(name)) {
+					nameIndex.put(name, nameIndex.size());
+				}
+			}
+			numNames = nameIndex.size();
+			allowedTable = new boolean[numNames * numNames];
+			matchTable = new ResolvedPair[numNames * numNames];
+			for (Object2IntMap.Entry<String> a : nameIndex.object2IntEntrySet()) {
+				for (Object2IntMap.Entry<String> b : nameIndex.object2IntEntrySet()) {
+					int idx = a.getIntValue() * numNames + b.getIntValue();
+					allowedTable[idx] = computeContactAllowed(a.getKey(), b.getKey());
+					matchTable[idx] = match(a.getKey(), b.getKey());
+				}
+			}
 		}
 
 		/**
@@ -728,6 +789,15 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		 * types without a group are unconstrained.
 		 */
 		public boolean isContactAllowed(String activityA, String activityB) {
+			int i = nameIndex.getInt(activityA);
+			int j = nameIndex.getInt(activityB);
+			if (i >= 0 && j >= 0) {
+				return allowedTable[i * numNames + j];
+			}
+			return computeContactAllowed(activityA, activityB);
+		}
+
+		private boolean computeContactAllowed(String activityA, String activityB) {
 			ResolvedPair pair = match(activityA, activityB);
 			if (pair != null && pair.forbidden) {
 				return false;
@@ -756,10 +826,11 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 
 		/**
 		 * Resolves weights for an unordered activity and age pair.
-		 * The simple version, if it will be too slow, we could change it later
 		 */
 		public TransmissionWeights resolve(String activityA, String activityB, int ageA, int ageB) {
-			ResolvedPair pair = match(activityA, activityB);
+			int i = nameIndex.getInt(activityA);
+			int j = nameIndex.getInt(activityB);
+			ResolvedPair pair = i >= 0 && j >= 0 ? matchTable[i * numNames + j] : match(activityA, activityB);
 			if (pair == null) {
 				return defaultWeights;
 			}
@@ -817,7 +888,11 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			if (age < 0) {
 				throw new IllegalArgumentException("Age must be non-negative, but was '" + age + "'.");
 			}
-			int result = Collections.binarySearch(bands, age);
+			return age < ageToBand.length ? ageToBand[age] : searchBand(age);
+		}
+
+		private int searchBand(int age) {
+			int result = Arrays.binarySearch(bandBounds, age);
 			return result >= 0 ? result : -result - 2;
 		}
 	}

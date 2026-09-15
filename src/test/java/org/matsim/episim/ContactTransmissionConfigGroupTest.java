@@ -13,6 +13,7 @@ import org.matsim.episim.model.TransmissionWeights;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -114,6 +115,35 @@ public class ContactTransmissionConfigGroupTest {
 		Resolver resolver = group.createResolver();
 
 		assertThat(resolver.resolve("edu", "edu", 5, 5).getDirectContact()).isEqualTo(0.9);
+	}
+
+	@Test
+	public void precomputedContainerNamesMatchSlowPath() throws IOException {
+		File matrix = writeCsv("precomputed.csv", completeMatrix(Arrays.asList(0, 6, 18), "0,6,0.3,0.7\n"));
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.setAgeBands(Arrays.asList(0, 6, 18));
+		group.getOrAddContactPair("home", "home").setTransmissionWeights(TransmissionWeights.parse("respiratory=1.0;directContact=1.0"));
+		group.getOrAddContactPair("educ_kiga", "educ_kiga").setFile(matrix.toString());
+		group.getOrAddContactPair("shop", "work").setForbidden(true);
+
+		List<String> names = List.of("home", "work", "leisure", "educ_kiga", "educ_primary", "shop_daily", "quarantine_home", "pt");
+		Resolver precomputed = group.createResolver(names);
+		Resolver slow = group.createResolver();
+
+		// includes a name that is not precomputed, which must fall back to prefix matching
+		List<String> probe = new ArrayList<>(names);
+		probe.add("educ_other");
+		for (String a : probe) {
+			for (String b : probe) {
+				assertThat(precomputed.isContactAllowed(a, b)).as(a + "/" + b).isEqualTo(slow.isContactAllowed(a, b));
+				for (int[] ages : new int[][]{{2, 3}, {3, 30}, {40, 40}, {-1, 4}, {200, 1}}) {
+					assertThat(precomputed.resolve(a, b, ages[0], ages[1]).toToken())
+							.as(a + "/" + b + " " + Arrays.toString(ages))
+							.isEqualTo(slow.resolve(a, b, ages[0], ages[1]).toToken());
+				}
+			}
+		}
+		assertThat(precomputed.bandIndex(200)).isEqualTo(2);
 	}
 
 	@Test

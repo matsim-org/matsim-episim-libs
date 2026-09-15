@@ -9,8 +9,11 @@ import org.matsim.episim.model.VirusStrain;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.LocalDate;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class VirusStrainConfigGroupTest {
 	private static final String STRAIN_PARAMS = "strainParams";
@@ -94,6 +97,40 @@ public class VirusStrainConfigGroupTest {
 		assertThat(flu.getPathogen()).isEqualTo(new Pathogen("influenza"));
 		assertThat(strains.getParams(flu).getPathogen()).isEqualTo(new Pathogen("influenza"));
 		assertThat(antibodies.getParams(flu).getInitialAntibodies()).containsEntry(flu, 1.0);
+	}
+
+	@Test
+	public void paramsFollowPathogenDeclaredAfterCreation() {
+		VirusStrainConfigGroup group = new VirusStrainConfigGroup();
+		VirusStrainConfigGroup.StrainParams params = group.getOrAddParams(VirusStrain.of("LATE_DECLARED_STRAIN"));
+		assertThat(params.getPathogen()).isEqualTo(Pathogen.SARS_COV_2);
+
+		VirusStrain.of(new Pathogen("influenza"), "LATE_DECLARED_STRAIN");
+
+		assertThat(params.getPathogen()).isEqualTo(new Pathogen("influenza"));
+		assertThat(params.getPathogenName()).isEqualTo("influenza");
+	}
+
+	@Test
+	public void importedStrainWithoutParamsIsRejected() {
+		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
+		EpisimConfigGroup episim = new EpisimConfigGroup();
+		Config config = ConfigUtils.createConfig(episim, strains);
+
+		// a misspelled name is registered leniently while reading, but has no parameter set
+		episim.setInfections_pers_per_day(VirusStrain.of("DELTAA_TYPO"), Map.of(LocalDate.parse("2021-01-01"), 5));
+
+		assertThatThrownBy(() -> strains.checkConsistency(config))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("DELTAA_TYPO");
+
+		// placeholders without infections are fine
+		episim.setInfections_pers_per_day(VirusStrain.of("DELTAA_TYPO"), Map.of(LocalDate.parse("2021-01-01"), 0));
+		strains.checkConsistency(config);
+
+		episim.setInfections_pers_per_day(VirusStrain.of("DELTAA_TYPO"), Map.of(LocalDate.parse("2021-01-01"), 5));
+		strains.getOrAddParams(VirusStrain.of("DELTAA_TYPO"));
+		strains.checkConsistency(config);
 	}
 
 	@Test
