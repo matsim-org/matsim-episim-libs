@@ -92,7 +92,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Number of initial infections per day.
 	 * Default is 1 infection per day for {@link VirusStrain#SARS_CoV_2}.
 	 */
-	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
+	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new LinkedHashMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
 
 	/**
 	 * Leisure outdoor fractions per day.

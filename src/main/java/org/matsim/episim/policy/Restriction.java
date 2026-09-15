@@ -312,7 +312,7 @@ public final class Restriction {
 		// Could be integer or double
 		Map<String, Number> nameMap = (Map<String, Number>) config.getValue("masks").unwrapped();
 
-		Map<FaceMask, Double> enumMap = new HashMap<>();
+		Map<FaceMask, Double> enumMap = new LinkedHashMap<>();
 
 		Map<String, Double> locationBasedRf = new HashMap<>();
 
