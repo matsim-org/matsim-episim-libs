@@ -91,8 +91,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Number of initial infections per day.
 	 * Default is 1 infection per day for {@link VirusStrain#SARS_CoV_2}.
+	 * Sorted by {@link VirusStrain#DECLARATION_ORDER}, because the initial infections are drawn strain by strain in this
+	 * order; it must not depend on the order in which strains were set or read from the config file.
 	 */
-	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new LinkedHashMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
+	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new TreeMap<>(VirusStrain.DECLARATION_ORDER);
+
+	{
+		infectionsPerDay.put(VirusStrain.SARS_CoV_2, new TreeMap<>());
+	}
 
 	/**
 	 * Leisure outdoor fractions per day.
@@ -309,13 +315,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(INFECTIONS_PER_DAY)
 	String getInfectionsPerDay() {
 		Map<VirusStrain, String> collect =
-				infectionsPerDay.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+				infectionsPerDay.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue()),
+						(a, b) -> a, LinkedHashMap::new));
 
 		return Joiner.on("|").withKeyValueSeparator(">").join(collect);
 	}
 
 	@StringSetter(INFECTIONS_PER_DAY)
 	void setInfectionsPerDay(String capacity) {
+
+		// an empty value is written when all strains were removed, it must not bring back the default SARS-CoV-2 entry
+		if (capacity == null || capacity.isBlank()) {
+			infectionsPerDay.clear();
+			return;
+		}
 
 		Map<String, String> cap = Splitter.on("|").withKeyValueSeparator(">").split(capacity);
 
@@ -564,7 +577,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(LEISUREOUTDOORFRACTION)
 	void setLeisureOutdoorFraction(String capacity) {
 
-		Map<String, String> map = SPLITTER.split(capacity);
+		Map<String, String> map = splitMap(capacity);
 		setLeisureOutdoorFraction(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
@@ -592,7 +605,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(CURFEW_COMPLIANCE)
 	void setCurfewCompliance(String config) {
-		Map<String, String> map = SPLITTER.split(config);
+		Map<String, String> map = splitMap(config);
 		setCurfewCompliance(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
@@ -612,10 +625,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(INPUT_DAYS)
 	void setInputDays(String days) {
-		Map<String, String> map = SPLITTER.split(days);
+		Map<String, String> map = splitMap(days);
 		setInputDays(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> DayOfWeek.valueOf(e.getValue())
 		)));
+	}
+
+	/**
+	 * Splits a {@code key=value;key=value} config value. An empty map is written as an empty value, which must be read
+	 * back as an empty map, but {@link Splitter.MapSplitter} rejects it.
+	 */
+	private static Map<String, String> splitMap(String value) {
+		return value == null || value.isBlank() ? Map.of() : SPLITTER.split(value);
 	}
 
 	@StringGetter(INPUT_DAYS)

@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.matsim.episim.EpisimTestUtils.*;
 
 public class PathogenConfigGroupTest {
 
@@ -92,18 +93,19 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (3) Probabilities outside [0, 1] are rejected, both via the string setter and the map setter.
+	 * (3) Probabilities outside [0, 1] are rejected, both when read from a config file and via the map setter.
 	 */
 	@Test
 	public void probabilitiesOutsideUnitIntervalAreRejected() {
-		ProgressionParams p = new ProgressionParams();
 
-		assertThatThrownBy(() -> p.setCriticalProbabilityByAge("0=1.5"))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> p.setCriticalProbabilityByAge("0=-0.1"))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> p.setSeriouslySickProbabilityByAge("0=0.2;40=2.0"))
-				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> loadProgression(xmlParam("criticalProbabilityByAge", "0=1.5")))
+				.hasStackTraceContaining("must be within [0, 1] but was 1.5");
+		assertThatThrownBy(() -> loadProgression(xmlParam("criticalProbabilityByAge", "0=-0.1")))
+				.hasStackTraceContaining("must be within [0, 1] but was -0.1");
+		assertThatThrownBy(() -> loadProgression(xmlParam("seriouslySickProbabilityByAge", "0=0.2;40=2.0")))
+				.hasStackTraceContaining("must be within [0, 1] but was 2.0");
+
+		ProgressionParams p = new ProgressionParams();
 		assertThatThrownBy(() -> p.setDeathProbabilityByAge(Map.of(0, -0.0001)))
 				.isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> p.setShowingSymptomsProbabilityByAge(Map.of(0, 1.0001)))
@@ -147,16 +149,19 @@ public class PathogenConfigGroupTest {
 	}
 
 	/**
-	 * (5) A brand new pathogen can be introduced through configuration alone.
+	 * (5) A brand new pathogen can be introduced through a config file alone.
 	 */
 	@Test
-	public void newPathogenCanBeAddedThroughConfigurationOnly() {
+	public void newPathogenCanBeAddedThroughConfigurationOnly() throws IOException {
+		assertThat(new PathogenConfigGroup().hasParams(INFLUENZA)).isFalse();
+
 		PathogenConfigGroup group = new PathogenConfigGroup();
-
-		assertThat(group.hasParams(INFLUENZA)).isFalse();
-
-		group.getOrAddParams(INFLUENZA).getOrAddProgressionParams(false)
-				.setShowingSymptomsProbabilityByAge(Map.of(0, 0.3, 60, 0.6));
+		loadConfigXml(xmlModule("pathogen",
+				xmlSet(PathogenParams.SET_TYPE,
+						xmlParam("pathogen", INFLUENZA.getName()),
+						xmlSet(ProgressionParams.SET_TYPE,
+								xmlParam("ageDependent", "false"),
+								xmlParam("showingSymptomsProbabilityByAge", "0=0.3;60=0.6")))), group);
 
 		assertThat(group.hasParams(INFLUENZA)).isTrue();
 		assertThat(group.getProgressionParams(INFLUENZA, false).getShowingSymptomsProbability(15)).isEqualTo(0.3);
@@ -232,10 +237,11 @@ public class PathogenConfigGroupTest {
 	 * (8) A pathogen configured without the variant a transition model needs fails with a message naming the variant.
 	 */
 	@Test
-	public void missingProgressionVariantFailsClearly() {
+	public void missingProgressionVariantFailsClearly() throws IOException {
 		PathogenConfigGroup group = new PathogenConfigGroup();
-		group.getOrAddParams(INFLUENZA).getOrAddProgressionParams(true);
+		loadProgression(group, xmlParam("ageDependent", "true"));
 
+		assertThat(group.getParams(INFLUENZA).hasProgressionParams(true)).isTrue();
 		assertThatThrownBy(() -> group.getProgressionParams(INFLUENZA, false))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("INFLUENZA")
@@ -323,27 +329,37 @@ public class PathogenConfigGroupTest {
 	 * negative weights are rejected.
 	 */
 	@Test
-	public void routeTransmissibilityAcceptsSumAboveOneRejectsNegative() {
-		PathogenParams p = new PathogenParams();
+	public void routeTransmissibilityAcceptsSumAboveOneRejectsNegative() throws IOException {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		loadConfigXml(xmlModule("pathogen",
+				xmlSet(PathogenParams.SET_TYPE,
+						xmlParam("pathogen", INFLUENZA.getName()),
+						xmlParam("routeTransmissibility", "respiratory=1.0;directContact=0.5"))), group);
 
-		p.setRouteTransmissibilityString("respiratory=1.0;directContact=0.5");
-		assertThat(p.getRouteTransmissibility().sum()).isEqualTo(1.5);
+		assertThat(group.getParams(INFLUENZA).getRouteTransmissibility().sum()).isEqualTo(1.5);
 
-		assertThatThrownBy(() -> p.setRouteTransmissibilityString("respiratory=-0.1"))
-				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> loadConfigXml(xmlModule("pathogen",
+				xmlSet(PathogenParams.SET_TYPE,
+						xmlParam("pathogen", INFLUENZA.getName()),
+						xmlParam("routeTransmissibility", "respiratory=-0.1"))), new PathogenConfigGroup()))
+				.hasStackTraceContaining("Invalid respiratory weight");
 	}
 
 	/**
 	 * (14) A pathogen that cannot transmit by any route is rejected on config finalisation.
 	 */
 	@Test
-	public void allZeroRouteTransmissibilityIsRejected() {
-		PathogenParams p = new PathogenParams();
-		p.setPathogen(INFLUENZA);
+	public void allZeroRouteTransmissibilityIsRejected() throws IOException {
+		PathogenConfigGroup written = new PathogenConfigGroup();
+		PathogenParams p = written.getOrAddParams(INFLUENZA);
 		completeProgression(p.getOrAddProgressionParams(false));
 		p.setRouteTransmissibility(TransmissionWeights.ZERO);
 
-		assertThatThrownBy(() -> p.validateComplete("pathogen"))
+		// an all-zero value can be written and read, it is rejected when the config is checked
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		Config config = roundTrip(ConfigUtils.createConfig(written), group);
+
+		assertThatThrownBy(() -> group.checkConsistency(config))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("routeTransmissibility");
 	}
@@ -352,17 +368,21 @@ public class PathogenConfigGroupTest {
 	 * (15) A pathogen needs at least one progression variant, and each present variant must be complete.
 	 */
 	@Test
-	public void incompleteProgressionIsRejected() {
-		PathogenParams p = new PathogenParams();
-		p.setPathogen(INFLUENZA);
+	public void incompleteProgressionIsRejected() throws IOException {
+		PathogenConfigGroup withoutProgression = new PathogenConfigGroup();
+		Config config = loadConfigXml(xmlModule("pathogen",
+				xmlSet(PathogenParams.SET_TYPE,
+						xmlParam("pathogen", INFLUENZA.getName()))), withoutProgression);
 
-		assertThatThrownBy(() -> p.validateComplete("pathogen"))
+		assertThatThrownBy(() -> withoutProgression.checkConsistency(config))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("progressionParams");
 
-		p.getOrAddProgressionParams(true).setShowingSymptomsProbabilityByAge(Map.of(0, 0.5));
+		PathogenConfigGroup incomplete = new PathogenConfigGroup();
+		Config config2 = loadProgression(incomplete, xmlParam("ageDependent", "true"),
+				xmlParam("showingSymptomsProbabilityByAge", "0=0.5"));
 
-		assertThatThrownBy(() -> p.validateComplete("pathogen"))
+		assertThatThrownBy(() -> incomplete.checkConsistency(config2))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("ageDependent=true")
 				.hasMessageContaining("seriouslySickProbabilityByAge");
@@ -388,22 +408,33 @@ public class PathogenConfigGroupTest {
 	 * (17) Isolation probabilities are age buckets within [0, 1]; only 'full' and 'atHome' are valid statuses.
 	 */
 	@Test
-	public void symptomaticIsolationIsValidated() {
+	public void symptomaticIsolationIsValidated() throws IOException {
 		PathogenParams p = new PathogenParams();
 
 		assertThatThrownBy(() -> p.setSymptomaticIsolationProbabilityByAge(Map.of(0, 1.2)))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> p.setSymptomaticIsolationProbabilityByAge("0=-0.1"))
 				.isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> p.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.testing))
 				.isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> p.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.no))
 				.isInstanceOf(IllegalArgumentException.class);
 
-		p.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.5, 18, 0.25));
-		assertThat(p.getSymptomaticIsolationProbability(10)).isEqualTo(0.5);
-		assertThat(p.getSymptomaticIsolationProbability(18)).isEqualTo(0.25);
-		assertThat(p.getSymptomaticIsolationProbability(70)).isEqualTo(0.25);
+		// the same values in a config file
+		assertThatThrownBy(() -> loadIsolation(xmlParam("symptomaticIsolationProbabilityByAge", "0=-0.1")))
+				.hasStackTraceContaining("must be within [0, 1] but was -0.1");
+		assertThatThrownBy(() -> loadIsolation(xmlParam("symptomaticIsolationStatus", "testing")))
+				.hasStackTraceContaining("must be 'full' or 'atHome'");
+		assertThatThrownBy(() -> loadIsolation(xmlParam("symptomaticIsolationStatus", "hospital")))
+				.hasStackTraceContaining("hospital");
+
+		PathogenConfigGroup group = loadIsolation(
+				xmlParam("symptomaticIsolationProbabilityByAge", "0=0.5;18=0.25"),
+				xmlParam("symptomaticIsolationStatus", "atHome"));
+
+		PathogenParams loaded = group.getParams(INFLUENZA);
+		assertThat(loaded.getSymptomaticIsolationProbability(10)).isEqualTo(0.5);
+		assertThat(loaded.getSymptomaticIsolationProbability(18)).isEqualTo(0.25);
+		assertThat(loaded.getSymptomaticIsolationProbability(70)).isEqualTo(0.25);
+		assertThat(loaded.getSymptomaticIsolationStatus()).isEqualTo(EpisimPerson.QuarantineStatus.atHome);
 	}
 
 	/**
@@ -432,13 +463,49 @@ public class PathogenConfigGroupTest {
 	}
 
 	private static PathogenConfigGroup roundTrip(Config config) throws IOException {
+		PathogenConfigGroup copy = new PathogenConfigGroup();
+		roundTrip(config, copy);
+		return copy;
+	}
+
+	/**
+	 * Writes the config to a file and loads it into the given group.
+	 *
+	 * @return the loaded config
+	 */
+	private static Config roundTrip(Config config, PathogenConfigGroup copy) throws IOException {
 		File tmp = File.createTempFile("matsim", "config");
 		tmp.deleteOnExit();
 		ConfigUtils.writeConfig(config, tmp.toString());
 
-		PathogenConfigGroup copy = new PathogenConfigGroup();
-		ConfigUtils.loadConfig(tmp.toString(), copy);
-		return copy;
+		return ConfigUtils.loadConfig(tmp.toString(), copy);
+	}
+
+	/**
+	 * Loads a config file with an influenza progression variant consisting of the given params.
+	 */
+	private static Config loadProgression(String... params) throws IOException {
+		return loadProgression(new PathogenConfigGroup(), params);
+	}
+
+	private static Config loadProgression(PathogenConfigGroup group, String... params) throws IOException {
+		return loadConfigXml(xmlModule("pathogen",
+				xmlSet(PathogenParams.SET_TYPE,
+						xmlParam("pathogen", INFLUENZA.getName()),
+						xmlSet(ProgressionParams.SET_TYPE, params))), group);
+	}
+
+	/**
+	 * Loads a config file with influenza params consisting of the given params.
+	 */
+	private static PathogenConfigGroup loadIsolation(String... params) throws IOException {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		String[] content = new String[params.length + 1];
+		content[0] = xmlParam("pathogen", INFLUENZA.getName());
+		System.arraycopy(params, 0, content, 1, params.length);
+
+		loadConfigXml(xmlModule("pathogen", xmlSet(PathogenParams.SET_TYPE, content)), group);
+		return group;
 	}
 
 	private static void completeProgression(ProgressionParams p) {

@@ -19,6 +19,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.matsim.episim.EpisimTestUtils.loadConfigXml;
+import static org.matsim.episim.EpisimTestUtils.xmlModule;
+import static org.matsim.episim.EpisimTestUtils.xmlParam;
+import static org.matsim.episim.EpisimTestUtils.xmlSet;
 
 public class ContactTransmissionConfigGroupTest {
 
@@ -53,16 +57,19 @@ public class ContactTransmissionConfigGroupTest {
 	}
 
 	@Test
-	public void duplicateContactPairReplacesPrevious() {
-		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+	public void duplicateContactPairReplacesPrevious() throws IOException {
 
-		for (String weights : List.of("respiratory=0.4", "respiratory=0.9")) {
-			ContactPairParams pair = (ContactPairParams) group.createParameterSet(ContactPairParams.SET_TYPE);
-			pair.setActivityA("work");
-			pair.setActivityB("home");
-			pair.setTransmissionWeights(TransmissionWeights.parse(weights));
-			group.addParameterSet(pair);
-		}
+		// the same unordered pair twice in a config file, the second one written in the other order
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		loadConfigXml(xmlModule(ContactTransmissionConfigGroup.GROUPNAME,
+				xmlSet(ContactPairParams.SET_TYPE,
+						xmlParam("activityA", "work"),
+						xmlParam("activityB", "home"),
+						xmlParam("transmissionWeights", "respiratory=0.4")),
+				xmlSet(ContactPairParams.SET_TYPE,
+						xmlParam("activityA", "home"),
+						xmlParam("activityB", "work"),
+						xmlParam("transmissionWeights", "respiratory=0.9"))), group);
 
 		assertThat(group.getParameterSets(ContactPairParams.SET_TYPE)).hasSize(1);
 		assertThat(group.getContactPair("home", "work").getTransmissionWeights().getRespiratory()).isEqualTo(0.9);
@@ -105,12 +112,22 @@ public class ContactTransmissionConfigGroupTest {
 
 	@Test
 	public void relativeFileIsResolvedAgainstContext() throws IOException {
-		File matrix = writeCsv("relative-matrix.csv",
-				"ageA,ageB,respiratory,directContact\n"
-						+ "0,0,0.1,0.9\n");
+		File dir = temporaryFolder.newFolder("scenario");
+		File matrix = new File(dir, "relative-matrix.csv");
+		Files.writeString(matrix.toPath(), "ageA,ageB,respiratory,directContact\n"
+				+ "0,0,0.1,0.9\n");
+
+		ContactTransmissionConfigGroup written = new ContactTransmissionConfigGroup();
+		written.getOrAddContactPair("edu", "edu").setFile(matrix.getName());
+		File configFile = new File(dir, "config.xml");
+		ConfigUtils.writeConfig(ConfigUtils.createConfig(written), configFile.toString());
+
+		// loaded from another working directory: the relative file is found next to the config, as in the contact model
 		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
-		group.getOrAddContactPair("edu", "edu").setFile(matrix.getName());
-		group.setContext(new File(matrix.getParentFile(), "config.xml").toURI().toURL());
+		Config config = ConfigUtils.loadConfig(configFile.toString(), group);
+		group.setContext(config.getContext());
+
+		assertThat(group.getContactPair("edu", "edu").getFile()).isEqualTo("relative-matrix.csv");
 
 		Resolver resolver = group.createResolver();
 
@@ -290,9 +307,15 @@ public class ContactTransmissionConfigGroupTest {
 	}
 
 	@Test
-	public void customContactGroupOverridesDefault() {
+	public void customContactGroupOverridesDefault() throws IOException {
 		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
-		group.getOrAddContactGroup("home").setAllowedPartners(Arrays.asList("home"));
+		loadConfigXml(xmlModule(ContactTransmissionConfigGroup.GROUPNAME,
+				xmlSet(ContactTransmissionConfigGroup.ContactGroupParams.SET_TYPE,
+						xmlParam("activity", "home"),
+						xmlParam("allowedPartners", "home"))), group);
+
+		// replaces the default home group instead of being added next to it
+		assertThat(group.getContactGroups()).hasSize(2);
 
 		Resolver resolver = group.createResolver();
 

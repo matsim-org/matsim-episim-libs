@@ -4,6 +4,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -123,11 +124,26 @@ public final class VirusStrain implements ImmunityEvent, Comparable<VirusStrain>
 	);
 	private static final Map<String, VirusStrain> STRAINS_BY_NAME = new ConcurrentHashMap<>();
 
+	/**
+	 * Position of each standard strain in {@link #STANDARD_OPTIONS}.
+	 */
+	private static final Map<String, Integer> STANDARD_INDEX = new HashMap<>();
+
 	static {
 		for (VirusStrain strain : STANDARD_OPTIONS) {
 			STRAINS_BY_NAME.put(strain.virusStrainName, strain);
+			STANDARD_INDEX.put(strain.virusStrainName, STANDARD_INDEX.size());
 		}
 	}
+
+	/**
+	 * Standard strains in declaration order (the order of the former enum), followed by all other strains sorted by name.
+	 * Use this where the iteration order over strains influences results, e.g. the random numbers drawn per strain.
+	 * Unlike insertion order, it does not depend on whether a config was built in code or read from a file.
+	 */
+	public static final Comparator<VirusStrain> DECLARATION_ORDER = Comparator
+		.comparingInt((VirusStrain s) -> STANDARD_INDEX.getOrDefault(s.virusStrainName, STANDARD_OPTIONS.size()))
+		.thenComparing(s -> s.virusStrainName);
 
 	private final String virusStrainName;
 	public final VirusStrain parent;

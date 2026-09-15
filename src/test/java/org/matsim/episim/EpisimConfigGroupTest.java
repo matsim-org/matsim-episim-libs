@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -121,5 +122,67 @@ public class EpisimConfigGroupTest {
 		assertThat(episimConfig.getInfections_pers_per_day().get(VirusStrain.ALPHA))
 				.isEqualTo(ref);
 
+	}
+
+	@Test
+	public void initialInfectionsOrder() throws IOException {
+
+		Config config = ConfigUtils.createConfig();
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		Map<LocalDate, Integer> ref = Map.of(LocalDate.of(2020, 12, 12), 10);
+
+		// set in an arbitrary order, including a custom strain
+		VirusStrain custom = VirusStrain.of("INFECTIONS_ORDER_TEST_STRAIN");
+		for (VirusStrain strain : List.of(custom, VirusStrain.OMICRON_BA5, VirusStrain.DELTA, VirusStrain.ALPHA, VirusStrain.OMICRON_BA1))
+			episimConfig.setInfections_pers_per_day(strain, ref);
+
+		// initial infections are drawn in this order: standard strains as declared, then others by name
+		List<VirusStrain> expected = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA,
+				VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA5, custom);
+
+		assertThat(episimConfig.getInfections_pers_per_day().keySet()).containsExactlyElementsOf(expected);
+
+		// the order must be the same when the config is written to and read from a file
+		EpisimConfigGroup read = writeAndRead(config);
+
+		assertThat(read.getInfections_pers_per_day().keySet()).containsExactlyElementsOf(expected);
+		assertThat(read.getInfections_pers_per_day()).isEqualTo(episimConfig.getInfections_pers_per_day());
+	}
+
+	@Test
+	public void noInitialInfectionsFromFile() throws IOException {
+
+		Config config = ConfigUtils.createConfig();
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		// e.g. a non-covid scenario that removes the default SARS-CoV-2 import
+		episimConfig.getInfections_pers_per_day().clear();
+
+		EpisimConfigGroup read = writeAndRead(config);
+
+		assertThat(read.getInfections_pers_per_day()).isEmpty();
+		// empty maps are written as empty values and must be readable as well
+		assertThat(read.getCurfewCompliance()).isEmpty();
+		assertThat(read.getInputDays()).isEmpty();
+	}
+
+	/**
+	 * Writes the config to a temporary file and reads the episim config group back from it.
+	 */
+	private static EpisimConfigGroup writeAndRead(Config config) throws IOException {
+
+		// the progression config is referenced by its file name, as with the progression.conf written to the output
+		File progression = File.createTempFile("progression", ".conf");
+		progression.deleteOnExit();
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(progression.toString());
+
+		File tmp = File.createTempFile("config", ".xml");
+		tmp.deleteOnExit();
+
+		ConfigUtils.writeConfig(config, tmp.toString());
+
+		EpisimConfigGroup read = new EpisimConfigGroup();
+		ConfigUtils.loadConfig(tmp.toString(), read);
+		return read;
 	}
 }

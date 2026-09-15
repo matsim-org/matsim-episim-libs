@@ -9,11 +9,13 @@ import org.matsim.episim.model.VirusStrain;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.time.LocalDate;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.matsim.episim.EpisimTestUtils.loadConfigXml;
+import static org.matsim.episim.EpisimTestUtils.xmlModule;
+import static org.matsim.episim.EpisimTestUtils.xmlParam;
+import static org.matsim.episim.EpisimTestUtils.xmlSet;
 
 public class VirusStrainConfigGroupTest {
 	private static final String STRAIN_PARAMS = "strainParams";
@@ -112,36 +114,44 @@ public class VirusStrainConfigGroupTest {
 	}
 
 	@Test
-	public void importedStrainWithoutParamsIsRejected() {
-		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
-		EpisimConfigGroup episim = new EpisimConfigGroup();
-		Config config = ConfigUtils.createConfig(episim, strains);
+	public void importedStrainWithoutParamsIsRejected() throws IOException {
 
-		// a misspelled name is registered leniently while reading, but has no parameter set
-		episim.setInfections_pers_per_day(VirusStrain.of("DELTAA_TYPO"), Map.of(LocalDate.parse("2021-01-01"), 5));
+		// a misspelled name in a config file is registered leniently while reading, but has no parameter set
+		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
+		Config config = loadConfigXml(xmlModule("episim", xmlParam("infectionsPerDay", "DELTAA_TYPO>2021-01-01=5")),
+			new EpisimConfigGroup(), strains);
 
 		assertThatThrownBy(() -> strains.checkConsistency(config))
 			.isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("DELTAA_TYPO");
 
 		// placeholders without infections are fine
-		episim.setInfections_pers_per_day(VirusStrain.of("DELTAA_TYPO"), Map.of(LocalDate.parse("2021-01-01"), 0));
-		strains.checkConsistency(config);
+		VirusStrainConfigGroup placeholder = new VirusStrainConfigGroup();
+		Config placeholderConfig = loadConfigXml(xmlModule("episim", xmlParam("infectionsPerDay", "DELTAA_TYPO>2021-01-01=0")),
+			new EpisimConfigGroup(), placeholder);
+		placeholder.checkConsistency(placeholderConfig);
 
-		episim.setInfections_pers_per_day(VirusStrain.of("DELTAA_TYPO"), Map.of(LocalDate.parse("2021-01-01"), 5));
-		strains.getOrAddParams(VirusStrain.of("DELTAA_TYPO"));
-		strains.checkConsistency(config);
+		VirusStrainConfigGroup declared = new VirusStrainConfigGroup();
+		Config declaredConfig = loadConfigXml(
+			xmlModule("episim", xmlParam("infectionsPerDay", "DELTAA_TYPO>2021-01-01=5")) + "\n" +
+				xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTAA_TYPO"))),
+			new EpisimConfigGroup(), declared);
+		declared.checkConsistency(declaredConfig);
 	}
 
 	@Test
-	public void defaultsToSarsCov2WhenPathogenIsOmitted() {
+	public void defaultsToSarsCov2WhenPathogenIsOmitted() throws IOException {
+
+		// config files written before pathogens existed have no pathogen param
 		VirusStrainConfigGroup group = new VirusStrainConfigGroup();
-		VirusStrainConfigGroup.StrainParams params =
-			(VirusStrainConfigGroup.StrainParams) group.createParameterSet(STRAIN_PARAMS);
+		loadConfigXml(xmlModule("virusStrains",
+			xmlSet(STRAIN_PARAMS,
+				xmlParam("strain", "LEGACY_CONFIG_STRAIN"),
+				xmlParam("infectiousness", "1.5"))), group);
 
-		params.setStrain("LEGACY_CONFIG_STRAIN");
-		group.addParameterSet(params);
-
-		assertThat(params.getStrain().getPathogen()).isSameAs(Pathogen.SARS_COV_2);
+		VirusStrain strain = VirusStrain.of("LEGACY_CONFIG_STRAIN");
+		assertThat(strain.getPathogen()).isSameAs(Pathogen.SARS_COV_2);
+		assertThat(group.getParams(strain).getPathogen()).isSameAs(Pathogen.SARS_COV_2);
+		assertThat(group.getParams(strain).getInfectiousness()).isEqualTo(1.5);
 	}
 }
