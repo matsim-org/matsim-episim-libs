@@ -61,31 +61,29 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
  * weight, and {@link ContactTransmissionConfigGroup} shapes the contact side, including an age-banded
  * CSV for the {@code educ_kiga}/{@code educ_kiga} pair (see below). Face masks, ventilation and
  * indoor-outdoor dilution attenuate only the respiratory channel, so direct contact keeps contributing
- * under the Cologne mask policy and is <b>not damped by the seasonality mechanism at all</b>
- * ({@code docs/rsv-parameterisation.md} section 3.5).</p>
+ * under the Cologne mask policy and is <b>not damped by the seasonality mechanism at all</b>.</p>
  *
- * <p>The numbers in {@link #configureRsv} and {@link #rsvProgressionConfig} are sourced in
- * {@code docs/rsv-parameterisation.md} (2022/23 season, shared start date with
- * {@link InfluenzaCologneScenarioTest}, RSV-B dominated through the peak). The strain infectiousness and
- * the direct-contact route weight are both uncalibrated placeholders, to be fit jointly against the
- * ICOSARI RSV-SARI growth rate and the household secondary attack rate (doc section 4.6).
+ * <p>The numbers in {@link #configureRsv} and {@link #rsvProgressionConfig} describe the 2022/23 season
+ * (shared start date with {@link InfluenzaCologneScenarioTest}, RSV-B dominated through the peak); the source
+ * of each value is cited next to it. The strain infectiousness and the direct-contact route weight are both
+ * uncalibrated placeholders, to be fit jointly against the ICOSARI RSV-SARI growth rate and the household
+ * secondary attack rate.
  * {@link #runsOnCologneScenario()} downloads the full Cologne input set from the VSP SVN and is meant to
  * be run by hand, not in CI.</p>
  *
- * <p><b>Biggest blocker (doc section 1): the Cologne synthetic population does not represent infant
+ * <p><b>Biggest blocker: the Cologne synthetic population does not represent infant
  * childcare or infant households.</b> A direct check of the downloaded 25&nbsp;% population found ~50&nbsp;%
  * of age-0 agents attending {@code educ_kiga} on a weekday (real NRW under-1 Kita attendance is ~1.1&nbsp;%,
  * IT.NRW), and 25.3&nbsp;% of age-0 agents with no adult in their household at all. The age-banded CSV
  * configured below (respiratory=0.0;directContact=0.0 for any pair involving age band 0 on
  * {@code educ_kiga}/{@code educ_kiga}) suppresses the daycare symptom of this defect; it does
- * <b>not</b> fix the missing-adult-household problem, which stays open (doc section 6).</p>
+ * <b>not</b> fix the missing-adult-household problem, which stays open.</p>
  *
  * <p><b>Known limitations</b> (shared with {@link InfluenzaCologneScenarioTest}): the antibody /
  * individual immunity model is still SARS-CoV-2 specific, so only RSV is seeded (the SARS-CoV-2 disease
  * import is cleared); co-circulation needs the immunity model reworked first. Isolation at symptom onset
  * uses {@code atHome} (not {@code full}) so a sick person still infects their own household &mdash; the
- * dominant real RSV transmission situation &mdash; with a low-confidence, age-graded probability; see the
- * parameterisation document sections 3.1 and 6. Protection after a single RSV infection is short and
+ * dominant real RSV transmission situation &mdash; with a low-confidence, age-graded probability. Protection after a single RSV infection is short and
  * partial (median ~90&nbsp;days, not influenza's {@code fixed(365)}), so within-season reinfection is
  * plausible and exercised here for the first time in this test suite; re-validate once run.</p>
  */
@@ -123,8 +121,8 @@ public class RsvCologneScenarioTest {
 	/**
 	 * Layers RSV onto an already-built Cologne {@link Config}: moves the start date to the 2022/23
 	 * season, registers the strain, its pathogen params, its disease progression and the direct-contact
-	 * route, and replaces the SARS-CoV-2 disease import with an RSV import. Every number is sourced in
-	 * {@code docs/rsv-parameterisation.md}.
+	 * route, and replaces the SARS-CoV-2 disease import with an RSV import. The source of every number is cited
+	 * next to it.
 	 */
 	static void configureRsv(Config config) {
 
@@ -134,7 +132,7 @@ public class RsvCologneScenarioTest {
 		ContactTransmissionConfigGroup contactTransmissionConfig =
 				ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
 
-		// 0. season window: 2022/23 on the real Cologne mobility trace, shared with influenza (doc section 2)
+		// 0. season window: 2022/23 on the real Cologne mobility trace, shared with influenza
 		episimConfig.setStartDate(SEASON_START);
 
 		// 1. one pooled strain (RSV-A dominated 2021, RSV-B dominated 2022/23; one-pathogen immunity limitation
@@ -155,7 +153,7 @@ public class RsvCologneScenarioTest {
 		PathogenConfigGroup.ProgressionParams byAge = rsv.getOrAddProgressionParams(true);
 		// P(symptomatic|infected): PHIRST South Africa by age, band 5 pools 5-12/13-18/19-44/45-64 (doi:10.1038/s41467-023-44275-y)
 		byAge.setShowingSymptomsProbabilityByAge(Map.of(0, 0.67, 1, 0.48, 5, 0.26, 60, 0.35, 80, 0.45));
-		byAge.setSeriouslySickProbabilityByAge(Map.of(       // P(hosp|symptomatic); chained derivation, doc section 4.2
+		byAge.setSeriouslySickProbabilityByAge(Map.of(       // P(hosp|symptomatic); chained derivation
 				0, 0.2051,    // RESCEU hosp/infection-incidence / PHIRST symptomatic fraction (doi:10.1016/s2213-2600(22)00414-3)
 				1, 0.0216,    // Wick 2023 hosp / PHIRST infection incidence & symptomatic fraction (doi:10.1111/irv.13211)
 				5, 0.001,     // no evidence found: coarse low placeholder for the broad 5-59 band
@@ -167,7 +165,7 @@ public class RsvCologneScenarioTest {
 				5, 0.30,      // US adult ICU-among-hospitalised proxy (doi:10.1007/s40121-025-01255-7)
 				60, 0.161,    // Scholz 2024, Germany 60+, excl. pandemic seasons
 				80, 0.15));   // assumption: ICU-among-hospitalised plateaus/declines at oldest ages (Liang 2025 pattern)
-		byAge.setDeathProbabilityByAge(Map.of(                  // P(deceased|critical) = P(death|ICU); death-only-via-ICU gap, doc section 4.4
+		byAge.setDeathProbabilityByAge(Map.of(                  // P(deceased|critical) = P(death|ICU); deaths only via ICU in this model
 				0, 0.01,      // BRICK: 3/423 PICU deaths, all comorbid (doi:10.1097/inf.0000000000004712)
 				1, 0.01,      // same order, pediatric ICU death rare beyond infancy
 				5, 0.05,      // no evidence found: coarse assumption
@@ -176,14 +174,14 @@ public class RsvCologneScenarioTest {
 		// RSV spreads by droplets AND direct/self-inoculation contact, aerosols "less important" than for influenza (doi:10.1111/irv.70270)
 		rsv.setRouteTransmissibility(TransmissionWeights.parse("respiratory=1.0;directContact=0.6"));
 		// atHome (not full): a sick child still infects their own household, the dominant real RSV transmission situation.
-		// Low-confidence, age-graded assumption (doc section 3.1): informal Kita-exclusion norm vs. adult presenteeism.
+		// Low-confidence, age-graded assumption: informal Kita-exclusion norm vs. adult presenteeism.
 		rsv.setSymptomaticIsolationProbabilityByAge(Map.of(0, 0.85, 1, 0.70, 5, 0.30, 60, 0.40, 80, 0.50));
 		rsv.setSymptomaticIsolationStatus(EpisimPerson.QuarantineStatus.atHome);
 
 		// 3. disease progression (replaces the COVID progressionConfig of SnzCologneOpenProductionScenario)
 		episimConfig.setProgressionConfig(rsvProgressionConfig(Transition.config()).build());
 
-		// 4. season inputs the Cologne builder does not cover for 2022/23 (same fixes as influenza, doc section 3.5)
+		// 4. season inputs the Cologne builder does not cover for 2022/23 (same fixes as influenza)
 		FixedPolicy.ConfigBuilder policy = FixedPolicy.parse(episimConfig.getPolicy());
 		// schools fully open in autumn 2022; the Cologne builder keeps all educ_* at 0.5 from 2020-04-27 onwards
 		policy.restrict(SEASON_START, 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other");
@@ -205,8 +203,8 @@ public class RsvCologneScenarioTest {
 		// no contact tracing for RSV in 2022/23
 		ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 
-		// 5. contact-side route split: home is the most physical setting in Germany (POLYMOD DE re-analysis, doc section 4.7);
-		//    educ_kiga gets an age-banded CSV to suppress the model's erroneous ~50% age-0 kiga attendance (doc section 2.1) -
+		// 5. contact-side route split: home is the most physical setting in Germany (POLYMOD DE re-analysis);
+		//    educ_kiga gets an age-banded CSV to suppress the model's erroneous ~50% age-0 kiga attendance -
 		//    real under-1 Kita attendance is ~1.1% (IT.NRW); this patches the symptom, not the population defect itself.
 		contactTransmissionConfig.setDefaultTransmissionWeights(TransmissionWeights.parse("respiratory=1.0;directContact=0.2"));
 		contactTransmissionConfig.getOrAddContactPair("home", "home")
@@ -226,8 +224,7 @@ public class RsvCologneScenarioTest {
 				LocalDate.parse("2022-10-24"), LocalDate.parse("2022-12-31"), 6.0, 6.0);
 		episimConfig.setInfections_pers_per_day(RSV_STRAIN, rsvImport);
 
-		// 7. antibodies 0.0 keep getSeriouslySickFactor = 1/(1+ab^beta) at 1 (same neutralisation as influenza,
-		//    doc section 1 / influenza doc section 6.2)
+		// 7. antibodies 0.0 keep getSeriouslySickFactor = 1/(1+ab^beta) at 1 (same neutralisation as influenza)
 		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
 		AntibodyConfigGroup.AntibodyParams rsvAntibodies = antibodyConfig.getOrAddParams(RSV_STRAIN);
 		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
@@ -334,7 +331,7 @@ public class RsvCologneScenarioTest {
 		assertThat(resolver.resolve("home", "home", 30, 30).getDirectContact())
 				.isGreaterThan(resolver.resolve("work", "leisure", 30, 30).getDirectContact());
 		// the age-banded CSV suppresses transmission for an age-0 agent placed in an educ_kiga container
-		// (doc section 2.1 / section 3.4): real under-1 Kita attendance is ~1.1%, the Cologne population puts it at ~50%
+		// real under-1 Kita attendance is ~1.1%, the Cologne population puts it at ~50%
 		assertThat(resolver.resolve("educ_kiga", "educ_kiga", 0, 3).getDirectContact()).isEqualTo(0.0);
 		assertThat(resolver.resolve("educ_kiga", "educ_kiga", 4, 3).getDirectContact()).isGreaterThan(0.0);
 

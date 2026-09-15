@@ -70,15 +70,14 @@ import static org.matsim.episim.model.Transition.to;
  * the pathogen refactor is released and {@code matsim-episim} bumps {@code episim.version}, move these
  * tests there and delete the copy.</p>
  *
- * <p>The numbers in {@link #configureInfluenza} and {@link #influenzaProgressionConfig} are sourced in
- * {@code docs/influenza-parameterisation.md} (2022/23 season, A(H3N2)-dominated). The strain
+ * <p>The numbers in {@link #configureInfluenza} and {@link #influenzaProgressionConfig} describe the
+ * 2022/23 season (A(H3N2)-dominated); the source of each value is cited next to it. The strain
  * infectiousness is still an uncalibrated placeholder. {@link #runsOnCologneScenario()} downloads the
  * full Cologne input set from the VSP SVN and is meant to be run by hand, not in CI.</p>
  *
  * <p><b>Known limitations</b>: the antibody / individual immunity model is still SARS-CoV-2 specific,
  * so only influenza is seeded (the SARS-CoV-2 disease import is cleared). Isolation at symptom onset
- * is set to 75 % home isolation, a low-confidence value derived from contact data during illness; see the
- * parameterisation document, sections 4.9 and "Gaps and risks".</p>
+ * is set to 75 % home isolation, a low-confidence value derived from contact data during illness.</p>
  */
 public class InfluenzaCologneScenarioTest {
 
@@ -114,8 +113,8 @@ public class InfluenzaCologneScenarioTest {
 	/**
 	 * Layers influenza onto an already-built Cologne {@link Config}: moves the start date to the
 	 * 2022/23 season, registers the strain, its pathogen params and its disease progression, and
-	 * replaces the SARS-CoV-2 disease import with an influenza import. Every number is sourced in
-	 * {@code docs/influenza-parameterisation.md}.
+	 * replaces the SARS-CoV-2 disease import with an influenza import. The source of every number is cited next
+	 * to it.
 	 */
 	static void configureInfluenza(Config config) {
 
@@ -123,7 +122,7 @@ public class InfluenzaCologneScenarioTest {
 		VirusStrainConfigGroup virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		PathogenConfigGroup pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 
-		// 0. season window: 2022/23 on the real Cologne mobility trace (doc section 2)
+		// 0. season window: 2022/23 on the real Cologne mobility trace
 		episimConfig.setStartDate(SEASON_START);
 
 		// 1. one pooled strain -> pathogen (2022/23: sentinel subtyping 95 A(H3N2), 1 A(H1N1)pdm09, 2 B/Victoria up to KW 44,
@@ -133,7 +132,7 @@ public class InfluenzaCologneScenarioTest {
 		// NOT an estimate: calibration placeholder. Fit together with calibrationParameter to the 2022/23 growth rate
 		// r = 0.085/day (doubling 8.1 d, ICOSARI flu-SARI KW 45-49/2022, doi:10.5281/zenodo.22686153), i.e. R ~ 1.2-1.35
 		strain.setInfectiousness(1.0);
-		// pooled strain = pathogen baseline, no strain-relative severity (doc section 1.2)
+		// pooled strain = pathogen baseline, no strain-relative severity
 		strain.setFactorSeriouslySick(1.0);
 		strain.setFactorCritical(1.0);
 		// relative susceptibility vs adults >= 40 y for A(H3N2): 12-18 y HR 2.04 (1.19-3.49); < 12 y not significantly
@@ -176,7 +175,7 @@ public class InfluenzaCologneScenarioTest {
 		// 3. disease progression timing (replaces the COVID progressionConfig of SnzCologneOpenProductionScenario)
 		episimConfig.setProgressionConfig(influenzaProgressionConfig(Transition.config()).build());
 
-		// 4. season inputs the Cologne builder does not cover for 2022/23 (doc section "Gaps and risks")
+		// 4. season inputs the Cologne builder does not cover for 2022/23
 		FixedPolicy.ConfigBuilder policy = FixedPolicy.parse(episimConfig.getPolicy());
 		// schools fully open in autumn 2022; the Cologne builder keeps all educ_* at 0.5 from 2020-04-27 onwards
 		policy.restrict(SEASON_START, 1.0, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other");
@@ -212,7 +211,7 @@ public class InfluenzaCologneScenarioTest {
 
 		// 6. antibody model: initial antibodies 0.0. AntibodyDependentTransitionModel.getSeriouslySickFactor applies
 		//    1 / (1 + ab^beta) even on a first infection, so the former placeholder 5.0 cut hospitalisation ~6-fold; 0.0 keeps the
-		//    factor at 1. The Cologne infection model does not read antibodies for susceptibility (doc section 1.5).
+		//    factor at 1. The Cologne infection model does not read antibodies for susceptibility.
 		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
 		AntibodyConfigGroup.AntibodyParams influenzaAntibodies = antibodyConfig.getOrAddParams(INFLUENZA_STRAIN);
 		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
