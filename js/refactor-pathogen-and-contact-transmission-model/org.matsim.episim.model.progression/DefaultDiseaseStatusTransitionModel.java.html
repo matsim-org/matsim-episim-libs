@@ -27,62 +27,65 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 <span class="fc" id="L27">		this.vaccinationConfig = vaccinationConfig;</span>
 <span class="fc" id="L28">		this.strainConfig = strainConfigGroup;</span>
 <span class="fc" id="L29">		this.pathogenConfig = pathogenConfig;</span>
-<span class="fc" id="L30">	}</span>
+
+		// fail now instead of at the first transition of a strain without the age-independent progression
+<span class="fc" id="L32">		pathogenConfig.checkProgressionConfigured(strainConfigGroup.getConfiguredStrains(), false, getClass().getSimpleName());</span>
+<span class="fc" id="L33">	}</span>
 
 	/**
 	 * Age-independent base disease-progression probabilities of the pathogen the person is infected with.
 	 */
 	private PathogenConfigGroup.ProgressionParams progressionParams(EpisimPerson person) {
-<span class="fc" id="L36">		return pathogenConfig.getProgressionParams(person.getVirusStrain().getPathogen(), false);</span>
+<span class="fc" id="L39">		return pathogenConfig.getProgressionParams(person.getVirusStrain().getPathogen(), false);</span>
 	}
 
 	@Override
 	public final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status, int day) {
 
-<span class="pc bpc" id="L42" title="1 of 8 branches missed.">		switch (status) {</span>
+<span class="pc bpc" id="L45" title="1 of 8 branches missed.">		switch (status) {</span>
 			case infectedButNotContagious:
-<span class="fc" id="L44">				return EpisimPerson.DiseaseStatus.contagious;</span>
+<span class="fc" id="L47">				return EpisimPerson.DiseaseStatus.contagious;</span>
 
 			case contagious:
-<span class="fc bfc" id="L47" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))</span>
-<span class="fc" id="L48">					return EpisimPerson.DiseaseStatus.showingSymptoms;</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))</span>
+<span class="fc" id="L51">					return EpisimPerson.DiseaseStatus.showingSymptoms;</span>
 				else
-<span class="fc" id="L50">					return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L53">					return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case showingSymptoms:
-<span class="fc" id="L53">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToSeriouslySick(person)</span>
-<span class="fc bfc" id="L54" title="All 2 branches covered.">						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?</span>
-<span class="fc" id="L55">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :</span>
-<span class="fc" id="L56">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())</span>
-<span class="fc bfc" id="L57" title="All 2 branches covered.">						* getSeriouslySickFactor(person, vaccinationConfig, day))</span>
+<span class="fc" id="L56">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToSeriouslySick(person)</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?</span>
+<span class="fc" id="L58">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :</span>
+<span class="fc" id="L59">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">						* getSeriouslySickFactor(person, vaccinationConfig, day))</span>
 //						* (person.getNumInfections() &gt; 1 ? getFactorRecovered(person, day) : 1.0))
-<span class="fc" id="L59">					return EpisimPerson.DiseaseStatus.seriouslySick;</span>
+<span class="fc" id="L62">					return EpisimPerson.DiseaseStatus.seriouslySick;</span>
 				else
-<span class="fc" id="L61">					return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L64">					return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case seriouslySick:
-<span class="pc bpc" id="L64" title="1 of 2 branches missed.">				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)</span>
-<span class="fc" id="L65">						&amp;&amp; (rnd.nextDouble() &lt; getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()</span>
-<span class="fc bfc" id="L66" title="All 2 branches covered.">						* getCriticalFactor(person, vaccinationConfig, day)))</span>
-<span class="fc" id="L67">					return EpisimPerson.DiseaseStatus.critical;</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)</span>
+<span class="fc" id="L68">						&amp;&amp; (rnd.nextDouble() &lt; getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">						* getCriticalFactor(person, vaccinationConfig, day)))</span>
+<span class="fc" id="L70">					return EpisimPerson.DiseaseStatus.critical;</span>
 				else
-<span class="fc" id="L69">					return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L72">					return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case critical:
-<span class="fc" id="L72">				double proba = getProbaOfTransitioningToDeceased(person);</span>
-<span class="pc bpc" id="L73" title="1 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
-<span class="fc" id="L74">					return DiseaseStatus.deceased;</span>
+<span class="fc" id="L75">				double proba = getProbaOfTransitioningToDeceased(person);</span>
+<span class="pc bpc" id="L76" title="1 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
+<span class="fc" id="L77">					return DiseaseStatus.deceased;</span>
 				else
-<span class="fc" id="L76">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
+<span class="fc" id="L79">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
 
 			case seriouslySickAfterCritical:
-<span class="fc" id="L79">				return EpisimPerson.DiseaseStatus.recovered;</span>
+<span class="fc" id="L82">				return EpisimPerson.DiseaseStatus.recovered;</span>
 
 			case recovered:
-<span class="fc" id="L82">				return EpisimPerson.DiseaseStatus.susceptible;</span>
+<span class="fc" id="L85">				return EpisimPerson.DiseaseStatus.susceptible;</span>
 
 			default:
-<span class="nc" id="L85">				throw new IllegalStateException(&quot;No state transition defined for &quot; + person.getDiseaseStatus());</span>
+<span class="nc" id="L88">				throw new IllegalStateException(&quot;No state transition defined for &quot; + person.getDiseaseStatus());</span>
 		}
 	}
 
@@ -91,32 +94,32 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	 */
 	protected double getFactorRecovered(EpisimPerson person, int day) {
 
-<span class="nc" id="L94">		int daysSince = person.daysSince(DiseaseStatus.recovered, day);</span>
+<span class="nc" id="L97">		int daysSince = person.daysSince(DiseaseStatus.recovered, day);</span>
 
 		//we assume about 20% loss of protection against severe progression every year
-<span class="nc" id="L97">		return Math.min(0.2 * (daysSince / 365), 1.0);</span>
+<span class="nc" id="L100">		return Math.min(0.2 * (daysSince / 365), 1.0);</span>
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
-<span class="fc" id="L104">		return progressionParams(person).getSeriouslySickProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L107">		return progressionParams(person).getSeriouslySickProbability(person.getAgeOrDefault(0));</span>
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
 	 */
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
-<span class="fc" id="L111">		return progressionParams(person).getCriticalProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L114">		return progressionParams(person).getCriticalProbability(person.getAgeOrDefault(0));</span>
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-<span class="fc" id="L115">		return progressionParams(person).getShowingSymptomsProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L118">		return progressionParams(person).getShowingSymptomsProbability(person.getAgeOrDefault(0));</span>
 	}
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-<span class="fc" id="L119">		return progressionParams(person).getDeathProbability(person.getAgeOrDefault(0));</span>
+<span class="fc" id="L122">		return progressionParams(person).getDeathProbability(person.getAgeOrDefault(0));</span>
 	}
 
 }

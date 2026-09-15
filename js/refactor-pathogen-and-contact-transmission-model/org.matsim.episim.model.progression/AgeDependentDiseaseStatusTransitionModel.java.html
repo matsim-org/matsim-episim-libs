@@ -41,20 +41,15 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
 	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup,
 	                                                PathogenConfigGroup pathogenConfig) {
-<span class="fc" id="L44">		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig);</span>
+<span class="fc" id="L44">		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, true);</span>
 <span class="fc" id="L45">		this.episimConfig = episimConfig;</span>
 <span class="fc" id="L46">	}</span>
-
-	@Override
-	protected boolean isAgeDependentTransition() {
-<span class="fc" id="L50">		return true;</span>
-	}
 
 	@Override
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
 		// https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=802030488
 		// age table taken from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8353925/, now configured in PathogenConfigGroup.
-<span class="fc" id="L57">		return super.getProbaOfTransitioningToSeriouslySick(person) * episimConfig.getHospitalFactor();</span>
+<span class="fc" id="L52">		return super.getProbaOfTransitioningToSeriouslySick(person) * episimConfig.getHospitalFactor();</span>
 	}
 
 }

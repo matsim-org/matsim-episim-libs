@@ -32,7 +32,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String TIME_PERIOD_IGA = &quot;timePeriodIgA&quot;;
 	private static final String VALID_DEADLINE = &quot;validDeadline&quot;;
 
-	private static final String GROUPNAME = &quot;episimVaccination&quot;;
+	static final String GROUPNAME = &quot;episimVaccination&quot;;
 
 	/**
 	 * Amount of vaccinations available per day.
@@ -579,7 +579,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * Vaccination type this parameter set applies to.
 		 */
 		public VaccinationType getType() {
-<span class="nc" id="L582">			return type;</span>
+<span class="fc" id="L582">			return type;</span>
 		}
 
 		public void setType(VaccinationType type) {

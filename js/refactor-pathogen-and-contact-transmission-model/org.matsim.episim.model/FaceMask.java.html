@@ -51,7 +51,7 @@ public class FaceMask {
 	 * Returns the standard face masks.
 	 */
 	public static List&lt;FaceMask&gt; values() {
-<span class="nc" id="L54">		return STANDARD_OPTIONS;</span>
+<span class="fc" id="L54">		return STANDARD_OPTIONS;</span>
 	}
 
 	/**
@@ -109,6 +109,11 @@ public class FaceMask {
 	@Override
 	public int hashCode() {
 <span class="fc" id="L111">		return Objects.hashCode(name);</span>
+	}
+
+	@Override
+	public String toString() {
+<span class="fc" id="L116">		return name;</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
