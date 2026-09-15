@@ -80,8 +80,6 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
 
-		bind(AntibodyModel.Config.class).toInstance(AntibodyModel.newConfig());
-
 		Multibinder.newSetBinder(binder(), SimulationListener.class);
 		Multibinder.newSetBinder(binder(), VaccinationModel.class);
 	}
@@ -131,6 +129,27 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public VirusStrainConfigGroup strainConfigGroup(Config config) {
 		return ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+	}
+
+	@Provides
+	@Singleton
+	public PathogenConfigGroup pathogenConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
+	}
+
+	@Provides
+	@Singleton
+	public AntibodyConfigGroup antibodyConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
+	}
+
+	/** Provides the contact-transmission configuration. */
+	@Provides
+	@Singleton
+	public ContactTransmissionConfigGroup contactTransmissionConfigGroup(Config config) {
+		ContactTransmissionConfigGroup group = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
+		group.setContext(config.getContext());
+		return group;
 	}
 
 	@Provides

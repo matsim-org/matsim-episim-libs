@@ -1,0 +1,24 @@
+# RSV direct-contact weights for the educ_kiga/educ_kiga contact pair, by age band.
+# Age bands (ContactTransmissionConfigGroup.setAgeBands): 0, 1, 3, 18.
+#   0  = age 0 (infants). The Cologne synthetic population marks ~50% of age-0 agents as attending
+#        educ_kiga on a weekday, which is not plausible
+#        (NRW Kita attendance for under-1s is ~1%, IT.NRW 1.3.2022). Both routes are set to 0 here so an
+#        age-0 agent erroneously placed in a kiga container cannot transmit or acquire RSV through it;
+#        this does not fix the population, only suppresses its consequence for this contact pair.
+#   1  = ages 1-2 (toddlers; modelled Kita attendance ~48-51% vs. real NRW 27.5-29.5%, still too high but
+#        not zeroed here).
+#   3  = ages 3-17 (Kindergarten- and school-age children and staff up to school leaving age).
+#   18 = adults (kiga staff, parents dropping off/picking up).
+# Every unordered pair among the declared bands must be listed, a matrix with a missing cell is rejected
+# (ContactTransmissionConfigGroup.readAgeMatrix).
+ageA,ageB,respiratory,directContact
+0,0,0.0,0.0
+0,1,0.0,0.0
+0,3,0.0,0.0
+0,18,0.0,0.0
+1,1,1.0,0.6
+1,3,1.0,0.6
+1,18,1.0,0.6
+3,3,1.0,0.6
+3,18,1.0,0.6
+18,18,1.0,0.6

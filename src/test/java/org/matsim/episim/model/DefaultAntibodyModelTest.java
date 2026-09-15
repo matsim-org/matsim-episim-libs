@@ -18,9 +18,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
-import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.testcases.MatsimTestUtils;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
@@ -54,7 +55,7 @@ public class DefaultAntibodyModelTest {
 
 	private final List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
 	private DefaultAntibodyModel model;
-	private AntibodyModel.Config antibodyConfig;
+	private AntibodyConfigGroup antibodyConfig;
 	private final Offset<Double> OFFSET = Offset.offset(0.1);
 	;
 
@@ -62,8 +63,8 @@ public class DefaultAntibodyModelTest {
 	@BeforeEach
 	public void setup() {
 
-		antibodyConfig = AntibodyModel.newConfig();
-		model = new DefaultAntibodyModel(antibodyConfig,new EpisimConfigGroup());
+		antibodyConfig = new AntibodyConfigGroup();
+		model = new DefaultAntibodyModel(antibodyConfig, new VirusStrainConfigGroup());
 
 	}
 
@@ -94,7 +95,7 @@ public class DefaultAntibodyModelTest {
 		}
 
 		// test when sigma is 0; all immuneResponseMultipliers should = 1.0
-		antibodyConfig.setImmuneReponseSigma(0);
+		antibodyConfig.setImmuneResponseSigma(0);
 		model.init(episimPeople, 0);
 
 		for (EpisimPerson person : episimPeople) {
@@ -102,7 +103,7 @@ public class DefaultAntibodyModelTest {
 		}
 
 		// test when sigma is 1; multiplies should range between 0.1 and 10.
-		antibodyConfig.setImmuneReponseSigma(1);
+		antibodyConfig.setImmuneResponseSigma(1);
 		model.init(episimPeople, 0);
 
 		double sigma1q1;
@@ -125,7 +126,7 @@ public class DefaultAntibodyModelTest {
 		double sigma10q1;
 		double sigma10q3;
 		{
-			antibodyConfig.setImmuneReponseSigma(10);
+			antibodyConfig.setImmuneResponseSigma(10);
 			model.init(episimPeople, 0);
 
 			DoubleList multipliers = new DoubleArrayList();
@@ -149,6 +150,40 @@ public class DefaultAntibodyModelTest {
 
 
 	/**
+	 * A strain of another pathogen is only configured as its own immunity event. Immunity events without an entry
+	 * for a strain neither induce nor refresh antibodies against it, instead of failing.
+	 */
+	@Test
+	public void missingCrossImmunityEntriesHaveNoEffect() {
+
+		VirusStrain flu = VirusStrain.of(new Pathogen("influenza"), "FLU_CROSS_IMMUNITY_TEST");
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		strainConfig.getOrAddParams(flu);
+		antibodyConfig.getOrAddParams(flu).setInitialAntibodies(Map.of(flu, 2.0));
+		model = new DefaultAntibodyModel(antibodyConfig, strainConfig);
+
+		EpisimPerson person = EpisimTestUtils.createPerson();
+		person.setImmuneResponseMultiplier(1.0);
+
+		// first immunization: mRNA has no entry for the flu strain
+		person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 1);
+		model.updateAntibodies(person, 2);
+
+		assertThat(person.getAntibodies(flu)).isEqualTo(0.0);
+		double sarsAntibodies = person.getAntibodies(VirusStrain.SARS_CoV_2);
+		assertThat(sarsAntibodies).isGreaterThan(0.0);
+
+		// refresh: the flu infection has no entry for SARS-CoV-2, so that level is kept
+		EpisimTestUtils.infectPerson(person, flu, 24 * 60 * 60 * 3);
+		person.setDiseaseStatus(24 * 60 * 60 * 3, EpisimPerson.DiseaseStatus.recovered);
+		model.updateAntibodies(person, 4);
+
+		assertThat(person.getAntibodies(flu)).isEqualTo(2.0);
+		assertThat(person.getAntibodies(VirusStrain.SARS_CoV_2)).isEqualTo(sarsAntibodies);
+	}
+
+	/**
 	 * Tests when there are no immunity events. Antibodies should remain 0.
 	 */
 	@Test
@@ -162,14 +197,14 @@ public class DefaultAntibodyModelTest {
 		// update antibodies on day 0; antibody map should be filled with strains but ak values should equal 0.0
 		model.updateAntibodies(person, 0);
 
-		for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 			assertThat(person.getAntibodies(strain)).isEqualTo(0.0);
 		}
 
 		// at higher iterations, antibody levels should remain at 0.0 if there is no vaccination or infection
 		for (int day = 0; day <= 100; day++) {
 			model.updateAntibodies(person, day);
-			for (VirusStrain strain : VirusStrain.values()) {
+			for (VirusStrain strain : VirusStrain.getAllStandardOptions()) {
 				assertThat(person.getAntibodies(strain)).isEqualTo(0.0);
 			}
 		}
@@ -440,7 +475,7 @@ public class DefaultAntibodyModelTest {
 
 //		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevelsAvg = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600, EpisimTestUtils.createPerson());
 
-		antibodyConfig.setImmuneReponseSigma(3.);
+		antibodyConfig.setImmuneResponseSigma(3.);
 		model.init(episimPeople, 0);
 		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevelsAvg = new Int2ObjectArrayMap<>();
 		for (EpisimPerson person : episimPeople) {
@@ -968,22 +1003,22 @@ public class DefaultAntibodyModelTest {
 
 
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
-				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
+				log.warn("double vaccination against " + strain.getVirusStrainName()+ "=" + abLevels.get(100).get(strain));
 
 				strain = VirusStrain.DELTA;
-				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
+				log.warn("double vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(100).get(strain));
 
 				strain = VirusStrain.OMICRON_BA1;
-				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
+				log.warn("double vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(100).get(strain));
 
 				immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
 				immunityEventDays = IntList.of(0, 200);
 				abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 300, EpisimTestUtils.createPerson());
 
 				strain = VirusStrain.DELTA;
-				log.warn("triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain));
+				log.warn("triple vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(300).get(strain));
 				strain = VirusStrain.OMICRON_BA1;
-				log.warn("triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain));
+				log.warn("triple vaccination against " + strain.getVirusStrainName() + "=" + abLevels.get(300).get(strain));
 			}
 
 

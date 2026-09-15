@@ -34,6 +34,7 @@ public interface InfectionModel {
 	 */
 	double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 									EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+									TransmissionWeights transmissionWeights,
 									double contactIntensity, double jointTimeInContainer);
 
 	/**

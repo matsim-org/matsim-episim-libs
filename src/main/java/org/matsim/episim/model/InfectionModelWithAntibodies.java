@@ -8,9 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -26,9 +24,10 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
+	private final PathogenConfigGroup pathogenConfig;
 
-	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
-	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> susceptibility; //= new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity; //= new EnumMap<>(VirusStrain.class);
 	private final RealDistribution distribution;
 
 	/**
@@ -48,10 +47,13 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
+		this.susceptibility = new HashMap<>();
+		this.infectivity = new HashMap<>();
 
-		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, virusStrainConfig.getVirusStrains());
 
 		// based on https://arxiv.org/abs/2007.06602
 		distribution = new NormalDistribution(0.5, 2.6);
@@ -74,6 +76,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   TransmissionWeights transmissionWeights,
 										   double contactIntensity, double jointTimeInContainer) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
@@ -100,7 +103,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 				int lastInfectionWithStrain = 0;
 				for (int ii = 0; ii < target.getNumInfections(); ii++) {
-					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {
+					if (Objects.equals(target.getVirusStrain(ii),infector.getVirusStrain())) {
 						lastInfectionWithStrain = ii;
 					}
 				}
@@ -133,11 +136,11 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 			if (vaccinationConfig.getUseIgA()) {
 
-				for (VirusStrain str : VirusStrain.values()) {
+				for (VirusStrain str : virusStrainConfig.getVirusStrains()) {
 					if (str.toString().startsWith("A_"))
 						strainsLineA.add(str);
 				}
-				for (VirusStrain str : VirusStrain.values()) {
+				for (VirusStrain str : virusStrainConfig.getVirusStrains()) {
 					if (str.toString().startsWith("B_"))
 						strainsLineB.add(str);
 				}
@@ -198,22 +201,30 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 				susceptibility = susceptibility * (1.0 - igaFactor);
 //			}
-		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
+		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, transmissionWeights, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
 		// remaining risk --> lower val, lower risk, max risk at 1
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
-				* shedding
-				* intake
-				* indoorOutdoorFactor
-				* immunityFactor
-		);
+				* immunityFactor;
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+		double respiratoryModifier = ciCorrection * shedding * intake * indoorOutdoorFactor;
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
-	private double calcInfectionProbabilityWoImmunity(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
+	private double calcInfectionProbabilityWoImmunity(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, TransmissionWeights transmissionWeights, double contactIntensity, double jointTimeInContainer,
 		double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
@@ -223,16 +234,23 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		double relativeAntibodyLevel = 0.0;
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
-				* shedding
-				* intake
-				* indoorOutdoorFactor
-				/ (1.0 + Math.pow(relativeAntibodyLevel, vaccinationConfig.getBeta()))
+				/ (1.0 + Math.pow(relativeAntibodyLevel, vaccinationConfig.getBeta()));
 
-		);
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+		double respiratoryModifier = ciCorrection * shedding * intake * indoorOutdoorFactor;
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
 	/**

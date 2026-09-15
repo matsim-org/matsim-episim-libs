@@ -9,10 +9,7 @@ import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 
 import java.time.LocalDate;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -35,7 +32,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String TIME_PERIOD_IGA = "timePeriodIgA";
 	private static final String VALID_DEADLINE = "validDeadline";
 
-	private static final String GROUPNAME = "episimVaccination";
+	static final String GROUPNAME = "episimVaccination";
 
 	/**
 	 * Amount of vaccinations available per day.
@@ -59,7 +56,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Holds all specific vaccination params.
 	 */
-	private final Map<VaccinationType, VaccinationParams> params = new EnumMap<>(VaccinationType.class);
+	private final Map<VaccinationType, VaccinationParams> params = new HashMap<>();
 	/**
 	 * Load vaccinations from file instead.
 	 */
@@ -425,7 +422,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		Map<String, String> share = Splitter.on("|").withKeyValueSeparator(">").split(value);
 		Map<LocalDate, Map<VaccinationType, Double>> collect = share.entrySet().stream().collect(Collectors.toMap(
 			e -> LocalDate.parse(e.getKey()),
-			e -> SPLITTER.split(e.getValue()).entrySet().stream().collect(Collectors.toMap(k -> VaccinationType.valueOf(k.getKey()), k -> Double.parseDouble(k.getValue())))
+			e -> SPLITTER.split(e.getValue()).entrySet().stream().collect(Collectors.toMap(k -> VaccinationType.of(k.getKey()), k -> Double.parseDouble(k.getValue())))
 		));
 
 		setVaccinationShare(collect);
@@ -438,7 +435,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Map<VaccinationType, Double> getVaccinationTypeProb(LocalDate date) {
 
-		EnumMap<VaccinationType, Double> prob = new EnumMap<>(VaccinationType.class);
+		// LinkedHashMap: chooseVaccinationType() iterates this and returns the first entry with p < value,
+		// so the entries must stay in the ascending (declaration) order they are inserted in below.
+		Map<VaccinationType, Double> prob = new LinkedHashMap<>();
 
 		Map<VaccinationType, Double> share = EpisimUtils.findValidEntry(vaccinationShare, null, date);
 
@@ -448,8 +447,19 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		double total = share.values().stream().sorted().mapToDouble(Double::doubleValue).sum();
 
 		double sum = 1 - total;
-		for (VaccinationType t : VaccinationType.values()) {
+		for (VaccinationType t : VaccinationType.getAllStandardOptions()) {
 			sum += share.getOrDefault(t, 0d);
+			prob.put(t, sum);
+		}
+
+		// custom vaccination types follow the standard ones in a deterministic order, so standard results are unchanged
+		List<VaccinationType> custom = share.keySet().stream()
+			.filter(t -> !prob.containsKey(t))
+			.sorted(Comparator.comparing(VaccinationType::getId))
+			.collect(Collectors.toList());
+
+		for (VaccinationType t : custom) {
+			sum += share.get(t);
 			prob.put(t, sum);
 		}
 
@@ -497,7 +507,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> effectiveness = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(4, 0)
 				.atDay(5, 0.45)
@@ -507,7 +517,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> infectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> infectivity = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(0, 1)
 				.atFullEffect(1.0)
@@ -516,12 +526,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness after booster shot.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> boostEffectiveness = new EnumMap<>(VirusStrain.class);
+		private Map<VirusStrain, VaccinationConfigGroupParameter> boostEffectiveness = new HashMap<>();
 
 		/**
 		 * Infectivity of a vaccinated person towards others.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> boostInfectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> boostInfectivity = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(0, 1)
 				.atFullEffect(1.0)
@@ -530,7 +540,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> factorShowingSymptoms = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorShowingSymptoms = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(5, 0.5)
 		));
@@ -538,7 +548,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorSeriouslySick = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(5, 0.5)
 		));
@@ -546,7 +556,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, VaccinationConfigGroupParameter> factorCritical = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+		private Map<VirusStrain, VaccinationConfigGroupParameter> factorCritical = new HashMap<>(Map.of(VirusStrain.SARS_CoV_2,
 			forStrain(VirusStrain.SARS_CoV_2)
 				.atDay(0, 1)
 		));
@@ -556,11 +566,22 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringGetter(TYPE)
+		String getTypeName() {
+			return type == null ? null : type.getName();
+		}
+
+		@StringSetter(TYPE)
+		void setType(String type) {
+			this.type = VaccinationType.of(type);
+		}
+
+		/**
+		 * Vaccination type this parameter set applies to.
+		 */
 		public VaccinationType getType() {
 			return type;
 		}
 
-		@StringSetter(TYPE)
 		public void setType(VaccinationType type) {
 			this.type = type;
 		}
@@ -606,7 +627,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 			map.clear();
 			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-				map.put(VirusStrain.valueOf(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
+				map.put(VirusStrain.of(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));
 			}
 		}
 

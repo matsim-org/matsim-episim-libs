@@ -59,7 +59,7 @@ public final class Restriction {
 	/**
 	 * Maps mask type to percentage of persons wearing it.
 	 */
-	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
+	private Map<FaceMask, Double> maskUsage = new LinkedHashMap<>();
 
 	/**
 	 * Maps location-based remainingFraction to district name.
@@ -123,7 +123,14 @@ public final class Restriction {
 			double sum = 1 - total;
 			this.maskUsage.put(FaceMask.NONE, sum);
 
-			for (FaceMask m : FaceMask.values()) {
+			// custom masks follow the standard ones in a deterministic order, so standard results are unchanged
+			List<FaceMask> masks = new ArrayList<>(FaceMask.getAllStandardOptions());
+			maskUsage.keySet().stream()
+					.filter(m -> !masks.contains(m))
+					.sorted(Comparator.comparing(FaceMask::getName))
+					.forEach(masks::add);
+
+			for (FaceMask m : masks) {
 				if (maskUsage.containsKey(m)) {
 					sum += maskUsage.get(m);
 					if (Double.isNaN(sum))
@@ -150,7 +157,7 @@ public final class Restriction {
 		this.maxGroupSize = maxGroupSize;
 		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
-		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
+		setCumulativeMaskUsage(other != null ? other.maskUsage : maskUsage);
 		this.locationBasedRf = locationBasedRf;
 		this.susceptibleRf = susceptibleRf;
 		this.vaccinatedRf = vaccinatedRf;
@@ -305,7 +312,7 @@ public final class Restriction {
 		// Could be integer or double
 		Map<String, Number> nameMap = (Map<String, Number>) config.getValue("masks").unwrapped();
 
-		Map<FaceMask, Double> enumMap = new EnumMap<>(FaceMask.class);
+		Map<FaceMask, Double> enumMap = new LinkedHashMap<>();
 
 		Map<String, Double> locationBasedRf = new HashMap<>();
 
@@ -318,7 +325,7 @@ public final class Restriction {
 
 
 		if (nameMap != null)
-			nameMap.forEach((k, v) -> enumMap.put(FaceMask.valueOf(k), v.doubleValue()));
+			nameMap.forEach((k, v) -> enumMap.put(FaceMask.of(k), v.doubleValue()));
 
 		return new Restriction(
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
@@ -486,8 +493,7 @@ public final class Restriction {
 			closingHours = r.closingHours;
 
 		if (!r.maskUsage.isEmpty()) {
-			maskUsage.clear();
-			maskUsage.putAll(r.maskUsage);
+			setCumulativeMaskUsage(r.maskUsage);
 		}
 		if (r.locationBasedRf !=null && !r.locationBasedRf.isEmpty()) {
 			locationBasedRf = new HashMap<>();
@@ -514,9 +520,9 @@ public final class Restriction {
 		Double otherVRf = (Double) restriction.get("vaccinatedRf");
 		ClosingHours otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
-		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
+		Map<FaceMask, Double> otherMasks = new HashMap<>();
 		((Map<String, Double>) restriction.get("masks"))
-				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
+				.forEach((k, v) -> otherMasks.put(FaceMask.of(k), v));
 
 		Map<String, Double> otherLocationBasedRf = new HashMap<>();
 		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
@@ -576,8 +582,27 @@ public final class Restriction {
 			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value.");
 			log.warn("(full new restriction=" + restriction + ")");
 		} else if (maskUsage.isEmpty())
-			maskUsage.putAll(otherMasks);
+			setCumulativeMaskUsage(otherMasks);
 
+	}
+
+	/**
+	 * Replaces the mask usage with the given cumulative probabilities, ordered ascending by probability.
+	 * {@link #determineMask(EpisimSplittableRandom)} relies on this order, but maps read from a config
+	 * (e.g. {@link Config#getValue(String)} unwrapped) do not preserve it. Equal probabilities keep the order of the
+	 * standard masks, followed by custom masks sorted by name, as in the constructor computing the probabilities.
+	 */
+	private void setCumulativeMaskUsage(@Nullable Map<FaceMask, Double> cumulative) {
+		maskUsage.clear();
+		if (cumulative == null)
+			return;
+
+		List<FaceMask> standard = FaceMask.values();
+		cumulative.entrySet().stream()
+				.sorted(Map.Entry.<FaceMask, Double>comparingByValue()
+						.thenComparingInt(e -> standard.contains(e.getKey()) ? standard.indexOf(e.getKey()) : standard.size())
+						.thenComparing(e -> e.getKey().getName()))
+				.forEachOrdered(e -> maskUsage.put(e.getKey(), e.getValue()));
 	}
 
 	boolean isExtrapolate() {
@@ -658,7 +683,7 @@ public final class Restriction {
 
 		// Must be converted to map with strings
 		Map<String, Double> nameMap = new LinkedHashMap<>();
-		maskUsage.forEach((k, v) -> nameMap.put(k.name(), v));
+		maskUsage.forEach((k, v) -> nameMap.put(k.name, v));
 		map.put("masks", nameMap);
 
 		if (closingHours != null) {

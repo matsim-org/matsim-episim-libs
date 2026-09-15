@@ -20,6 +20,8 @@
  */
 package org.matsim.episim.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -32,7 +34,9 @@ import org.matsim.facilities.ActivityFacility;
 
 import java.util.HashMap;
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
@@ -43,6 +47,8 @@ import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
  */
 public abstract class AbstractContactModel implements ContactModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";
+
+	private static final Logger log = LogManager.getLogger(AbstractContactModel.class);
 
 	protected final Scenario scenario;
 	protected final EpisimSplittableRandom rnd;
@@ -67,6 +73,11 @@ public abstract class AbstractContactModel implements ContactModel {
 	 * Infection probability calculation.
 	 */
 	protected final InfectionModel infectionModel;
+
+	/**
+	 * Resolves which activity types may infect each other (cross-activity interaction rules).
+	 */
+	protected final ContactTransmissionConfigGroup.Resolver contactTransmission;
 
 	protected int iteration;
 	protected DayOfWeek day;
@@ -97,6 +108,17 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.trParams = episimConfig.selectInfectionParams("tr");
 		this.qhParams = episimConfig.selectInfectionParams(QUARANTINE_HOME);
 		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();
+		ContactTransmissionConfigGroup contactTransmissionConfig = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);
+		// relative contact matrix files are resolved against the config location
+		contactTransmissionConfig.setContext(config.getContext());
+		List<String> containerNames = episimConfig.getInfectionParams().stream()
+				.map(EpisimConfigGroup.InfectionParams::getContainerName)
+				.collect(Collectors.toList());
+		// rules for all known containers are precomputed, the contact loop then avoids string operations
+		this.contactTransmission = contactTransmissionConfig.createResolver(containerNames);
+		for (String pair : contactTransmissionConfig.unmatchedContactPairs(containerNames)) {
+			log.warn("contactPair {} matches no infection container and will never apply; check the activity-type prefixes", pair);
+		}
 		this.scenario = scenario;
 
 		subdistrictFacilities = new HashMap<>();

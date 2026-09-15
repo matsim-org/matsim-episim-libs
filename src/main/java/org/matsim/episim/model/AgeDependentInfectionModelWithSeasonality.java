@@ -6,8 +6,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -24,9 +23,10 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
+	private final PathogenConfigGroup pathogenConfig;
 
-	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
-	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> susceptibility; //= new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity; //= new EnumMap<>(VirusStrain.class);
 
 	private double outdoorFactor;
 	private int iteration;
@@ -37,18 +37,20 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
-
-		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+		this.susceptibility = new HashMap<>();
+		this.infectivity = new HashMap<>();
+		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, virusStrainConfig.getVirusStrains());
 	}
 
 	/**
 	 * Pre-compute interpolated age dependent entries.
 	 */
-	static void preComputeAgeDependency(Map<VirusStrain, double[]> susceptibility, Map<VirusStrain, double[]> infectivity, VirusStrainConfigGroup virusStrainConfig) {
+	static void preComputeAgeDependency(Map<VirusStrain, double[]> susceptibility, Map<VirusStrain, double[]> infectivity, VirusStrainConfigGroup virusStrainConfig, Collection<VirusStrain> virusStrains) {
 
-		for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : virusStrains) {
 
 			if (!virusStrainConfig.hasParams(strain))
 				continue;
@@ -76,6 +78,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   TransmissionWeights transmissionWeights,
 										   double contactIntensity, double jointTimeInContainer) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
@@ -90,13 +93,24 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+		// route-agnostic factors
+		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer
 				* getVaccinationInfectivity(infector, params, vaccinationConfig, iteration)
 				* target.getSusceptibility()
-				* params.getInfectiousness()
+				* params.getInfectiousness();
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+		double respiratoryModifier = ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
-				* indoorOutdoorFactor
-		);
+				* indoorOutdoorFactor;
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+		TransmissionWeights pathogenWeights = pathogenConfig.getParams(params.getPathogen()).getRouteTransmissibility();
+		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;
+		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 }
