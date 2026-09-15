@@ -157,7 +157,7 @@ public final class Restriction {
 		this.maxGroupSize = maxGroupSize;
 		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
-		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
+		setCumulativeMaskUsage(other != null ? other.maskUsage : maskUsage);
 		this.locationBasedRf = locationBasedRf;
 		this.susceptibleRf = susceptibleRf;
 		this.vaccinatedRf = vaccinatedRf;
@@ -493,8 +493,7 @@ public final class Restriction {
 			closingHours = r.closingHours;
 
 		if (!r.maskUsage.isEmpty()) {
-			maskUsage.clear();
-			maskUsage.putAll(r.maskUsage);
+			setCumulativeMaskUsage(r.maskUsage);
 		}
 		if (r.locationBasedRf !=null && !r.locationBasedRf.isEmpty()) {
 			locationBasedRf = new HashMap<>();
@@ -583,8 +582,27 @@ public final class Restriction {
 			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value.");
 			log.warn("(full new restriction=" + restriction + ")");
 		} else if (maskUsage.isEmpty())
-			maskUsage.putAll(otherMasks);
+			setCumulativeMaskUsage(otherMasks);
 
+	}
+
+	/**
+	 * Replaces the mask usage with the given cumulative probabilities, ordered ascending by probability.
+	 * {@link #determineMask(EpisimSplittableRandom)} relies on this order, but maps read from a config
+	 * (e.g. {@link Config#getValue(String)} unwrapped) do not preserve it. Equal probabilities keep the order of the
+	 * standard masks, followed by custom masks sorted by name, as in the constructor computing the probabilities.
+	 */
+	private void setCumulativeMaskUsage(@Nullable Map<FaceMask, Double> cumulative) {
+		maskUsage.clear();
+		if (cumulative == null)
+			return;
+
+		List<FaceMask> standard = FaceMask.values();
+		cumulative.entrySet().stream()
+				.sorted(Map.Entry.<FaceMask, Double>comparingByValue()
+						.thenComparingInt(e -> standard.contains(e.getKey()) ? standard.indexOf(e.getKey()) : standard.size())
+						.thenComparing(e -> e.getKey().getName()))
+				.forEachOrdered(e -> maskUsage.put(e.getKey(), e.getValue()));
 	}
 
 	boolean isExtrapolate() {
