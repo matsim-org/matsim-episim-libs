@@ -68,7 +68,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *       container names, as in {@code contactGroup} ({@code edu} covers {@code educ_primary}); when several
  *       pairs match, the one with the longest combined prefix wins, ties go to the pair configured first.</li>
  *   <li>{@code contactGroup} &mdash; which activity types may share a container at all (see the
- *       constructor).</li>
+ *       constructor). Groups must not overlap, i.e. no group activity may be a prefix of another one; to change the
+ *       rules for the default {@code home} and {@code edu} groups, configure a group with that activity.</li>
  * </ul>
  */
 public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
@@ -288,6 +289,10 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 			super.addParameterSet(set);
 		} else if (ContactGroupParams.SET_TYPE.equals(set.getName())) {
 			ContactGroupParams params = (ContactGroupParams) set;
+			for (String activity : contactGroups.keySet()) {
+				if (params.getActivity() != null && !activity.equals(params.getActivity()))
+					checkNotOverlapping(activity, params.getActivity());
+			}
 			ContactGroupParams previous = contactGroups.put(params.getActivity(), params);
 			// replace a previously registered group (e.g. an auto-added default) instead of keeping a duplicate
 			if (previous != null) {
@@ -346,6 +351,9 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 		Map<String, List<String>> groupWhitelist = new LinkedHashMap<>();
 		for (ContactGroupParams group : contactGroups.values()) {
 			group.validate();
+			// checked again, the activity of a group may have been changed after it was added
+			for (String activity : groupWhitelist.keySet())
+				checkNotOverlapping(activity, group.getActivity());
 			groupWhitelist.put(group.getActivity(), new ArrayList<>(group.getAllowedPartners()));
 		}
 
@@ -487,6 +495,23 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 				throw new IllegalArgumentException("ageBands must be strictly ascending; offending value '" + band + "'.");
 			}
 		}
+	}
+
+	/**
+	 * As with the infection params, every activity type must be matched by at most one contact group. Otherwise all
+	 * matching groups would apply, and a more specific group (e.g. {@code educ}) could not relax a broader one
+	 * (e.g. the default {@code edu}).
+	 */
+	private static void checkNotOverlapping(String existing, String activity) {
+		if (!existing.startsWith(activity) && !activity.startsWith(existing))
+			return;
+
+		String broader = existing.length() <= activity.length() ? existing : activity;
+		String specific = broader.equals(existing) ? activity : existing;
+		throw new IllegalArgumentException("Contact group '" + activity + "' overlaps with contact group '" + existing
+				+ "': every activity type must be matched by one contact group only, but '" + broader + "' also covers '"
+				+ specific + "'. To change the rules of an existing group, configure a group with the same activity"
+				+ " (the default groups are 'home' and 'edu').");
 	}
 
 	private static String pairKey(String activityA, String activityB) {
@@ -634,6 +659,9 @@ public class ContactTransmissionConfigGroup extends ReflectiveConfigGroup {
 	 * <p>Matching is prefix-based: an activity {@code educ_primary} is covered by a group whose
 	 * {@code activity} is {@code edu}, and it is allowed to meet any partner whose type starts with one
 	 * of the {@code allowedPartners} prefixes. An activity without a group may meet anyone.</p>
+	 *
+	 * <p>As with the infection params, an activity is matched by at most one group: a group whose activity overlaps
+	 * with another group (e.g. {@code educ} next to {@code edu}) is rejected.</p>
 	 */
 	public static final class ContactGroupParams extends ReflectiveConfigGroup {
 

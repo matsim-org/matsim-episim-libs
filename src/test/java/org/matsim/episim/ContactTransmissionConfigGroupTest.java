@@ -324,6 +324,52 @@ public class ContactTransmissionConfigGroupTest {
 	}
 
 	@Test
+	public void overlappingContactGroupIsRejected() throws IOException {
+
+		// a more specific group next to the default edu group
+		assertThatThrownBy(() -> loadConfigXml(xmlModule(ContactTransmissionConfigGroup.GROUPNAME,
+				xmlSet(ContactTransmissionConfigGroup.ContactGroupParams.SET_TYPE,
+						xmlParam("activity", "educ"),
+						xmlParam("allowedPartners", "educ,work,leis"))), new ContactTransmissionConfigGroup()))
+				.hasStackTraceContaining("Contact group 'educ' overlaps with contact group 'edu'")
+				.hasStackTraceContaining("'edu' also covers 'educ'");
+
+		// a broader group covering the default home group
+		assertThatThrownBy(() -> loadConfigXml(xmlModule(ContactTransmissionConfigGroup.GROUPNAME,
+				xmlSet(ContactTransmissionConfigGroup.ContactGroupParams.SET_TYPE,
+						xmlParam("activity", "ho"),
+						xmlParam("allowedPartners", "home"))), new ContactTransmissionConfigGroup()))
+				.hasStackTraceContaining("Contact group 'ho' overlaps with contact group 'home'");
+
+		// the same in code
+		assertThatThrownBy(() -> new ContactTransmissionConfigGroup().getOrAddContactGroup("home_other"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("overlaps with contact group 'home'");
+
+		// relaxing the default edu group through its own activity is the supported way
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		loadConfigXml(xmlModule(ContactTransmissionConfigGroup.GROUPNAME,
+				xmlSet(ContactTransmissionConfigGroup.ContactGroupParams.SET_TYPE,
+						xmlParam("activity", "edu"),
+						xmlParam("allowedPartners", "edu,work,leis"))), group);
+
+		assertThat(group.createResolver().isContactAllowed("educ_primary", "leisure")).isTrue();
+	}
+
+	@Test
+	public void contactGroupChangedToOverlapIsRejectedByResolver() {
+		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
+		group.getOrAddContactGroup("shop").setAllowedPartners(Arrays.asList("shop", "work"));
+
+		// the activity is changed after the group was added
+		group.getOrAddContactGroup("shop").setActivity("educ");
+
+		assertThatThrownBy(group::createResolver)
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("overlaps with contact group 'edu'");
+	}
+
+	@Test
 	public void forbiddenPairBlocksContactAndResolvesToZero() {
 		ContactTransmissionConfigGroup group = new ContactTransmissionConfigGroup();
 		group.getOrAddContactPair("work", "leisure").setForbidden(true);
