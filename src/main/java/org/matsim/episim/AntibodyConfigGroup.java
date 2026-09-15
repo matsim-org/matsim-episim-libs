@@ -2,15 +2,21 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.ImmunityEvent;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * Config option specific to the antibody model ({@link org.matsim.episim.model.AntibodyModel}).
@@ -36,7 +42,7 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
-	private static final String GROUPNAME = "antibodies";
+	static final String GROUPNAME = "antibodies";
 
 	private static final String IMMUNE_RESPONSE_SIGMA = "immuneResponseSigma";
 	private static final String HL_MULTIPLIER_FOR_INFECTED = "hlMultiplierForInfected";
@@ -152,6 +158,39 @@ public class AntibodyConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(HL_MULTIPLIER_FOR_INFECTED)
 	public void setHlMultiplierForInfected(double hlMultiplierForInfected) {
 		this.hlMultiplierForInfected = hlMultiplierForInfected;
+	}
+
+	/**
+	 * Checks before the simulation starts that every vaccination type of the vaccination config has a parameter set,
+	 * instead of failing when the first person is vaccinated with it. Strains are checked by
+	 * {@link VirusStrainConfigGroup#checkConsistency(Config)}.
+	 */
+	@Override
+	protected void checkConsistency(Config config) {
+		super.checkConsistency(config);
+
+		VaccinationConfigGroup vaccinations = VirusStrainConfigGroup.moduleOrDefault(config, VaccinationConfigGroup.GROUPNAME,
+				VaccinationConfigGroup.class, VaccinationConfigGroup::new);
+		if (vaccinations == null)
+			return;
+
+		Set<VaccinationType> types = new TreeSet<>(Comparator.comparing(VaccinationType::getName));
+		vaccinations.getVaccinationShare().values().forEach(share -> types.addAll(share.keySet()));
+		for (ConfigGroup set : vaccinations.getParameterSets(VaccinationConfigGroup.VaccinationParams.SET_TYPE)) {
+			VaccinationType type = ((VaccinationConfigGroup.VaccinationParams) set).getType();
+			if (type != null)
+				types.add(type);
+		}
+
+		List<String> missing = types.stream()
+				.filter(type -> !hasParams(type))
+				.map(VaccinationType::getName)
+				.collect(Collectors.toList());
+
+		if (!missing.isEmpty())
+			throw new IllegalStateException("Vaccination types " + missing + " are used in config group '" + VaccinationConfigGroup.GROUPNAME
+					+ "', but have no '" + AntibodyParams.SET_TYPE + "' in config group '" + GROUPNAME + "'. Add a parameter set with "
+					+ "immunityEventKind '" + AntibodyParams.KIND_VACCINATION + "' for each of these types.");
 	}
 
 	@Override

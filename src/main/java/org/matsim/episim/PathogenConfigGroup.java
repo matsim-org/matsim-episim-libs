@@ -8,8 +8,13 @@ import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.ContactTransmissionType;
 import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.TransmissionWeights;
+import org.matsim.episim.model.VirusStrain;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
@@ -64,7 +69,7 @@ import java.util.TreeMap;
  */
 public class PathogenConfigGroup extends ReflectiveConfigGroup {
 
-	private static final String GROUPNAME = "pathogen";
+	static final String GROUPNAME = "pathogen";
 
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
@@ -126,6 +131,37 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		p.setPathogen(pathogen);
 		addParameterSet(p);
 		return p;
+	}
+
+	/**
+	 * Checks that the pathogens of all given strains are configured with the requested progression variant. Transition
+	 * models call this when they are created, i.e. before the simulation starts, because only they know which variant
+	 * they need.
+	 *
+	 * @param strains      strains that can infect persons
+	 * @param ageDependent the progression variant used by the model
+	 * @param model        name of the model for the error message
+	 * @throws IllegalStateException listing all pathogens without parameter set or without this variant
+	 */
+	public void checkProgressionConfigured(Collection<VirusStrain> strains, boolean ageDependent, String model) {
+
+		Map<Pathogen, List<String>> byPathogen = new TreeMap<>(Comparator.comparing(Pathogen::getName));
+		for (VirusStrain strain : strains)
+			byPathogen.computeIfAbsent(strain.getPathogen(), k -> new ArrayList<>()).add(strain.getVirusStrainName());
+
+		List<String> problems = new ArrayList<>();
+		byPathogen.forEach((pathogen, names) -> {
+			if (!hasParams(pathogen))
+				problems.add("pathogen '" + pathogen.getName() + "' of strains " + names + " has no '" + PathogenParams.SET_TYPE + "'");
+			else if (!params.get(pathogen).hasProgressionParams(ageDependent))
+				problems.add("pathogen '" + pathogen.getName() + "' of strains " + names + " has no '" + ProgressionParams.SET_TYPE
+						+ "' with ageDependent=" + ageDependent);
+		});
+
+		if (!problems.isEmpty())
+			throw new IllegalStateException(model + " needs the " + (ageDependent ? "age-dependent" : "age-independent")
+					+ " disease progression of every configured strain in config group '" + GROUPNAME + "', but "
+					+ String.join("; ", problems) + ".");
 	}
 
 	@Override

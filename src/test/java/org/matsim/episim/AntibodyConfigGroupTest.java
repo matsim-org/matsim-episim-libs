@@ -16,7 +16,12 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.data.MapEntry.entry;
+import static org.matsim.episim.EpisimTestUtils.loadConfigXml;
+import static org.matsim.episim.EpisimTestUtils.xmlModule;
+import static org.matsim.episim.EpisimTestUtils.xmlParam;
+import static org.matsim.episim.EpisimTestUtils.xmlSet;
 
 /**
  * Tests for {@link AntibodyConfigGroup}. The config group is expected to reproduce the antibody default that
@@ -188,6 +193,44 @@ public class AntibodyConfigGroupTest {
 
 		// untouched default is still there
 		assertThat(copy.getParams(VaccinationType.vector).getInitialAntibodies().get(VirusStrain.B1351)).isEqualTo(6.8);
+	}
+
+	/**
+	 * (6) A vaccination type used in the vaccination config without antibody params is rejected before the simulation
+	 * starts, instead of failing when the first person is vaccinated with it.
+	 */
+	@Test
+	public void vaccinationTypeWithoutParamsIsRejected() throws IOException {
+
+		String vaccinations = xmlModule("episimVaccination",
+				xmlParam("vaccinationShare", "2021-01-01>CHECK_SHARE_VACCINE=0.5;mRNA=0.5"),
+				xmlSet("vaccinationParams", xmlParam("type", "CHECK_PARAMS_VACCINE")));
+
+		AntibodyConfigGroup antibodies = new AntibodyConfigGroup();
+		Config config = loadConfigXml(vaccinations, antibodies, new VaccinationConfigGroup());
+
+		assertThatThrownBy(() -> antibodies.checkConsistency(config))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("[CHECK_PARAMS_VACCINE, CHECK_SHARE_VACCINE]")
+				.hasMessageContaining("antibodyParams");
+
+		AntibodyConfigGroup configured = new AntibodyConfigGroup();
+		Config configuredConfig = loadConfigXml(vaccinations + "\n" + xmlModule("antibodies",
+						vaccinationAntibodyParams("CHECK_SHARE_VACCINE"),
+						vaccinationAntibodyParams("CHECK_PARAMS_VACCINE")),
+				configured, new VaccinationConfigGroup());
+		configured.checkConsistency(configuredConfig);
+
+		// standard vaccination types are covered by the defaults
+		AntibodyConfigGroup defaults = new AntibodyConfigGroup();
+		defaults.checkConsistency(ConfigUtils.createConfig(defaults, new VaccinationConfigGroup()));
+	}
+
+	private static String vaccinationAntibodyParams(String type) {
+		return xmlSet(AntibodyParams.SET_TYPE,
+				xmlParam("immunityEvent", type),
+				xmlParam("immunityEventKind", AntibodyParams.KIND_VACCINATION),
+				xmlParam("initialAntibodies", "SARS_CoV_2=1.0"));
 	}
 
 	// ---------------------------------------------------------------------------------------------------------

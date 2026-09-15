@@ -23,21 +23,41 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	private final VirusStrainConfigGroup strainConfig;
 	private final PathogenConfigGroup pathogenConfig;
 
+	/**
+	 * Whether this model reads the age-dependent pathogen configuration.
+	 */
+	private final boolean ageDependent;
+
 	@Inject
 	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
 	                                        VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig) {
+		this(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, false);
+	}
+
+	/**
+	 * Constructor for subclasses with age-dependent transitions.
+	 *
+	 * @param ageDependent whether the age-dependent pathogen configuration is used
+	 * @throws IllegalStateException if a configured strain lacks this progression variant, so that this does not fail at
+	 *                               the first transition during the simulation
+	 */
+	protected AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+	                                           VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig,
+	                                           boolean ageDependent) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;
 		this.pathogenConfig = pathogenConfig;
+		this.ageDependent = ageDependent;
+
+		pathogenConfig.checkProgressionConfigured(strainConfigGroup.getConfiguredStrains(), ageDependent, getClass().getSimpleName());
 	}
 
 	/**
-	 * Whether this model reads the age-dependent pathogen configuration. Subclasses with age-dependent
-	 * transitions override this to {@code true}.
+	 * Whether this model reads the age-dependent pathogen configuration.
 	 */
-	protected boolean isAgeDependentTransition() {
-		return false;
+	protected final boolean isAgeDependentTransition() {
+		return ageDependent;
 	}
 
 	/**

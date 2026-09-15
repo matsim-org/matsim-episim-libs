@@ -32,7 +32,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String TIME_PERIOD_IGA = "timePeriodIgA";
 	private static final String VALID_DEADLINE = "validDeadline";
 
-	private static final String GROUPNAME = "episimVaccination";
+	static final String GROUPNAME = "episimVaccination";
 
 	/**
 	 * Amount of vaccinations available per day.

@@ -27,6 +27,9 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;
 		this.pathogenConfig = pathogenConfig;
+
+		// fail now instead of at the first transition of a strain without the age-independent progression
+		pathogenConfig.checkProgressionConfigured(strainConfigGroup.getConfiguredStrains(), false, getClass().getSimpleName());
 	}
 
 	/**

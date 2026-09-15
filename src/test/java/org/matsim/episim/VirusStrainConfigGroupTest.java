@@ -134,9 +134,80 @@ public class VirusStrainConfigGroupTest {
 		VirusStrainConfigGroup declared = new VirusStrainConfigGroup();
 		Config declaredConfig = loadConfigXml(
 			xmlModule("episim", xmlParam("infectionsPerDay", "DELTAA_TYPO>2021-01-01=5")) + "\n" +
-				xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTAA_TYPO"))),
-			new EpisimConfigGroup(), declared);
+				xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTAA_TYPO"))) + "\n" +
+				xmlModule("antibodies", antibodyParams("DELTAA_TYPO")),
+			new EpisimConfigGroup(), declared, new AntibodyConfigGroup());
 		declared.checkConsistency(declaredConfig);
+	}
+
+	/**
+	 * A strain of a pathogen without {@code pathogenParams} is rejected before the simulation starts, instead of failing
+	 * at its first infection.
+	 */
+	@Test
+	public void strainOfUnconfiguredPathogenIsRejected() throws IOException {
+
+		String strain = xmlModule("virusStrains", xmlSet(STRAIN_PARAMS,
+			xmlParam("strain", "CHECK_PATHOGEN_STRAIN"),
+			xmlParam("pathogen", "checkPathogen")));
+		String antibodies = xmlModule("antibodies", antibodyParams("CHECK_PATHOGEN_STRAIN"));
+
+		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
+		Config config = loadConfigXml(strain + "\n" + antibodies, strains, new AntibodyConfigGroup(), new PathogenConfigGroup());
+
+		assertThatThrownBy(() -> strains.checkConsistency(config))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("CHECK_PATHOGEN_STRAIN")
+			.hasMessageContaining("pathogen 'checkPathogen'")
+			.hasMessageContaining("pathogenParams");
+
+		// the pathogen group is not part of the config: its defaults only contain SARS-CoV-2
+		VirusStrainConfigGroup withoutGroup = new VirusStrainConfigGroup();
+		Config configWithoutGroup = loadConfigXml(strain + "\n" + antibodies, withoutGroup, new AntibodyConfigGroup());
+
+		assertThatThrownBy(() -> withoutGroup.checkConsistency(configWithoutGroup))
+			.hasMessageContaining("pathogen 'checkPathogen'");
+
+		VirusStrainConfigGroup configured = new VirusStrainConfigGroup();
+		Config configuredConfig = loadConfigXml(strain + "\n" + antibodies + "\n" +
+				xmlModule("pathogen", xmlSet("pathogenParams", xmlParam("pathogen", "checkPathogen"))),
+			configured, new AntibodyConfigGroup(), new PathogenConfigGroup());
+		configured.checkConsistency(configuredConfig);
+	}
+
+	/**
+	 * A strain without {@code antibodyParams} is rejected before the simulation starts, instead of failing on the day
+	 * after its first infection. All problems are reported at once.
+	 */
+	@Test
+	public void strainWithoutAntibodyParamsIsRejected() throws IOException {
+
+		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
+		Config config = loadConfigXml(
+			xmlModule("episim", xmlParam("infectionsPerDay", "CHECK_TYPO_STRAIN>2021-01-01=5")) + "\n" +
+				xmlModule("virusStrains",
+					xmlSet(STRAIN_PARAMS, xmlParam("strain", "CHECK_ANTIBODY_STRAIN_A")),
+					xmlSet(STRAIN_PARAMS, xmlParam("strain", "CHECK_ANTIBODY_STRAIN_B"))),
+			new EpisimConfigGroup(), strains, new AntibodyConfigGroup());
+
+		assertThatThrownBy(() -> strains.checkConsistency(config))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("[CHECK_ANTIBODY_STRAIN_A, CHECK_ANTIBODY_STRAIN_B] have no 'antibodyParams'")
+			// the misspelled import is reported together with the missing antibodies
+			.hasMessageContaining("[CHECK_TYPO_STRAIN] are imported");
+
+		// standard strains are covered by the antibody defaults
+		VirusStrainConfigGroup standard = new VirusStrainConfigGroup();
+		Config standardConfig = loadConfigXml(
+			xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTA"))), standard);
+		standard.checkConsistency(standardConfig);
+	}
+
+	private static String antibodyParams(String strain) {
+		return xmlSet("antibodyParams",
+			xmlParam("immunityEvent", strain),
+			xmlParam("immunityEventKind", "strain"),
+			xmlParam("initialAntibodies", strain + "=1.0"));
 	}
 
 	@Test

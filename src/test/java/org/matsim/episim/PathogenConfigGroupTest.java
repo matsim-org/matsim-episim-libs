@@ -11,6 +11,7 @@ import org.matsim.episim.model.TransmissionWeights;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.AntibodyDependentTransitionModel;
+import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.io.File;
@@ -246,6 +247,46 @@ public class PathogenConfigGroupTest {
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("INFLUENZA")
 				.hasMessageContaining("ageDependent=false");
+	}
+
+	/**
+	 * (8b) A transition model refuses to be created when a configured strain lacks the progression variant it needs, so the
+	 * simulation does not fail at the first transition of that strain.
+	 */
+	@Test
+	public void transitionModelRejectsMissingVariantWhenCreated() throws IOException {
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
+
+		// influenza is configured with the age-independent variant only
+		PathogenConfigGroup pathogenConfig = new PathogenConfigGroup();
+		loadProgression(pathogenConfig, xmlParam("ageDependent", "false"),
+				xmlParam("showingSymptomsProbabilityByAge", "0=0.4"),
+				xmlParam("seriouslySickProbabilityByAge", "0=0.01"),
+				xmlParam("criticalProbabilityByAge", "0=0.05"),
+				xmlParam("deathProbabilityByAge", "0=0.0"));
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		strainConfig.getOrAddParams(VirusStrain.of(INFLUENZA, "FLU_VARIANT_CHECK"));
+
+		VaccinationConfigGroup vaccinationConfig = new VaccinationConfigGroup();
+
+		assertThatThrownBy(() -> new AgeDependentDiseaseStatusTransitionModel(rnd, new EpisimConfigGroup(), vaccinationConfig, strainConfig, pathogenConfig))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("AgeDependentDiseaseStatusTransitionModel")
+				.hasMessageContaining("pathogen 'INFLUENZA' of strains [FLU_VARIANT_CHECK]")
+				.hasMessageContaining("ageDependent=true");
+
+		// the age-independent models find their variant
+		new AntibodyDependentTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig);
+		new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig);
+
+		// a strain of a pathogen without any parameter set
+		VirusStrainConfigGroup unknownPathogen = new VirusStrainConfigGroup();
+		unknownPathogen.getOrAddParams(VirusStrain.of(new Pathogen("UNKNOWN_VARIANT_CHECK"), "UNKNOWN_VARIANT_CHECK_STRAIN"));
+
+		assertThatThrownBy(() -> new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, unknownPathogen, pathogenConfig))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("pathogen 'UNKNOWN_VARIANT_CHECK' of strains [UNKNOWN_VARIANT_CHECK_STRAIN] has no 'pathogenParams'");
 	}
 
 	/**

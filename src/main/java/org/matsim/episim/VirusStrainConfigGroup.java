@@ -8,8 +8,10 @@ import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.VirusStrain;
 
+import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -89,28 +91,87 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Every strain that is imported with a positive number of infections needs a parameter set. Since strain names are
-	 * resolved leniently while the config is read, this catches misspelled strain names before the simulation starts.
+	 * Strains that have a parameter set in this config group, i.e. the strains that can infect persons.
+	 */
+	public Set<VirusStrain> getConfiguredStrains() {
+		return Collections.unmodifiableSet(strains.keySet());
+	}
+
+	/**
+	 * Checks before the simulation starts that every strain can be simulated, instead of failing at its first infection:
+	 * <ul>
+	 *     <li>Every strain that is imported with a positive number of infections needs a parameter set. Since strain names
+	 *     are resolved leniently while the config is read, this catches misspelled strain names.</li>
+	 *     <li>The pathogen of every configured strain needs a {@code pathogenParams} set in {@link PathogenConfigGroup}.</li>
+	 *     <li>Every configured strain needs an {@code antibodyParams} set in {@link AntibodyConfigGroup}.</li>
+	 * </ul>
+	 * All problems are reported at once. A config group that is not part of the config is checked with its defaults,
+	 * as these are used by the simulation.
 	 */
 	@Override
 	protected void checkConsistency(Config config) {
 		super.checkConsistency(config);
 
-		ConfigGroup episim = config.getModules().get("episim");
-		if (!(episim instanceof EpisimConfigGroup))
-			return;
+		List<String> problems = new ArrayList<>();
 
-		List<String> missing = new ArrayList<>();
-		for (Map.Entry<VirusStrain, NavigableMap<LocalDate, Integer>> e : ((EpisimConfigGroup) episim).getInfections_pers_per_day().entrySet()) {
-			boolean imported = e.getValue().values().stream().anyMatch(n -> n > 0);
-			if (imported && !strains.containsKey(e.getKey()))
-				missing.add(e.getKey().getVirusStrainName());
+		ConfigGroup episim = config.getModules().get("episim");
+		if (episim instanceof EpisimConfigGroup) {
+			List<String> missing = new ArrayList<>();
+			for (Map.Entry<VirusStrain, NavigableMap<LocalDate, Integer>> e : ((EpisimConfigGroup) episim).getInfections_pers_per_day().entrySet()) {
+				boolean imported = e.getValue().values().stream().anyMatch(n -> n > 0);
+				if (imported && !strains.containsKey(e.getKey()))
+					missing.add(e.getKey().getVirusStrainName());
+			}
+
+			if (!missing.isEmpty())
+				problems.add("Virus strains " + missing + " are imported via 'infections_pers_per_day' of config group "
+						+ "'episim', but have no '" + StrainParams.SET_TYPE + "' in config group '" + GROUPNAME + "'. "
+						+ "Check the strain names for typos or add parameter sets for these strains.");
 		}
 
-		if (!missing.isEmpty())
-			throw new IllegalStateException("Virus strains " + missing + " are imported via 'infections_pers_per_day' of config group "
-					+ "'episim', but have no '" + StrainParams.SET_TYPE + "' in config group '" + GROUPNAME + "'. "
-					+ "Check the strain names for typos or add parameter sets for these strains.");
+		PathogenConfigGroup pathogens = moduleOrDefault(config, PathogenConfigGroup.GROUPNAME, PathogenConfigGroup.class, PathogenConfigGroup::new);
+		if (pathogens != null) {
+			Map<Pathogen, List<String>> missing = new TreeMap<>(Comparator.comparing(Pathogen::getName));
+			for (VirusStrain strain : strains.keySet()) {
+				if (!pathogens.hasParams(strain.getPathogen()))
+					missing.computeIfAbsent(strain.getPathogen(), k -> new ArrayList<>()).add(strain.getVirusStrainName());
+			}
+
+			missing.forEach((pathogen, names) -> problems.add("Virus strains " + names + " belong to pathogen '" + pathogen.getName()
+					+ "', which has no '" + PathogenConfigGroup.PathogenParams.SET_TYPE + "' in config group '"
+					+ PathogenConfigGroup.GROUPNAME + "'. Add a parameter set for this pathogen or check its name in '"
+					+ StrainParams.SET_TYPE + "'."));
+		}
+
+		AntibodyConfigGroup antibodies = moduleOrDefault(config, AntibodyConfigGroup.GROUPNAME, AntibodyConfigGroup.class, AntibodyConfigGroup::new);
+		if (antibodies != null) {
+			List<String> missing = new ArrayList<>();
+			for (VirusStrain strain : strains.keySet()) {
+				if (!antibodies.hasParams(strain))
+					missing.add(strain.getVirusStrainName());
+			}
+
+			if (!missing.isEmpty())
+				problems.add("Virus strains " + missing + " have no '" + AntibodyConfigGroup.AntibodyParams.SET_TYPE
+						+ "' in config group '" + AntibodyConfigGroup.GROUPNAME + "'. Add a parameter set with immunityEventKind '"
+						+ AntibodyConfigGroup.AntibodyParams.KIND_STRAIN + "' for each of these strains.");
+		}
+
+		if (!problems.isEmpty())
+			throw new IllegalStateException(String.join("\n", problems));
+	}
+
+	/**
+	 * The typed config group with the given name, a new default instance if the config does not contain this group, or
+	 * {@code null} if the group has not been converted to its typed class yet and can not be checked.
+	 */
+	@Nullable
+	static <T extends ConfigGroup> T moduleOrDefault(Config config, String name, Class<T> type, Supplier<T> defaults) {
+		ConfigGroup module = config.getModules().get(name);
+		if (module == null)
+			return defaults.get();
+
+		return type.isInstance(module) ? type.cast(module) : null;
 	}
 
 	@Override

@@ -41,13 +41,8 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
 	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup,
 	                                                PathogenConfigGroup pathogenConfig) {
-		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig);
+		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, true);
 		this.episimConfig = episimConfig;
-	}
-
-	@Override
-	protected boolean isAgeDependentTransition() {
-		return true;
 	}
 
 	@Override
