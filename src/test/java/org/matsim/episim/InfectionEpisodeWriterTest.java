@@ -146,6 +146,22 @@ public class InfectionEpisodeWriterTest {
 						assertThat(r.get("day_" + stage)).as("Stage %s of %s", stage, r).isNotEmpty();
 				});
 
+		// deaths are counted cumulatively in infections.txt
+		List<Map<String, String>> reports = readTsv(output, "infections.txt");
+		String lastDay = reports.get(reports.size() - 1).get("day");
+		List<Map<String, String>> lastReports = reports.stream().filter(r -> r.get("day").equals(lastDay)).collect(Collectors.toList());
+		// the total row is only present with multiple districts, otherwise the single district is the total
+		long nDeceasedCumulative = lastReports.stream().anyMatch(r -> r.get("district").equals("total")) ?
+				lastReports.stream().filter(r -> r.get("district").equals("total")).mapToLong(r -> Long.parseLong(r.get("nDeceasedCumulative"))).sum() :
+				lastReports.stream().mapToLong(r -> Long.parseLong(r.get("nDeceasedCumulative"))).sum();
+
+		long deceasedPersons = persons.stream().filter(p -> p.getDiseaseStatus() == DiseaseStatus.deceased).count();
+		double sampleSize = injector.getInstance(EpisimConfigGroup.class).getSampleSize();
+
+		assertThat(nDeceasedCumulative)
+				.isEqualTo((long) (deceasedPersons * (1 / sampleSize)))
+				.isEqualTo((long) (deceased.size() * (1 / sampleSize)));
+
 		// 7. consecutive episodes
 		Map<String, List<Integer>> perPerson = episodes.stream().collect(Collectors.groupingBy(r -> r.get("personId"),
 				Collectors.mapping(r -> Integer.parseInt(r.get("episode")), Collectors.toList())));
