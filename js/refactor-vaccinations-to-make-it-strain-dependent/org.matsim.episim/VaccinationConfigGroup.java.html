@@ -1,0 +1,934 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VaccinationConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">VaccinationConfigGroup.java</span></div><h1>VaccinationConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.model.vaccination.VaccinationModel;
+
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Config option specific to vaccination and measures performed in {@link VaccinationModel}.
+ */
+@SuppressWarnings(&quot;checkstyle:MethodName&quot;)
+public class VaccinationConfigGroup extends ReflectiveConfigGroup {
+
+<span class="fc" id="L21">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L22">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+
+	private static final String COMPLIANCE = &quot;compliance&quot;;
+	private static final String CAPACITY = &quot;vaccinationCapacity&quot;;
+	private static final String RECAPACITY = &quot;reVaccinationCapacity&quot;;
+	private static final String SHARE = &quot;vaccinationShare&quot;;
+	private static final String FROM_FILE = &quot;vaccinationFile&quot;;
+	private static final String DAYS_VALID = &quot;daysValid&quot;;
+	private static final String BETA = &quot;beta&quot;;
+	private static final String IGA = &quot;IGA&quot;;
+	private static final String TIME_PERIOD_IGA = &quot;timePeriodIgA&quot;;
+	private static final String VALID_DEADLINE = &quot;validDeadline&quot;;
+
+	static final String GROUPNAME = &quot;episimVaccination&quot;;
+
+	/**
+	 * Amount of vaccinations available per day.
+	 */
+<span class="fc" id="L40">	private final NavigableMap&lt;LocalDate, Integer&gt; vaccinationCapacity = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Amount of re-vaccinations available per day.
+	 */
+<span class="fc" id="L45">	private final NavigableMap&lt;LocalDate, Integer&gt; reVaccinationCapacity = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Share of vaccination for the different {@link VaccinationType}.
+	 */
+<span class="fc" id="L50">	private final NavigableMap&lt;LocalDate, Map&lt;VaccinationType, Double&gt;&gt; vaccinationShare = new TreeMap&lt;&gt;(Map.of(LocalDate.EPOCH, Map.of(VaccinationType.generic, 1d)));</span>
+	/**
+	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
+	 * -1 is used as lookup when no age is present.
+	 */
+<span class="fc" id="L55">	private final NavigableMap&lt;Integer, Double&gt; compliance = new TreeMap&lt;&gt;(Map.of(-1, 1.0));</span>
+	/**
+	 * Holds all specific vaccination params.
+	 */
+<span class="fc" id="L59">	private final Map&lt;VaccinationType, VaccinationParams&gt; params = new HashMap&lt;&gt;();</span>
+	/**
+	 * Load vaccinations from file instead.
+	 */
+	private String fromFile;
+	/**
+	 * Validity of vaccination in days.
+	 */
+<span class="fc" id="L67">	private int daysValid = 180;</span>
+	/**
+	 * Needed for antibody model.
+	 */
+<span class="fc" id="L71">	private double beta = 1.0;</span>
+	/**
+	 * Needed for antibody model.
+	 */
+<span class="fc" id="L75">	private boolean useIgA = false;</span>
+<span class="fc" id="L76">	private double timePeriodIgA = 120.;</span>
+	/**
+	 * Deadline after which days valid is in effect.
+	 */
+<span class="fc" id="L80">	private LocalDate validDeadline = LocalDate.of(2022, 2, 1);</span>
+
+
+	/**
+	 * Default constructor.
+	 */
+	public VaccinationConfigGroup() {
+<span class="fc" id="L87">		super(GROUPNAME);</span>
+
+		// add default params
+<span class="fc" id="L90">		getOrAddParams(VaccinationType.generic);</span>
+<span class="fc" id="L91">	}</span>
+
+	/**
+	 * Creates an empty {@link Parameter} progression for one or multiple strain.
+	 */
+	public static VaccinationConfigGroupParameter forStrain(VirusStrain... strain) {
+<span class="fc" id="L97">		return new VaccinationConfigGroupParameter(strain);</span>
+	}
+
+	/**
+	 * Get config parameter for a specific vaccination type.
+	 */
+	public VaccinationParams getParams(VaccinationType type) {
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">		if (!params.containsKey(type))</span>
+<span class="nc" id="L105">			throw new IllegalStateException(&quot;Vaccination type &quot; + type + &quot; is not configured.&quot;);</span>
+
+<span class="fc" id="L107">		return params.get(type);</span>
+	}
+
+	/**
+	 * Whether config contains certain type.
+	 */
+	public boolean hasParams(VaccinationType type) {
+<span class="fc" id="L114">		return params.containsKey(type);</span>
+	}
+
+	/**
+	 * Get an existing or add new parameter set.
+	 */
+	public VaccinationParams getOrAddParams(VaccinationType type) {
+<span class="fc bfc" id="L121" title="All 2 branches covered.">		if (!params.containsKey(type)) {</span>
+<span class="fc" id="L122">			VaccinationParams p = new VaccinationParams();</span>
+<span class="fc" id="L123">			p.type = type;</span>
+<span class="fc" id="L124">			addParameterSet(p);</span>
+<span class="fc" id="L125">			return p;</span>
+		}
+
+<span class="fc" id="L128">		return params.get(type);</span>
+	}
+
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">		if (VaccinationParams.SET_TYPE.equals(type)) {</span>
+<span class="fc" id="L134">			return new VaccinationParams();</span>
+		}
+<span class="nc" id="L136">		throw new IllegalArgumentException(&quot;Unknown type &quot; + type);</span>
+	}
+
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">		if (VaccinationParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L142">			VaccinationParams p = (VaccinationParams) set;</span>
+<span class="fc" id="L143">			params.put(p.getType(), p);</span>
+<span class="fc" id="L144">			super.addParameterSet(set);</span>
+
+<span class="fc" id="L146">		} else</span>
+<span class="nc" id="L147">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
+<span class="fc" id="L148">	}</span>
+
+	/**
+	 * Get vaccination compliance by age.
+	 */
+	public NavigableMap&lt;Integer, Double&gt; getCompliancePerAge() {
+<span class="fc" id="L154">		return compliance;</span>
+	}
+
+	/**
+	 * Set vaccination compliance by age.
+	 *
+	 * @see #compliance
+	 */
+	public void setCompliancePerAge(Map&lt;Integer, Double&gt; compliance) {
+<span class="fc" id="L163">		this.compliance.clear();</span>
+<span class="fc" id="L164">		this.compliance.putAll(compliance);</span>
+<span class="fc" id="L165">	}</span>
+
+	@StringSetter(COMPLIANCE)
+	void setCompliance(String compliance) {
+<span class="fc" id="L169">		Map&lt;String, String&gt; map = SPLITTER.split(compliance);</span>
+<span class="fc" id="L170">		setCompliancePerAge(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L171">			e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+		)));
+<span class="fc" id="L173">	}</span>
+
+	@StringGetter(COMPLIANCE)
+	String getComplianceString() {
+<span class="fc" id="L177">		return JOINER.join(compliance);</span>
+	}
+
+	/**
+	 * Sets the vaccination capacity for individual days. If a day has no entry the previous will be still valid.
+	 * If empty, default is 0.
+	 *
+	 * @param capacity map of dates to changes in capacity.
+	 */
+	public void setVaccinationCapacity_pers_per_day(Map&lt;LocalDate, Integer&gt; capacity) {
+<span class="fc" id="L187">		vaccinationCapacity.clear();</span>
+<span class="fc" id="L188">		vaccinationCapacity.putAll(capacity);</span>
+<span class="fc" id="L189">	}</span>
+
+	public NavigableMap&lt;LocalDate, Integer&gt; getVaccinationCapacity() {
+<span class="fc" id="L192">		return vaccinationCapacity;</span>
+	}
+
+	@StringSetter(CAPACITY)
+	void setVaccinationCapacity(String capacity) {
+
+<span class="pc bpc" id="L198" title="1 of 2 branches missed.">		if (capacity.isBlank())</span>
+<span class="fc" id="L199">			return;</span>
+
+<span class="nc" id="L201">		Map&lt;String, String&gt; map = SPLITTER.split(capacity);</span>
+<span class="nc" id="L202">		setVaccinationCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L203">			e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+		)));
+<span class="nc" id="L205">	}</span>
+
+	@StringGetter(CAPACITY)
+	String getVaccinationCapacityString() {
+<span class="fc" id="L209">		return JOINER.join(vaccinationCapacity);</span>
+	}
+
+	@StringGetter(FROM_FILE)
+	public String getFromFile() {
+<span class="fc" id="L214">		return fromFile;</span>
+	}
+
+	@StringSetter(FROM_FILE)
+	public void setFromFile(String fromFile) {
+<span class="fc" id="L219">		this.fromFile = fromFile;</span>
+<span class="fc" id="L220">	}</span>
+
+	@StringGetter(DAYS_VALID)
+	int getDaysValid() {
+<span class="fc" id="L224">		return daysValid;</span>
+	}
+
+	@StringSetter(DAYS_VALID)
+	public void setDaysValid(int daysValid) {
+<span class="fc" id="L229">		this.daysValid = daysValid;</span>
+<span class="fc" id="L230">	}</span>
+
+	@StringGetter(BETA)
+	public double getBeta() {
+<span class="fc" id="L234">		return beta;</span>
+	}
+
+	@StringSetter(BETA)
+	public void setBeta(double beta) {
+<span class="fc" id="L239">		this.beta = beta;</span>
+<span class="fc" id="L240">	}</span>
+
+	@StringGetter(IGA)
+	public boolean getUseIgA() {
+<span class="fc" id="L244">		return useIgA;</span>
+	}
+
+	@StringSetter(IGA)
+	public void setUseIgA(boolean useIgA) {
+<span class="fc" id="L249">		this.useIgA = useIgA;</span>
+<span class="fc" id="L250">	}</span>
+
+	@StringGetter(TIME_PERIOD_IGA)
+	public double getTimePeriodIgA() {
+<span class="fc" id="L254">		return this.timePeriodIgA;</span>
+	}
+
+	@StringSetter(TIME_PERIOD_IGA)
+	public void setTimePeriodIgA(double timePeriodIgA) {
+<span class="fc" id="L259">		this.timePeriodIgA = timePeriodIgA;</span>
+<span class="fc" id="L260">	}</span>
+
+	@StringGetter(VALID_DEADLINE)
+	public LocalDate getValidDeadline() {
+<span class="fc" id="L264">		return validDeadline;</span>
+	}
+
+	@StringSetter(VALID_DEADLINE)
+	public void setValidDeadline(String validDeadline) {
+<span class="fc" id="L269">		this.validDeadline = LocalDate.parse(validDeadline);</span>
+<span class="fc" id="L270">	}</span>
+
+	public void setValidDeadline(LocalDate validDeadline) {
+<span class="fc" id="L273">		this.validDeadline = validDeadline;</span>
+<span class="fc" id="L274">	}</span>
+
+	/**
+	 * Check if person is recently recovered or vaccinated.
+	 */
+	public boolean hasGreenPass(EpisimPerson person, int day, LocalDate date) {
+<span class="fc" id="L280">		return hasGreenPass(person, day, date, daysValid);</span>
+	}
+
+	/**
+	 * Check 2G plus status, but use given {@code daysValid}.
+	 */
+	public boolean hasGreenPass(EpisimPerson person, int day, LocalDate date, int daysValid) {
+<span class="pc bpc" id="L287" title="2 of 8 branches missed.">		return hasRecoveredStatus(person, day, date, daysValid &gt; -1 ? daysValid : this.daysValid) || hasValidVaccination(person, day, date, daysValid &gt; -1 ? daysValid : this.daysValid);</span>
+	}
+
+	/**
+	 * Special type of green pass with separate setting for boostered or equivalent status.
+	 */
+	public boolean hasGreenPassForBooster(EpisimPerson p, int day, LocalDate date, int greenPassValidDays, int greenPassBoosterValidDays) {
+<span class="nc" id="L294">		int valid = greenPassValidDays;</span>
+
+		// infected and vaccinated count as booster
+<span class="nc bnc" id="L297" title="All 6 branches missed.">		if (p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || (p.getNumInfections() &gt;= 1 &amp;&amp; p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes))</span>
+<span class="nc" id="L298">			valid = greenPassBoosterValidDays;</span>
+
+<span class="nc" id="L300">		return hasGreenPass(p, day, date, valid);</span>
+	}
+
+	/**
+	 * Check whether person has the recovered status.
+	 */
+	private boolean hasRecoveredStatus(EpisimPerson person, int day, LocalDate date, int daysValid) {
+		// Initial the threshold was 180 days, this setting is adjusted to the threshold after the deadline
+<span class="pc bpc" id="L308" title="1 of 2 branches missed.">		return date.isBefore(validDeadline) ? person.isRecentlyRecovered(day, 180) : person.isRecentlyRecovered(day, daysValid);</span>
+	}
+
+	/**
+	 * Check if person has a valid vaccination card.
+	 *
+	 * @param person person to check
+	 * @param day    current simulation day
+	 * @param date   simulation date
+	 */
+	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date) {
+<span class="fc" id="L319">		return hasValidVaccination(person, day, date, getDaysValid());</span>
+	}
+
+	/**
+	 * Check if person has a valid vaccination card for the given validity period.
+	 *
+	 * @param person    person to check
+	 * @param day       current simulation day
+	 * @param date      simulation date
+	 * @param daysValid number of days the vaccination remains valid
+	 */
+	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
+<span class="fc bfc" id="L331" title="All 2 branches covered.">		if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="fc" id="L332">			return false;</span>
+
+<span class="fc bfc" id="L334" title="All 2 branches covered.">		boolean fullyVaccinated = person.daysSince(EpisimPerson.VaccinationStatus.yes, day) &gt; getParams(person.getVaccinationType()).getDaysBeforeFullEffect();</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">		boolean booster = person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes;</span>
+
+<span class="fc bfc" id="L337" title="All 2 branches covered.">		if (date.isBefore(validDeadline))</span>
+<span class="fc bfc" id="L338" title="All 4 branches covered.">			return fullyVaccinated || booster;</span>
+
+<span class="pc bpc" id="L340" title="4 of 6 branches missed.">		return (fullyVaccinated || booster) &amp;&amp; person.daysSince(EpisimPerson.VaccinationStatus.yes, day) &lt;= daysValid;</span>
+
+	}
+
+	/**
+	 * Computes the minimum factor over all vaccinations.
+	 *
+	 * @param person person
+	 * @param day    current iteration
+	 * @param f      function of VaccinationParams to retrieve the desired factor
+	 * @return minimum factor or 1 if not vaccinated
+	 */
+	public double getMinFactor(EpisimPerson person, int day, VaccinationFactorFunction f) {
+
+<span class="fc bfc" id="L354" title="All 2 branches covered.">		if (person.getNumVaccinations() == 0)</span>
+<span class="fc" id="L355">			return 1;</span>
+
+<span class="fc" id="L357">		double factor = 1d;</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">		for (int i = 0; i &lt; person.getNumVaccinations(); i++) {</span>
+
+<span class="fc" id="L360">			VaccinationType type = person.getVaccinationType(i);</span>
+
+<span class="fc" id="L362">			factor = Math.min(factor, f.getFactor(getParams(type), person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)));</span>
+		}
+
+<span class="fc" id="L365">		return factor;</span>
+	}
+
+	/**
+	 * Set the daily revaccination capacity.
+	 *
+	 * @see #setVaccinationCapacity_pers_per_day(Map)
+	 */
+	public void setReVaccinationCapacity_pers_per_day(Map&lt;LocalDate, Integer&gt; capacity) {
+<span class="nc" id="L374">		reVaccinationCapacity.clear();</span>
+<span class="nc" id="L375">		reVaccinationCapacity.putAll(capacity);</span>
+<span class="nc" id="L376">	}</span>
+
+	public NavigableMap&lt;LocalDate, Integer&gt; getReVaccinationCapacity() {
+<span class="fc" id="L379">		return reVaccinationCapacity;</span>
+	}
+
+	@StringSetter(RECAPACITY)
+	void setReVaccinationCapacity(String capacity) {
+
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">		if (capacity.isBlank())</span>
+<span class="fc" id="L386">			return;</span>
+
+<span class="nc" id="L388">		Map&lt;String, String&gt; map = SPLITTER.split(capacity);</span>
+<span class="nc" id="L389">		setReVaccinationCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L390">			e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+		)));
+<span class="nc" id="L392">	}</span>
+
+	@StringGetter(RECAPACITY)
+	String getReVaccinationCapacityString() {
+<span class="fc" id="L396">		return JOINER.join(reVaccinationCapacity);</span>
+	}
+
+	/**
+	 * Return vaccination share per date.
+	 */
+	public NavigableMap&lt;LocalDate, Map&lt;VaccinationType, Double&gt;&gt; getVaccinationShare() {
+<span class="fc" id="L403">		return vaccinationShare;</span>
+	}
+
+	/**
+	 * Set the vaccination share per date.
+	 */
+	public void setVaccinationShare(Map&lt;LocalDate, Map&lt;VaccinationType, Double&gt;&gt; share) {
+<span class="fc bfc" id="L410" title="All 2 branches covered.">		for (Map&lt;VaccinationType, Double&gt; v : share.values()) {</span>
+<span class="fc" id="L411">			double total = v.values().stream().sorted().mapToDouble(Double::doubleValue).sum();</span>
+<span class="pc bpc" id="L412" title="1 of 2 branches missed.">			if (total &gt; 1) throw new IllegalArgumentException(&quot;Sum of shares must be &lt; 1&quot;);</span>
+<span class="fc" id="L413">		}</span>
+
+<span class="fc" id="L415">		this.vaccinationShare.clear();</span>
+<span class="fc" id="L416">		this.vaccinationShare.putAll(share);</span>
+<span class="fc" id="L417">	}</span>
+
+	@StringSetter(SHARE)
+	void setVaccinationShare(String value) {
+
+<span class="fc" id="L422">		Map&lt;String, String&gt; share = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).split(value);</span>
+<span class="fc" id="L423">		Map&lt;LocalDate, Map&lt;VaccinationType, Double&gt;&gt; collect = share.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L424">			e -&gt; LocalDate.parse(e.getKey()),</span>
+<span class="fc" id="L425">			e -&gt; SPLITTER.split(e.getValue()).entrySet().stream().collect(Collectors.toMap(k -&gt; VaccinationType.of(k.getKey()), k -&gt; Double.parseDouble(k.getValue())))</span>
+		));
+
+<span class="fc" id="L428">		setVaccinationShare(collect);</span>
+<span class="fc" id="L429">	}</span>
+
+	/**
+	 * Return the cumulative probability for all vaccination types, based on {@link #getVaccinationShare()}.
+	 *
+	 * @param date date to lookup
+	 */
+	public Map&lt;VaccinationType, Double&gt; getVaccinationTypeProb(LocalDate date) {
+
+		// LinkedHashMap: chooseVaccinationType() iterates this and returns the first entry with p &lt; value,
+		// so the entries must stay in the ascending (declaration) order they are inserted in below.
+<span class="fc" id="L440">		Map&lt;VaccinationType, Double&gt; prob = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L442">		Map&lt;VaccinationType, Double&gt; share = EpisimUtils.findValidEntry(vaccinationShare, null, date);</span>
+
+<span class="pc bpc" id="L444" title="1 of 2 branches missed.">		if (share == null)</span>
+<span class="nc" id="L445">			share = Map.of(VaccinationType.generic, 1d);</span>
+
+<span class="fc" id="L447">		double total = share.values().stream().sorted().mapToDouble(Double::doubleValue).sum();</span>
+
+<span class="fc" id="L449">		double sum = 1 - total;</span>
+<span class="fc bfc" id="L450" title="All 2 branches covered.">		for (VaccinationType t : VaccinationType.getAllStandardOptions()) {</span>
+<span class="fc" id="L451">			sum += share.getOrDefault(t, 0d);</span>
+<span class="fc" id="L452">			prob.put(t, sum);</span>
+<span class="fc" id="L453">		}</span>
+
+		// custom vaccination types follow the standard ones in a deterministic order, so standard results are unchanged
+<span class="fc" id="L456">		List&lt;VaccinationType&gt; custom = share.keySet().stream()</span>
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">			.filter(t -&gt; !prob.containsKey(t))</span>
+<span class="fc" id="L458">			.sorted(Comparator.comparing(VaccinationType::getId))</span>
+<span class="fc" id="L459">			.collect(Collectors.toList());</span>
+
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">		for (VaccinationType t : custom) {</span>
+<span class="nc" id="L462">			sum += share.get(t);</span>
+<span class="nc" id="L463">			prob.put(t, sum);</span>
+<span class="nc" id="L464">		}</span>
+
+<span class="fc" id="L466">		return prob;</span>
+	}
+
+	@StringGetter(SHARE)
+	String getVaccinationShareString() {
+<span class="fc" id="L471">		Map&lt;LocalDate, String&gt; collect =</span>
+<span class="fc" id="L472">			vaccinationShare.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -&gt; JOINER.join(e.getValue())));</span>
+
+<span class="fc" id="L474">		return Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;).join(collect);</span>
+	}
+
+	/**
+	 * Holds strain specific options.
+	 */
+	public static final class VaccinationParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = &quot;vaccinationParams&quot;;
+
+		private static final String TYPE = &quot;type&quot;;
+		private static final String SOURCE_OF_NATURAL_VACCINATION = &quot;sourceOfNaturalVaccination&quot;;
+		private static final String DAYS_BEFORE_FULL_EFFECT = &quot;daysBeforeFullEffect&quot;;
+		private static final String EFFECTIVENESS = &quot;effectiveness&quot;;
+		private static final String INFECTIVITY = &quot;infectivity&quot;;
+		private static final String BOOST_EFFECTIVENESS = &quot;boostEffectiveness&quot;;
+		private static final String BOOST_INFECTIVITY = &quot;boostInfectivity&quot;;
+		private static final String BOOST_WAIT_PERIOD = &quot;boostWaitPeriod&quot;;
+		private static final String FACTOR_SHOWINGS_SYMPTOMS = &quot;factorShowingSymptoms&quot;;
+		private static final String FACTOR_SERIOUSLY_SICK = &quot;factorSeriouslySick&quot;;
+		private static final String FACTOR_CRITICAL = &quot;factorCritical&quot;;
+
+		/**
+		 * Type of this parameter set. Resolved lazily from {@link #typeName} and
+		 * {@link #sourceOfNaturalVaccinationName}, because the two are read in unspecified order.
+		 */
+		private VaccinationType type;
+		private String typeName;
+		private String sourceOfNaturalVaccinationName;
+
+		/**
+		 * Number of days until vaccination goes into full effect.
+		 */
+<span class="fc" id="L507">		private int daysBeforeFullEffect = 28;</span>
+
+		/**
+		 * Wait period before boost can be applied.
+		 */
+<span class="fc" id="L512">		private int boostWaitPeriod = 5 * 30;</span>
+
+		/**
+		 * Effectiveness, i.e. how much susceptibility is reduced.
+		 */
+<span class="fc" id="L517">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; effectiveness = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L518">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L519">				.atDay(4, 0)</span>
+<span class="fc" id="L520">				.atDay(5, 0.45)</span>
+<span class="fc" id="L521">				.atFullEffect(0.9)</span>
+		));
+
+		/**
+		 * Infectivity of a vaccinated person towards others.
+		 */
+<span class="fc" id="L527">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; infectivity = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L528">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L529">				.atDay(0, 1)</span>
+<span class="fc" id="L530">				.atFullEffect(1.0)</span>
+		));
+
+		/**
+		 * Effectiveness after booster shot.
+		 */
+<span class="fc" id="L536">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; boostEffectiveness = new HashMap&lt;&gt;();</span>
+
+		/**
+		 * Infectivity of a vaccinated person towards others.
+		 */
+<span class="fc" id="L541">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; boostInfectivity = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L542">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L543">				.atDay(0, 1)</span>
+<span class="fc" id="L544">				.atFullEffect(1.0)</span>
+		));
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+<span class="fc" id="L550">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorShowingSymptoms = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L551">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L552">				.atDay(5, 0.5)</span>
+		));
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+<span class="fc" id="L558">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorSeriouslySick = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L559">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L560">				.atDay(5, 0.5)</span>
+		));
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+<span class="fc" id="L566">		private Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; factorCritical = new HashMap&lt;&gt;(Map.of(VirusStrain.SARS_CoV_2,</span>
+<span class="fc" id="L567">			forStrain(VirusStrain.SARS_CoV_2)</span>
+<span class="fc" id="L568">				.atDay(0, 1)</span>
+		));
+
+		VaccinationParams() {
+<span class="fc" id="L572">			super(SET_TYPE);</span>
+<span class="fc" id="L573">		}</span>
+
+		@StringGetter(TYPE)
+		String getTypeName() {
+<span class="pc bpc" id="L577" title="1 of 2 branches missed.">			return type != null ? type.getName() : typeName;</span>
+		}
+
+		@StringSetter(TYPE)
+		void setType(String type) {
+<span class="fc" id="L582">			this.typeName = type;</span>
+<span class="fc" id="L583">			this.type = null;</span>
+<span class="fc" id="L584">		}</span>
+
+		/**
+		 * Vaccination type this parameter set applies to. Once the type is known, its own source of natural
+		 * vaccination is used, which may have been declared after this parameter set was created
+		 * (see {@link VaccinationType#of(String, VirusStrain)}).
+		 */
+		public VaccinationType getType() {
+<span class="pc bpc" id="L592" title="1 of 4 branches missed.">			if (type == null &amp;&amp; typeName != null) {</span>
+<span class="fc bfc" id="L593" title="All 2 branches covered.">				type = sourceOfNaturalVaccinationName == null</span>
+<span class="fc" id="L594">					? VaccinationType.of(typeName)</span>
+<span class="fc" id="L595">					: VaccinationType.of(typeName, VirusStrain.of(sourceOfNaturalVaccinationName));</span>
+			}
+<span class="fc" id="L597">			return type;</span>
+		}
+
+		public void setType(VaccinationType type) {
+<span class="nc" id="L601">			this.type = type;</span>
+<span class="nc bnc" id="L602" title="All 2 branches missed.">			this.typeName = type == null ? null : type.getName();</span>
+<span class="nc bnc" id="L603" title="All 4 branches missed.">			this.sourceOfNaturalVaccinationName = type == null || type.getSourceOfNaturalVaccination() == null</span>
+<span class="nc" id="L604">				? null : type.getSourceOfNaturalVaccination().getVirusStrainName();</span>
+<span class="nc" id="L605">		}</span>
+
+		/**
+		 * Name of the strain whose infection induces this immunity, or {@code null} for a real vaccination.
+		 */
+		@StringGetter(SOURCE_OF_NATURAL_VACCINATION)
+		String getSourceOfNaturalVaccinationName() {
+<span class="fc" id="L612">			VaccinationType resolved = getType();</span>
+<span class="pc bpc" id="L613" title="1 of 2 branches missed.">			VirusStrain source = resolved == null ? null : resolved.getSourceOfNaturalVaccination();</span>
+<span class="fc bfc" id="L614" title="All 2 branches covered.">			return source == null ? sourceOfNaturalVaccinationName : source.getVirusStrainName();</span>
+		}
+
+		/**
+		 * A real vaccination has no source. MATSim maps an absent value ({@code value=&quot;null&quot;}) back to {@code null}
+		 * itself, but an empty value arrives as an empty string and must not become a strain with an empty name.
+		 */
+		@StringSetter(SOURCE_OF_NATURAL_VACCINATION)
+		void setSourceOfNaturalVaccinationName(String strainName) {
+<span class="fc bfc" id="L623" title="All 4 branches covered.">			this.sourceOfNaturalVaccinationName = strainName == null || strainName.isEmpty() ? null : strainName;</span>
+<span class="fc" id="L624">			this.type = null;</span>
+<span class="fc" id="L625">		}</span>
+
+		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
+		public int getDaysBeforeFullEffect() {
+<span class="fc" id="L629">			return daysBeforeFullEffect;</span>
+		}
+
+		@StringSetter(DAYS_BEFORE_FULL_EFFECT)
+		public VaccinationParams setDaysBeforeFullEffect(int daysBeforeFullEffect) {
+<span class="fc" id="L634">			this.daysBeforeFullEffect = daysBeforeFullEffect;</span>
+<span class="fc" id="L635">			return this;</span>
+		}
+
+		@StringGetter(BOOST_WAIT_PERIOD)
+		public int getBoostWaitPeriod() {
+<span class="fc" id="L640">			return boostWaitPeriod;</span>
+		}
+
+		@StringSetter(BOOST_WAIT_PERIOD)
+		public VaccinationParams setBoostWaitPeriod(int boostWaitPeriod) {
+<span class="fc" id="L645">			this.boostWaitPeriod = boostWaitPeriod;</span>
+<span class="fc" id="L646">			return this;</span>
+		}
+
+		private VaccinationParams setParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map, VaccinationConfigGroupParameter[] params) {
+<span class="fc bfc" id="L650" title="All 2 branches covered.">			for (VaccinationConfigGroupParameter p : params) {</span>
+<span class="fc bfc" id="L651" title="All 2 branches covered.">				for (VirusStrain s : p.strain) {</span>
+<span class="fc" id="L652">					p.setDaysBeforeFullEffect(getDaysBeforeFullEffect());</span>
+<span class="fc" id="L653">					map.put(s, p);</span>
+				}
+			}
+<span class="fc" id="L656">			return this;</span>
+		}
+
+		/**
+		 * Load serialized parameters.
+		 */
+		private void setParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map, String value) {
+<span class="fc" id="L663">			map.clear();</span>
+<span class="fc bfc" id="L664" title="All 2 branches covered.">			if (value.isBlank()) return;</span>
+
+<span class="fc" id="L666">			map.clear();</span>
+<span class="fc bfc" id="L667" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : SPLITTER.split(value).entrySet()) {</span>
+<span class="fc" id="L668">				map.put(VirusStrain.of(e.getKey()), VaccinationConfigGroupParameter.parse(e.getValue()));</span>
+<span class="fc" id="L669">			}</span>
+<span class="fc" id="L670">		}</span>
+
+		/**
+		 * Interpolate parameter for day after vaccination.
+		 *
+		 * @param map    map for lookup
+		 * @param strain virus strain
+		 * @param day    days since vaccination
+		 * @return interpolated factor
+		 */
+		private double getParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map, VirusStrain strain, int day) {
+<span class="fc" id="L681">			VaccinationConfigGroupParameter p = map.getOrDefault(strain, map.get(VirusStrain.SARS_CoV_2));</span>
+<span class="fc" id="L682">			return p.get(day);</span>
+		}
+
+		private String getParamsInternal(Map&lt;VirusStrain, VaccinationConfigGroupParameter&gt; map) {
+
+<span class="fc" id="L687">			Map&lt;VirusStrain, String&gt; result = map.entrySet().stream().collect(Collectors.toMap(</span>
+				Map.Entry::getKey,
+<span class="fc" id="L689">				e -&gt; e.getValue().toString()</span>
+			));
+
+<span class="fc" id="L692">			return JOINER.join(result);</span>
+		}
+
+		public VaccinationParams setBoostEffectiveness(VaccinationConfigGroupParameter... parameters) {
+<span class="fc" id="L696">			return setParamsInternal(boostEffectiveness, parameters);</span>
+		}
+
+		@StringSetter(BOOST_EFFECTIVENESS)
+		void setBoostEffectiveness(String value) {
+<span class="fc" id="L701">			setParamsInternal(boostEffectiveness, value);</span>
+<span class="fc" id="L702">		}</span>
+
+		public double getEffectiveness(VirusStrain strain, int day) {
+<span class="fc" id="L705">			return getParamsInternal(effectiveness, strain, day);</span>
+		}
+
+		/**
+		 * Return effectiveness against base variant.
+		 *
+		 * @deprecated use {@link #getEffectiveness(VirusStrain, int)}
+		 */
+		@Deprecated
+		public double getEffectiveness() {
+<span class="nc" id="L715">			return getEffectiveness(VirusStrain.SARS_CoV_2, getDaysBeforeFullEffect());</span>
+		}
+
+		public double getInfectivity(VirusStrain strain, int day) {
+<span class="fc" id="L719">			return getParamsInternal(infectivity, strain, day);</span>
+		}
+
+		@StringGetter(INFECTIVITY)
+		public String getInfectivity() {
+<span class="fc" id="L724">			return getParamsInternal(infectivity);</span>
+		}
+
+		public double getBoostInfectivity(VirusStrain strain, int day) {
+<span class="fc" id="L728">			return getParamsInternal(boostInfectivity, strain, day);</span>
+		}
+
+		@StringGetter(BOOST_INFECTIVITY)
+		public String getBoostInfectivity() {
+<span class="fc" id="L733">			return getParamsInternal(boostInfectivity);</span>
+		}
+
+		public double getBoostEffectiveness(VirusStrain strain, int day) {
+<span class="pc bpc" id="L737" title="1 of 2 branches missed.">			return getParamsInternal(boostEffectiveness.containsKey(strain) ? boostEffectiveness : effectiveness, strain, day);</span>
+		}
+
+		public double getFactorShowingSymptoms(VirusStrain strain, int day) {
+<span class="fc" id="L741">			return getParamsInternal(factorShowingSymptoms, strain, day);</span>
+		}
+
+		@StringGetter(FACTOR_SHOWINGS_SYMPTOMS)
+		String getFactorShowingSymptoms() {
+<span class="fc" id="L746">			return getParamsInternal(factorShowingSymptoms);</span>
+		}
+
+		public double getFactorSeriouslySick(VirusStrain strain, int day) {
+<span class="fc" id="L750">			return getParamsInternal(factorSeriouslySick, strain, day);</span>
+		}
+
+		@StringGetter(FACTOR_SERIOUSLY_SICK)
+		String getFactorSeriouslySick() {
+<span class="fc" id="L755">			return getParamsInternal(factorSeriouslySick);</span>
+		}
+
+		public double getFactorCritical(VirusStrain strain, int day) {
+<span class="nc" id="L759">			return getParamsInternal(factorCritical, strain, day);</span>
+		}
+
+		@StringGetter(FACTOR_CRITICAL)
+		public String getFactorCritical() {
+<span class="fc" id="L764">			return getParamsInternal(factorCritical);</span>
+		}
+
+		@StringGetter(EFFECTIVENESS)
+		String getEffectivenessString() {
+<span class="fc" id="L769">			return getParamsInternal(effectiveness);</span>
+		}
+
+		@StringGetter(BOOST_EFFECTIVENESS)
+		String getBoostEffectivenessString() {
+<span class="fc" id="L774">			return getParamsInternal(boostEffectiveness);</span>
+		}
+
+		public VaccinationParams setFactorShowingSymptoms(VaccinationConfigGroupParameter... parameters) {
+<span class="fc" id="L778">			return setParamsInternal(factorShowingSymptoms, parameters);</span>
+		}
+
+		@StringSetter(FACTOR_SHOWINGS_SYMPTOMS)
+		void setFactorShowingSymptoms(String value) {
+<span class="fc" id="L783">			setParamsInternal(factorShowingSymptoms, value);</span>
+<span class="fc" id="L784">		}</span>
+
+		@Deprecated
+		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
+<span class="nc" id="L788">			throw new UnsupportedOperationException(&quot;Use .setFactorShowingSymptoms(VaccinationConfigGroupParameter ...)&quot;);</span>
+		}
+
+		public VaccinationParams setFactorSeriouslySick(VaccinationConfigGroupParameter... parameters) {
+<span class="fc" id="L792">			return setParamsInternal(factorSeriouslySick, parameters);</span>
+		}
+
+		@StringSetter(FACTOR_SERIOUSLY_SICK)
+		void setFactorSeriouslySick(String value) {
+<span class="fc" id="L797">			setParamsInternal(factorSeriouslySick, value);</span>
+<span class="fc" id="L798">		}</span>
+
+		@Deprecated
+		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
+<span class="nc" id="L802">			throw new UnsupportedOperationException(&quot;Use .setFactorSeriouslySick(VaccinationConfigGroupParameter ...)&quot;);</span>
+		}
+
+		public VaccinationParams setFactorCritical(VaccinationConfigGroupParameter... parameters) {
+<span class="nc" id="L806">			return setParamsInternal(factorCritical, parameters);</span>
+		}
+
+		@StringSetter(FACTOR_CRITICAL)
+		void setFactorCritical(String value) {
+<span class="fc" id="L811">			setParamsInternal(factorCritical, value);</span>
+<span class="fc" id="L812">		}</span>
+
+		public VaccinationParams setInfectivity(VaccinationConfigGroupParameter... parameters) {
+<span class="fc" id="L815">			return setParamsInternal(infectivity, parameters);</span>
+		}
+
+		@StringSetter(INFECTIVITY)
+		void setInfectivity(String value) {
+<span class="fc" id="L820">			setParamsInternal(infectivity, value);</span>
+<span class="fc" id="L821">		}</span>
+
+		public VaccinationParams setBoostInfectivity(VaccinationConfigGroupParameter... parameters) {
+<span class="fc" id="L824">			return setParamsInternal(boostInfectivity, parameters);</span>
+		}
+
+		@StringSetter(BOOST_INFECTIVITY)
+		void setBoostInfectivity(String value) {
+<span class="fc" id="L829">			setParamsInternal(boostInfectivity, value);</span>
+<span class="fc" id="L830">		}</span>
+
+		public VaccinationParams setEffectiveness(VaccinationConfigGroupParameter... parameters) {
+<span class="fc" id="L833">			return setParamsInternal(effectiveness, parameters);</span>
+		}
+
+		@StringSetter(EFFECTIVENESS)
+		void setEffectiveness(String value) {
+<span class="fc" id="L838">			setParamsInternal(effectiveness, value);</span>
+<span class="fc" id="L839">		}</span>
+
+		/**
+		 * Return effectiveness against base variant.
+		 *
+		 * @deprecated use {@link #setEffectiveness(VaccinationConfigGroupParameter...)}
+		 */
+		@Deprecated
+		public void setEffectiveness(double effectiveness) {
+<span class="nc" id="L848">			throw new UnsupportedOperationException(&quot;Use .setEffectiveness(VaccinationConfigGroupParameter ...)&quot;);</span>
+		}
+
+	}
+
+	/**
+	 * Holds the temporal progression of certain value for each virus strains.
+	 */
+	public static final class VaccinationConfigGroupParameter {
+
+<span class="fc" id="L858">		private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;);</span>
+<span class="fc" id="L859">		private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;|&quot;).withKeyValueSeparator(&quot;&gt;&quot;);</span>
+
+		private final VirusStrain[] strain;
+<span class="fc" id="L862">		private final NavigableMap&lt;Integer, Double&gt; map = new TreeMap&lt;&gt;();</span>
+
+<span class="fc" id="L864">		private VaccinationConfigGroupParameter(VirusStrain[] strain) {</span>
+<span class="fc" id="L865">			this.strain = strain;</span>
+<span class="fc" id="L866">		}</span>
+
+<span class="fc" id="L868">		private VaccinationConfigGroupParameter(Map&lt;String, String&gt; map) {</span>
+<span class="fc" id="L869">			this.strain = new VirusStrain[0];</span>
+<span class="fc bfc" id="L870" title="All 2 branches covered.">			for (Map.Entry&lt;String, String&gt; e : map.entrySet()) {</span>
+<span class="fc" id="L871">				this.map.put(Integer.parseInt(e.getKey()), Double.parseDouble(e.getValue()));</span>
+<span class="fc" id="L872">			}</span>
+
+<span class="fc" id="L874">		}</span>
+
+		private static VaccinationConfigGroupParameter parse(String value) {
+<span class="fc" id="L877">			Map&lt;String, String&gt; m = SPLITTER.split(value);</span>
+<span class="fc" id="L878">			return new VaccinationConfigGroupParameter(m);</span>
+		}
+
+		/**
+		 * Sets the value for a parameter at a specific day.
+		 */
+		public VaccinationConfigGroupParameter atDay(int day, double value) {
+<span class="fc" id="L885">			map.put(day, value);</span>
+<span class="fc" id="L886">			return this;</span>
+		}
+
+		/**
+		 * Sets the value for parameter for the day of full effect.
+		 * {@link VaccinationParams#setDaysBeforeFullEffect(int)} has to be set before calling this method!
+		 */
+		public VaccinationConfigGroupParameter atFullEffect(double value) {
+<span class="fc" id="L894">			map.put(Integer.MAX_VALUE, value);</span>
+<span class="fc" id="L895">			return this;</span>
+		}
+
+		/**
+		 * Interpolate for given day.
+		 */
+		private double get(int day) {
+
+<span class="fc" id="L903">			Map.Entry&lt;Integer, Double&gt; floor = map.floorEntry(day);</span>
+
+<span class="fc bfc" id="L905" title="All 2 branches covered.">			if (floor == null)</span>
+<span class="fc" id="L906">				return map.firstEntry().getValue();</span>
+
+<span class="fc bfc" id="L908" title="All 2 branches covered.">			if (floor.getKey().equals(day))</span>
+<span class="fc" id="L909">				return floor.getValue();</span>
+
+<span class="fc" id="L911">			Map.Entry&lt;Integer, Double&gt; ceil = map.ceilingEntry(day);</span>
+
+			// there is no higher entry to interpolate
+<span class="fc bfc" id="L914" title="All 2 branches covered.">			if (ceil == null)</span>
+<span class="fc" id="L915">				return floor.getValue();</span>
+
+<span class="fc" id="L917">			double between = ceil.getKey() - floor.getKey();</span>
+<span class="fc" id="L918">			double diff = day - floor.getKey();</span>
+<span class="fc" id="L919">			return floor.getValue() + diff * (ceil.getValue() - floor.getValue()) / between;</span>
+		}
+
+		private void setDaysBeforeFullEffect(int daysBeforeFullEffect) {
+<span class="fc bfc" id="L923" title="All 2 branches covered.">			if (map.containsKey(Integer.MAX_VALUE))</span>
+<span class="fc" id="L924">				map.put(daysBeforeFullEffect, map.remove(Integer.MAX_VALUE));</span>
+<span class="fc" id="L925">		}</span>
+
+		@Override
+		public String toString() {
+<span class="fc" id="L929">			return JOINER.join(map);</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

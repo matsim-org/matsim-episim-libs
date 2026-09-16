@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CreateRestrictionsFromCSV.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.input</a> &gt; <span class="el_source">CreateRestrictionsFromCSV.java</span></div><h1>CreateRestrictionsFromCSV.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.input;
+
+import com.google.common.collect.Iterables;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
+import org.matsim.core.utils.io.IOUtils;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.policy.FixedPolicy;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+/**
+ * Creates policy restrictions from CSV input data.
+ */
+public final class CreateRestrictionsFromCSV implements RestrictionInput {
+	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
+	// create method without damage.
+
+	private final EpisimConfigGroup episimConfig;
+	private String input;
+<span class="fc" id="L31">	private double alpha = 1.;</span>
+<span class="fc" id="L32">	private double scale = 1.;</span>
+<span class="fc" id="L33">	private boolean leisureAsNightly = false;</span>
+<span class="fc" id="L34">	private double nightlyScale = 1.;</span>
+<span class="fc" id="L35">	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;</span>
+	private Map&lt;String, String&gt; subdistrictInput;
+
+	/**
+	 * Creates a restriction input for the supplied Episim configuration.
+	 */
+<span class="fc" id="L41">	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {</span>
+<span class="fc" id="L42">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L43">	}</span>
+
+	/**
+	 * Sets the input path for the CSV file, can be a URL or a local file.
+	 */
+	public CreateRestrictionsFromCSV setInput(String input) {
+<span class="fc" id="L49">		this.input = input;</span>
+<span class="fc" id="L50">		return this;</span>
+	}
+
+	@Override
+	public CreateRestrictionsFromCSV setInput(Path input) {
+		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
+<span class="fc" id="L56">		this.input = input.toString();</span>
+<span class="fc" id="L57">		return this;</span>
+	}
+
+	/**
+	 * Sets the paths for each subdistrict CSV.
+	 */
+	public CreateRestrictionsFromCSV setDistrictInputs(Map&lt;String, String&gt; subdistrictInput) {
+<span class="nc" id="L64">		this.subdistrictInput = subdistrictInput;</span>
+<span class="nc" id="L65">		return this;</span>
+	}
+
+	@Override
+	public CreateRestrictionsFromCSV setAlpha(double alpha) {
+<span class="nc" id="L70">		this.alpha = alpha;</span>
+<span class="nc" id="L71">		return this;</span>
+	}
+
+	public double getAlpha() {
+<span class="nc" id="L75">		return alpha;</span>
+	}
+
+	public CreateRestrictionsFromCSV setScale(double scale) {
+<span class="fc" id="L79">		this.scale = scale;</span>
+<span class="fc" id="L80">		return this;</span>
+	}
+
+	public CreateRestrictionsFromCSV setLeisureAsNightly(boolean leisureAsNightly) {
+<span class="fc" id="L84">		this.leisureAsNightly = leisureAsNightly;</span>
+<span class="fc" id="L85">		return this;</span>
+	}
+
+	public CreateRestrictionsFromCSV setNightlyScale(double nightlyScale) {
+<span class="fc" id="L89">		this.nightlyScale = nightlyScale;</span>
+<span class="fc" id="L90">		return this;</span>
+	}
+
+	public CreateRestrictionsFromCSV setExtrapolation(EpisimUtils.Extrapolation extrapolation) {
+<span class="nc" id="L94">		this.extrapolation = extrapolation;</span>
+<span class="nc" id="L95">		return this;</span>
+	}
+
+	public EpisimUtils.Extrapolation getExtrapolation() {
+<span class="nc" id="L99">		return extrapolation;</span>
+	}
+
+	static Map&lt;LocalDate, Double&gt; readInput(String input, String column, double alpha, double scale) throws IOException {
+
+<span class="fc" id="L104">		try (BufferedReader in = IOUtils.getBufferedReader(input)) {</span>
+
+<span class="fc" id="L106">			CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);</span>
+<span class="fc" id="L107">			DateTimeFormatter fmt = DateTimeFormatter.ofPattern(&quot;yyyyMMdd&quot;);</span>
+
+			// activity reduction for notAtHome each day
+<span class="fc" id="L110">			Map&lt;LocalDate, Double&gt; days = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L112" title="All 2 branches covered.">			for (CSVRecord record : parser) {</span>
+<span class="fc" id="L113">				LocalDate date = LocalDate.parse(record.get(0), fmt);</span>
+
+<span class="fc" id="L115">				int value = Integer.parseInt(record.get(column));</span>
+
+<span class="fc" id="L117">				double remainingFraction = (1. + (value / 100.)) / scale; // e.g. &quot;1.2&quot;</span>
+
+				// modulate reduction with alpha:
+<span class="fc" id="L120">				double reduction = Math.min(1., alpha * (1. - remainingFraction)); // e.g. min( 1., alpha * (1-1.2) ) = min( 1., alpha * -0.2 ) ... i.e. the &quot;alpha&quot; does not help with values &gt; 100.</span>
+<span class="fc" id="L121">				days.put(date, Math.min(1, 1 - reduction));</span>
+<span class="fc" id="L122">			}</span>
+
+<span class="fc" id="L124">			return days;</span>
+
+		}
+	}
+
+	@Override
+	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
+
+<span class="fc" id="L132">		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();</span>
+
+		// activities to set:
+<span class="fc" id="L135">		List&lt;String&gt; act = episimConfig.getInfectionParams().stream()</span>
+<span class="fc" id="L136">				.map(EpisimConfigGroup.InfectionParams::getContainerName)</span>
+<span class="pc bpc" id="L137" title="1 of 8 branches missed.">				.filter(name -&gt; !name.startsWith(&quot;edu&quot;) &amp;&amp; !name.startsWith(&quot;pt&quot;) &amp;&amp; !name.startsWith(&quot;tr&quot;) &amp;&amp; !name.contains(&quot;home&quot;))</span>
+<span class="fc" id="L138">				.collect(Collectors.toList());</span>
+
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">		if (leisureAsNightly) {</span>
+
+<span class="nc" id="L142">			act.remove(&quot;leisure&quot;);</span>
+
+<span class="nc" id="L144">			createPolicy(builder, act.toArray(new String[0]), &quot;notAtHome&quot;, scale);</span>
+<span class="nc" id="L145">			createPolicy(builder, new String[]{&quot;leisure&quot;}, &quot;notAtHome_22&quot;, nightlyScale);</span>
+
+		} else {
+
+<span class="fc" id="L149">			createPolicy(builder, act.toArray(new String[0]), &quot;notAtHome&quot;, scale);</span>
+
+		}
+
+<span class="fc" id="L153">		return builder;</span>
+	}
+
+	private void createPolicy(FixedPolicy.ConfigBuilder builder, String[] act, String column, double scale) throws IOException {
+
+		// If active, the remaining fraction is calculated and saved for each subdistrict
+<span class="pc bpc" id="L159" title="3 of 4 branches missed.">		boolean locationBasedRfActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)</span>
+<span class="pc bnc" id="L160" title="All 2 branches missed.">				&amp;&amp; subdistrictInput != null &amp;&amp; !subdistrictInput.isEmpty();</span>
+
+		// (&quot;except edu&quot; since we set it separately.  yyyy but why &quot;except leisure&quot;??  kai, dec'20)
+<span class="fc" id="L163">		Map&lt;LocalDate, Double&gt; days = readInput(input, column, alpha, scale);</span>
+
+		// days per subdistrict
+<span class="fc" id="L166">		Map&lt;String, Map&lt;LocalDate, Double&gt;&gt; daysPerDistrict = new HashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L167" title="1 of 2 branches missed.">		if (locationBasedRfActive) {</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">			for (Map.Entry&lt;String, String&gt; entry : subdistrictInput.entrySet()) {</span>
+<span class="nc" id="L169">				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), column, alpha, scale));</span>
+<span class="nc" id="L170">			}</span>
+		}
+
+<span class="fc" id="L173">		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), &quot;CSV is empty&quot;);</span>
+<span class="fc" id="L174">		AtomicReference&lt;LocalDate&gt; until = new AtomicReference&lt;&gt;(start);</span>
+
+		// trend used for extrapolation
+<span class="fc" id="L177">		List&lt;Double&gt; trend = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L178">		Map&lt;String, List&lt;Double&gt;&gt; trendPerDistrict = new HashMap&lt;&gt;();</span>
+
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">		if (locationBasedRfActive) {</span>
+<span class="nc" id="L181">			RestrictionInput.resampleAvgWeekdayBySubdistrict(days, daysPerDistrict, start, (date, avg, avgPerDistrict) -&gt; {</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">				for (String districtName : avgPerDistrict.keySet()) {</span>
+<span class="nc" id="L183">					trendPerDistrict.getOrDefault(districtName, new ArrayList&lt;&gt;()).add(avgPerDistrict.get(districtName));</span>
+<span class="nc" id="L184">				}</span>
+<span class="nc" id="L185">				trend.add(avg);</span>
+<span class="nc" id="L186">				builder.restrictWithDistrict(date, avgPerDistrict, avg, act);</span>
+<span class="nc" id="L187">				until.set(date);</span>
+<span class="nc" id="L188">			});</span>
+		} else {
+<span class="fc" id="L190">			RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -&gt; {</span>
+<span class="fc" id="L191">				trend.add(avg);</span>
+<span class="fc" id="L192">				builder.restrict(date, avg, act);</span>
+<span class="fc" id="L193">				until.set(date);</span>
+<span class="fc" id="L194">			});</span>
+		}
+
+		// Use last weeks for the trend
+<span class="fc" id="L198">		List&lt;Double&gt; recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());</span>
+<span class="fc" id="L199">		start = until.get().plusDays(7);</span>
+
+<span class="fc" id="L201">		List&lt;Double&gt; extrapolateGlobal = RestrictionInput.extrapolate(recentTrend, 25, extrapolation);</span>
+
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">		if (locationBasedRfActive) {</span>
+<span class="nc" id="L204">			Map&lt;String, List&lt;Double&gt;&gt; extrapolateByDistrict = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">			for (String district : trendPerDistrict.keySet()) {</span>
+<span class="nc" id="L206">				List&lt;Double&gt; recentTrendForDistrict = trendPerDistrict.get(district).subList(Math.max(0, trendPerDistrict.size() - 8), trendPerDistrict.size());</span>
+<span class="nc" id="L207">				List&lt;Double&gt; extrapolateForDistrict = RestrictionInput.extrapolate(recentTrendForDistrict, 25, extrapolation);</span>
+<span class="nc" id="L208">				extrapolateByDistrict.put(district, extrapolateForDistrict);</span>
+<span class="nc" id="L209">			}</span>
+
+<span class="nc bnc" id="L211" title="All 2 branches missed.">			for (int i = 0; i &lt; extrapolateGlobal.size(); i++) {</span>
+<span class="nc" id="L212">				double predict = Math.min(extrapolateGlobal.get(i), 1);</span>
+<span class="nc" id="L213">				Map&lt;String, Double&gt; predictByDistrict = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">				for (String district : extrapolateByDistrict.keySet()) {</span>
+<span class="nc" id="L215">					predictByDistrict.put(district, Math.min(extrapolateByDistrict.get(district).get(i), 1));</span>
+<span class="nc" id="L216">				}</span>
+<span class="nc" id="L217">				builder.restrictWithDistrict(start, predictByDistrict, predict, act);</span>
+<span class="nc" id="L218">				start = start.plusDays(7);</span>
+			}
+<span class="nc" id="L220">		} else {</span>
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">			for (Double predict : extrapolateGlobal) {</span>
+<span class="nc" id="L222">				builder.restrict(start, Math.min(predict, 1), act);</span>
+<span class="nc" id="L223">				start = start.plusDays(7);</span>
+<span class="nc" id="L224">			}</span>
+		}
+
+<span class="fc" id="L227">	}</span>
+
+	@Override
+	public String toString() {
+<span class="nc" id="L231">		return &quot;fromCSV-&quot; +</span>
+				&quot;alpha_&quot; + alpha +
+				&quot;, extrapolation_&quot; + extrapolation +
+				'}';
+	}
+
+	/**
+	 * Exponential function in the form of 1 - a * exp(-x / b).
+	 */
+<span class="nc" id="L240">	static final class Exponential implements ParametricUnivariateFunction {</span>
+
+		@Override
+		public double value(double x, double... parameters) {
+<span class="nc" id="L244">			return 1 - parameters[0] * Math.exp(-x / parameters[1]);</span>
+		}
+
+		@Override
+		public double[] gradient(double x, double... parameters) {
+<span class="nc" id="L249">			double exb = Math.exp(-x / parameters[1]);</span>
+<span class="nc" id="L250">			return new double[]{-exb, -parameters[0] * x * exb / (parameters[1] * parameters[1])};</span>
+		}
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
