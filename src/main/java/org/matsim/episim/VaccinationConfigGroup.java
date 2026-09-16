@@ -140,7 +140,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	public void addParameterSet(final ConfigGroup set) {
 		if (VaccinationParams.SET_TYPE.equals(set.getName())) {
 			VaccinationParams p = (VaccinationParams) set;
-			params.put(p.type, p);
+			params.put(p.getType(), p);
 			super.addParameterSet(set);
 
 		} else
@@ -482,6 +482,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		static final String SET_TYPE = "vaccinationParams";
 
 		private static final String TYPE = "type";
+		private static final String SOURCE_OF_NATURAL_VACCINATION = "sourceOfNaturalVaccination";
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String INFECTIVITY = "infectivity";
@@ -492,7 +493,13 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 		private static final String FACTOR_CRITICAL = "factorCritical";
 
+		/**
+		 * Type of this parameter set. Resolved lazily from {@link #typeName} and
+		 * {@link #sourceOfNaturalVaccinationName}, because the two are read in unspecified order.
+		 */
 		private VaccinationType type;
+		private String typeName;
+		private String sourceOfNaturalVaccinationName;
 
 		/**
 		 * Number of days until vaccination goes into full effect.
@@ -567,23 +574,54 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		@StringGetter(TYPE)
 		String getTypeName() {
-			return type == null ? null : type.getName();
+			return type != null ? type.getName() : typeName;
 		}
 
 		@StringSetter(TYPE)
 		void setType(String type) {
-			this.type = VaccinationType.of(type);
+			this.typeName = type;
+			this.type = null;
 		}
 
 		/**
-		 * Vaccination type this parameter set applies to.
+		 * Vaccination type this parameter set applies to. Once the type is known, its own source of natural
+		 * vaccination is used, which may have been declared after this parameter set was created
+		 * (see {@link VaccinationType#of(String, VirusStrain)}).
 		 */
 		public VaccinationType getType() {
+			if (type == null && typeName != null) {
+				type = sourceOfNaturalVaccinationName == null
+					? VaccinationType.of(typeName)
+					: VaccinationType.of(typeName, VirusStrain.of(sourceOfNaturalVaccinationName));
+			}
 			return type;
 		}
 
 		public void setType(VaccinationType type) {
 			this.type = type;
+			this.typeName = type == null ? null : type.getName();
+			this.sourceOfNaturalVaccinationName = type == null || type.getSourceOfNaturalVaccination() == null
+				? null : type.getSourceOfNaturalVaccination().getVirusStrainName();
+		}
+
+		/**
+		 * Name of the strain whose infection induces this immunity, or {@code null} for a real vaccination.
+		 */
+		@StringGetter(SOURCE_OF_NATURAL_VACCINATION)
+		String getSourceOfNaturalVaccinationName() {
+			VaccinationType resolved = getType();
+			VirusStrain source = resolved == null ? null : resolved.getSourceOfNaturalVaccination();
+			return source == null ? sourceOfNaturalVaccinationName : source.getVirusStrainName();
+		}
+
+		/**
+		 * A real vaccination has no source. MATSim maps an absent value ({@code value="null"}) back to {@code null}
+		 * itself, but an empty value arrives as an empty string and must not become a strain with an empty name.
+		 */
+		@StringSetter(SOURCE_OF_NATURAL_VACCINATION)
+		void setSourceOfNaturalVaccinationName(String strainName) {
+			this.sourceOfNaturalVaccinationName = strainName == null || strainName.isEmpty() ? null : strainName;
+			this.type = null;
 		}
 
 		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
