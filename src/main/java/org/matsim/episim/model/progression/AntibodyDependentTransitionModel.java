@@ -4,9 +4,12 @@ import com.google.inject.Inject;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.Immunizable;
+import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.VirusStrain;
+
+import java.util.NavigableMap;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -18,13 +21,66 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	private final EpisimSplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup strainConfig;
+	private final PathogenConfigGroup pathogenConfig;
+
+	/**
+	 * Whether this model reads the age-dependent pathogen configuration.
+	 */
+	private final boolean ageDependent;
 
 	@Inject
 	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
-	                                        VirusStrainConfigGroup strainConfigGroup) {
+	                                        VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig) {
+		this(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, false);
+	}
+
+	/**
+	 * Constructor for subclasses with age-dependent transitions.
+	 *
+	 * @param ageDependent whether the age-dependent pathogen configuration is used
+	 * @throws IllegalStateException if a configured strain lacks this progression variant, so that this does not fail at
+	 *                               the first transition during the simulation
+	 */
+	protected AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+	                                           VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig,
+	                                           boolean ageDependent) {
 		this.rnd = rnd;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;
+		this.pathogenConfig = pathogenConfig;
+		this.ageDependent = ageDependent;
+
+		pathogenConfig.checkProgressionConfigured(strainConfigGroup.getConfiguredStrains(), ageDependent, getClass().getSimpleName());
+	}
+
+	/**
+	 * Whether this model reads the age-dependent pathogen configuration.
+	 */
+	protected final boolean isAgeDependentTransition() {
+		return ageDependent;
+	}
+
+	/**
+	 * Base disease-progression probabilities of the pathogen the person is currently infected with.
+	 */
+	protected final PathogenConfigGroup.ProgressionParams progressionParams(Immunizable person) {
+		return pathogenConfig.getProgressionParams(person.getVirusStrain().getPathogen(), isAgeDependentTransition());
+	}
+
+	/**
+	 * Age used for the probability lookup in the given profile. A profile with a single bucket does not depend on
+	 * age, so the age is not read at all (persons without age are fine, as for the previously constant probabilities).
+	 * Otherwise the age-dependent variant requires a real age, while the age-independent variant falls back to
+	 * {@code 0} for a missing age.
+	 */
+	private int lookupAge(Immunizable person, NavigableMap<Integer, Double> profile) {
+		if (profile.size() <= 1){
+			return 0;}
+
+		if (isAgeDependentTransition()){
+			return person.getAge();}
+
+		return person instanceof EpisimPerson ? ((EpisimPerson) person).getAgeOrDefault(0) : person.getAge();
 	}
 
 	@Override
@@ -92,18 +148,21 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
-		return 0.05625;
+		PathogenConfigGroup.ProgressionParams params = progressionParams(person);
+		return params.getSeriouslySickProbability(lookupAge(person, params.getSeriouslySickProbabilityByAge()));
 	}
 
 	/**
 	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
 	 */
 	public double getProbaOfTransitioningToCritical(Immunizable person) {
-		return 0.25;
+		PathogenConfigGroup.ProgressionParams params = progressionParams(person);
+		return params.getCriticalProbability(lookupAge(person, params.getCriticalProbabilityByAge()));
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-		return 0.8;
+		PathogenConfigGroup.ProgressionParams params = progressionParams(person);
+		return params.getShowingSymptomsProbability(lookupAge(person, params.getShowingSymptomsProbabilityByAge()));
 	}
 
 	@Override
@@ -179,7 +238,8 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-		return 0.0;
+		PathogenConfigGroup.ProgressionParams params = progressionParams(person);
+		return params.getDeathProbability(lookupAge(person, params.getDeathProbabilityByAge()));
 	}
 
 

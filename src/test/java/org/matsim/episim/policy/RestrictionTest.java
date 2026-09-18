@@ -1,12 +1,15 @@
 package org.matsim.episim.policy;
 
+import com.typesafe.config.Config;
 import org.junit.Test;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.util.EpisimSplittableRandom;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 public class RestrictionTest {
 
@@ -67,6 +70,33 @@ public class RestrictionTest {
 		assertThat(localRestriction.getLocationBasedRf().size()).isEqualTo(2);
 		assertThat(localRestriction.getLocationBasedRf().get("Queens")).isEqualTo(0.8);
 
+	}
+
+	@Test
+	public void maskUsageFromConfig() {
+
+		Map<FaceMask, Double> usage = Map.of(FaceMask.CLOTH, 0.3, FaceMask.SURGICAL, 0.2);
+
+		// masks read back from the config are unordered, the cumulative probabilities must be sorted again
+		Config config = FixedPolicy.config().restrict(1, Restriction.ofMask(usage), "work").build();
+		Restriction r = Restriction.fromConfig(config.getConfig("work").getConfig("day-1"));
+
+		assertThat(r.getMaskUsage().keySet()).containsExactly(FaceMask.NONE, FaceMask.CLOTH, FaceMask.SURGICAL);
+		assertThat(r.getMaskUsage().values()).containsExactly(0.5, 0.8, 1.0);
+
+		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
+		Map<FaceMask, Integer> counts = new HashMap<>();
+		int n = 100_000;
+		for (int i = 0; i < n; i++)
+			counts.merge(r.determineMask(rnd), 1, Integer::sum);
+
+		assertThat(counts.get(FaceMask.NONE) / (double) n).isCloseTo(0.5, offset(0.01));
+		assertThat(counts.get(FaceMask.CLOTH) / (double) n).isCloseTo(0.3, offset(0.01));
+		assertThat(counts.get(FaceMask.SURGICAL) / (double) n).isCloseTo(0.2, offset(0.01));
+
+		// updating another restriction keeps the order as well
+		Restriction updated = update(Restriction.of(1.0), r);
+		assertThat(updated.getMaskUsage().keySet()).containsExactly(FaceMask.NONE, FaceMask.CLOTH, FaceMask.SURGICAL);
 	}
 
 	@Test

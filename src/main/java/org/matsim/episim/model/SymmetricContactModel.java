@@ -162,16 +162,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
 			double jointTimeInContainer = calculateJointTimeInContainer(now, leavingParams, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
-			//forbid certain cross-activity interactions, keep track of contacts
+			// forbid certain cross-activity interactions (configured in ContactTransmissionConfigGroup), keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
-				//home can only interact with home, leisure or work
-				if (infectionType.indexOf("home") >= 0 && infectionType.indexOf("leis") == -1 && infectionType.indexOf("work") == -1
-						&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
-					// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
-					continue;
-				} else if (infectionType.indexOf("edu") >= 0 && infectionType.indexOf("work") == -1 && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
-					//edu can only interact with work or edu
-					// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
+				if (!contactTransmission.isContactAllowed(leavingPersonsActivity, otherPersonsActivity)) {
 					continue;
 				}
 				if (trackingEnabled) {
@@ -217,11 +210,15 @@ public final class SymmetricContactModel extends AbstractContactModel {
 					contactParams.getContactIntensity() / (maxPersonsInContainer / nSpacesPerFacility)
 			);
 
+			// transmission-route weights for this activity/age pair (symmetric in person order); -1 marks an unknown age
+			TransmissionWeights transmissionWeights = contactTransmission.resolve(leavingPersonsActivity, otherPersonsActivity,
+					personLeavingContainer.getAgeOrDefault(-1), contactPerson.getAgeOrDefault(-1));
+
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
+						leavingParams, contactParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
 				double probUnVac = infectionModel.getLastUnVacInfectionProbability();
 
@@ -234,7 +231,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+						contactParams, leavingParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
 				double probUnVac = infectionModel.getLastUnVacInfectionProbability();
 

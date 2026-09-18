@@ -2,6 +2,7 @@ package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.VaccinationType;
@@ -12,6 +13,9 @@ import org.matsim.utils.objectattributes.attributable.AttributesImpl;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -246,6 +250,47 @@ public class EpisimTestUtils {
 		report.nSeriouslySick = hospital;
 
 		return report;
+	}
+
+	/**
+	 * Writes a config file with the given modules, as a user would write it, and loads it into the given config groups.
+	 * Use this for content that {@link ConfigUtils#writeConfig(Config, String)} can not produce, e.g. invalid values.
+	 *
+	 * @param modules xml of the modules, see {@link #xmlModule(String, String...)}
+	 */
+	public static Config loadConfigXml(String modules, ConfigGroup... groups) throws IOException {
+		File tmp = File.createTempFile("matsim", "config.xml");
+		tmp.deleteOnExit();
+
+		Files.writeString(tmp.toPath(), String.join("\n",
+				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+				"<!DOCTYPE config SYSTEM \"http://www.matsim.org/files/dtd/config_v2.dtd\">",
+				"<config>",
+				modules,
+				"</config>"));
+
+		return ConfigUtils.loadConfig(tmp.toString(), groups);
+	}
+
+	/**
+	 * Xml of a config module.
+	 */
+	public static String xmlModule(String name, String... content) {
+		return "<module name=\"" + name + "\" >\n" + String.join("\n", content) + "\n</module>";
+	}
+
+	/**
+	 * Xml of a parameter set.
+	 */
+	public static String xmlSet(String type, String... content) {
+		return "<parameterset type=\"" + type + "\" >\n" + String.join("\n", content) + "\n</parameterset>";
+	}
+
+	/**
+	 * Xml of a single parameter.
+	 */
+	public static String xmlParam(String name, String value) {
+		return "<param name=\"" + name + "\" value=\"" + value + "\" />";
 	}
 
 }

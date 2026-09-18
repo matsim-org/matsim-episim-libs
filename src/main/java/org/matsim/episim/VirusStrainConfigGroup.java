@@ -2,14 +2,16 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.VirusStrain;
 
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import javax.annotation.Nullable;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -25,7 +27,12 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Holds all virus strains params.
 	 */
-	private final Map<VirusStrain, StrainParams> strains = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, StrainParams> strains = new LinkedHashMap<>();
+
+	/**
+	 * Cached result of {@link #getVirusStrains()}, null if it needs to be rebuilt.
+	 */
+	private volatile Collection<VirusStrain> virusStrains;
 
 	/**
 	 * Default constructor.
@@ -53,7 +60,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	public StrainParams getOrAddParams(VirusStrain strain) {
 		if (!strains.containsKey(strain)) {
 			StrainParams p = new StrainParams();
-			p.strain = strain;
+			p.setStrain(strain);
 			addParameterSet(p);
 			return p;
 		}
@@ -68,6 +75,105 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		return strains.containsKey(strain);
 	}
 
+	/**
+	 * Returns the standard virus strains followed by strains added through this configuration.
+	 */
+	public Collection<VirusStrain> getVirusStrains() {
+		// cached, because this is called on hot paths; reset whenever a strain is added
+		Collection<VirusStrain> result = virusStrains;
+		if (result == null) {
+			Set<VirusStrain> set = new LinkedHashSet<>(VirusStrain.getAllStandardOptions());
+			set.addAll(strains.keySet());
+			result = Collections.unmodifiableSet(set);
+			virusStrains = result;
+		}
+		return result;
+	}
+
+	/**
+	 * Strains that have a parameter set in this config group, i.e. the strains that can infect persons.
+	 */
+	public Set<VirusStrain> getConfiguredStrains() {
+		return Collections.unmodifiableSet(strains.keySet());
+	}
+
+	/**
+	 * Checks before the simulation starts that every strain can be simulated, instead of failing at its first infection:
+	 * <ul>
+	 *     <li>Every strain that is imported with a positive number of infections needs a parameter set. Since strain names
+	 *     are resolved leniently while the config is read, this catches misspelled strain names.</li>
+	 *     <li>The pathogen of every configured strain needs a {@code pathogenParams} set in {@link PathogenConfigGroup}.</li>
+	 *     <li>Every configured strain needs an {@code antibodyParams} set in {@link AntibodyConfigGroup}.</li>
+	 * </ul>
+	 * All problems are reported at once. A config group that is not part of the config is checked with its defaults,
+	 * as these are used by the simulation.
+	 */
+	@Override
+	protected void checkConsistency(Config config) {
+		super.checkConsistency(config);
+
+		List<String> problems = new ArrayList<>();
+
+		ConfigGroup episim = config.getModules().get("episim");
+		if (episim instanceof EpisimConfigGroup) {
+			List<String> missing = new ArrayList<>();
+			for (Map.Entry<VirusStrain, NavigableMap<LocalDate, Integer>> e : ((EpisimConfigGroup) episim).getInfections_pers_per_day().entrySet()) {
+				boolean imported = e.getValue().values().stream().anyMatch(n -> n > 0);
+				if (imported && !strains.containsKey(e.getKey()))
+					missing.add(e.getKey().getVirusStrainName());
+			}
+
+			if (!missing.isEmpty())
+				problems.add("Virus strains " + missing + " are imported via 'infections_pers_per_day' of config group "
+						+ "'episim', but have no '" + StrainParams.SET_TYPE + "' in config group '" + GROUPNAME + "'. "
+						+ "Check the strain names for typos or add parameter sets for these strains.");
+		}
+
+		PathogenConfigGroup pathogens = moduleOrDefault(config, PathogenConfigGroup.GROUPNAME, PathogenConfigGroup.class, PathogenConfigGroup::new);
+		if (pathogens != null) {
+			Map<Pathogen, List<String>> missing = new TreeMap<>(Comparator.comparing(Pathogen::getName));
+			for (VirusStrain strain : strains.keySet()) {
+				if (!pathogens.hasParams(strain.getPathogen()))
+					missing.computeIfAbsent(strain.getPathogen(), k -> new ArrayList<>()).add(strain.getVirusStrainName());
+			}
+
+			missing.forEach((pathogen, names) -> problems.add("Virus strains " + names + " belong to pathogen '" + pathogen.getName()
+					+ "', which has no '" + PathogenConfigGroup.PathogenParams.SET_TYPE + "' in config group '"
+					+ PathogenConfigGroup.GROUPNAME + "'. Add a parameter set for this pathogen or check its name in '"
+					+ StrainParams.SET_TYPE + "'."));
+		}
+
+		AntibodyConfigGroup antibodies = moduleOrDefault(config, AntibodyConfigGroup.GROUPNAME, AntibodyConfigGroup.class, AntibodyConfigGroup::new);
+		if (antibodies != null) {
+			List<String> missing = new ArrayList<>();
+			for (VirusStrain strain : strains.keySet()) {
+				if (!antibodies.hasParams(strain))
+					missing.add(strain.getVirusStrainName());
+			}
+
+			if (!missing.isEmpty())
+				problems.add("Virus strains " + missing + " have no '" + AntibodyConfigGroup.AntibodyParams.SET_TYPE
+						+ "' in config group '" + AntibodyConfigGroup.GROUPNAME + "'. Add a parameter set with immunityEventKind '"
+						+ AntibodyConfigGroup.AntibodyParams.KIND_STRAIN + "' for each of these strains.");
+		}
+
+		if (!problems.isEmpty())
+			throw new IllegalStateException(String.join("\n", problems));
+	}
+
+	/**
+	 * The typed config group with the given name, a new default instance if the config does not contain this group, or
+	 * {@code null} if the group has not been converted to its typed class yet and can not be checked.
+	 */
+	@Nullable
+	static <T extends ConfigGroup> T moduleOrDefault(Config config, String name, Class<T> type, Supplier<T> defaults) {
+		ConfigGroup module = config.getModules().get(name);
+		if (module == null)
+			return defaults.get();
+
+		return type.isInstance(module) ? type.cast(module) : null;
+	}
+
 	@Override
 	public ConfigGroup createParameterSet(String type) {
 		if (StrainParams.SET_TYPE.equals(type)) {
@@ -80,8 +186,12 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	public void addParameterSet(final ConfigGroup set) {
 		if (StrainParams.SET_TYPE.equals(set.getName())) {
 			StrainParams p = (StrainParams) set;
-			strains.put(p.strain, p);
+			StrainParams previous = strains.put(p.getStrain(), p);
+			// replace a previously registered set (e.g. the auto-added SARS-CoV-2 default) instead of keeping a stale duplicate
+			if (previous != null)
+				super.removeParameterSet(previous);
 			super.addParameterSet(set);
+			virusStrains = null;
 
 		} else
 			throw new IllegalStateException("Unknown set type " + set.getName());
@@ -95,6 +205,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		static final String SET_TYPE = "strainParams";
 
 		private static final String STRAIN = "strain";
+		private static final String PATHOGEN = "pathogen";
 		private static final String INFECTIOUSNESS = "infectiousness";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 		private static final String FACTOR_CRITICAL = "factorCritical";
@@ -105,6 +216,8 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Type of the strain.
 		 */
+		private String strainName;
+		private Pathogen pathogen = Pathogen.SARS_COV_2;
 		private VirusStrain strain;
 
 		/**
@@ -150,13 +263,51 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringGetter(STRAIN)
+		public String getStrainName(){
+			return strainName;
+		}
+
 		public VirusStrain getStrain() {
+			if (strain == null && strainName != null) {
+				strain = VirusStrain.of(pathogen, strainName);
+				pathogen = strain.getPathogen();
+			}
 			return strain;
 		}
 
 		@StringSetter(STRAIN)
+		public void setStrain(String strain){
+			this.strainName = strain;
+			this.strain = null;
+		}
+
 		public void setStrain(VirusStrain strain) {
 			this.strain = strain;
+			this.strainName = strain == null ? null : strain.getVirusStrainName();
+			this.pathogen = strain == null ? Pathogen.SARS_COV_2 : strain.getPathogen();
+		}
+
+		@StringGetter(PATHOGEN)
+		public String getPathogenName() {
+			return getPathogen().getName();
+		}
+
+		/**
+		 * Pathogen of this strain. Once the strain is known, its pathogen is used, which may have been declared after this
+		 * parameter set was created (see {@link VirusStrain#of(Pathogen, String)}).
+		 */
+		public Pathogen getPathogen() {
+			return strain != null ? strain.getPathogen() : pathogen;
+		}
+
+		@StringSetter(PATHOGEN)
+		public void setPathogen(String pathogen) {
+			setPathogen(new Pathogen(pathogen));
+		}
+
+		public void setPathogen(Pathogen pathogen) {
+			this.pathogen = Objects.requireNonNull(pathogen, "Pathogen must not be null");
+			this.strain = null;
 		}
 
 		@StringGetter(INFECTIOUSNESS)

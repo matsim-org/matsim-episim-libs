@@ -29,6 +29,9 @@ import org.matsim.episim.util.EpisimSplittableRandom;
 
 /**
  * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
+ *
+ * <p>The base (age-dependent) probabilities are read from {@link PathogenConfigGroup}; the only modifier that
+ * stays in this model is the {@code hospitalFactor} applied to the {@code seriouslySick} transition.</p>
  */
 public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentTransitionModel {
 
@@ -36,206 +39,17 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 
 	@Inject
 	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
-	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
-		super(rnd, vaccinationConfig, strainConfigGroup);
+	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup,
+	                                                PathogenConfigGroup pathogenConfig) {
+		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, true);
 		this.episimConfig = episimConfig;
-	}
-
-
-	@Override
-	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-
-		double proba = 0.8;
-
-//		int age = EpisimUtils.getAge( person );
-//
-//		if (age < 10) {
-//			proba = 0.1 / 100;
-//		} else if (age < 20) {
-//			proba = 0.3 / 100;
-//		} else if (age < 30) {
-//			proba = 1.2 / 100;
-//		} else if (age < 40) {
-//			proba = 3.2 / 100;
-//		} else if (age < 50) {
-//			proba = 4.9 / 100;
-//		} else if (age < 60) {
-//			proba = 10.2 / 100;
-//		} else if (age < 70) {
-//			proba = 16.6 / 100;
-//		} else if (age < 80) {
-//			proba = 24.3 / 100;
-//		} else {
-//			proba = 27.3 / 100;
-//		}
-
-		return proba;
 	}
 
 	@Override
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
 		// https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=802030488
-
-
-		double proba;
-
-		int age = person.getAge();
-
-		// source 3: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8353925/
-		if (age < 5) {
-			proba = 4.0 / 100;
-		} else if (age < 15) {
-			proba = 1.1 / 100;
-		} else if (age < 35) {
-			proba = 2.4 / 100;
-		} else if (age < 60) {
-			proba = 5.6 / 100;
-		} else if (age < 80) {
-			proba = 23. / 100;
-		} else {
-			proba = 36. / 100;
-		}
-
-		return proba * episimConfig.getHospitalFactor();
-
-
-		// source 2
-//		if (age < 10) {
-//			proba = 0.1 / 100;
-//		} else if (age < 20) {
-//			proba = 0.2 / 100;
-//		} else if (age < 30) {
-//			proba = 0.5 / 100;
-//		} else if (age < 40) {
-//			proba = 1.0 / 100;
-//		} else if (age < 50) {
-//			proba = 2.1 / 100;
-//		} else if (age < 60) {
-//			proba = 4.1 / 100;
-//		} else if (age < 70) {
-//			proba = 8.9 / 100;
-//		} else if (age < 80) {
-//			proba = 17.1 / 100;
-//		} else {
-//			proba = 30.3 / 100;
-//		}
-
-		// source 1
-//		if (age < 5) {
-//			proba = 12.9 / 100;
-//		} else if (age < 20) {
-//			proba = 4.0 / 100;
-//		} else if (age < 40) {
-//			proba = 5.9 / 100;
-//		} else if (age < 60) {
-//			proba = 13.0 / 100;
-//		} else if (age < 80) {
-//			proba = 43.2 / 100;
-//		} else {
-//			proba = 64.8 / 100;
-//		}
-
-
-		//old
-//		if (age < 10) {
-//			proba = 0.1 / 100;
-//		} else if (age < 20) {
-//			proba = 0.3 / 100;
-//		} else if (age < 30) {
-//			proba = 1.2 / 100;
-//		} else if (age < 40) {
-//			proba = 3.2 / 100;
-//		} else if (age < 50) {
-//			proba = 4.9 / 100;
-//		} else if (age < 60) {
-//			proba = 10.2 / 100;
-//		} else if (age < 70) {
-//			proba = 16.6 / 100;
-//		} else if (age < 80) {
-//			proba = 24.3 / 100;
-//		} else {
-//			proba = 27.3 / 100;
-//		}
-
-
+		// age table taken from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8353925/, now configured in PathogenConfigGroup.
+		return super.getProbaOfTransitioningToSeriouslySick(person) * episimConfig.getHospitalFactor();
 	}
-
-	@Override
-	public double getProbaOfTransitioningToCritical(Immunizable person) {
-		double proba = -1;
-
-		int age = person.getAge();
-
-		// source 3
-		if (age < 5) {
-			proba = 7.0 / 100;
-		} else if (age < 15) {
-			proba = 0.0 / 100;
-		} else if (age < 35) {
-			proba = 15.0 / 100;
-		} else if (age < 60) {
-			proba = 30.0 / 100;
-		} else if (age < 80) {
-			proba = 41. / 100;
-		} else {
-			proba = 27. / 100;
-		}
-
-
-		// source 2
-//		if (age < 10) {
-//			proba = 8.5 / 100;
-//		} else if (age < 20) {
-//			proba = 10.9 / 100;
-//		} else if (age < 30) {
-//			proba = 13.4 / 100;
-//		} else if (age < 40) {
-//			proba = 17.2 / 100;
-//		} else if (age < 50) {
-//			proba = 21.9 / 100;
-//		} else if (age < 60) {
-//			proba = 27.3 / 100;
-//		} else if (age < 70) {
-//			proba = 37.1 / 100;
-//		} else if (age < 80) {
-//			proba = 48.5/ 100;
-//		} else {
-//			proba = 64.0 / 100;
-//		}
-
-////		// source 1
-//		if (age < 5) {
-//			proba = 3.5 / 100;
-//		} else if (age < 20) {
-//			proba = 1.7 / 100;
-//		} else if (age < 40) {
-//			proba = 7.3 / 100;
-//		} else if (age < 60) {
-//			proba = 18.0 / 100;
-//		} else if (age < 80) {
-//			proba = 37.0 / 100;
-//		} else {
-//			proba = 42.9 / 100;
-//		}
-//
-
-		// old
-//		if (age < 40) {
-//			proba = 5. / 100;
-//		} else if (age < 50) {
-//			proba = 6.3 / 100;
-//		} else if (age < 60) {
-//			proba = 12.2 / 100;
-//		} else if (age < 70) {
-//			proba = 27.4 / 100;
-//		} else if (age < 80) {
-//			proba = 43.2 / 100;
-//		} else {
-//			proba = 70.9 / 100;
-//		}
-
-		return proba;
-	}
-
 
 }

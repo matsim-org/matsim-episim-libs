@@ -13,6 +13,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.events.EpisimInfectionEvent;
@@ -40,6 +41,7 @@ public class HospitalNumbersFromEventsTest {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		PathogenConfigGroup pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
 
 
 		// create population
@@ -58,7 +60,7 @@ public class HospitalNumbersFromEventsTest {
 
 		// instantiate event handler
 		Map<Id<Person>, Handler.ImmunizablePerson> data = new IdMap<>(Person.class, population.getPersons().size());
-		ConfigHolder configHolder = new ConfigHolder(episimConfig,vaccinationConfig,strainConfig);
+		ConfigHolder configHolder = new ConfigHolder(episimConfig,vaccinationConfig,strainConfig,pathogenConfig);
 
 		handler = new Handler("xxx", population, configHolder);
 

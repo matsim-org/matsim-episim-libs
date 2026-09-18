@@ -3,6 +3,7 @@ package org.matsim.episim;
 import org.junit.Test;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.model.VirusStrain;
 
 import java.io.*;
 import java.time.DayOfWeek;
@@ -155,5 +156,50 @@ public class EpisimPersonTest {
 		assertThat(p2.getDiseaseStatus())
 				.isEqualTo(EpisimPerson.DiseaseStatus.showingSymptoms);
 
+	}
+
+	/**
+	 * Snapshot round-trip with a non-empty infection history and non-empty antibody / max-antibody
+	 * maps: the maps must come back keyed by the same {@link VirusStrain} instances, not by synthetic
+	 * "strain=>value" keys. Guards the serialization of {@code antibodies} / {@code maxAntibodies} in
+	 * {@link EpisimPerson#write(ObjectOutput)}.
+	 */
+	@Test
+	public void readWriteAntibodies() throws IOException {
+
+		EpisimPerson p1 = EpisimTestUtils.createPerson("work", null);
+
+		p1.setInitialInfection(100, VirusStrain.SARS_CoV_2);
+		p1.setInitialInfection(200, VirusStrain.DELTA);
+
+		p1.setAntibodies(VirusStrain.SARS_CoV_2, 1.75);
+		p1.setAntibodies(VirusStrain.DELTA, 0.5);
+		p1.setAntibodies(VirusStrain.OMICRON_BA1, 3.0);
+
+		p1.updateMaxAntibodies(VirusStrain.SARS_CoV_2, 4.25);
+		p1.updateMaxAntibodies(VirusStrain.DELTA, 2.0);
+
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ObjectOutputStream bout = new ObjectOutputStream(out);
+		p1.write(bout);
+		bout.flush();
+
+		EpisimPerson p2 = EpisimTestUtils.createPerson("c1.0", null);
+		p2.read(new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())), new HashMap<>());
+
+		assertThat(p2.getNumInfections()).isEqualTo(2);
+		assertThat(p2.getVirusStrain(0)).isEqualTo(VirusStrain.SARS_CoV_2);
+		assertThat(p2.getVirusStrain(1)).isEqualTo(VirusStrain.DELTA);
+
+		assertThat(p2.getAntibodies().keySet())
+				.containsExactlyInAnyOrder(VirusStrain.SARS_CoV_2, VirusStrain.DELTA, VirusStrain.OMICRON_BA1);
+		assertThat(p2.getAntibodies(VirusStrain.SARS_CoV_2)).isEqualTo(1.75);
+		assertThat(p2.getAntibodies(VirusStrain.DELTA)).isEqualTo(0.5);
+		assertThat(p2.getAntibodies(VirusStrain.OMICRON_BA1)).isEqualTo(3.0);
+
+		assertThat(p2.getMaxAntibodies().keySet())
+				.containsExactlyInAnyOrder(VirusStrain.SARS_CoV_2, VirusStrain.DELTA);
+		assertThat(p2.getMaxAntibodies(VirusStrain.SARS_CoV_2)).isEqualTo(4.25);
+		assertThat(p2.getMaxAntibodies(VirusStrain.DELTA)).isEqualTo(2.0);
 	}
 }
