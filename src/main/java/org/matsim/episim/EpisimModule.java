@@ -66,6 +66,14 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		bind(AntibodyModel.class).to(DefaultAntibodyModel.class).in(Singleton.class);
+		// Both sources are bound explicitly because LegacySplitImmunityModel injects them and this injector
+		// requires explicit bindings. The default is the curve-based source, which is what
+		// DefaultDiseaseStatusTransitionModel used through the former default methods of its interface.
+		// Modules that bind AgeDependentDiseaseStatusTransitionModel took severity from antibodies instead and
+		// therefore override this with LegacySplitImmunityModel.
+		bind(LegacyCurveImmunityModel.class).in(Singleton.class);
+		bind(LegacyAntibodyImmunityModel.class).in(Singleton.class);
+		bind(ImmunityModel.class).to(LegacyCurveImmunityModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);

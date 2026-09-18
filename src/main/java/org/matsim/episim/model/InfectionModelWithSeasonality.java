@@ -27,11 +27,14 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private final PathogenConfigGroup pathogenConfig;
 
 	private double outdoorFactor;
+	private final ImmunityModel immunityModel;
 	private int iteration;
 
 	@Inject
-	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, EpisimSplittableRandom rnd, Config config, EpisimReporting reporting) {
+	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ImmunityModel immunityModel,
+										 EpisimSplittableRandom rnd, Config config, EpisimReporting reporting) {
 		this.maskModel = faceMaskModel;
+		this.immunityModel = immunityModel;
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -60,7 +63,8 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
+		double susceptibility = immunityModel.getFactor(target, strain.getStrain(),
+			EpisimPerson.DiseaseStatus.infectedButNotContagious, iteration);
 
 		// route-agnostic factors
 		double base = episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer

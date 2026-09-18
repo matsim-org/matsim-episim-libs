@@ -7,6 +7,7 @@ import org.matsim.episim.Immunizable;
 import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.model.ImmunityModel;
 import org.matsim.episim.model.VirusStrain;
 
 import java.util.NavigableMap;
@@ -19,6 +20,7 @@ import org.matsim.episim.util.EpisimSplittableRandom;
 public class AntibodyDependentTransitionModel implements DiseaseStatusTransitionModel {
 
 	private final EpisimSplittableRandom rnd;
+	private final ImmunityModel immunityModel;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup strainConfig;
 	private final PathogenConfigGroup pathogenConfig;
@@ -29,9 +31,10 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	private final boolean ageDependent;
 
 	@Inject
-	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                        VaccinationConfigGroup vaccinationConfig,
 	                                        VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig) {
-		this(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, false);
+		this(rnd, immunityModel, vaccinationConfig, strainConfigGroup, pathogenConfig, false);
 	}
 
 	/**
@@ -41,10 +44,12 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	 * @throws IllegalStateException if a configured strain lacks this progression variant, so that this does not fail at
 	 *                               the first transition during the simulation
 	 */
-	protected AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+	protected AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                           VaccinationConfigGroup vaccinationConfig,
 	                                           VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig,
 	                                           boolean ageDependent) {
 		this.rnd = rnd;
+		this.immunityModel = immunityModel;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;
 		this.pathogenConfig = pathogenConfig;
@@ -91,7 +96,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 				return EpisimPerson.DiseaseStatus.contagious;
 			case contagious:
 
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * immunity(person, EpisimPerson.DiseaseStatus.showingSymptoms, day))
 					return EpisimPerson.DiseaseStatus.showingSymptoms;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -101,7 +106,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-						* getSeriouslySickFactor(person, vaccinationConfig, day))
+						* immunity(person, EpisimPerson.DiseaseStatus.seriouslySick, day))
 //						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
 					return EpisimPerson.DiseaseStatus.seriouslySick;
 				else
@@ -110,7 +115,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 			case seriouslySick:
 				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)
 						&& (rnd.nextDouble() < getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()
-						* getCriticalFactor(person, vaccinationConfig, day)))
+						* immunity(person, EpisimPerson.DiseaseStatus.critical, day)))
 					return EpisimPerson.DiseaseStatus.critical;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -165,77 +170,12 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		return params.getShowingSymptomsProbability(lookupAge(person, params.getShowingSymptomsProbabilityByAge()));
 	}
 
-	@Override
-	public double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
-		return 1.0;
+	/**
+	 * Remaining risk of the transition, given what the person's immune history protects them against.
+	 */
+	private double immunity(EpisimPerson person, EpisimPerson.DiseaseStatus target, int day) {
+		return immunityModel.getFactor(person, person.getVirusStrain(), target, day);
 	}
-
-	@Override
-	public double getSeriouslySickFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
-
-
-		int numVaccinations = person.getNumVaccinations();
-		int numInfections = person.getNumInfections() - 1;
-
-//		if (numVaccinations == 0 && numInfections == 0)
-//			return 1.0;
-
-		VirusStrain strain = person.getVirusStrain();
-
-		double abNoWaning = person.getMaxAntibodies(strain);
-
-		// Two modifications to antibody level below:
-		// a) we multiply the antibody level by 4 if the agent is boostered
-		if (numVaccinations > 1) {
-			abNoWaning *= 4;
-		}
-		// b) if strain is omicron, an additional factor of 3.7 is applied
-		if (strain.equals(VirusStrain.OMICRON_BA1) ||
-			strain.equals(VirusStrain.OMICRON_BA2) ||
-			strain.equals(VirusStrain.OMICRON_BA5) ||
-			strain.equals(VirusStrain.BQ) ||
-			strain.equals(VirusStrain.EG) ||
-			strain.equals(VirusStrain.XBB_15) ||
-			strain.equals(VirusStrain.XBB_19) ||
-			strain.equals(VirusStrain.STRAIN_A) ||
-			strain.equals(VirusStrain.STRAIN_B) ||
-			strain.toString().startsWith("A_") ||
-			strain.toString().startsWith("B_")) {
-			abNoWaning *= 3.7;
-		}
-
-		// returns remaining risk of infection (1 is full risk, 0 is no risk), opposite of vaccine effectiveness
-		return 1. / (1. + Math.pow(abNoWaning,vaccinationConfig.getBeta()));
-
-	}
-
-	@Override
-	public double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
-
-		int numVaccinations = person.getNumVaccinations();
-		int numInfections = person.getNumInfections() - 1;
-
-		if (numVaccinations == 0 && numInfections == 0)
-			return 1.0;
-
-		VirusStrain strain = person.getVirusStrain();
-
-		double abNoWaning = person.getMaxAntibodies(strain);
-
-		// Two modifications to antibody level below:
-		// a) we multiply the antibody level by 4 if the agent is boostered
-		if (numVaccinations > 1) {
-			abNoWaning *= 4;
-		}
-		// b) if strain is omicron, an additional factor of 3.7 is applied
-		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2)) {
-			abNoWaning *= 3.7;
-		}
-
-		return 1. / (1. + Math.pow(abNoWaning, vaccinationConfig.getBeta()));
-
-	}
-
 
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
 		PathogenConfigGroup.ProgressionParams params = progressionParams(person);

@@ -6,6 +6,7 @@ import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.model.ImmunityModel;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -16,14 +17,17 @@ import org.matsim.episim.util.EpisimSplittableRandom;
 public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransitionModel {
 
 	private final EpisimSplittableRandom rnd;
+	private final ImmunityModel immunityModel;
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup strainConfig;
 	private final PathogenConfigGroup pathogenConfig;
 
 	@Inject
-	public DefaultDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, VaccinationConfigGroup vaccinationConfig,
+	public DefaultDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                           VaccinationConfigGroup vaccinationConfig,
 	                                           VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig) {
 		this.rnd = rnd;
+		this.immunityModel = immunityModel;
 		this.vaccinationConfig = vaccinationConfig;
 		this.strainConfig = strainConfigGroup;
 		this.pathogenConfig = pathogenConfig;
@@ -47,7 +51,7 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 				return EpisimPerson.DiseaseStatus.contagious;
 
 			case contagious:
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * immunity(person, DiseaseStatus.showingSymptoms, day))
 					return EpisimPerson.DiseaseStatus.showingSymptoms;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -57,7 +61,7 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-						* getSeriouslySickFactor(person, vaccinationConfig, day))
+						* immunity(person, DiseaseStatus.seriouslySick, day))
 //						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
 					return EpisimPerson.DiseaseStatus.seriouslySick;
 				else
@@ -66,7 +70,7 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 			case seriouslySick:
 				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)
 						&& (rnd.nextDouble() < getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()
-						* getCriticalFactor(person, vaccinationConfig, day)))
+						* immunity(person, DiseaseStatus.critical, day)))
 					return EpisimPerson.DiseaseStatus.critical;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -87,6 +91,13 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 			default:
 				throw new IllegalStateException("No state transition defined for " + person.getDiseaseStatus());
 		}
+	}
+
+	/**
+	 * Remaining risk of the transition, given what the person's immune history protects them against.
+	 */
+	private double immunity(EpisimPerson person, DiseaseStatus target, int day) {
+		return immunityModel.getFactor(person, person.getVirusStrain(), target, day);
 	}
 
 	/**

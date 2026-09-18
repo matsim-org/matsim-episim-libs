@@ -24,6 +24,7 @@ import org.matsim.episim.*;
 
 import com.google.inject.Inject;
 import org.matsim.episim.model.ConfigurableProgressionModel;
+import org.matsim.episim.model.ImmunityModel;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -38,10 +39,11 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	private final EpisimConfigGroup episimConfig;
 
 	@Inject
-	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
+	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                                EpisimConfigGroup episimConfig,
 	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup,
 	                                                PathogenConfigGroup pathogenConfig) {
-		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, true);
+		super(rnd, immunityModel, vaccinationConfig, strainConfigGroup, pathogenConfig, true);
 		this.episimConfig = episimConfig;
 	}
 

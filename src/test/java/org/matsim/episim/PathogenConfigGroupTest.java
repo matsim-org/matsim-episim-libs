@@ -188,9 +188,9 @@ public class PathogenConfigGroupTest {
 		EpisimConfigGroup episimConfig = new EpisimConfigGroup();
 
 		AntibodyDependentTransitionModel flat =
-				new AntibodyDependentTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig);
+				new AntibodyDependentTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig);
 		AgeDependentDiseaseStatusTransitionModel byAge =
-				new AgeDependentDiseaseStatusTransitionModel(rnd, episimConfig, vaccinationConfig, strainConfig, pathogenConfig);
+				new AgeDependentDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), episimConfig, vaccinationConfig, strainConfig, pathogenConfig);
 
 		VirusStrain fluStrain = VirusStrain.of(INFLUENZA, "FLU_H1N1");
 
@@ -219,7 +219,7 @@ public class PathogenConfigGroupTest {
 
 		PathogenConfigGroup pathogenConfig = new PathogenConfigGroup();
 		AntibodyDependentTransitionModel model = new AntibodyDependentTransitionModel(
-				rnd, new VaccinationConfigGroup(), new VirusStrainConfigGroup(), pathogenConfig);
+				rnd, EpisimTestUtils.noImmunity(), new VaccinationConfigGroup(), new VirusStrainConfigGroup(), pathogenConfig);
 
 		VirusStrain rsvStrain = VirusStrain.of(new Pathogen("RSV"), "RSV_A");
 		EpisimPerson person = EpisimTestUtils.createPerson(true, 40);
@@ -270,21 +270,21 @@ public class PathogenConfigGroupTest {
 
 		VaccinationConfigGroup vaccinationConfig = new VaccinationConfigGroup();
 
-		assertThatThrownBy(() -> new AgeDependentDiseaseStatusTransitionModel(rnd, new EpisimConfigGroup(), vaccinationConfig, strainConfig, pathogenConfig))
+		assertThatThrownBy(() -> new AgeDependentDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), new EpisimConfigGroup(), vaccinationConfig, strainConfig, pathogenConfig))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("AgeDependentDiseaseStatusTransitionModel")
 				.hasMessageContaining("pathogen 'INFLUENZA' of strains [FLU_VARIANT_CHECK]")
 				.hasMessageContaining("ageDependent=true");
 
 		// the age-independent models find their variant
-		new AntibodyDependentTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig);
-		new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig);
+		new AntibodyDependentTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig);
+		new DefaultDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig);
 
 		// a strain of a pathogen without any parameter set
 		VirusStrainConfigGroup unknownPathogen = new VirusStrainConfigGroup();
 		unknownPathogen.getOrAddParams(VirusStrain.of(new Pathogen("UNKNOWN_VARIANT_CHECK"), "UNKNOWN_VARIANT_CHECK_STRAIN"));
 
-		assertThatThrownBy(() -> new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, unknownPathogen, pathogenConfig))
+		assertThatThrownBy(() -> new DefaultDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, unknownPathogen, pathogenConfig))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("pathogen 'UNKNOWN_VARIANT_CHECK' of strains [UNKNOWN_VARIANT_CHECK_STRAIN] has no 'pathogenParams'");
 	}
@@ -563,7 +563,7 @@ public class PathogenConfigGroupTest {
 		strainConfig.getParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(strainFactorSeriouslySick);
 
 		AntibodyDependentTransitionModel model =
-				new AntibodyDependentTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig);
+				new AntibodyDependentTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig);
 
 		int serious = 0;
 		for (int i = 0; i < 20_000; i++) {

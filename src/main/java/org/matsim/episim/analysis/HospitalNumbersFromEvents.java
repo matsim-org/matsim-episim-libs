@@ -39,6 +39,10 @@
  import org.matsim.episim.*;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VirusStrain;
+ import org.matsim.episim.model.LegacyAntibodyImmunityModel;
+ import org.matsim.episim.model.LegacyCurveImmunityModel;
+ import org.matsim.episim.model.ImmunityModel;
+ import org.matsim.episim.model.LegacySplitImmunityModel;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.util.EpisimSplittableRandom;
  import org.matsim.run.AnalysisCommand;
@@ -403,6 +407,8 @@
 		 private final Random rnd;
 		 private final ConfigHolder holder;
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
+		 /** Same split the simulation uses, so that a replay keeps matching the run it replays. */
+		 private final ImmunityModel immunityModel;
 		 private final Int2ObjectAVLTreeMap<Int2IntAVLTreeMap> postProcessHospitalAdmissionsByAge;
 
 
@@ -430,7 +436,9 @@
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
 
-			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig, holder.pathogenConfig);
+			 this.immunityModel = new LegacySplitImmunityModel(
+				 new LegacyCurveImmunityModel(holder.vaccinationConfig), new LegacyAntibodyImmunityModel(holder.vaccinationConfig));
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), immunityModel, holder.episimConfig, holder.vaccinationConfig, holder.strainConfig, holder.pathogenConfig);
 
 //			 try {
 //				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
@@ -596,7 +604,7 @@
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
-			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
+			 double immunityFactor = immunityModel.getFactor(person, person.getVirusStrain(), EpisimPerson.DiseaseStatus.seriouslySick, day);
 
 			 return rnd.nextDouble() < ageFactor
 				 * strainFactor
@@ -611,7 +619,7 @@
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToCritical(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorCritical();
-			 double immunityFactor = transitionModel.getCriticalFactor(person, holder.vaccinationConfig, day); //todo: revert
+			 double immunityFactor = immunityModel.getFactor(person, person.getVirusStrain(), EpisimPerson.DiseaseStatus.critical, day); //todo: revert
 
 			 return rnd.nextDouble() < ageFactor
 				 * strainFactor

@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.ImmunityModel;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -175,6 +176,25 @@ public class EpisimTestUtils {
 	/**
 	 * Create uninitialized person without trajectory.
 	 */
+	/**
+	 * Immunity model for tests that do not care about immunity: nothing is ever reduced. Equivalent to what the
+	 * curve-based immunity returns while {@code VaccinationType.natural} is not configured, which is the state
+	 * every one of these tests was written in.
+	 */
+	public static ImmunityModel noImmunity() {
+		return new ImmunityModel() {
+			@Override
+			public double getFactor(Immunizable person, VirusStrain strain, EpisimPerson.DiseaseStatus target, int day) {
+				return 1.0;
+			}
+
+			@Override
+			public double getInfectivityFactor(Immunizable infector, VirusStrain strain, int day) {
+				return 1.0;
+			}
+		};
+	}
+
 	public static EpisimPerson createPerson() {
 		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new AttributesImpl(), reporting);
 	}

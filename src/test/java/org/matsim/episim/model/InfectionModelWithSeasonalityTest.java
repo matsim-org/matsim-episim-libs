@@ -33,7 +33,8 @@ public class InfectionModelWithSeasonalityTest {
 		act = episimConfig.getInfectionParam("c10");
 		restrictions = episimConfig.createInitialRestrictions();
 		reporting = Mockito.mock(EpisimReporting.class);
-		model = new InfectionModelWithSeasonality(new DefaultFaceMaskModel(rnd), rnd, config, reporting);
+		model = new InfectionModelWithSeasonality(new DefaultFaceMaskModel(rnd),
+			new LegacyCurveImmunityModel(ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class)), rnd, config, reporting);
 	}
 
 	@Test
