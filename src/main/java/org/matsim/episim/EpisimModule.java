@@ -66,6 +66,8 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		bind(AntibodyModel.class).to(DefaultAntibodyModel.class).in(Singleton.class);
+		// antibody parameters are calibrated for SARS-CoV-2 and not a config group; scenarios bind their own instance
+		bind(AntibodyModel.Config.class).toInstance(new AntibodyModel.Config());
 		// Both sources are bound explicitly because LegacySplitImmunityModel injects them and this injector
 		// requires explicit bindings. The default is the curve-based source, which is what
 		// DefaultDiseaseStatusTransitionModel used through the former default methods of its interface.
@@ -143,12 +145,6 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public PathogenConfigGroup pathogenConfigGroup(Config config) {
 		return ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
-	}
-
-	@Provides
-	@Singleton
-	public AntibodyConfigGroup antibodyConfigGroup(Config config) {
-		return ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
 	}
 
 	/** Provides the contact-transmission configuration. */

@@ -20,7 +20,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.ContactTransmissionConfigGroup;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
@@ -224,13 +223,8 @@ public class RsvCologneScenarioTest {
 				LocalDate.parse("2022-10-24"), LocalDate.parse("2022-12-31"), 6.0, 6.0);
 		episimConfig.setInfections_pers_per_day(RSV_STRAIN, rsvImport);
 
-		// 7. antibodies 0.0 keep getSeriouslySickFactor = 1/(1+ab^beta) at 1 (same neutralisation as influenza)
-		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
-		AntibodyConfigGroup.AntibodyParams rsvAntibodies = antibodyConfig.getOrAddParams(RSV_STRAIN);
-		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
-			rsvAntibodies.getInitialAntibodies().put(against, 0.0);
-			rsvAntibodies.getAntibodyRefreshFactors().put(against, 1.0);
-		}
+		// 7. no antibody parameters on purpose: an RSV infection then induces no antibodies, so the antibody-based
+		//    severity factor 1/(1+ab^beta) stays at 1 (same as influenza)
 	}
 
 	/**

@@ -124,6 +124,11 @@
 		 bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 		 bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
 
+		 // antibody model
+		 AntibodyModel.Config antibodyConfig = new AntibodyModel.Config();
+		 antibodyConfig.setImmuneResponseSigma(3.0);
+		 bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
+
 		 bind(HouseholdSusceptibility.Config.class).toInstance(
 			 HouseholdSusceptibility.newConfig().withSusceptibleHouseholds(householdSusc, 5.0)
 		 );
@@ -134,14 +139,6 @@
 		 listener.addBinding().to(HouseholdSusceptibility.class);
 
 
-	 }
-
-	 @Provides
-	 @Singleton
-	 public AntibodyConfigGroup antibodyConfigGroup(Config config) {
-		 AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
-		 antibodyConfig.setImmuneResponseSigma(3.0);
-		 return antibodyConfig;
 	 }
 
 	 @Provides

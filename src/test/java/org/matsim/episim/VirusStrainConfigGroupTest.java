@@ -63,8 +63,8 @@ public class VirusStrainConfigGroupTest {
 	}
 
 	/**
-	 * MATSim writes config modules in alphabetical order, so {@code antibodies} (and {@code episim}) reference a
-	 * custom strain by name before {@code virusStrains} declares its pathogen. Loading must not depend on that order.
+	 * MATSim writes config modules in alphabetical order, so {@code episim} references a custom strain by name before
+	 * {@code virusStrains} declares its pathogen. Loading must not depend on that order.
 	 */
 	@Test
 	public void loadsCustomPathogenStrainReferencedBeforeVirusStrains() throws IOException {
@@ -76,12 +76,8 @@ public class VirusStrainConfigGroupTest {
 			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
 			"<!DOCTYPE config SYSTEM \"http://www.matsim.org/files/dtd/config_v2.dtd\">",
 			"<config>",
-			"	<module name=\"antibodies\" >",
-			"		<parameterset type=\"antibodyParams\" >",
-			"			<param name=\"immunityEvent\" value=\"FLU_ORDER_TEST\" />",
-			"			<param name=\"immunityEventKind\" value=\"strain\" />",
-			"			<param name=\"initialAntibodies\" value=\"FLU_ORDER_TEST=1.0\" />",
-			"		</parameterset>",
+			"	<module name=\"episim\" >",
+			"		<param name=\"infectionsPerDay\" value=\"FLU_ORDER_TEST>2021-01-01=5\" />",
 			"	</module>",
 			"	<module name=\"virusStrains\" >",
 			"		<parameterset type=\"strainParams\" >",
@@ -91,14 +87,14 @@ public class VirusStrainConfigGroupTest {
 			"	</module>",
 			"</config>"));
 
-		AntibodyConfigGroup antibodies = new AntibodyConfigGroup();
+		EpisimConfigGroup episim = new EpisimConfigGroup();
 		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
-		ConfigUtils.loadConfig(tmp.toString(), antibodies, strains);
+		ConfigUtils.loadConfig(tmp.toString(), episim, strains);
 
 		VirusStrain flu = VirusStrain.of("FLU_ORDER_TEST");
 		assertThat(flu.getPathogen()).isEqualTo(new Pathogen("influenza"));
 		assertThat(strains.getParams(flu).getPathogen()).isEqualTo(new Pathogen("influenza"));
-		assertThat(antibodies.getParams(flu).getInitialAntibodies()).containsEntry(flu, 1.0);
+		assertThat(episim.getInfections_pers_per_day()).containsKey(flu);
 	}
 
 	@Test
@@ -134,9 +130,8 @@ public class VirusStrainConfigGroupTest {
 		VirusStrainConfigGroup declared = new VirusStrainConfigGroup();
 		Config declaredConfig = loadConfigXml(
 			xmlModule("episim", xmlParam("infectionsPerDay", "DELTAA_TYPO>2021-01-01=5")) + "\n" +
-				xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTAA_TYPO"))) + "\n" +
-				xmlModule("antibodies", antibodyParams("DELTAA_TYPO")),
-			new EpisimConfigGroup(), declared, new AntibodyConfigGroup());
+				xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTAA_TYPO"))),
+			new EpisimConfigGroup(), declared);
 		declared.checkConsistency(declaredConfig);
 	}
 
@@ -150,10 +145,9 @@ public class VirusStrainConfigGroupTest {
 		String strain = xmlModule("virusStrains", xmlSet(STRAIN_PARAMS,
 			xmlParam("strain", "CHECK_PATHOGEN_STRAIN"),
 			xmlParam("pathogen", "checkPathogen")));
-		String antibodies = xmlModule("antibodies", antibodyParams("CHECK_PATHOGEN_STRAIN"));
 
 		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
-		Config config = loadConfigXml(strain + "\n" + antibodies, strains, new AntibodyConfigGroup(), new PathogenConfigGroup());
+		Config config = loadConfigXml(strain, strains, new PathogenConfigGroup());
 
 		assertThatThrownBy(() -> strains.checkConsistency(config))
 			.isInstanceOf(IllegalStateException.class)
@@ -163,51 +157,43 @@ public class VirusStrainConfigGroupTest {
 
 		// the pathogen group is not part of the config: its defaults only contain SARS-CoV-2
 		VirusStrainConfigGroup withoutGroup = new VirusStrainConfigGroup();
-		Config configWithoutGroup = loadConfigXml(strain + "\n" + antibodies, withoutGroup, new AntibodyConfigGroup());
+		Config configWithoutGroup = loadConfigXml(strain, withoutGroup);
 
 		assertThatThrownBy(() -> withoutGroup.checkConsistency(configWithoutGroup))
 			.hasMessageContaining("pathogen 'checkPathogen'");
 
 		VirusStrainConfigGroup configured = new VirusStrainConfigGroup();
-		Config configuredConfig = loadConfigXml(strain + "\n" + antibodies + "\n" +
+		Config configuredConfig = loadConfigXml(strain + "\n" +
 				xmlModule("pathogen", xmlSet("pathogenParams", xmlParam("pathogen", "checkPathogen"))),
-			configured, new AntibodyConfigGroup(), new PathogenConfigGroup());
+			configured, new PathogenConfigGroup());
 		configured.checkConsistency(configuredConfig);
 	}
 
 	/**
-	 * A strain without {@code antibodyParams} is rejected before the simulation starts, instead of failing on the day
-	 * after its first infection. All problems are reported at once.
+	 * All problems are reported at once rather than one per run: here a misspelled import together with a strain of
+	 * a pathogen that has no parameters.
 	 */
 	@Test
-	public void strainWithoutAntibodyParamsIsRejected() throws IOException {
+	public void allProblemsAreReportedAtOnce() throws IOException {
 
 		VirusStrainConfigGroup strains = new VirusStrainConfigGroup();
 		Config config = loadConfigXml(
 			xmlModule("episim", xmlParam("infectionsPerDay", "CHECK_TYPO_STRAIN>2021-01-01=5")) + "\n" +
-				xmlModule("virusStrains",
-					xmlSet(STRAIN_PARAMS, xmlParam("strain", "CHECK_ANTIBODY_STRAIN_A")),
-					xmlSet(STRAIN_PARAMS, xmlParam("strain", "CHECK_ANTIBODY_STRAIN_B"))),
-			new EpisimConfigGroup(), strains, new AntibodyConfigGroup());
+				xmlModule("virusStrains", xmlSet(STRAIN_PARAMS,
+					xmlParam("strain", "CHECK_ALL_PROBLEMS_STRAIN"),
+					xmlParam("pathogen", "checkAllProblemsPathogen"))),
+			new EpisimConfigGroup(), strains, new PathogenConfigGroup());
 
 		assertThatThrownBy(() -> strains.checkConsistency(config))
 			.isInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("[CHECK_ANTIBODY_STRAIN_A, CHECK_ANTIBODY_STRAIN_B] have no 'antibodyParams'")
-			// the misspelled import is reported together with the missing antibodies
-			.hasMessageContaining("[CHECK_TYPO_STRAIN] are imported");
+			.hasMessageContaining("[CHECK_TYPO_STRAIN] are imported")
+			.hasMessageContaining("pathogen 'checkAllProblemsPathogen'");
 
-		// standard strains are covered by the antibody defaults
+		// a standard strain passes without any further configuration
 		VirusStrainConfigGroup standard = new VirusStrainConfigGroup();
 		Config standardConfig = loadConfigXml(
 			xmlModule("virusStrains", xmlSet(STRAIN_PARAMS, xmlParam("strain", "DELTA"))), standard);
 		standard.checkConsistency(standardConfig);
-	}
-
-	private static String antibodyParams(String strain) {
-		return xmlSet("antibodyParams",
-			xmlParam("immunityEvent", strain),
-			xmlParam("immunityEventKind", "strain"),
-			xmlParam("initialAntibodies", strain + "=1.0"));
 	}
 
 	@Test

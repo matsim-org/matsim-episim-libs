@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.MatsimXmlParser;
-import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.VirusStrainConfigGroup;
@@ -55,7 +54,7 @@ public class DefaultAntibodyModelTest {
 
 	private final List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
 	private DefaultAntibodyModel model;
-	private AntibodyConfigGroup antibodyConfig;
+	private AntibodyModel.Config antibodyConfig;
 	private final Offset<Double> OFFSET = Offset.offset(0.1);
 	;
 
@@ -63,7 +62,7 @@ public class DefaultAntibodyModelTest {
 	@BeforeEach
 	public void setup() {
 
-		antibodyConfig = new AntibodyConfigGroup();
+		antibodyConfig = new AntibodyModel.Config();
 		model = new DefaultAntibodyModel(antibodyConfig, new VirusStrainConfigGroup());
 
 	}
@@ -160,7 +159,7 @@ public class DefaultAntibodyModelTest {
 
 		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
 		strainConfig.getOrAddParams(flu);
-		antibodyConfig.getOrAddParams(flu).setInitialAntibodies(Map.of(flu, 2.0));
+		antibodyConfig.setInitialAntibodies(flu, Map.of(flu, 2.0));
 		model = new DefaultAntibodyModel(antibodyConfig, strainConfig);
 
 		EpisimPerson person = EpisimTestUtils.createPerson();
@@ -181,6 +180,34 @@ public class DefaultAntibodyModelTest {
 
 		assertThat(person.getAntibodies(flu)).isEqualTo(2.0);
 		assertThat(person.getAntibodies(VirusStrain.SARS_CoV_2)).isEqualTo(sarsAntibodies);
+	}
+
+	/**
+	 * An infection with a strain that has no antibody parameters at all induces no antibodies and does not fail.
+	 * This replaces the former consistency rule that every configured strain needs antibody parameters: pathogens
+	 * such as RSV and influenza run without configuring zeros for them.
+	 */
+	@Test
+	public void immunityEventWithoutParametersInducesNoAntibodies() {
+
+		VirusStrain rsv = VirusStrain.of(new Pathogen("RSV_NO_ANTIBODY_PARAMS"), "RSV_NO_ANTIBODY_PARAMS");
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		strainConfig.getOrAddParams(rsv);
+		model = new DefaultAntibodyModel(antibodyConfig, strainConfig);
+
+		assertThat(antibodyConfig.getInitialAntibodies(rsv)).isEmpty();
+
+		EpisimPerson person = EpisimTestUtils.createPerson();
+		person.setImmuneResponseMultiplier(1.0);
+
+		EpisimTestUtils.infectPerson(person, rsv, 0);
+		for (int day = 1; day <= 5; day++)
+			model.updateAntibodies(person, day);
+
+		assertThat(person.getAntibodies(rsv)).isEqualTo(0.0);
+		assertThat(person.getMaxAntibodies(rsv)).isEqualTo(0.0);
+		assertThat(person.getAntibodies(VirusStrain.SARS_CoV_2)).isEqualTo(0.0);
 	}
 
 	/**

@@ -43,8 +43,8 @@ public class VaccinationType implements ImmunityEvent {
 	/**
 	 * Canonical natural-immunity type per source strain. Natural types are created on demand by
 	 * {@link #naturalFor(VirusStrain)}; they are deliberately not pre-created for every standard strain, because every
-	 * registered type becomes a column in {@code vaccinations.tsv} and a default parameter set in
-	 * {@code AntibodyConfigGroup}.
+	 * registered type becomes a column in {@code vaccinations.tsv}, and every standard type gets default antibody
+	 * parameters in {@link AntibodyModel.Config}.
 	 */
 	private static final Map<VirusStrain, VaccinationType> NATURAL_BY_SOURCE = new ConcurrentHashMap<>();
 
