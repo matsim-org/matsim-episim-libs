@@ -103,63 +103,48 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	 *     &lt;li&gt;Every strain that is imported with a positive number of infections needs a parameter set. Since strain names
 	 *     are resolved leniently while the config is read, this catches misspelled strain names.&lt;/li&gt;
 	 *     &lt;li&gt;The pathogen of every configured strain needs a {@code pathogenParams} set in {@link PathogenConfigGroup}.&lt;/li&gt;
-	 *     &lt;li&gt;Every configured strain needs an {@code antibodyParams} set in {@link AntibodyConfigGroup}.&lt;/li&gt;
 	 * &lt;/ul&gt;
 	 * All problems are reported at once. A config group that is not part of the config is checked with its defaults,
 	 * as these are used by the simulation.
 	 */
 	@Override
 	protected void checkConsistency(Config config) {
-<span class="fc" id="L113">		super.checkConsistency(config);</span>
+<span class="fc" id="L112">		super.checkConsistency(config);</span>
 
-<span class="fc" id="L115">		List&lt;String&gt; problems = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L114">		List&lt;String&gt; problems = new ArrayList&lt;&gt;();</span>
 
-<span class="fc" id="L117">		ConfigGroup episim = config.getModules().get(&quot;episim&quot;);</span>
-<span class="fc bfc" id="L118" title="All 2 branches covered.">		if (episim instanceof EpisimConfigGroup) {</span>
-<span class="fc" id="L119">			List&lt;String&gt; missing = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L120" title="All 2 branches covered.">			for (Map.Entry&lt;VirusStrain, NavigableMap&lt;LocalDate, Integer&gt;&gt; e : ((EpisimConfigGroup) episim).getInfections_pers_per_day().entrySet()) {</span>
-<span class="fc bfc" id="L121" title="All 2 branches covered.">				boolean imported = e.getValue().values().stream().anyMatch(n -&gt; n &gt; 0);</span>
-<span class="fc bfc" id="L122" title="All 4 branches covered.">				if (imported &amp;&amp; !strains.containsKey(e.getKey()))</span>
-<span class="fc" id="L123">					missing.add(e.getKey().getVirusStrainName());</span>
-<span class="fc" id="L124">			}</span>
+<span class="fc" id="L116">		ConfigGroup episim = config.getModules().get(&quot;episim&quot;);</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">		if (episim instanceof EpisimConfigGroup) {</span>
+<span class="fc" id="L118">			List&lt;String&gt; missing = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">			for (Map.Entry&lt;VirusStrain, NavigableMap&lt;LocalDate, Integer&gt;&gt; e : ((EpisimConfigGroup) episim).getInfections_pers_per_day().entrySet()) {</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">				boolean imported = e.getValue().values().stream().anyMatch(n -&gt; n &gt; 0);</span>
+<span class="fc bfc" id="L121" title="All 4 branches covered.">				if (imported &amp;&amp; !strains.containsKey(e.getKey()))</span>
+<span class="fc" id="L122">					missing.add(e.getKey().getVirusStrainName());</span>
+<span class="fc" id="L123">			}</span>
 
-<span class="fc bfc" id="L126" title="All 2 branches covered.">			if (!missing.isEmpty())</span>
-<span class="fc" id="L127">				problems.add(&quot;Virus strains &quot; + missing + &quot; are imported via 'infections_pers_per_day' of config group &quot;</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">			if (!missing.isEmpty())</span>
+<span class="fc" id="L126">				problems.add(&quot;Virus strains &quot; + missing + &quot; are imported via 'infections_pers_per_day' of config group &quot;</span>
 						+ &quot;'episim', but have no '&quot; + StrainParams.SET_TYPE + &quot;' in config group '&quot; + GROUPNAME + &quot;'. &quot;
 						+ &quot;Check the strain names for typos or add parameter sets for these strains.&quot;);
 		}
 
-<span class="fc" id="L132">		PathogenConfigGroup pathogens = moduleOrDefault(config, PathogenConfigGroup.GROUPNAME, PathogenConfigGroup.class, PathogenConfigGroup::new);</span>
-<span class="pc bpc" id="L133" title="1 of 2 branches missed.">		if (pathogens != null) {</span>
-<span class="fc" id="L134">			Map&lt;Pathogen, List&lt;String&gt;&gt; missing = new TreeMap&lt;&gt;(Comparator.comparing(Pathogen::getName));</span>
-<span class="fc bfc" id="L135" title="All 2 branches covered.">			for (VirusStrain strain : strains.keySet()) {</span>
-<span class="fc bfc" id="L136" title="All 2 branches covered.">				if (!pathogens.hasParams(strain.getPathogen()))</span>
-<span class="fc" id="L137">					missing.computeIfAbsent(strain.getPathogen(), k -&gt; new ArrayList&lt;&gt;()).add(strain.getVirusStrainName());</span>
-<span class="fc" id="L138">			}</span>
+<span class="fc" id="L131">		PathogenConfigGroup pathogens = moduleOrDefault(config, PathogenConfigGroup.GROUPNAME, PathogenConfigGroup.class, PathogenConfigGroup::new);</span>
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">		if (pathogens != null) {</span>
+<span class="fc" id="L133">			Map&lt;Pathogen, List&lt;String&gt;&gt; missing = new TreeMap&lt;&gt;(Comparator.comparing(Pathogen::getName));</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">			for (VirusStrain strain : strains.keySet()) {</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">				if (!pathogens.hasParams(strain.getPathogen()))</span>
+<span class="fc" id="L136">					missing.computeIfAbsent(strain.getPathogen(), k -&gt; new ArrayList&lt;&gt;()).add(strain.getVirusStrainName());</span>
+<span class="fc" id="L137">			}</span>
 
-<span class="fc" id="L140">			missing.forEach((pathogen, names) -&gt; problems.add(&quot;Virus strains &quot; + names + &quot; belong to pathogen '&quot; + pathogen.getName()</span>
+<span class="fc" id="L139">			missing.forEach((pathogen, names) -&gt; problems.add(&quot;Virus strains &quot; + names + &quot; belong to pathogen '&quot; + pathogen.getName()</span>
 					+ &quot;', which has no '&quot; + PathogenConfigGroup.PathogenParams.SET_TYPE + &quot;' in config group '&quot;
 					+ PathogenConfigGroup.GROUPNAME + &quot;'. Add a parameter set for this pathogen or check its name in '&quot;
 					+ StrainParams.SET_TYPE + &quot;'.&quot;));
 		}
 
-<span class="fc" id="L146">		AntibodyConfigGroup antibodies = moduleOrDefault(config, AntibodyConfigGroup.GROUPNAME, AntibodyConfigGroup.class, AntibodyConfigGroup::new);</span>
-<span class="pc bpc" id="L147" title="1 of 2 branches missed.">		if (antibodies != null) {</span>
-<span class="fc" id="L148">			List&lt;String&gt; missing = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L149" title="All 2 branches covered.">			for (VirusStrain strain : strains.keySet()) {</span>
-<span class="fc bfc" id="L150" title="All 2 branches covered.">				if (!antibodies.hasParams(strain))</span>
-<span class="fc" id="L151">					missing.add(strain.getVirusStrainName());</span>
-<span class="fc" id="L152">			}</span>
-
-<span class="fc bfc" id="L154" title="All 2 branches covered.">			if (!missing.isEmpty())</span>
-<span class="fc" id="L155">				problems.add(&quot;Virus strains &quot; + missing + &quot; have no '&quot; + AntibodyConfigGroup.AntibodyParams.SET_TYPE</span>
-						+ &quot;' in config group '&quot; + AntibodyConfigGroup.GROUPNAME + &quot;'. Add a parameter set with immunityEventKind '&quot;
-						+ AntibodyConfigGroup.AntibodyParams.KIND_STRAIN + &quot;' for each of these strains.&quot;);
-		}
-
-<span class="fc bfc" id="L160" title="All 2 branches covered.">		if (!problems.isEmpty())</span>
-<span class="fc" id="L161">			throw new IllegalStateException(String.join(&quot;\n&quot;, problems));</span>
-<span class="fc" id="L162">	}</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">		if (!problems.isEmpty())</span>
+<span class="fc" id="L146">			throw new IllegalStateException(String.join(&quot;\n&quot;, problems));</span>
+<span class="fc" id="L147">	}</span>
 
 	/**
 	 * The typed config group with the given name, a new default instance if the config does not contain this group, or
@@ -167,35 +152,35 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	 */
 	@Nullable
 	static &lt;T extends ConfigGroup&gt; T moduleOrDefault(Config config, String name, Class&lt;T&gt; type, Supplier&lt;T&gt; defaults) {
-<span class="fc" id="L170">		ConfigGroup module = config.getModules().get(name);</span>
-<span class="fc bfc" id="L171" title="All 2 branches covered.">		if (module == null)</span>
-<span class="fc" id="L172">			return defaults.get();</span>
+<span class="fc" id="L155">		ConfigGroup module = config.getModules().get(name);</span>
+<span class="fc bfc" id="L156" title="All 2 branches covered.">		if (module == null)</span>
+<span class="fc" id="L157">			return defaults.get();</span>
 
-<span class="pc bpc" id="L174" title="1 of 2 branches missed.">		return type.isInstance(module) ? type.cast(module) : null;</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">		return type.isInstance(module) ? type.cast(module) : null;</span>
 	}
 
 	@Override
 	public ConfigGroup createParameterSet(String type) {
-<span class="pc bpc" id="L179" title="1 of 2 branches missed.">		if (StrainParams.SET_TYPE.equals(type)) {</span>
-<span class="fc" id="L180">			return new StrainParams();</span>
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">		if (StrainParams.SET_TYPE.equals(type)) {</span>
+<span class="fc" id="L165">			return new StrainParams();</span>
 		}
-<span class="nc" id="L182">		throw new IllegalArgumentException(&quot;Unknown type&quot; + type);</span>
+<span class="nc" id="L167">		throw new IllegalArgumentException(&quot;Unknown type&quot; + type);</span>
 	}
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
-<span class="pc bpc" id="L187" title="1 of 2 branches missed.">		if (StrainParams.SET_TYPE.equals(set.getName())) {</span>
-<span class="fc" id="L188">			StrainParams p = (StrainParams) set;</span>
-<span class="fc" id="L189">			StrainParams previous = strains.put(p.getStrain(), p);</span>
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">		if (StrainParams.SET_TYPE.equals(set.getName())) {</span>
+<span class="fc" id="L173">			StrainParams p = (StrainParams) set;</span>
+<span class="fc" id="L174">			StrainParams previous = strains.put(p.getStrain(), p);</span>
 			// replace a previously registered set (e.g. the auto-added SARS-CoV-2 default) instead of keeping a stale duplicate
-<span class="fc bfc" id="L191" title="All 2 branches covered.">			if (previous != null)</span>
-<span class="fc" id="L192">				super.removeParameterSet(previous);</span>
-<span class="fc" id="L193">			super.addParameterSet(set);</span>
-<span class="fc" id="L194">			virusStrains = null;</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">			if (previous != null)</span>
+<span class="fc" id="L177">				super.removeParameterSet(previous);</span>
+<span class="fc" id="L178">			super.addParameterSet(set);</span>
+<span class="fc" id="L179">			virusStrains = null;</span>
 
-<span class="fc" id="L196">		} else</span>
-<span class="nc" id="L197">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
-<span class="fc" id="L198">	}</span>
+<span class="fc" id="L181">		} else</span>
+<span class="nc" id="L182">			throw new IllegalStateException(&quot;Unknown set type &quot; + set.getName());</span>
+<span class="fc" id="L183">	}</span>
 
 	/**
 	 * Holds strain specific options.
@@ -217,79 +202,79 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		 * Type of the strain.
 		 */
 		private String strainName;
-<span class="fc" id="L220">		private Pathogen pathogen = Pathogen.SARS_COV_2;</span>
+<span class="fc" id="L205">		private Pathogen pathogen = Pathogen.SARS_COV_2;</span>
 		private VirusStrain strain;
 
 		/**
 		 * v Infectiousness of this variant.
 		 */
-<span class="fc" id="L226">		private double infectiousness = 1.0;</span>
+<span class="fc" id="L211">		private double infectiousness = 1.0;</span>
 
 		/**
 		 * Factor for probability.
 		 */
-<span class="fc" id="L231">		private double factorSeriouslySick = 1.0;</span>
+<span class="fc" id="L216">		private double factorSeriouslySick = 1.0;</span>
 
 		/**
 		 * Factor for critical probability.
 		 */
-<span class="fc" id="L236">		private double factorCritical = 1.0;</span>
+<span class="fc" id="L221">		private double factorCritical = 1.0;</span>
 
 		/**
 		 * Factor for probability when person is vaccinated.
 		 */
-<span class="fc" id="L241">		private double factorSeriouslySickVaccinated = 1.0;</span>
+<span class="fc" id="L226">		private double factorSeriouslySickVaccinated = 1.0;</span>
 
 		/**
 		 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 		 * Taken from https://doi.org/10.1101/2020.06.03.20121145
 		 */
-<span class="fc" id="L247">		private final NavigableMap&lt;Integer, Double&gt; ageSusceptibility = new TreeMap&lt;&gt;(Map.of(</span>
-<span class="fc" id="L248">				19, 0.45,</span>
-<span class="fc" id="L249">				20, 1d</span>
+<span class="fc" id="L232">		private final NavigableMap&lt;Integer, Double&gt; ageSusceptibility = new TreeMap&lt;&gt;(Map.of(</span>
+<span class="fc" id="L233">				19, 0.45,</span>
+<span class="fc" id="L234">				20, 1d</span>
 		));
 
 		/**
 		 * Child infectivity used in AgeDependentInfectionModelWithSeasonality.
 		 * Taken from https://doi.org/10.1101/2020.06.03.20121145
 		 */
-<span class="fc" id="L256">		private final NavigableMap&lt;Integer, Double&gt; ageInfectivity = new TreeMap&lt;&gt;(Map.of(</span>
-<span class="fc" id="L257">				19, 0.85,</span>
-<span class="fc" id="L258">				20, 1d</span>
+<span class="fc" id="L241">		private final NavigableMap&lt;Integer, Double&gt; ageInfectivity = new TreeMap&lt;&gt;(Map.of(</span>
+<span class="fc" id="L242">				19, 0.85,</span>
+<span class="fc" id="L243">				20, 1d</span>
 		));
 
 		StrainParams() {
-<span class="fc" id="L262">			super(SET_TYPE);</span>
-<span class="fc" id="L263">		}</span>
+<span class="fc" id="L247">			super(SET_TYPE);</span>
+<span class="fc" id="L248">		}</span>
 
 		@StringGetter(STRAIN)
 		public String getStrainName(){
-<span class="fc" id="L267">			return strainName;</span>
+<span class="fc" id="L252">			return strainName;</span>
 		}
 
 		public VirusStrain getStrain() {
-<span class="pc bpc" id="L271" title="1 of 4 branches missed.">			if (strain == null &amp;&amp; strainName != null) {</span>
-<span class="fc" id="L272">				strain = VirusStrain.of(pathogen, strainName);</span>
-<span class="fc" id="L273">				pathogen = strain.getPathogen();</span>
+<span class="pc bpc" id="L256" title="1 of 4 branches missed.">			if (strain == null &amp;&amp; strainName != null) {</span>
+<span class="fc" id="L257">				strain = VirusStrain.of(pathogen, strainName);</span>
+<span class="fc" id="L258">				pathogen = strain.getPathogen();</span>
 			}
-<span class="fc" id="L275">			return strain;</span>
+<span class="fc" id="L260">			return strain;</span>
 		}
 
 		@StringSetter(STRAIN)
 		public void setStrain(String strain){
-<span class="fc" id="L280">			this.strainName = strain;</span>
-<span class="fc" id="L281">			this.strain = null;</span>
-<span class="fc" id="L282">		}</span>
+<span class="fc" id="L265">			this.strainName = strain;</span>
+<span class="fc" id="L266">			this.strain = null;</span>
+<span class="fc" id="L267">		}</span>
 
 		public void setStrain(VirusStrain strain) {
-<span class="fc" id="L285">			this.strain = strain;</span>
-<span class="pc bpc" id="L286" title="1 of 2 branches missed.">			this.strainName = strain == null ? null : strain.getVirusStrainName();</span>
-<span class="pc bpc" id="L287" title="1 of 2 branches missed.">			this.pathogen = strain == null ? Pathogen.SARS_COV_2 : strain.getPathogen();</span>
-<span class="fc" id="L288">		}</span>
+<span class="fc" id="L270">			this.strain = strain;</span>
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">			this.strainName = strain == null ? null : strain.getVirusStrainName();</span>
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">			this.pathogen = strain == null ? Pathogen.SARS_COV_2 : strain.getPathogen();</span>
+<span class="fc" id="L273">		}</span>
 
 		@StringGetter(PATHOGEN)
 		public String getPathogenName() {
-<span class="fc" id="L292">			return getPathogen().getName();</span>
+<span class="fc" id="L277">			return getPathogen().getName();</span>
 		}
 
 		/**
@@ -297,68 +282,68 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		 * parameter set was created (see {@link VirusStrain#of(Pathogen, String)}).
 		 */
 		public Pathogen getPathogen() {
-<span class="fc bfc" id="L300" title="All 2 branches covered.">			return strain != null ? strain.getPathogen() : pathogen;</span>
+<span class="fc bfc" id="L285" title="All 2 branches covered.">			return strain != null ? strain.getPathogen() : pathogen;</span>
 		}
 
 		@StringSetter(PATHOGEN)
 		public void setPathogen(String pathogen) {
-<span class="fc" id="L305">			setPathogen(new Pathogen(pathogen));</span>
-<span class="fc" id="L306">		}</span>
+<span class="fc" id="L290">			setPathogen(new Pathogen(pathogen));</span>
+<span class="fc" id="L291">		}</span>
 
 		public void setPathogen(Pathogen pathogen) {
-<span class="fc" id="L309">			this.pathogen = Objects.requireNonNull(pathogen, &quot;Pathogen must not be null&quot;);</span>
-<span class="fc" id="L310">			this.strain = null;</span>
-<span class="fc" id="L311">		}</span>
+<span class="fc" id="L294">			this.pathogen = Objects.requireNonNull(pathogen, &quot;Pathogen must not be null&quot;);</span>
+<span class="fc" id="L295">			this.strain = null;</span>
+<span class="fc" id="L296">		}</span>
 
 		@StringGetter(INFECTIOUSNESS)
 		public double getInfectiousness() {
-<span class="fc" id="L315">			return infectiousness;</span>
+<span class="fc" id="L300">			return infectiousness;</span>
 		}
 
 		@StringSetter(INFECTIOUSNESS)
 		public void setInfectiousness(double infectiousness) {
-<span class="fc" id="L320">			this.infectiousness = infectiousness;</span>
-<span class="fc" id="L321">		}</span>
+<span class="fc" id="L305">			this.infectiousness = infectiousness;</span>
+<span class="fc" id="L306">		}</span>
 
 		@Deprecated
 		public double getVaccineEffectiveness() {
-<span class="nc" id="L325">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+<span class="nc" id="L310">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
 		}
 
 		@Deprecated
 		public void setVaccineEffectiveness(double vaccineEffectiveness) {
-<span class="nc" id="L330">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+<span class="nc" id="L315">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
 		}
 
 		@Deprecated
 		public double getReVaccineEffectiveness() {
-<span class="nc" id="L335">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+<span class="nc" id="L320">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
 		}
 
 		@Deprecated
 		public void setReVaccineEffectiveness(double vaccineEffectiveness) {
-<span class="nc" id="L340">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
+<span class="nc" id="L325">			throw new RuntimeException(&quot;Deprecated: Configure effectiveness in hte vaccination config.&quot;);</span>
 		}
 
 		@StringSetter(FACTOR_SERIOUSLY_SICK)
 		public void setFactorSeriouslySick(double factorSeriouslySick) {
-<span class="fc" id="L345">			this.factorSeriouslySick = factorSeriouslySick;</span>
-<span class="fc" id="L346">		}</span>
+<span class="fc" id="L330">			this.factorSeriouslySick = factorSeriouslySick;</span>
+<span class="fc" id="L331">		}</span>
 
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
 		public double getFactorSeriouslySick() {
-<span class="fc" id="L350">			return factorSeriouslySick;</span>
+<span class="fc" id="L335">			return factorSeriouslySick;</span>
 		}
 
 		@StringGetter(FACTOR_CRITICAL)
 		public double getFactorCritical() {
-<span class="fc" id="L355">			return factorCritical;</span>
+<span class="fc" id="L340">			return factorCritical;</span>
 		}
 
 		@StringSetter(FACTOR_CRITICAL)
 		public void setFactorCritical(double factorCritical) {
-<span class="fc" id="L360">			this.factorCritical = factorCritical;</span>
-<span class="fc" id="L361">		}</span>
+<span class="fc" id="L345">			this.factorCritical = factorCritical;</span>
+<span class="fc" id="L346">		}</span>
 
 		/**
 		 * Configure this in the vaccination config instead. Nonetheless, for now this value will still be respected.
@@ -366,70 +351,70 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		@Deprecated
 		@StringSetter(FACTOR_SERIOUSLY_SICK_VAC)
 		public void setFactorSeriouslySickVaccinated(double factorSeriouslySickVaccinated) {
-<span class="fc" id="L369">			this.factorSeriouslySickVaccinated = factorSeriouslySickVaccinated;</span>
-<span class="fc" id="L370">		}</span>
+<span class="fc" id="L354">			this.factorSeriouslySickVaccinated = factorSeriouslySickVaccinated;</span>
+<span class="fc" id="L355">		}</span>
 
 		@StringGetter(FACTOR_SERIOUSLY_SICK_VAC)
 		public double getFactorSeriouslySickVaccinated() {
-<span class="fc" id="L374">			return factorSeriouslySickVaccinated;</span>
+<span class="fc" id="L359">			return factorSeriouslySickVaccinated;</span>
 		}
 
 
 		@StringGetter(AGE_SUSCEPTIBILITY)
 		String getAgeSusceptibilityString() {
-<span class="fc" id="L380">			return JOINER.join(ageSusceptibility);</span>
+<span class="fc" id="L365">			return JOINER.join(ageSusceptibility);</span>
 		}
 
 		@StringSetter(AGE_SUSCEPTIBILITY)
 		void setAgeSusceptibility(String config) {
-<span class="fc" id="L385">			Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
-<span class="fc" id="L386">			setAgeSusceptibility(map.entrySet().stream().collect(Collectors.toMap(</span>
-<span class="fc" id="L387">					e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+<span class="fc" id="L370">			Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
+<span class="fc" id="L371">			setAgeSusceptibility(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L372">					e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
 			)));
-<span class="fc" id="L389">		}</span>
+<span class="fc" id="L374">		}</span>
 
 		/**
 		 * Return susceptibility for different age groups.
 		 */
 		public NavigableMap&lt;Integer, Double&gt; getAgeSusceptibility() {
-<span class="fc" id="L395">			return ageSusceptibility;</span>
+<span class="fc" id="L380">			return ageSusceptibility;</span>
 		}
 
 		/**
 		 * Set susceptibility for all age groups, previous entries will be overwritten.
 		 */
 		public void setAgeSusceptibility(Map&lt;Integer, Double&gt; ageSusceptibility) {
-<span class="fc" id="L402">			this.ageSusceptibility.clear();</span>
-<span class="fc" id="L403">			this.ageSusceptibility.putAll(ageSusceptibility);</span>
-<span class="fc" id="L404">		}</span>
+<span class="fc" id="L387">			this.ageSusceptibility.clear();</span>
+<span class="fc" id="L388">			this.ageSusceptibility.putAll(ageSusceptibility);</span>
+<span class="fc" id="L389">		}</span>
 
 		@StringGetter(AGE_INFECTIVITY)
 		String getAgeInfectivityString() {
-<span class="fc" id="L408">			return JOINER.join(ageInfectivity);</span>
+<span class="fc" id="L393">			return JOINER.join(ageInfectivity);</span>
 		}
 
 		@StringSetter(AGE_INFECTIVITY)
 		void setAgeInfectivity(String config) {
-<span class="fc" id="L413">			Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
-<span class="fc" id="L414">			setAgeInfectivity(map.entrySet().stream().collect(Collectors.toMap(</span>
-<span class="fc" id="L415">					e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+<span class="fc" id="L398">			Map&lt;String, String&gt; map = SPLITTER.split(config);</span>
+<span class="fc" id="L399">			setAgeInfectivity(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L400">					e -&gt; Integer.parseInt(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
 			)));
-<span class="fc" id="L417">		}</span>
+<span class="fc" id="L402">		}</span>
 
 		/**
 		 * Return infectivity for different age groups.
 		 */
 		public NavigableMap&lt;Integer, Double&gt; getAgeInfectivity() {
-<span class="fc" id="L423">			return ageInfectivity;</span>
+<span class="fc" id="L408">			return ageInfectivity;</span>
 		}
 
 		/**
 		 * Set infectivity for all age groups, previous entries will be overwritten.
 		 */
 		public void setAgeInfectivity(Map&lt;Integer, Double&gt; ageInfectivity) {
-<span class="fc" id="L430">			this.ageInfectivity.clear();</span>
-<span class="fc" id="L431">			this.ageInfectivity.putAll(ageInfectivity);</span>
-<span class="fc" id="L432">		}</span>
+<span class="fc" id="L415">			this.ageInfectivity.clear();</span>
+<span class="fc" id="L416">			this.ageInfectivity.putAll(ageInfectivity);</span>
+<span class="fc" id="L417">		}</span>
 
 	}
 

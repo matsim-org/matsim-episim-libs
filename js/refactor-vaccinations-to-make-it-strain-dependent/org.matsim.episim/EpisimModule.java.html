@@ -66,23 +66,33 @@ import java.util.concurrent.Executors;
 <span class="fc" id="L66">		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);</span>
 <span class="fc" id="L67">		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);</span>
 <span class="fc" id="L68">		bind(AntibodyModel.class).to(DefaultAntibodyModel.class).in(Singleton.class);</span>
-<span class="fc" id="L69">		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);</span>
-<span class="fc" id="L70">		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);</span>
-<span class="fc" id="L71">		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);</span>
-<span class="fc" id="L72">		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);</span>
-<span class="fc" id="L73">		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);</span>
-<span class="fc" id="L74">		bind(TestingModel.class).to(DefaultTestingModel.class).in(Singleton.class);</span>
-<span class="fc" id="L75">		bind(ActivityParticipationModel.class).to(AllParticipationModel.class).in(Singleton.class);</span>
+		// antibody parameters are calibrated for SARS-CoV-2 and not a config group; scenarios bind their own instance
+<span class="fc" id="L70">		bind(AntibodyModel.Config.class).toInstance(new AntibodyModel.Config());</span>
+		// Both sources are bound explicitly because LegacySplitImmunityModel injects them and this injector
+		// requires explicit bindings. The default is the curve-based source, which is what
+		// DefaultDiseaseStatusTransitionModel used through the former default methods of its interface.
+		// Modules that bind AgeDependentDiseaseStatusTransitionModel took severity from antibodies instead and
+		// therefore override this with LegacySplitImmunityModel.
+<span class="fc" id="L76">		bind(LegacyCurveImmunityModel.class).in(Singleton.class);</span>
+<span class="fc" id="L77">		bind(LegacyAntibodyImmunityModel.class).in(Singleton.class);</span>
+<span class="fc" id="L78">		bind(ImmunityModel.class).to(LegacyCurveImmunityModel.class).in(Singleton.class);</span>
+<span class="fc" id="L79">		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);</span>
+<span class="fc" id="L80">		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);</span>
+<span class="fc" id="L81">		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);</span>
+<span class="fc" id="L82">		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);</span>
+<span class="fc" id="L83">		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);</span>
+<span class="fc" id="L84">		bind(TestingModel.class).to(DefaultTestingModel.class).in(Singleton.class);</span>
+<span class="fc" id="L85">		bind(ActivityParticipationModel.class).to(AllParticipationModel.class).in(Singleton.class);</span>
 
 		// Internal classes, should rarely be needed to be reconfigured
-<span class="fc" id="L78">		bind(EpisimRunner.class).in(Singleton.class);</span>
-<span class="fc" id="L79">		bind(ReplayHandler.class).in(Singleton.class);</span>
-<span class="fc" id="L80">		bind(InfectionEventHandler.class).in(Singleton.class);</span>
-<span class="fc" id="L81">		bind(EpisimReporting.class).in(Singleton.class);</span>
+<span class="fc" id="L88">		bind(EpisimRunner.class).in(Singleton.class);</span>
+<span class="fc" id="L89">		bind(ReplayHandler.class).in(Singleton.class);</span>
+<span class="fc" id="L90">		bind(InfectionEventHandler.class).in(Singleton.class);</span>
+<span class="fc" id="L91">		bind(EpisimReporting.class).in(Singleton.class);</span>
 
-<span class="fc" id="L83">		Multibinder.newSetBinder(binder(), SimulationListener.class);</span>
-<span class="fc" id="L84">		Multibinder.newSetBinder(binder(), VaccinationModel.class);</span>
-<span class="fc" id="L85">	}</span>
+<span class="fc" id="L93">		Multibinder.newSetBinder(binder(), SimulationListener.class);</span>
+<span class="fc" id="L94">		Multibinder.newSetBinder(binder(), VaccinationModel.class);</span>
+<span class="fc" id="L95">	}</span>
 
 	@Provides
 	@Singleton
@@ -90,66 +100,60 @@ import java.util.concurrent.Executors;
 
 		// guice will use no args constructor by default, we check if this config was initialized
 		// this is only the case when no explicit binding are required
-<span class="pc bpc" id="L93" title="1 of 2 branches missed.">		if (config.getModules().size() == 0)</span>
-<span class="nc" id="L94">			throw new IllegalArgumentException(&quot;Please provide a config module or binding.&quot;);</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">		if (config.getModules().size() == 0)</span>
+<span class="nc" id="L104">			throw new IllegalArgumentException(&quot;Please provide a config module or binding.&quot;);</span>
 
-<span class="fc" id="L96">		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore);</span>
+<span class="fc" id="L106">		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore);</span>
 
 		// save some time for not needed inputs
 //		config.facilities().setInputFile(null); // facilities are needed for location-based-restrictions
 
-<span class="fc" id="L101">		return ScenarioUtils.loadScenario(config);</span>
+<span class="fc" id="L111">		return ScenarioUtils.loadScenario(config);</span>
 	}
 
 	@Provides
 	@Singleton
 	public EpisimConfigGroup episimConfigGroup(Config config) {
-<span class="fc" id="L107">		return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L117">		return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
 	}
 
 	@Provides
 	@Singleton
 	public TracingConfigGroup tracingConfigGroup(Config config) {
-<span class="fc" id="L113">		return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);</span>
+<span class="fc" id="L123">		return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);</span>
 	}
 
 	@Provides
 	@Singleton
 	public VaccinationConfigGroup vaccinationConfigGroup(Config config) {
-<span class="fc" id="L119">		return ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="fc" id="L129">		return ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
 	}
 
 	@Provides
 	@Singleton
 	public TestingConfigGroup testingConfigGroup(Config config) {
-<span class="fc" id="L125">		return ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);</span>
+<span class="fc" id="L135">		return ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);</span>
 	}
 
 	@Provides
 	@Singleton
 	public VirusStrainConfigGroup strainConfigGroup(Config config) {
-<span class="fc" id="L131">		return ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="fc" id="L141">		return ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
 	}
 
 	@Provides
 	@Singleton
 	public PathogenConfigGroup pathogenConfigGroup(Config config) {
-<span class="fc" id="L137">		return ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
-	}
-
-	@Provides
-	@Singleton
-	public AntibodyConfigGroup antibodyConfigGroup(Config config) {
-<span class="fc" id="L143">		return ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);</span>
+<span class="fc" id="L147">		return ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
 	}
 
 	/** Provides the contact-transmission configuration. */
 	@Provides
 	@Singleton
 	public ContactTransmissionConfigGroup contactTransmissionConfigGroup(Config config) {
-<span class="fc" id="L150">		ContactTransmissionConfigGroup group = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);</span>
-<span class="fc" id="L151">		group.setContext(config.getContext());</span>
-<span class="fc" id="L152">		return group;</span>
+<span class="fc" id="L154">		ContactTransmissionConfigGroup group = ConfigUtils.addOrGetModule(config, ContactTransmissionConfigGroup.class);</span>
+<span class="fc" id="L155">		group.setContext(config.getContext());</span>
+<span class="fc" id="L156">		return group;</span>
 	}
 
 	@Provides
@@ -162,26 +166,26 @@ import java.util.concurrent.Executors;
 			// by default only one episim simulation is running
 		//	return new AsyncEpisimWriter(1);
 
-<span class="fc" id="L165">		return new EpisimWriter();</span>
+<span class="fc" id="L169">		return new EpisimWriter();</span>
 	}
 
 	@Provides
 	@Singleton
 	public EventsManager eventsManager() {
-<span class="fc" id="L171">		return EventsUtils.createEventsManager();</span>
+<span class="fc" id="L175">		return EventsUtils.createEventsManager();</span>
 	}
 
 	@Provides
 	@Singleton
 	public EpisimSplittableRandom splittableRandom(Config config) {
-<span class="fc" id="L177">		return new EpisimSplittableRandom(config.global().getRandomSeed());</span>
+<span class="fc" id="L181">		return new EpisimSplittableRandom(config.global().getRandomSeed());</span>
 	}
 
 	@Provides
 	@Named(&quot;policy&quot;)
 	@Singleton
 	public com.typesafe.config.Config policyConfig(EpisimConfigGroup config) {
-<span class="fc" id="L184">		return config.getPolicy();</span>
+<span class="fc" id="L188">		return config.getPolicy();</span>
 	}
 
 
@@ -189,10 +193,10 @@ import java.util.concurrent.Executors;
 	@Singleton
 	public ExecutorService executorService(EpisimConfigGroup episimConfig) {
 
-<span class="fc bfc" id="L192" title="All 2 branches covered.">		if (episimConfig.getThreads() &gt; 1)</span>
-<span class="fc" id="L193">			return Executors.newFixedThreadPool(episimConfig.getThreads());</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">		if (episimConfig.getThreads() &gt; 1)</span>
+<span class="fc" id="L197">			return Executors.newFixedThreadPool(episimConfig.getThreads());</span>
 		else
-<span class="fc" id="L195">			return Executors.newSingleThreadScheduledExecutor();</span>
+<span class="fc" id="L199">			return Executors.newSingleThreadScheduledExecutor();</span>
 	}
 
 }

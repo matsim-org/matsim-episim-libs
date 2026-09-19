@@ -24,6 +24,7 @@ import org.matsim.episim.*;
 
 import com.google.inject.Inject;
 import org.matsim.episim.model.ConfigurableProgressionModel;
+import org.matsim.episim.model.ImmunityModel;
 
 import org.matsim.episim.util.EpisimSplittableRandom;
 
@@ -38,18 +39,19 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	private final EpisimConfigGroup episimConfig;
 
 	@Inject
-	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, EpisimConfigGroup episimConfig,
+	public AgeDependentDiseaseStatusTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                                EpisimConfigGroup episimConfig,
 	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup,
 	                                                PathogenConfigGroup pathogenConfig) {
-<span class="fc" id="L44">		super(rnd, vaccinationConfig, strainConfigGroup, pathogenConfig, true);</span>
-<span class="fc" id="L45">		this.episimConfig = episimConfig;</span>
-<span class="fc" id="L46">	}</span>
+<span class="fc" id="L46">		super(rnd, immunityModel, vaccinationConfig, strainConfigGroup, pathogenConfig, true);</span>
+<span class="fc" id="L47">		this.episimConfig = episimConfig;</span>
+<span class="fc" id="L48">	}</span>
 
 	@Override
 	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
 		// https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=802030488
 		// age table taken from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8353925/, now configured in PathogenConfigGroup.
-<span class="fc" id="L52">		return super.getProbaOfTransitioningToSeriouslySick(person) * episimConfig.getHospitalFactor();</span>
+<span class="fc" id="L54">		return super.getProbaOfTransitioningToSeriouslySick(person) * episimConfig.getHospitalFactor();</span>
 	}
 
 }

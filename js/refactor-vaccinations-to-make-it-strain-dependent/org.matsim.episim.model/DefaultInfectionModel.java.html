@@ -25,21 +25,23 @@ public final class DefaultInfectionModel implements InfectionModel {
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 	private final PathogenConfigGroup pathogenConfig;
+	private final ImmunityModel immunityModel;
 	private int iteration;
 
 	@Inject
-<span class="fc" id="L31">	public DefaultInfectionModel(FaceMaskModel faceMaskModel, Config config) {</span>
-<span class="fc" id="L32">		this.maskModel = faceMaskModel;</span>
-<span class="fc" id="L33">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
-<span class="fc" id="L34">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
-<span class="fc" id="L35">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
-<span class="fc" id="L36">		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
-<span class="fc" id="L37">	}</span>
+<span class="fc" id="L32">	public DefaultInfectionModel(FaceMaskModel faceMaskModel, ImmunityModel immunityModel, Config config) {</span>
+<span class="fc" id="L33">		this.maskModel = faceMaskModel;</span>
+<span class="fc" id="L34">		this.immunityModel = immunityModel;</span>
+<span class="fc" id="L35">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L36">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="fc" id="L37">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="fc" id="L38">		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
+<span class="fc" id="L39">	}</span>
 
 	@Override
 	public void setIteration(int iteration) {
-<span class="fc" id="L41">		this.iteration = iteration;</span>
-<span class="fc" id="L42">	}</span>
+<span class="fc" id="L43">		this.iteration = iteration;</span>
+<span class="fc" id="L44">	}</span>
 
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions,
@@ -48,33 +50,34 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double contactIntensity, double jointTimeInContainer) {
 
 		// ci corr can not be null, because sim is initialized with non null value
-<span class="fc" id="L51">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+<span class="fc" id="L53">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
 
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
-<span class="fc" id="L56">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
-<span class="fc" id="L57">		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));</span>
+<span class="fc" id="L58">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+<span class="fc" id="L59">		double susceptibility = immunityModel.getFactor(target, strain.getStrain(),</span>
+			EpisimPerson.DiseaseStatus.infectedButNotContagious, iteration);
 
 		// route-agnostic factors
-<span class="fc" id="L60">		double base = episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer</span>
-<span class="fc" id="L61">				* getInfectivity(infector, strain, vaccinationConfig, iteration)</span>
-<span class="fc" id="L62">				* target.getSusceptibility()</span>
+<span class="fc" id="L63">		double base = episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer</span>
+<span class="fc" id="L64">				* immunityModel.getInfectivityFactor(infector, strain.getStrain(), iteration)</span>
+<span class="fc" id="L65">				* target.getSusceptibility()</span>
 				* susceptibility
-<span class="fc" id="L64">				* strain.getInfectiousness();</span>
+<span class="fc" id="L67">				* strain.getInfectiousness();</span>
 
 		// respiratory route only: ventilation / contact-intensity correction and face masks
-<span class="fc" id="L67">		double respiratoryModifier = ciCorrection</span>
-<span class="fc" id="L68">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
-<span class="fc" id="L69">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;</span>
+<span class="fc" id="L70">		double respiratoryModifier = ciCorrection</span>
+<span class="fc" id="L71">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
+<span class="fc" id="L72">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;</span>
 
 		// contact-side route split combined with the pathogen's per-route transmissibility
-<span class="fc" id="L72">		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();</span>
-<span class="fc" id="L73">		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;</span>
-<span class="fc" id="L74">		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();</span>
+<span class="fc" id="L75">		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();</span>
+<span class="fc" id="L76">		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;</span>
+<span class="fc" id="L77">		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();</span>
 		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
 
-<span class="fc" id="L77">		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));</span>
+<span class="fc" id="L80">		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));</span>
 	}
 
 	/**
@@ -82,26 +85,26 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 */
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
 
-<span class="fc bfc" id="L85" title="All 2 branches covered.">		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
-<span class="fc" id="L86">			return 1;</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="nc" id="L89">			return 1;</span>
 
-<span class="fc" id="L88">		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);</span>
+<span class="fc" id="L91">		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);</span>
 
-<span class="fc" id="L90">		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());</span>
-<span class="fc" id="L91">		VirusStrain strain = virusStrain.getStrain();</span>
+<span class="fc" id="L93">		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());</span>
+<span class="fc" id="L94">		VirusStrain strain = virusStrain.getStrain();</span>
 
 		double vaccineEffectiveness;
 
 		// person with infection also have the boost effectiveness
-<span class="pc bpc" id="L96" title="1 of 4 branches missed.">		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || target.getNumInfections() &gt;= 1) {</span>
-<span class="fc" id="L97">			vaccineEffectiveness = params.getBoostEffectiveness(strain, Math.min(daysVaccinated, target.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));</span>
+<span class="pc bpc" id="L99" title="1 of 4 branches missed.">		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || target.getNumInfections() &gt;= 1) {</span>
+<span class="fc" id="L100">			vaccineEffectiveness = params.getBoostEffectiveness(strain, Math.min(daysVaccinated, target.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));</span>
 		} else {
-<span class="fc" id="L99">			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);</span>
+<span class="fc" id="L102">			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);</span>
 		}
 
 		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
-<span class="fc" id="L104">		return 1 - vaccineEffectiveness;</span>
+<span class="fc" id="L107">		return 1 - vaccineEffectiveness;</span>
 	}
 
 	/**
@@ -109,14 +112,14 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 */
 	static double getInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
 
-<span class="fc" id="L112">		double naturalInfectivity = 1;</span>
+<span class="fc" id="L115">		double naturalInfectivity = 1;</span>
 
-<span class="pc bpc" id="L114" title="3 of 4 branches missed.">		if (config.hasParams(VaccinationType.natural) &amp;&amp; infector.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)) {</span>
-<span class="nc" id="L115">			VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);</span>
-<span class="nc" id="L116">			naturalInfectivity = params.getInfectivity(strain.getStrain(), infector.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration));</span>
+<span class="pc bpc" id="L117" title="3 of 4 branches missed.">		if (config.hasParams(VaccinationType.natural) &amp;&amp; infector.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)) {</span>
+<span class="nc" id="L118">			VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);</span>
+<span class="nc" id="L119">			naturalInfectivity = params.getInfectivity(strain.getStrain(), infector.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration));</span>
 		}
 
-<span class="fc" id="L119">		return Math.min(getVaccinationInfectivity(infector, strain, config, iteration), naturalInfectivity);</span>
+<span class="fc" id="L122">		return Math.min(getVaccinationInfectivity(infector, strain, config, iteration), naturalInfectivity);</span>
 	}
 
 	/**
@@ -124,40 +127,40 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 */
 	static double getVaccinationInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
 
-<span class="fc bfc" id="L127" title="All 2 branches covered.">		if (infector.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
-<span class="fc" id="L128">			return 1;</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">		if (infector.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
+<span class="fc" id="L131">			return 1;</span>
 
-<span class="fc" id="L130">		int daysVaccinated = infector.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);</span>
+<span class="fc" id="L133">		int daysVaccinated = infector.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);</span>
 
-<span class="fc" id="L132">		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());</span>
+<span class="fc" id="L135">		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());</span>
 
-<span class="fc bfc" id="L134" title="All 4 branches covered.">		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || infector.getNumInfections() &gt;= 1) {</span>
-<span class="fc" id="L135">			return params.getBoostInfectivity(strain.getStrain(), Math.min(daysVaccinated, infector.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));</span>
+<span class="pc bpc" id="L137" title="1 of 4 branches missed.">		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || infector.getNumInfections() &gt;= 1) {</span>
+<span class="fc" id="L138">			return params.getBoostInfectivity(strain.getStrain(), Math.min(daysVaccinated, infector.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));</span>
 		} else
-<span class="fc" id="L137">			return params.getInfectivity(strain.getStrain(), daysVaccinated);</span>
+<span class="fc" id="L140">			return params.getInfectivity(strain.getStrain(), daysVaccinated);</span>
 	}
 
 	/**
 	 * Calculate factor for natural immunity after infection.
 	 */
 	static double getImmunityEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
-<span class="pc bpc" id="L144" title="1 of 4 branches missed.">		if (target.getNumInfections() &lt; 1 || !target.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))</span>
-<span class="fc" id="L145">			return 1;</span>
-
-<span class="fc bfc" id="L147" title="All 2 branches covered.">		if (!config.hasParams(VaccinationType.natural))</span>
+<span class="pc bpc" id="L147" title="1 of 4 branches missed.">		if (target.getNumInfections() &lt; 1 || !target.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))</span>
 <span class="fc" id="L148">			return 1;</span>
 
-<span class="fc" id="L150">		int daysSince = target.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration);</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">		if (!config.hasParams(VaccinationType.natural))</span>
+<span class="fc" id="L151">			return 1;</span>
+
+<span class="fc" id="L153">		int daysSince = target.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration);</span>
 
 		// persons can not get infected for 180 days when
 		// they had 2 infections or 1 infection and vaccinations
 		// TODO: only here a quick fix and needs to be remodelled
-<span class="pc bpc" id="L155" title="3 of 8 branches missed.">		if (daysSince &lt; 180 &amp;&amp; (target.getNumInfections() &gt;= 2 || (target.getNumInfections() &gt;= 1 &amp;&amp; target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)))</span>
-<span class="nc" id="L156">			return 0;</span>
+<span class="pc bpc" id="L158" title="3 of 8 branches missed.">		if (daysSince &lt; 180 &amp;&amp; (target.getNumInfections() &gt;= 2 || (target.getNumInfections() &gt;= 1 &amp;&amp; target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)))</span>
+<span class="nc" id="L159">			return 0;</span>
 
-<span class="fc" id="L158">		VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);</span>
+<span class="fc" id="L161">		VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);</span>
 
-<span class="fc" id="L160">		return 1 - params.getEffectiveness(virusStrain.getStrain(), daysSince);</span>
+<span class="fc" id="L163">		return 1 - params.getEffectiveness(virusStrain.getStrain(), daysSince);</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

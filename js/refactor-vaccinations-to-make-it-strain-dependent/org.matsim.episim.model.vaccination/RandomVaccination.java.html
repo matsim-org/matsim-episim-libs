@@ -48,9 +48,9 @@ public class RandomVaccination implements VaccinationModel {
 <span class="pc bpc" id="L48" title="3 of 4 branches missed.">				.filter(p -&gt; reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) &gt;= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)</span>
 <span class="fc" id="L49">				.collect(Collectors.toList());</span>
 
-<span class="pc bpc" id="L51" title="1 of 2 branches missed.">		if (candidates.isEmpty()) {</span>
-<span class="nc" id="L52">			log.warn(&quot;Not enough people to vaccinate left ({})&quot;, availableVaccinations);</span>
-<span class="nc" id="L53">			return 0;</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">		if (candidates.isEmpty()) {</span>
+<span class="fc" id="L52">			log.warn(&quot;Not enough people to vaccinate left ({})&quot;, availableVaccinations);</span>
+<span class="fc" id="L53">			return 0;</span>
 		}
 
 <span class="fc" id="L56">		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));</span>

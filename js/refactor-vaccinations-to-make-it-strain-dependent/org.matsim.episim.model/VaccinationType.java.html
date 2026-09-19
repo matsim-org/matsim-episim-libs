@@ -5,30 +5,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Enum for different types of vaccinations.
- *
- * &lt;p&gt;A type either describes a real vaccination or the immunity gained from an infection. The latter carries the
- * {@link VirusStrain} whose infection induced it ({@link #getSourceOfNaturalVaccination()}), so that protection can be
- * configured per (source strain, target strain) pair. Use {@link #naturalFor(VirusStrain)} to obtain it.&lt;/p&gt;
  */
 public class VaccinationType implements ImmunityEvent {
 
-<span class="fc" id="L15">	public static final VaccinationType generic = new VaccinationType(&quot;generic&quot;);</span>
-<span class="fc" id="L16">	public static final VaccinationType mRNA = new VaccinationType(&quot;mRNA&quot;);</span>
-<span class="fc" id="L17">	public static final VaccinationType vector = new VaccinationType(&quot;vector&quot;);</span>
-<span class="fc" id="L18">	public static final VaccinationType ba1Update = new VaccinationType(&quot;ba1Update&quot;);</span>
-<span class="fc" id="L19">	public static final VaccinationType ba5Update = new VaccinationType(&quot;ba5Update&quot;);</span>
-<span class="fc" id="L20">	public static final VaccinationType xbbUpdate = new VaccinationType(&quot;xbbUpdate&quot;);</span>
+<span class="fc" id="L11">	public static final VaccinationType generic = new VaccinationType(&quot;generic&quot;);</span>
+<span class="fc" id="L12">	public static final VaccinationType mRNA = new VaccinationType(&quot;mRNA&quot;);</span>
+<span class="fc" id="L13">	public static final VaccinationType vector = new VaccinationType(&quot;vector&quot;);</span>
+<span class="fc" id="L14">	public static final VaccinationType ba1Update = new VaccinationType(&quot;ba1Update&quot;);</span>
+<span class="fc" id="L15">	public static final VaccinationType ba5Update = new VaccinationType(&quot;ba5Update&quot;);</span>
+<span class="fc" id="L16">	public static final VaccinationType xbbUpdate = new VaccinationType(&quot;xbbUpdate&quot;);</span>
 
 	/**
 	 * Not a real vaccination, but used to describe the profile for persons that have been infected and gained a natural immunity.
-	 *
-	 * &lt;p&gt;Legacy anchor: declared with SARS-CoV-2 as its source so that existing {@code getParams(natural)} call sites
-	 * keep resolving and {@code naturalFor(SARS_CoV_2)} returns this very instance. New code uses
-	 * {@link #naturalFor(VirusStrain)}.&lt;/p&gt;
 	 */
-<span class="fc" id="L29">	public static final VaccinationType natural = new VaccinationType(&quot;natural&quot;, VirusStrain.SARS_CoV_2, true);</span>
+<span class="fc" id="L21">	public static final VaccinationType natural = new VaccinationType(&quot;natural&quot;);</span>
 
-<span class="fc" id="L31">	private static final List&lt;VaccinationType&gt; STANDARD_OPTIONS = List.of(</span>
+<span class="fc" id="L23">	private static final List&lt;VaccinationType&gt; STANDARD_OPTIONS = List.of(</span>
 		generic,
 		mRNA,
 		vector,
@@ -38,51 +30,26 @@ public class VaccinationType implements ImmunityEvent {
 		natural
 	);
 
-<span class="fc" id="L41">	private static final Map&lt;String, VaccinationType&gt; VACCINATIONS_BY_NAME = new ConcurrentHashMap&lt;&gt;();</span>
-
-	/**
-	 * Canonical natural-immunity type per source strain. Natural types are created on demand by
-	 * {@link #naturalFor(VirusStrain)}; they are deliberately not pre-created for every standard strain, because every
-	 * registered type becomes a column in {@code vaccinations.tsv} and a default parameter set in
-	 * {@code AntibodyConfigGroup}.
-	 */
-<span class="fc" id="L49">	private static final Map&lt;VirusStrain, VaccinationType&gt; NATURAL_BY_SOURCE = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L33">	private static final Map&lt;String, VaccinationType&gt; VACCINATIONS_BY_NAME = new ConcurrentHashMap&lt;&gt;();</span>
 
 	static {
-<span class="fc bfc" id="L52" title="All 2 branches covered.">		for (VaccinationType type : STANDARD_OPTIONS) {</span>
-<span class="fc" id="L53">			VACCINATIONS_BY_NAME.put(type.name, type);</span>
-<span class="fc bfc" id="L54" title="All 2 branches covered.">			if (type.sourceOfNaturalVaccination != null)</span>
-<span class="fc" id="L55">				NATURAL_BY_SOURCE.put(type.sourceOfNaturalVaccination, type);</span>
-<span class="fc" id="L56">		}</span>
-<span class="fc" id="L57">	}</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">		for (VaccinationType type : STANDARD_OPTIONS) {</span>
+<span class="fc" id="L37">			VACCINATIONS_BY_NAME.put(type.name, type);</span>
+<span class="fc" id="L38">		}</span>
+<span class="fc" id="L39">	}</span>
 
 	private final String name;
 
 	/**
-	 * Strain whose infection induces this immunity; {@code null} for a real vaccination.
+	 * Private: every instance has to come from {@link #of(String)}, so that one name is one object. A public
+	 * constructor allowed a second object that is equal to the registered one by name.
 	 */
-	private volatile VirusStrain sourceOfNaturalVaccination;
-
-	/**
-	 * Whether the source has been declared explicitly. A type that was first referenced by name only (e.g. by a config
-	 * group that is read before the scenario declares it) is provisional and assumes it is a real vaccination until its
-	 * source is declared via {@link #of(String, VirusStrain)}. This keeps config loading independent of the order in
-	 * which the config groups are read.
-	 */
-	private volatile boolean sourceDeclared;
-
-	private VaccinationType(String name) {
-<span class="fc" id="L75">		this(name, null, true);</span>
-<span class="fc" id="L76">	}</span>
-
-<span class="fc" id="L78">	private VaccinationType(String name, VirusStrain sourceOfNaturalVaccination, boolean sourceDeclared) {</span>
-<span class="fc" id="L79">		this.name = Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
-<span class="fc" id="L80">		this.sourceOfNaturalVaccination = sourceOfNaturalVaccination;</span>
-<span class="fc" id="L81">		this.sourceDeclared = sourceDeclared;</span>
-<span class="fc" id="L82">	}</span>
+<span class="fc" id="L47">	private VaccinationType(String name) {</span>
+<span class="fc" id="L48">		this.name = Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
+<span class="fc" id="L49">	}</span>
 
 	public static List&lt;VaccinationType&gt; getAllStandardOptions() {
-<span class="fc" id="L85">		return STANDARD_OPTIONS;</span>
+<span class="fc" id="L52">		return STANDARD_OPTIONS;</span>
 	}
 
 	/**
@@ -90,125 +57,49 @@ public class VaccinationType implements ImmunityEvent {
 	 * The standard order is kept so that outputs like {@code vaccinations.tsv} stay unchanged.
 	 */
 	public static List&lt;VaccinationType&gt; getAllOptions() {
-<span class="fc" id="L93">		List&lt;VaccinationType&gt; vaccinationTypes = new ArrayList&lt;&gt;(STANDARD_OPTIONS);</span>
-<span class="fc" id="L94">		VACCINATIONS_BY_NAME.values().stream()</span>
-<span class="fc bfc" id="L95" title="All 2 branches covered.">			.filter(t -&gt; !STANDARD_OPTIONS.contains(t))</span>
-<span class="fc" id="L96">			.sorted(Comparator.comparing(VaccinationType::getId))</span>
-<span class="fc" id="L97">			.forEach(vaccinationTypes::add);</span>
-<span class="fc" id="L98">		return vaccinationTypes;</span>
+<span class="fc" id="L60">		List&lt;VaccinationType&gt; vaccinationTypes = new ArrayList&lt;&gt;(STANDARD_OPTIONS);</span>
+<span class="fc" id="L61">		VACCINATIONS_BY_NAME.values().stream()</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">			.filter(t -&gt; !STANDARD_OPTIONS.contains(t))</span>
+<span class="fc" id="L63">			.sorted(Comparator.comparing(VaccinationType::getId))</span>
+<span class="fc" id="L64">			.forEach(vaccinationTypes::add);</span>
+<span class="fc" id="L65">		return vaccinationTypes;</span>
 	}
 
 	/**
-	 * Returns the canonical instance for the given name. An unknown name is registered provisionally as a real
-	 * vaccination; a natural-immunity source can still be declared later via {@link #of(String, VirusStrain)}.
+	 * Returns the canonical instance for the given name, registering a new one when the name is first seen.
 	 */
 	public static VaccinationType of(String name) {
-<span class="fc" id="L106">		Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
-<span class="fc" id="L107">		return VACCINATIONS_BY_NAME.computeIfAbsent(name, n -&gt; new VaccinationType(n, null, false));</span>
+<span class="fc" id="L72">		Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
+<span class="fc" id="L73">		return VACCINATIONS_BY_NAME.computeIfAbsent(name, VaccinationType::new);</span>
 	}
 
-	/**
-	 * Returns the canonical instance and declares the strain whose infection induces it. A provisional type (only
-	 * referenced by name so far) takes over the given source. A type cannot be declared for more than one source, and a
-	 * source cannot be claimed by more than one type.
-	 */
-	public static VaccinationType of(String name, VirusStrain sourceOfNaturalVaccination) {
-<span class="fc" id="L116">		Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
-<span class="fc" id="L117">		Objects.requireNonNull(sourceOfNaturalVaccination, &quot;Source strain must not be null&quot;);</span>
-
-<span class="fc" id="L119">		VaccinationType type = VACCINATIONS_BY_NAME.compute(name, (typeName, existing) -&gt; {</span>
-<span class="fc bfc" id="L120" title="All 2 branches covered.">			if (existing == null)</span>
-<span class="fc" id="L121">				return new VaccinationType(typeName, sourceOfNaturalVaccination, true);</span>
-
-<span class="pc bpc" id="L123" title="1 of 2 branches missed.">			if (!existing.sourceDeclared) {</span>
-<span class="nc" id="L124">				existing.sourceOfNaturalVaccination = sourceOfNaturalVaccination;</span>
-<span class="nc" id="L125">				existing.sourceDeclared = true;</span>
-<span class="nc" id="L126">				return existing;</span>
-			}
-<span class="pc bpc" id="L128" title="1 of 2 branches missed.">			if (!sourceOfNaturalVaccination.equals(existing.sourceOfNaturalVaccination))</span>
-<span class="nc" id="L129">				throw new IllegalArgumentException(&quot;Vaccination type '&quot; + typeName + &quot;' is already registered for source strain '&quot;</span>
-					+ existing.sourceOfNaturalVaccination + &quot;' and cannot be registered for source strain '&quot;
-					+ sourceOfNaturalVaccination + &quot;'&quot;);
-
-<span class="fc" id="L133">			return existing;</span>
-		});
-
-		// maintained outside the compute above: a ConcurrentHashMap must not be modified from within its own remapping
-<span class="fc" id="L137">		VaccinationType previous = NATURAL_BY_SOURCE.putIfAbsent(sourceOfNaturalVaccination, type);</span>
-<span class="pc bpc" id="L138" title="1 of 4 branches missed.">		if (previous != null &amp;&amp; !previous.equals(type))</span>
-<span class="nc" id="L139">			throw new IllegalArgumentException(&quot;Source strain '&quot; + sourceOfNaturalVaccination</span>
-				+ &quot;' already induces vaccination type '&quot; + previous + &quot;' and cannot also induce '&quot; + type + &quot;'&quot;);
-
-<span class="fc" id="L142">		return type;</span>
-	}
-
-	/**
-	 * Returns the canonical natural-immunity type induced by an infection with the given strain, creating and
-	 * registering it when the strain is first seen. For SARS-CoV-2 this is the legacy {@link #natural} constant.
-	 */
-	public static VaccinationType naturalFor(VirusStrain sourceOfNaturalVaccination) {
-<span class="fc" id="L150">		Objects.requireNonNull(sourceOfNaturalVaccination, &quot;Source strain must not be null&quot;);</span>
-
-<span class="fc" id="L152">		VaccinationType existing = NATURAL_BY_SOURCE.get(sourceOfNaturalVaccination);</span>
-<span class="fc bfc" id="L153" title="All 2 branches covered.">		if (existing != null)</span>
-<span class="fc" id="L154">			return existing;</span>
-
-<span class="fc" id="L156">		return of(naturalName(sourceOfNaturalVaccination), sourceOfNaturalVaccination);</span>
-	}
-
-	/**
-	 * Canonical name of the natural-immunity type induced by the given strain.
-	 */
-	public static String naturalName(VirusStrain sourceOfNaturalVaccination) {
-<span class="fc" id="L163">		Objects.requireNonNull(sourceOfNaturalVaccination, &quot;Source strain must not be null&quot;);</span>
-<span class="fc" id="L164">		return &quot;natural_&quot; + sourceOfNaturalVaccination.getPathogen().getName()</span>
-<span class="fc" id="L165">			+ &quot;_&quot; + sourceOfNaturalVaccination.getVirusStrainName();</span>
-	}
-
-	/**
-	 * Returns the canonical instance for an id as written to configs and event files, i.e. the type name.
-	 */
 	public static VaccinationType ofId(String s) {
-<span class="nc" id="L172">		return of(s);</span>
+<span class="nc" id="L77">		return of(s);//in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
 	}
 
 	public String getName() {
-<span class="fc" id="L176">		return name;</span>
-	}
-
-	/**
-	 * Strain whose infection induces this immunity, or {@code null} for a real vaccination.
-	 */
-	public VirusStrain getSourceOfNaturalVaccination() {
-<span class="fc" id="L183">		return sourceOfNaturalVaccination;</span>
-	}
-
-	/**
-	 * Whether this type describes immunity gained from an infection rather than a real vaccination.
-	 */
-	public boolean isNaturalVaccination() {
-<span class="fc bfc" id="L190" title="All 2 branches covered.">		return sourceOfNaturalVaccination != null;</span>
+<span class="fc" id="L81">		return name;</span>
 	}
 
 	@Override
 	public boolean equals(Object o) {
-<span class="pc bpc" id="L195" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
-<span class="fc" id="L196">		VaccinationType that = (VaccinationType) o;</span>
-<span class="fc" id="L197">		return Objects.equals(name, that.name);</span>
+<span class="pc bpc" id="L86" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L87">		VaccinationType that = (VaccinationType) o;</span>
+<span class="fc" id="L88">		return Objects.equals(name, that.name);</span>
 	}
 
 	@Override
 	public int hashCode() {
-<span class="fc" id="L202">		return Objects.hashCode(name);</span>
+<span class="fc" id="L93">		return Objects.hashCode(name);</span>
 	}
 
 	public String getId() {
-<span class="fc" id="L206">		return getName();</span>
+<span class="fc" id="L97">		return getName(); //in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
 	}
 
 	@Override
 	public String toString() {
-<span class="fc" id="L211">		return getId();</span>
+<span class="fc" id="L102">		return getId();</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

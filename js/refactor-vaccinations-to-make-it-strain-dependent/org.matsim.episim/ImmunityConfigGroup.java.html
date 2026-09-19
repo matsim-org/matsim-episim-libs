@@ -1,0 +1,616 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ImmunityConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">ImmunityConfigGroup.java</span></div><h1>ImmunityConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.ImmunityEvent;
+import org.matsim.episim.model.Pathogen;
+import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.time.LocalDate;
+import java.util.NavigableMap;
+import java.util.TreeSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.OptionalDouble;
+import java.util.Set;
+
+/**
+ * How much protection an immunity event gives, over time, against which disease status and which strain.
+ *
+ * &lt;p&gt;One {@link SourceParams} per source of immunity. A source is an {@link ImmunityEvent}: an infection is
+ * described by the {@link VirusStrain} that caused it, a product &amp;mdash; a vaccine, a monoclonal antibody such as
+ * nirsevimab, a maternal vaccination &amp;mdash; by its {@link VaccinationType}. Which of the two is stated explicitly
+ * with {@code sourceKind}, because strains and vaccination types live in separate registries and a name may exist
+ * in both. The Java class of a product is still called {@code VaccinationType}, although not every product is a
+ * vaccine.&lt;/p&gt;
+ *
+ * &lt;p&gt;Each source holds one {@link ProtectionParams} per target disease status ({@code against}) and target strain:
+ * a {@link ProtectionCurve} of protection over the days since the event. Protection against strains of
+ * &lt;i&gt;other&lt;/i&gt; pathogens is not listed pair by pair but given once by {@code otherPathogensProtection}.&lt;/p&gt;
+ *
+ * &lt;p&gt;{@code model} decides whether this group is read at all. With {@link Model#legacyCovid}, the default, the
+ * immunity model is the legacy implementation the scenario module binds, which reads the vaccination curves and
+ * antibody levels calibrated for SARS-CoV-2; this group is then ignored. With {@link Model#explicit} the new
+ * immunity model reads this group, and it is checked strictly before the simulation starts.&lt;/p&gt;
+ *
+ * &lt;p&gt;This group only describes protection. Who receives a product and when stays in {@link VaccinationConfigGroup}
+ * and the vaccination model; the protection curves of {@link VaccinationConfigGroup} are not read by the immunity
+ * model that uses this group.&lt;/p&gt;
+ */
+public final class ImmunityConfigGroup extends ReflectiveConfigGroup {
+
+	public static final String GROUPNAME = &quot;immunity&quot;;
+
+<span class="fc" id="L57">	private static final Logger log = LogManager.getLogger(ImmunityConfigGroup.class);</span>
+
+	/**
+	 * Disease statuses a person can be protected against, in the order of the course of a disease.
+	 */
+<span class="fc" id="L62">	public static final Set&lt;DiseaseStatus&gt; SUPPORTED_TARGETS = Collections.unmodifiableSet(EnumSet.of(</span>
+		DiseaseStatus.infectedButNotContagious, DiseaseStatus.showingSymptoms,
+		DiseaseStatus.seriouslySick, DiseaseStatus.critical));
+
+	private static final String MODEL = &quot;model&quot;;
+	private static final String OTHER_PATHOGENS_PROTECTION = &quot;otherPathogensProtection&quot;;
+	private static final String COMBINATOR = &quot;combinator&quot;;
+
+	/**
+	 * Which immunity model a run uses.
+	 */
+<span class="fc" id="L73">	public enum Model {</span>
+		/**
+		 * The legacy implementation bound by the scenario module, calibrated for SARS-CoV-2. This group is not read.
+		 */
+<span class="fc" id="L77">		legacyCovid,</span>
+		/**
+		 * The immunity model that reads this group; the group is checked strictly.
+		 */
+<span class="fc" id="L81">		explicit</span>
+	}
+
+	/**
+	 * How the protection of several immunity events of one person is reduced to one.
+	 */
+<span class="fc" id="L87">	public enum Combinator {</span>
+		/**
+		 * The strongest single event wins; repeated events do not add up.
+		 */
+<span class="fc" id="L91">		min,</span>
+		/**
+		 * Remaining risks multiply, so repeated events add up.
+		 */
+<span class="fc" id="L95">		product</span>
+	}
+
+<span class="fc" id="L98">	private Model model = Model.legacyCovid;</span>
+
+	/**
+	 * Protection against strains of pathogens a source does not list; {@code null} while not set.
+	 */
+	private Double otherPathogensProtection;
+
+<span class="fc" id="L105">	private Combinator combinator = Combinator.min;</span>
+
+<span class="fc" id="L107">	private final Map&lt;ImmunityEvent, SourceParams&gt; sources = new LinkedHashMap&lt;&gt;();</span>
+
+	/**
+	 * An empty group: no source of immunity and {@code otherPathogensProtection} not set.
+	 */
+	public ImmunityConfigGroup() {
+<span class="fc" id="L113">		super(GROUPNAME);</span>
+<span class="fc" id="L114">	}</span>
+
+	public Model getModel() {
+<span class="fc" id="L117">		return model;</span>
+	}
+
+	public void setModel(Model model) {
+<span class="fc" id="L121">		this.model = Objects.requireNonNull(model, &quot;Immunity model must not be null&quot;);</span>
+<span class="fc" id="L122">	}</span>
+
+	@StringGetter(MODEL)
+	String getModelString() {
+<span class="fc" id="L126">		return model.name();</span>
+	}
+
+	@StringSetter(MODEL)
+	void setModelString(String value) {
+<span class="fc" id="L131">		setModel(parseEnum(Model.class, MODEL, value));</span>
+<span class="fc" id="L132">	}</span>
+
+	/**
+	 * Protection against strains of pathogens a source does not list, if set.
+	 */
+	public OptionalDouble getOtherPathogensProtection() {
+<span class="fc bfc" id="L138" title="All 2 branches covered.">		return otherPathogensProtection == null ? OptionalDouble.empty() : OptionalDouble.of(otherPathogensProtection);</span>
+	}
+
+	public void setOtherPathogensProtection(double protection) {
+<span class="pc bpc" id="L142" title="1 of 4 branches missed.">		if (!(protection &gt;= 0 &amp;&amp; protection &lt;= 1))</span>
+<span class="fc" id="L143">			throw new IllegalArgumentException(&quot;'&quot; + OTHER_PATHOGENS_PROTECTION + &quot;' has to be between 0 and 1, got &quot; + protection);</span>
+<span class="fc" id="L144">		this.otherPathogensProtection = protection;</span>
+<span class="fc" id="L145">	}</span>
+
+	@StringGetter(OTHER_PATHOGENS_PROTECTION)
+	String getOtherPathogensProtectionString() {
+<span class="fc bfc" id="L149" title="All 2 branches covered.">		return otherPathogensProtection == null ? null : otherPathogensProtection.toString();</span>
+	}
+
+	@StringSetter(OTHER_PATHOGENS_PROTECTION)
+	void setOtherPathogensProtectionString(String value) {
+<span class="pc bpc" id="L154" title="1 of 4 branches missed.">		if (value == null || value.isBlank())</span>
+<span class="fc" id="L155">			otherPathogensProtection = null;</span>
+		else
+<span class="fc" id="L157">			setOtherPathogensProtection(Double.parseDouble(value.trim()));</span>
+<span class="fc" id="L158">	}</span>
+
+	public Combinator getCombinator() {
+<span class="fc" id="L161">		return combinator;</span>
+	}
+
+	public void setCombinator(Combinator combinator) {
+<span class="fc" id="L165">		this.combinator = Objects.requireNonNull(combinator, &quot;Combinator must not be null&quot;);</span>
+<span class="fc" id="L166">	}</span>
+
+	@StringGetter(COMBINATOR)
+	String getCombinatorString() {
+<span class="fc" id="L170">		return combinator.name();</span>
+	}
+
+	@StringSetter(COMBINATOR)
+	void setCombinatorString(String value) {
+<span class="fc" id="L175">		setCombinator(parseEnum(Combinator.class, COMBINATOR, value));</span>
+<span class="fc" id="L176">	}</span>
+
+	/**
+	 * Parameters of the immunity gained from an infection with this strain, added if missing.
+	 */
+	public SourceParams getOrAddSource(VirusStrain strain) {
+<span class="fc" id="L182">		return getOrAddSource(strain, SourceKind.infection);</span>
+	}
+
+	/**
+	 * Parameters of the immunity given by this product, added if missing.
+	 */
+	public SourceParams getOrAddSource(VaccinationType product) {
+<span class="fc" id="L189">		return getOrAddSource(product, SourceKind.product);</span>
+	}
+
+	private SourceParams getOrAddSource(ImmunityEvent event, SourceKind kind) {
+<span class="fc" id="L193">		SourceParams existing = sources.get(event);</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">		if (existing != null)</span>
+<span class="fc" id="L195">			return existing;</span>
+
+<span class="fc" id="L197">		SourceParams p = new SourceParams();</span>
+<span class="fc" id="L198">		p.setSource(event.toString(), kind);</span>
+<span class="fc" id="L199">		addParameterSet(p);</span>
+<span class="fc" id="L200">		return p;</span>
+	}
+
+	/**
+	 * Parameters of a source, or {@code null} if it is not configured.
+	 */
+	public SourceParams getSource(ImmunityEvent event) {
+<span class="fc" id="L207">		return sources.get(event);</span>
+	}
+
+	public Collection&lt;SourceParams&gt; getSources() {
+<span class="nc" id="L211">		return Collections.unmodifiableCollection(sources.values());</span>
+	}
+
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">		if (SourceParams.SET_TYPE.equals(type))</span>
+<span class="fc" id="L217">			return new SourceParams();</span>
+
+<span class="nc" id="L219">		throw new IllegalArgumentException(&quot;Unknown parameter set type: &quot; + type);</span>
+	}
+
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+<span class="pc bpc" id="L224" title="1 of 2 branches missed.">		if (!SourceParams.SET_TYPE.equals(set.getName()))</span>
+<span class="nc" id="L225">			throw new IllegalStateException(&quot;Unknown parameter set type: &quot; + set.getName());</span>
+
+<span class="fc" id="L227">		SourceParams p = (SourceParams) set;</span>
+<span class="fc" id="L228">		ImmunityEvent event = p.getSource();</span>
+<span class="fc bfc" id="L229" title="All 2 branches covered.">		if (sources.containsKey(event))</span>
+<span class="fc" id="L230">			throw new IllegalArgumentException(&quot;Source of immunity '&quot; + event + &quot;' is configured twice in config group '&quot;</span>
+				+ GROUPNAME + &quot;'&quot;);
+
+<span class="fc" id="L233">		sources.put(event, p);</span>
+<span class="fc" id="L234">		super.addParameterSet(set);</span>
+<span class="fc" id="L235">	}</span>
+
+	/**
+	 * Checks the group before the simulation starts. Only with {@link Model#explicit}: with {@link Model#legacyCovid}
+	 * the group is not read, and settings that would be ignored are reported as a warning.
+	 */
+	@Override
+	protected void checkConsistency(Config config) {
+<span class="fc" id="L243">		super.checkConsistency(config);</span>
+
+<span class="fc bfc" id="L245" title="All 2 branches covered.">		if (model == Model.legacyCovid) {</span>
+<span class="pc bpc" id="L246" title="3 of 4 branches missed.">			if (!sources.isEmpty() || otherPathogensProtection != null)</span>
+<span class="fc" id="L247">				log.warn(&quot;Config group '{}' configures immunity, but '{}' is {}: the legacy immunity model does not read &quot;</span>
+					+ &quot;this group, so these settings have no effect.&quot;, GROUPNAME, MODEL, model);
+<span class="fc" id="L249">			return;</span>
+		}
+
+<span class="fc" id="L252">		List&lt;String&gt; problems = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L253" title="All 2 branches covered.">		for (SourceParams source : sources.values())</span>
+<span class="fc" id="L254">			source.collectProblems(problems);</span>
+
+		// coverage needs complete sets; report incomplete ones first
+<span class="fc bfc" id="L257" title="All 2 branches covered.">		if (problems.isEmpty())</span>
+<span class="fc" id="L258">			checkCoverage(config, problems);</span>
+
+<span class="fc bfc" id="L260" title="All 2 branches covered.">		if (!problems.isEmpty())</span>
+<span class="fc" id="L261">			throw new IllegalStateException(String.join(&quot;\n&quot;, problems));</span>
+<span class="fc" id="L262">	}</span>
+
+	/**
+	 * Checks that the sources cover what can happen in the run.
+	 *
+	 * &lt;p&gt;Only &lt;i&gt;circulating&lt;/i&gt; strains are required: configured in {@code virusStrains} and imported with a
+	 * positive number of infections in {@code episim}. The constructor of {@link VirusStrainConfigGroup} always adds
+	 * SARS-CoV-2, so requiring every configured strain would force a placeholder for it into every other run. A strain
+	 * that enters a run without being imported, through a custom initial infection handler, is not seen here; the
+	 * immunity model fails on its first infection instead.&lt;/p&gt;
+	 *
+	 * &lt;p&gt;Products handed out by the vaccination programme are not checked here: which vaccination model is bound is not
+	 * part of the configuration. The immunity model fails on the first vaccination with a product that has no source.&lt;/p&gt;
+	 */
+	private void checkCoverage(Config config, List&lt;String&gt; problems) {
+
+<span class="fc" id="L278">		VirusStrainConfigGroup strainConfig = VirusStrainConfigGroup.moduleOrDefault(config, &quot;virusStrains&quot;,</span>
+			VirusStrainConfigGroup.class, VirusStrainConfigGroup::new);
+<span class="fc" id="L280">		EpisimConfigGroup episimConfig = VirusStrainConfigGroup.moduleOrDefault(config, &quot;episim&quot;,</span>
+			EpisimConfigGroup.class, EpisimConfigGroup::new);
+<span class="pc bpc" id="L282" title="2 of 4 branches missed.">		if (strainConfig == null || episimConfig == null)</span>
+<span class="nc" id="L283">			return;</span>
+
+<span class="fc" id="L285">		Set&lt;VirusStrain&gt; configured = strainConfig.getConfiguredStrains();</span>
+<span class="fc" id="L286">		Set&lt;VirusStrain&gt; circulating = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">		for (Map.Entry&lt;VirusStrain, NavigableMap&lt;LocalDate, Integer&gt;&gt; e : episimConfig.getInfections_pers_per_day().entrySet()) {</span>
+<span class="pc bpc" id="L288" title="2 of 6 branches missed.">			if (configured.contains(e.getKey()) &amp;&amp; e.getValue().values().stream().anyMatch(n -&gt; n &gt; 0))</span>
+<span class="fc" id="L289">				circulating.add(e.getKey());</span>
+<span class="fc" id="L290">		}</span>
+
+<span class="fc" id="L292">		checkStrainNames(configured, problems);</span>
+<span class="fc" id="L293">		checkInfectionSources(circulating, problems);</span>
+<span class="fc" id="L294">		checkTargets(circulating, problems);</span>
+<span class="fc" id="L295">	}</span>
+
+	/**
+	 * Names that do not resolve to a configured strain are most likely typos.
+	 */
+	private void checkStrainNames(Set&lt;VirusStrain&gt; configured, List&lt;String&gt; problems) {
+<span class="fc bfc" id="L301" title="All 2 branches covered.">		for (SourceParams source : sources.values()) {</span>
+<span class="pc bpc" id="L302" title="1 of 4 branches missed.">			if (source.getSourceKind() == SourceKind.infection &amp;&amp; !configured.contains((VirusStrain) source.getSource()))</span>
+<span class="nc" id="L303">				problems.add(&quot;Source of immunity '&quot; + source.getSource() + &quot;' is an infection with a strain that has no '&quot;</span>
+					+ &quot;strainParams' in config group 'virusStrains'. Check the name or add the strain.&quot;);
+<span class="fc bfc" id="L305" title="All 2 branches covered.">			for (ProtectionParams p : source.getProtections()) {</span>
+<span class="fc bfc" id="L306" title="All 2 branches covered.">				if (!configured.contains(p.getStrain()))</span>
+<span class="fc" id="L307">					problems.add(&quot;Source of immunity '&quot; + source.getSource() + &quot;' lists protection for strain '&quot; + p.getStrain()</span>
+						+ &quot;', which has no 'strainParams' in config group 'virusStrains'. Check the name or add the strain.&quot;);
+<span class="fc" id="L309">			}</span>
+<span class="fc" id="L310">		}</span>
+<span class="fc" id="L311">	}</span>
+
+	/**
+	 * Every circulating strain leaves immunity behind, which has to be described, even if it is none.
+	 */
+	private void checkInfectionSources(Set&lt;VirusStrain&gt; circulating, List&lt;String&gt; problems) {
+<span class="fc bfc" id="L317" title="All 2 branches covered.">		for (VirusStrain strain : circulating) {</span>
+<span class="fc" id="L318">			SourceParams source = sources.get(strain);</span>
+<span class="pc bpc" id="L319" title="1 of 4 branches missed.">			if (source == null || source.getSourceKind() != SourceKind.infection)</span>
+<span class="fc" id="L320">				problems.add(&quot;Strain '&quot; + strain + &quot;' circulates, but there is no '&quot; + SourceParams.SET_TYPE + &quot;' for an infection &quot;</span>
+					+ &quot;with it. Describe the immunity it leaves behind, with curves '0&gt;0.0' if there is none.&quot;);
+<span class="fc" id="L322">		}</span>
+<span class="fc" id="L323">	}</span>
+
+	/**
+	 * A source covers its own pathogen (for an infection) and every pathogen it lists curves for. For circulating strains
+	 * of a covered pathogen every target has to be listed; other strains need {@link #OTHER_PATHOGENS_PROTECTION}.
+	 */
+	private void checkTargets(Set&lt;VirusStrain&gt; circulating, List&lt;String&gt; problems) {
+<span class="fc" id="L330">		Set&lt;String&gt; uncovered = new TreeSet&lt;&gt;();</span>
+<span class="fc bfc" id="L331" title="All 2 branches covered.">		for (SourceParams source : sources.values()) {</span>
+
+<span class="fc" id="L333">			Set&lt;Pathogen&gt; covered = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L334" title="All 2 branches covered.">			if (source.getSourceKind() == SourceKind.infection)</span>
+<span class="fc" id="L335">				covered.add(((VirusStrain) source.getSource()).getPathogen());</span>
+<span class="fc bfc" id="L336" title="All 2 branches covered.">			for (ProtectionParams p : source.getProtections())</span>
+<span class="fc" id="L337">				covered.add(p.getStrain().getPathogen());</span>
+
+<span class="fc bfc" id="L339" title="All 2 branches covered.">			for (VirusStrain target : circulating) {</span>
+<span class="fc bfc" id="L340" title="All 2 branches covered.">				if (!covered.contains(target.getPathogen())) {</span>
+<span class="fc" id="L341">					uncovered.add(source.getSource() + &quot; -&gt; &quot; + target);</span>
+<span class="fc" id="L342">					continue;</span>
+				}
+<span class="fc bfc" id="L344" title="All 2 branches covered.">				for (DiseaseStatus against : SUPPORTED_TARGETS) {</span>
+<span class="fc bfc" id="L345" title="All 2 branches covered.">					if (source.getProtection(against, target) == null)</span>
+<span class="fc" id="L346">						problems.add(&quot;Source of immunity '&quot; + source.getSource() + &quot;' covers pathogen '&quot; + target.getPathogen()</span>
+							+ &quot;' but has no protection against &quot; + against + &quot; for its strain '&quot; + target
+							+ &quot;'. Every target has to be listed; write curve '0&gt;0.0' for no protection.&quot;);
+<span class="fc" id="L349">				}</span>
+<span class="fc" id="L350">			}</span>
+<span class="fc" id="L351">		}</span>
+
+<span class="fc bfc" id="L353" title="All 4 branches covered.">		if (!uncovered.isEmpty() &amp;&amp; otherPathogensProtection == null)</span>
+<span class="fc" id="L354">			problems.add(&quot;Sources give no curves for strains of other pathogens &quot; + uncovered + &quot;, and '&quot;</span>
+				+ OTHER_PATHOGENS_PROTECTION + &quot;' is not set. Set it explicitly, e.g. to 0.0 for no cross-protection.&quot;);
+<span class="fc" id="L356">	}</span>
+
+	/**
+	 * Reads an enum value and names the allowed values if it is unknown, instead of the bare &quot;No enum constant&quot;.
+	 */
+	private static &lt;E extends Enum&lt;E&gt;&gt; E parseEnum(Class&lt;E&gt; type, String param, String value) {
+		try {
+<span class="fc" id="L363">			return Enum.valueOf(type, value.trim());</span>
+<span class="fc" id="L364">		} catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L365">			throw new IllegalArgumentException(&quot;'&quot; + param + &quot;' has no value '&quot; + value.trim() + &quot;'; allowed are &quot;</span>
+<span class="fc" id="L366">				+ java.util.Arrays.toString(type.getEnumConstants()), e);</span>
+		}
+	}
+
+	/**
+	 * Whether a source of immunity is an infection or a product.
+	 */
+<span class="fc" id="L373">	public enum SourceKind {</span>
+<span class="fc" id="L374">		infection, product</span>
+	}
+
+	/**
+	 * Protection given by one source of immunity.
+	 */
+	public static final class SourceParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = &quot;immunitySource&quot;;
+
+		private static final String SOURCE = &quot;source&quot;;
+		private static final String SOURCE_KIND = &quot;sourceKind&quot;;
+
+		private String sourceName;
+		private SourceKind sourceKind;
+
+		/**
+		 * One set per target disease status and target strain.
+		 */
+<span class="fc" id="L393">		private final Map&lt;DiseaseStatus, Map&lt;VirusStrain, ProtectionParams&gt;&gt; protections = new LinkedHashMap&lt;&gt;();</span>
+
+		SourceParams() {
+<span class="fc" id="L396">			super(SET_TYPE);</span>
+<span class="fc" id="L397">		}</span>
+
+		void setSource(String name, SourceKind kind) {
+<span class="fc" id="L400">			this.sourceName = name;</span>
+<span class="fc" id="L401">			this.sourceKind = kind;</span>
+<span class="fc" id="L402">		}</span>
+
+		/**
+		 * The immunity event this source describes.
+		 *
+		 * @throws IllegalStateException if {@code source} or {@code sourceKind} is not set
+		 */
+		public ImmunityEvent getSource() {
+<span class="pc bpc" id="L410" title="2 of 4 branches missed.">			if (sourceName == null || sourceKind == null)</span>
+<span class="nc" id="L411">				throw new IllegalStateException(&quot;A '&quot; + SET_TYPE + &quot;' in config group '&quot; + GROUPNAME + &quot;' needs both '&quot;</span>
+					+ SOURCE + &quot;' and '&quot; + SOURCE_KIND + &quot;', got source=&quot; + sourceName + &quot;, sourceKind=&quot; + sourceKind);
+
+<span class="fc bfc" id="L414" title="All 2 branches covered.">			return sourceKind == SourceKind.infection ? VirusStrain.of(sourceName) : VaccinationType.of(sourceName);</span>
+		}
+
+		public SourceKind getSourceKind() {
+<span class="fc" id="L418">			return sourceKind;</span>
+		}
+
+		@StringGetter(SOURCE)
+		String getSourceName() {
+<span class="fc" id="L423">			return sourceName;</span>
+		}
+
+		@StringSetter(SOURCE)
+		void setSourceName(String name) {
+<span class="pc bpc" id="L428" title="2 of 4 branches missed.">			this.sourceName = name == null || name.isBlank() ? null : name.trim();</span>
+<span class="fc" id="L429">		}</span>
+
+		@StringGetter(SOURCE_KIND)
+		String getSourceKindString() {
+<span class="pc bpc" id="L433" title="1 of 2 branches missed.">			return sourceKind == null ? null : sourceKind.name();</span>
+		}
+
+		@StringSetter(SOURCE_KIND)
+		void setSourceKindString(String kind) {
+<span class="pc bpc" id="L438" title="2 of 4 branches missed.">			this.sourceKind = kind == null || kind.isBlank() ? null : parseEnum(SourceKind.class, SOURCE_KIND, kind);</span>
+<span class="fc" id="L439">		}</span>
+
+		/**
+		 * Protection against {@code against} for {@code strain}, added with the given curve or replacing its curve.
+		 */
+		public ProtectionParams setProtection(DiseaseStatus against, VirusStrain strain, ProtectionCurve curve) {
+<span class="fc" id="L445">			ProtectionParams existing = find(against, strain);</span>
+<span class="pc bpc" id="L446" title="1 of 2 branches missed.">			if (existing != null) {</span>
+<span class="nc" id="L447">				existing.setCurve(curve);</span>
+<span class="nc" id="L448">				return existing;</span>
+			}
+
+<span class="fc" id="L451">			ProtectionParams p = new ProtectionParams();</span>
+<span class="fc" id="L452">			p.setAgainst(against);</span>
+<span class="fc" id="L453">			p.setStrain(strain);</span>
+<span class="fc" id="L454">			p.setCurve(curve);</span>
+<span class="fc" id="L455">			addParameterSet(p);</span>
+<span class="fc" id="L456">			return p;</span>
+		}
+
+		/**
+		 * Curve for the given target, or {@code null} if this source does not list it.
+		 */
+		public ProtectionCurve getProtection(DiseaseStatus against, VirusStrain strain) {
+<span class="fc" id="L463">			ProtectionParams p = find(against, strain);</span>
+<span class="fc bfc" id="L464" title="All 2 branches covered.">			return p == null ? null : p.getCurve();</span>
+		}
+
+		/**
+		 * All protections of this source, in the order they were added.
+		 */
+		public List&lt;ProtectionParams&gt; getProtections() {
+<span class="fc" id="L471">			List&lt;ProtectionParams&gt; all = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L472">			protections.values().forEach(byStrain -&gt; all.addAll(byStrain.values()));</span>
+<span class="fc" id="L473">			return Collections.unmodifiableList(all);</span>
+		}
+
+		private ProtectionParams find(DiseaseStatus against, VirusStrain strain) {
+<span class="fc" id="L477">			Map&lt;VirusStrain, ProtectionParams&gt; byStrain = protections.get(against);</span>
+<span class="fc bfc" id="L478" title="All 2 branches covered.">			return byStrain == null ? null : byStrain.get(strain);</span>
+		}
+
+		@Override
+		public ConfigGroup createParameterSet(String type) {
+<span class="pc bpc" id="L483" title="1 of 2 branches missed.">			if (ProtectionParams.SET_TYPE.equals(type))</span>
+<span class="fc" id="L484">				return new ProtectionParams();</span>
+
+<span class="nc" id="L486">			throw new IllegalArgumentException(&quot;Unknown parameter set type: &quot; + type);</span>
+		}
+
+		@Override
+		public void addParameterSet(final ConfigGroup set) {
+<span class="pc bpc" id="L491" title="1 of 2 branches missed.">			if (!ProtectionParams.SET_TYPE.equals(set.getName()))</span>
+<span class="nc" id="L492">				throw new IllegalStateException(&quot;Unknown parameter set type: &quot; + set.getName());</span>
+
+<span class="fc" id="L494">			ProtectionParams p = (ProtectionParams) set;</span>
+<span class="fc" id="L495">			p.requireTarget();</span>
+<span class="fc bfc" id="L496" title="All 2 branches covered.">			if (find(p.getAgainst(), p.getStrain()) != null)</span>
+<span class="fc" id="L497">				throw new IllegalArgumentException(&quot;Source of immunity '&quot; + sourceName + &quot;' lists protection against &quot;</span>
+<span class="fc" id="L498">					+ p.getAgainst() + &quot; for strain '&quot; + p.getStrain() + &quot;' twice&quot;);</span>
+
+<span class="fc" id="L500">			protections.computeIfAbsent(p.getAgainst(), k -&gt; new LinkedHashMap&lt;&gt;()).put(p.getStrain(), p);</span>
+<span class="fc" id="L501">			super.addParameterSet(set);</span>
+<span class="fc" id="L502">		}</span>
+
+		private void collectProblems(List&lt;String&gt; problems) {
+<span class="pc bpc" id="L505" title="2 of 4 branches missed.">			if (sourceName == null || sourceKind == null) {</span>
+<span class="nc" id="L506">				problems.add(&quot;A '&quot; + SET_TYPE + &quot;' needs both '&quot; + SOURCE + &quot;' and '&quot; + SOURCE_KIND + &quot;', got source=&quot;</span>
+					+ sourceName + &quot;, sourceKind=&quot; + sourceKind);
+<span class="nc" id="L508">				return;</span>
+			}
+
+<span class="fc bfc" id="L511" title="All 2 branches covered.">			for (ProtectionParams p : getProtections()) {</span>
+<span class="fc bfc" id="L512" title="All 2 branches covered.">				if (p.getCurve() == null)</span>
+<span class="fc" id="L513">					problems.add(&quot;Source of immunity '&quot; + sourceName + &quot;' has no '&quot; + ProtectionParams.CURVE</span>
+<span class="fc" id="L514">						+ &quot;' for protection against &quot; + p.getAgainst() + &quot; for strain '&quot; + p.getStrain() + &quot;'&quot;);</span>
+<span class="fc" id="L515">			}</span>
+<span class="fc" id="L516">		}</span>
+	}
+
+	/**
+	 * Protection a source gives against one target disease status for one target strain.
+	 */
+	public static final class ProtectionParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = &quot;protection&quot;;
+
+		private static final String AGAINST = &quot;against&quot;;
+		private static final String STRAIN = &quot;strain&quot;;
+		private static final String CURVE = &quot;curve&quot;;
+
+		private DiseaseStatus against;
+		private String strainName;
+		private ProtectionCurve curve;
+
+		ProtectionParams() {
+<span class="fc" id="L535">			super(SET_TYPE);</span>
+<span class="fc" id="L536">		}</span>
+
+		public DiseaseStatus getAgainst() {
+<span class="fc" id="L539">			return against;</span>
+		}
+
+		/**
+		 * Target disease status of this protection.
+		 *
+		 * @throws IllegalArgumentException if the status is not one a person can be protected against
+		 */
+		public void setAgainst(DiseaseStatus against) {
+<span class="fc bfc" id="L548" title="All 2 branches covered.">			if (!SUPPORTED_TARGETS.contains(against))</span>
+<span class="fc" id="L549">				throw new IllegalArgumentException(&quot;Protection against '&quot; + against + &quot;' is not supported; supported are &quot;</span>
+					+ SUPPORTED_TARGETS);
+<span class="fc" id="L551">			this.against = against;</span>
+<span class="fc" id="L552">		}</span>
+
+		@StringGetter(AGAINST)
+		String getAgainstString() {
+<span class="pc bpc" id="L556" title="1 of 2 branches missed.">			return against == null ? null : against.name();</span>
+		}
+
+		@StringSetter(AGAINST)
+		void setAgainstString(String value) {
+<span class="fc" id="L561">			setAgainst(parseEnum(DiseaseStatus.class, AGAINST, value));</span>
+<span class="fc" id="L562">		}</span>
+
+		/**
+		 * Strain the protection is against. Resolved by name on access, so that a strain whose pathogen is declared
+		 * by a config group read later still ends up with the right pathogen.
+		 */
+		public VirusStrain getStrain() {
+<span class="pc bpc" id="L569" title="1 of 2 branches missed.">			return strainName == null ? null : VirusStrain.of(strainName);</span>
+		}
+
+		public void setStrain(VirusStrain strain) {
+<span class="fc" id="L573">			this.strainName = strain.getVirusStrainName();</span>
+<span class="fc" id="L574">		}</span>
+
+		@StringGetter(STRAIN)
+		String getStrainName() {
+<span class="fc" id="L578">			return strainName;</span>
+		}
+
+		@StringSetter(STRAIN)
+		void setStrainName(String name) {
+<span class="pc bpc" id="L583" title="2 of 4 branches missed.">			this.strainName = name == null || name.isBlank() ? null : name.trim();</span>
+<span class="fc" id="L584">		}</span>
+
+		public ProtectionCurve getCurve() {
+<span class="fc" id="L587">			return curve;</span>
+		}
+
+		public void setCurve(ProtectionCurve curve) {
+<span class="fc" id="L591">			this.curve = Objects.requireNonNull(curve, &quot;Protection curve must not be null&quot;);</span>
+<span class="fc" id="L592">		}</span>
+
+		@StringGetter(CURVE)
+		String getCurveString() {
+<span class="pc bpc" id="L596" title="1 of 2 branches missed.">			return curve == null ? null : curve.toString();</span>
+		}
+
+		@StringSetter(CURVE)
+		void setCurveString(String value) {
+			try {
+<span class="fc" id="L602">				setCurve(ProtectionCurve.parse(value));</span>
+<span class="fc" id="L603">			} catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L604">				throw new IllegalArgumentException(&quot;Protection against &quot; + against + &quot; for strain '&quot; + strainName</span>
+<span class="fc" id="L605">					+ &quot;': &quot; + e.getMessage(), e);</span>
+<span class="fc" id="L606">			}</span>
+<span class="fc" id="L607">		}</span>
+
+		private void requireTarget() {
+<span class="pc bpc" id="L610" title="2 of 4 branches missed.">			if (against == null || strainName == null)</span>
+<span class="nc" id="L611">				throw new IllegalStateException(&quot;A '&quot; + SET_TYPE + &quot;' needs both '&quot; + AGAINST + &quot;' and '&quot; + STRAIN</span>
+					+ &quot;', got against=&quot; + against + &quot;, strain=&quot; + strainName);
+<span class="fc" id="L613">		}</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

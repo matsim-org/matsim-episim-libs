@@ -374,11 +374,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L374">					district.nInfectedButNotContagious++;</span>
 <span class="fc" id="L375">					report.nTotalInfected++;</span>
 <span class="fc" id="L376">					district.nTotalInfected++;</span>
-<span class="pc bpc" id="L377" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
-<span class="nc" id="L378">						report.nInfectedButNotContagiousVaccinated++;</span>
-<span class="nc" id="L379">						district.nInfectedButNotContagiousVaccinated++;</span>
-<span class="nc" id="L380">						report.nTotalInfectedVaccinated++;</span>
-<span class="nc" id="L381">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc bfc" id="L377" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L378">						report.nInfectedButNotContagiousVaccinated++;</span>
+<span class="fc" id="L379">						district.nInfectedButNotContagiousVaccinated++;</span>
+<span class="fc" id="L380">						report.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L381">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case contagious:
@@ -411,11 +411,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L411">					district.nSeriouslySick++;</span>
 <span class="fc" id="L412">					report.nTotalInfected++;</span>
 <span class="fc" id="L413">					district.nTotalInfected++;</span>
-<span class="pc bpc" id="L414" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
-<span class="nc" id="L415">						report.nSeriouslySickVaccinated++;</span>
-<span class="nc" id="L416">						district.nSeriouslySickVaccinated++;</span>
-<span class="nc" id="L417">						report.nTotalInfectedVaccinated++;</span>
-<span class="nc" id="L418">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc bfc" id="L414" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L415">						report.nSeriouslySickVaccinated++;</span>
+<span class="fc" id="L416">						district.nSeriouslySickVaccinated++;</span>
+<span class="fc" id="L417">						report.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L418">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case critical:

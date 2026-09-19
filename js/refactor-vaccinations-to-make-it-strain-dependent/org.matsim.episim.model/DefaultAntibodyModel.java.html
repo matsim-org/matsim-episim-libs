@@ -2,7 +2,6 @@
 
 
 import com.google.inject.Inject;
-import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VirusStrainConfigGroup;
@@ -22,59 +21,59 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	// optimistic: 46
 	//
 
-	private final AntibodyConfigGroup antibodyConfig;
+	private final AntibodyModel.Config antibodyConfig;
 	private final EpisimSplittableRandom localRnd;
 
 	private final Collection&lt;VirusStrain&gt; virusStrains;
 
 
 	@Inject
-<span class="fc" id="L32">	DefaultAntibodyModel(AntibodyConfigGroup antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {</span>
-<span class="fc" id="L33">		this.antibodyConfig = antibodyConfig;</span>
-<span class="fc" id="L34">		this.virusStrains = virusStrainConfig.getVirusStrains();</span>
-<span class="fc" id="L35">		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots</span>
+<span class="fc" id="L31">	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {</span>
+<span class="fc" id="L32">		this.antibodyConfig = antibodyConfig;</span>
+<span class="fc" id="L33">		this.virusStrains = virusStrainConfig.getVirusStrains();</span>
+<span class="fc" id="L34">		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots</span>
 
 
-<span class="fc" id="L38">	}</span>
+<span class="fc" id="L37">	}</span>
 
 	@Override
 	public void init(Collection&lt;EpisimPerson&gt; persons, int iteration) {
 
-<span class="fc bfc" id="L43" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
 
 			// mu = log(median); log(1)=0
 
 
 			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
-<span class="fc" id="L49">			double immuneResponseMultiplier = 0;</span>
-<span class="fc bfc" id="L50" title="All 4 branches covered.">			while (immuneResponseMultiplier &lt; 0.1 || immuneResponseMultiplier &gt; 10) {</span>
+<span class="fc" id="L48">			double immuneResponseMultiplier = 0;</span>
+<span class="fc bfc" id="L49" title="All 4 branches covered.">			while (immuneResponseMultiplier &lt; 0.1 || immuneResponseMultiplier &gt; 10) {</span>
 
-<span class="fc" id="L52">				immuneResponseMultiplier = EpisimUtils.nextLogNormal(localRnd, 0, antibodyConfig.getImmuneResponseSigma());</span>
+<span class="fc" id="L51">				immuneResponseMultiplier = EpisimUtils.nextLogNormal(localRnd, 0, antibodyConfig.getImmuneResponseSigma());</span>
 			}
 
-<span class="fc" id="L55">			person.setImmuneResponseMultiplier(immuneResponseMultiplier);</span>
+<span class="fc" id="L54">			person.setImmuneResponseMultiplier(immuneResponseMultiplier);</span>
 
-<span class="fc" id="L57">		}</span>
+<span class="fc" id="L56">		}</span>
 
 
-<span class="fc" id="L60">	}</span>
+<span class="fc" id="L59">	}</span>
 
 	@Override
 	public void recalculateAntibodiesAfterSnapshot(Collection&lt;EpisimPerson&gt; persons, int iteration) {
-<span class="fc bfc" id="L64" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
 
 			// reset to 0.0
-<span class="fc bfc" id="L67" title="All 2 branches covered.">			for (VirusStrain strain : virusStrains) {</span>
-<span class="fc" id="L68">				person.setAntibodies(strain, 0.0);</span>
-<span class="fc" id="L69">			}</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">			for (VirusStrain strain : virusStrains) {</span>
+<span class="fc" id="L67">				person.setAntibodies(strain, 0.0);</span>
+<span class="fc" id="L68">			}</span>
 
 			// recalculate antibodies from immune history
-<span class="fc bfc" id="L72" title="All 2 branches covered.">			for (int it = 1; it &lt; iteration; it++) {</span>
-<span class="fc" id="L73">				updateAntibodies(person, it);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">			for (int it = 1; it &lt; iteration; it++) {</span>
+<span class="fc" id="L72">				updateAntibodies(person, it);</span>
 
 			}
-<span class="fc" id="L76">		}</span>
-<span class="fc" id="L77">	}</span>
+<span class="fc" id="L75">		}</span>
+<span class="fc" id="L76">	}</span>
 
 	/**
 	 * Updates the antibody levels for person. If an immunity event occurs (vaccination or infection) on the previous
@@ -88,100 +87,100 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	public void updateAntibodies(EpisimPerson person, int day) {
 
 		//handle vaccination
-<span class="fc bfc" id="L91" title="All 2 branches covered.">		if (person.getVaccinationDates().contains(day - 1)) {</span>
-<span class="fc" id="L92">			int vaccinationIndex = person.getVaccinationDates().indexOf(day - 1);</span>
-<span class="fc" id="L93">			VaccinationType vaccinationType = person.getVaccinationType(vaccinationIndex);</span>
-<span class="fc" id="L94">			handleImmunization(person, vaccinationType);</span>
-<span class="fc" id="L95">			return;</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">		if (person.getVaccinationDates().contains(day - 1)) {</span>
+<span class="fc" id="L91">			int vaccinationIndex = person.getVaccinationDates().indexOf(day - 1);</span>
+<span class="fc" id="L92">			VaccinationType vaccinationType = person.getVaccinationType(vaccinationIndex);</span>
+<span class="fc" id="L93">			handleImmunization(person, vaccinationType);</span>
+<span class="fc" id="L94">			return;</span>
 		}
 
 		// handle infection
-<span class="fc bfc" id="L99" title="All 2 branches covered.">		for (int infectionIndex = 0; infectionIndex &lt; person.getNumInfections(); infectionIndex++) {</span>
-<span class="fc bfc" id="L100" title="All 2 branches covered.">			if (person.daysSinceInfection(infectionIndex, day) == 1) {</span>
-<span class="fc" id="L101">				VirusStrain virusStrain = person.getVirusStrain(infectionIndex);</span>
-<span class="fc" id="L102">				handleImmunization(person, virusStrain);</span>
-<span class="fc" id="L103">				return;</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">		for (int infectionIndex = 0; infectionIndex &lt; person.getNumInfections(); infectionIndex++) {</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">			if (person.daysSinceInfection(infectionIndex, day) == 1) {</span>
+<span class="fc" id="L100">				VirusStrain virusStrain = person.getVirusStrain(infectionIndex);</span>
+<span class="fc" id="L101">				handleImmunization(person, virusStrain);</span>
+<span class="fc" id="L102">				return;</span>
 			}
 		}
 
-<span class="fc" id="L107">		double halflifeDays = HALF_LIFE_DAYS;</span>
+<span class="fc" id="L106">		double halflifeDays = HALF_LIFE_DAYS;</span>
 
-<span class="fc bfc" id="L109" title="All 4 branches covered.">		if ((person.getNumInfections() &gt; 0 &amp;&amp; person.getNumVaccinations() &gt; 0)</span>
-<span class="fc bfc" id="L110" title="All 2 branches covered.">			|| person.getNumInfections() &gt; 4</span>
-<span class="pc bpc" id="L111" title="1 of 2 branches missed.">			|| person.getNumVaccinations() &gt; 3) {</span>
+<span class="fc bfc" id="L108" title="All 4 branches covered.">		if ((person.getNumInfections() &gt; 0 &amp;&amp; person.getNumVaccinations() &gt; 0)</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">			|| person.getNumInfections() &gt; 4</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">			|| person.getNumVaccinations() &gt; 3) {</span>
 
-<span class="fc" id="L113">			halflifeDays *= antibodyConfig.getHlMultiplierForInfected(); // 1, 2, 5</span>
+<span class="fc" id="L112">			halflifeDays *= antibodyConfig.getHlMultiplierForInfected(); // 1, 2, 5</span>
 		}
 
 		// if no immunity event: exponential decay, day by day:
-<span class="fc bfc" id="L117" title="All 2 branches covered.">		for (VirusStrain strain : virusStrains) {</span>
-<span class="fc" id="L118">			double oldAntibodyLevel = person.getAntibodies(strain);</span>
-<span class="fc" id="L119">			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halflifeDays));</span>
-<span class="fc" id="L120">		}</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">		for (VirusStrain strain : virusStrains) {</span>
+<span class="fc" id="L117">			double oldAntibodyLevel = person.getAntibodies(strain);</span>
+<span class="fc" id="L118">			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halflifeDays));</span>
+<span class="fc" id="L119">		}</span>
 
-<span class="fc" id="L122">	}</span>
+<span class="fc" id="L121">	}</span>
 
 	private void handleImmunization(EpisimPerson person, ImmunityEvent immunityEventType) {
 
-<span class="fc" id="L126">		boolean firstImmunization = checkFirstImmunization(person);</span>
+<span class="fc" id="L125">		boolean firstImmunization = checkFirstImmunization(person);</span>
 
 		// resolve the per-event maps once instead of rebuilding the whole nested map per strain
-<span class="fc" id="L129">		Map&lt;VirusStrain, Double&gt; initialAntibodiesForEvent = antibodyConfig.getParams(immunityEventType).getInitialAntibodies();</span>
+<span class="fc" id="L128">		Map&lt;VirusStrain, Double&gt; initialAntibodiesForEvent = antibodyConfig.getInitialAntibodies(immunityEventType);</span>
 
 		// 1st immunization:
-<span class="fc bfc" id="L132" title="All 2 branches covered.">		if (firstImmunization) {</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">		if (firstImmunization) {</span>
 
-<span class="fc bfc" id="L134" title="All 2 branches covered.">			for (VirusStrain strain2 : virusStrains) {</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">			for (VirusStrain strain2 : virusStrains) {</span>
 				// no entry: this immunity event does not induce antibodies against the strain (e.g. another pathogen)
-<span class="fc" id="L136">				double antibodies = initialAntibodiesForEvent.getOrDefault(strain2, 0.0);</span>
+<span class="fc" id="L135">				double antibodies = initialAntibodiesForEvent.getOrDefault(strain2, 0.0);</span>
 
-<span class="fc" id="L138">				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());</span>
+<span class="fc" id="L137">				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());</span>
 
-<span class="fc" id="L140">				person.setAntibodies(strain2, antibodies);</span>
+<span class="fc" id="L139">				person.setAntibodies(strain2, antibodies);</span>
 
 				// if antibodies against a strain2 are higher than previous maximum, replace maximum
 				// should always be the case for initial immunization
-<span class="fc" id="L144">				person.updateMaxAntibodies(strain2, antibodies);</span>
-<span class="fc" id="L145">			}</span>
+<span class="fc" id="L143">				person.updateMaxAntibodies(strain2, antibodies);</span>
+<span class="fc" id="L144">			}</span>
 
 
 		} else {
-<span class="fc" id="L149">			Map&lt;VirusStrain, Double&gt; refreshFactorsForEvent = antibodyConfig.getParams(immunityEventType).getAntibodyRefreshFactors();</span>
+<span class="fc" id="L148">			Map&lt;VirusStrain, Double&gt; refreshFactorsForEvent = antibodyConfig.getAntibodyRefreshFactors(immunityEventType);</span>
 
-<span class="fc bfc" id="L151" title="All 2 branches covered.">			for (VirusStrain strain2 : virusStrains) {</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">			for (VirusStrain strain2 : virusStrains) {</span>
 				// no entry: the existing antibody level against the strain is not refreshed
-<span class="fc" id="L153">				double refreshFactor = refreshFactorsForEvent.getOrDefault(strain2, 1.0);</span>
+<span class="fc" id="L152">				double refreshFactor = refreshFactorsForEvent.getOrDefault(strain2, 1.0);</span>
 
 				// antibodies before refresh
-<span class="fc" id="L156">				double antibodies = person.getAntibodies(strain2);</span>
+<span class="fc" id="L155">				double antibodies = person.getAntibodies(strain2);</span>
 
 				// refresh antibodies
-<span class="fc" id="L159">				antibodies = antibodies * refreshFactor;</span>
+<span class="fc" id="L158">				antibodies = antibodies * refreshFactor;</span>
 
 				// check that new antibody level at least as high as initial antibodies
-<span class="fc" id="L162">				double initialAntibodies = initialAntibodiesForEvent.getOrDefault(strain2, 0.0) * person.getImmuneResponseMultiplier();</span>
-<span class="fc" id="L163">				antibodies = Math.max(antibodies, initialAntibodies);</span>
+<span class="fc" id="L161">				double initialAntibodies = initialAntibodiesForEvent.getOrDefault(strain2, 0.0) * person.getImmuneResponseMultiplier();</span>
+<span class="fc" id="L162">				antibodies = Math.max(antibodies, initialAntibodies);</span>
 
 				// check that new antibody level is at most 150
-<span class="fc" id="L166">				antibodies = Math.min(150., antibodies);</span>
+<span class="fc" id="L165">				antibodies = Math.min(150., antibodies);</span>
 
-<span class="fc" id="L168">				person.setAntibodies(strain2, antibodies);</span>
+<span class="fc" id="L167">				person.setAntibodies(strain2, antibodies);</span>
 
 				// if antibodies against a strain2 are higher than previous maximum, replace maximum
-<span class="fc" id="L171">				person.updateMaxAntibodies(strain2, antibodies);</span>
-<span class="fc" id="L172">			}</span>
+<span class="fc" id="L170">				person.updateMaxAntibodies(strain2, antibodies);</span>
+<span class="fc" id="L171">			}</span>
 		}
-<span class="fc" id="L174">	}</span>
+<span class="fc" id="L173">	}</span>
 
 	private boolean checkFirstImmunization(EpisimPerson person) {
-<span class="fc" id="L177">		boolean firstImmunization = true;</span>
-<span class="fc bfc" id="L178" title="All 2 branches covered.">		for (double abLevel : person.getAntibodies().values()) {</span>
-<span class="fc bfc" id="L179" title="All 2 branches covered.">			if (abLevel &gt; 0) {</span>
-<span class="fc" id="L180">				firstImmunization = false;</span>
-<span class="fc" id="L181">				break;</span>
+<span class="fc" id="L176">		boolean firstImmunization = true;</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">		for (double abLevel : person.getAntibodies().values()) {</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">			if (abLevel &gt; 0) {</span>
+<span class="fc" id="L179">				firstImmunization = false;</span>
+<span class="fc" id="L180">				break;</span>
 			}
-<span class="fc" id="L183">		}</span>
-<span class="fc" id="L184">		return firstImmunization;</span>
+<span class="fc" id="L182">		}</span>
+<span class="fc" id="L183">		return firstImmunization;</span>
 	}
 
 }

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProtectionCurve.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">ProtectionCurve.java</span></div><h1>ProtectionCurve.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Objects;
+import java.util.TreeMap;
+
+/**
+ * Protection over time after an immunity event, as used by {@code ImmunityConfigGroup}.
+ *
+ * &lt;p&gt;A piecewise-linear function of the days since the event, written as points {@code day&gt;protection}
+ * separated by {@code |}, e.g. {@code 0&gt;0.47|90&gt;0.40|365&gt;0.10}. The rules are strict on purpose, because
+ * every one of them was a source of silently wrong values in the vaccination curves this replaces:&lt;/p&gt;
+ * &lt;ul&gt;
+ *     &lt;li&gt;the x-axis is whole days since the event, the y-axis is protection between {@code 0} (none) and
+ *     {@code 1} (complete) &amp;mdash; one scale, no mixture of protection and remaining risk;&lt;/li&gt;
+ *     &lt;li&gt;the first point is at day {@code 0}, so there is no rule for the time before it;&lt;/li&gt;
+ *     &lt;li&gt;days increase strictly in the order written; a curve is never reordered silently;&lt;/li&gt;
+ *     &lt;li&gt;between points the value is interpolated linearly, after the last point it is kept. A protection
+ *     that wanes to nothing needs an explicit last point with {@code 0};&lt;/li&gt;
+ *     &lt;li&gt;there are no sentinel days and nothing depends on the order of other settings.&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;p&gt;Instances are immutable. {@link #toString()} writes the same format {@link #parse(String)} reads.&lt;/p&gt;
+ */
+public final class ProtectionCurve {
+
+	/**
+	 * No protection at any time. Written out explicitly in a configuration, it states &quot;no protection&quot; as a
+	 * decision rather than as a forgotten entry.
+	 */
+<span class="fc" id="L34">	public static final ProtectionCurve NONE = new ProtectionCurve(new TreeMap&lt;&gt;(Map.of(0, 0.0)));</span>
+
+	private static final String POINT_SEPARATOR = &quot;|&quot;;
+	private static final String DAY_SEPARATOR = &quot;&gt;&quot;;
+
+	private final NavigableMap&lt;Integer, Double&gt; points;
+
+<span class="fc" id="L41">	private ProtectionCurve(NavigableMap&lt;Integer, Double&gt; points) {</span>
+<span class="fc" id="L42">		this.points = Collections.unmodifiableNavigableMap(points);</span>
+<span class="fc" id="L43">	}</span>
+
+	/**
+	 * Reads a curve such as {@code 0&gt;0.47|90&gt;0.40|365&gt;0.10}.
+	 *
+	 * @throws IllegalArgumentException if the text is malformed or breaks one of the rules of this class; the
+	 *                                  message names the offending point
+	 */
+	public static ProtectionCurve parse(String text) {
+<span class="fc" id="L52">		Objects.requireNonNull(text, &quot;Protection curve must not be null&quot;);</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">		if (text.isBlank())</span>
+<span class="fc" id="L54">			throw new IllegalArgumentException(&quot;Protection curve is empty; write '0&gt;0.0' for no protection&quot;);</span>
+
+<span class="fc" id="L56">		List&lt;Integer&gt; days = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L57">		List&lt;Double&gt; values = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L59" title="All 2 branches covered.">		for (String point : text.split(&quot;\\&quot; + POINT_SEPARATOR, -1)) {</span>
+<span class="fc" id="L60">			String[] parts = point.split(DAY_SEPARATOR, -1);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">			if (parts.length != 2)</span>
+<span class="fc" id="L62">				throw new IllegalArgumentException(&quot;Point '&quot; + point + &quot;' of protection curve '&quot; + text</span>
+					+ &quot;' is not of the form day&quot; + DAY_SEPARATOR + &quot;protection&quot;);
+
+			try {
+<span class="fc" id="L66">				days.add(Integer.parseInt(parts[0].trim()));</span>
+<span class="fc" id="L67">				values.add(Double.parseDouble(parts[1].trim()));</span>
+<span class="fc" id="L68">			} catch (NumberFormatException e) {</span>
+<span class="fc" id="L69">				throw new IllegalArgumentException(&quot;Point '&quot; + point + &quot;' of protection curve '&quot; + text</span>
+					+ &quot;' needs a whole day and a number&quot;, e);
+<span class="fc" id="L71">			}</span>
+		}
+
+<span class="fc" id="L74">		return of(days, values, text);</span>
+	}
+
+	/**
+	 * Builds a curve from points given as {@code day, protection, day, protection, ...}, in increasing day order.
+	 * Meant for code and tests; configurations use {@link #parse(String)}.
+	 */
+	public static ProtectionCurve of(double... dayProtectionPairs) {
+<span class="pc bpc" id="L82" title="1 of 4 branches missed.">		if (dayProtectionPairs.length == 0 || dayProtectionPairs.length % 2 != 0)</span>
+<span class="fc" id="L83">			throw new IllegalArgumentException(&quot;Protection curve needs pairs of day and protection, got &quot;</span>
+				+ dayProtectionPairs.length + &quot; numbers&quot;);
+
+<span class="fc" id="L86">		List&lt;Integer&gt; days = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L87">		List&lt;Double&gt; values = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">		for (int i = 0; i &lt; dayProtectionPairs.length; i += 2) {</span>
+<span class="fc" id="L89">			double day = dayProtectionPairs[i];</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">			if (day != Math.rint(day))</span>
+<span class="fc" id="L91">				throw new IllegalArgumentException(&quot;Day &quot; + day + &quot; of protection curve is not a whole day&quot;);</span>
+<span class="fc" id="L92">			days.add((int) day);</span>
+<span class="fc" id="L93">			values.add(dayProtectionPairs[i + 1]);</span>
+		}
+
+<span class="fc" id="L96">		return of(days, values, null);</span>
+	}
+
+	private static ProtectionCurve of(List&lt;Integer&gt; days, List&lt;Double&gt; values, String text) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">		String curve = text != null ? &quot; '&quot; + text + &quot;'&quot; : &quot;&quot;;</span>
+
+<span class="fc bfc" id="L102" title="All 2 branches covered.">		if (days.get(0) != 0)</span>
+<span class="fc" id="L103">			throw new IllegalArgumentException(&quot;Protection curve&quot; + curve + &quot; has to start at day 0, but starts at day &quot;</span>
+<span class="fc" id="L104">				+ days.get(0));</span>
+
+<span class="fc" id="L106">		NavigableMap&lt;Integer, Double&gt; points = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">		for (int i = 0; i &lt; days.size(); i++) {</span>
+<span class="fc" id="L108">			int day = days.get(i);</span>
+<span class="fc" id="L109">			double value = values.get(i);</span>
+
+<span class="fc bfc" id="L111" title="All 4 branches covered.">			if (i &gt; 0 &amp;&amp; day &lt;= days.get(i - 1))</span>
+<span class="fc" id="L112">				throw new IllegalArgumentException(&quot;Days of protection curve&quot; + curve + &quot; have to increase strictly, but day &quot;</span>
+<span class="fc" id="L113">					+ day + &quot; follows day &quot; + days.get(i - 1));</span>
+<span class="fc bfc" id="L114" title="All 4 branches covered.">			if (!(value &gt;= 0 &amp;&amp; value &lt;= 1))</span>
+<span class="fc" id="L115">				throw new IllegalArgumentException(&quot;Protection &quot; + value + &quot; at day &quot; + day + &quot; of protection curve&quot; + curve</span>
+					+ &quot; is not between 0 and 1&quot;);
+
+<span class="fc" id="L118">			points.put(day, value);</span>
+		}
+
+<span class="fc" id="L121">		return new ProtectionCurve(points);</span>
+	}
+
+	/**
+	 * Protection on the given day since the immunity event.
+	 *
+	 * @throws IllegalArgumentException for a negative day, i.e. an event that has not happened yet
+	 */
+	public double protectionAt(int day) {
+<span class="fc bfc" id="L130" title="All 2 branches covered.">		if (day &lt; 0)</span>
+<span class="fc" id="L131">			throw new IllegalArgumentException(&quot;Protection is asked for day &quot; + day + &quot;, before the immunity event&quot;);</span>
+
+<span class="fc" id="L133">		Map.Entry&lt;Integer, Double&gt; floor = points.floorEntry(day);</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">		if (floor.getKey() == day)</span>
+<span class="fc" id="L135">			return floor.getValue();</span>
+
+<span class="fc" id="L137">		Map.Entry&lt;Integer, Double&gt; ceiling = points.ceilingEntry(day);</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">		if (ceiling == null)</span>
+<span class="fc" id="L139">			return floor.getValue();</span>
+
+<span class="fc" id="L141">		double fraction = (double) (day - floor.getKey()) / (ceiling.getKey() - floor.getKey());</span>
+<span class="fc" id="L142">		return floor.getValue() + fraction * (ceiling.getValue() - floor.getValue());</span>
+	}
+
+	@Override
+	public String toString() {
+<span class="fc" id="L147">		StringBuilder text = new StringBuilder();</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">		for (Map.Entry&lt;Integer, Double&gt; point : points.entrySet()) {</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">			if (text.length() &gt; 0)</span>
+<span class="fc" id="L150">				text.append(POINT_SEPARATOR);</span>
+<span class="fc" id="L151">			text.append(point.getKey()).append(DAY_SEPARATOR).append(point.getValue());</span>
+<span class="fc" id="L152">		}</span>
+<span class="fc" id="L153">		return text.toString();</span>
+	}
+
+	@Override
+	public boolean equals(Object o) {
+<span class="pc bpc" id="L158" title="2 of 4 branches missed.">		return o instanceof ProtectionCurve &amp;&amp; points.equals(((ProtectionCurve) o).points);</span>
+	}
+
+	@Override
+	public int hashCode() {
+<span class="nc" id="L163">		return points.hashCode();</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
