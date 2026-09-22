@@ -106,7 +106,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		// deceased is terminal: no further transition, and a deceased person is no longer in quarantine
 <span class="fc bfc" id="L107" title="All 2 branches covered.">		if (from == EpisimPerson.DiseaseStatus.deceased) {</span>
 <span class="fc" id="L108">			nextStateAndDay.removeLong(id);</span>
-<span class="fc bfc" id="L109" title="All 2 branches covered.">			if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">			if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)</span>
 <span class="fc" id="L110">				person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);</span>
 <span class="fc" id="L111">			return false;</span>
 		}

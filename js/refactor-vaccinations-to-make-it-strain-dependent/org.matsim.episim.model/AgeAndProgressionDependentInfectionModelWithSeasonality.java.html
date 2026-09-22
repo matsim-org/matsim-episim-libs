@@ -170,10 +170,10 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	 */
 	double getInfectivity(EpisimPerson infector) {
 
-<span class="fc bfc" id="L173" title="All 2 branches covered.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
-<span class="fc" id="L175">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
-<span class="fc" id="L176">			return distribution.density(afterSymptomOnset) * scale;</span>
+<span class="nc" id="L175">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
+<span class="nc" id="L176">			return distribution.density(afterSymptomOnset) * scale;</span>
 <span class="pc bpc" id="L177" title="1 of 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
 
 <span class="fc" id="L179">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>

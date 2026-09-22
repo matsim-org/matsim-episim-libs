@@ -28,30 +28,30 @@ import java.util.*;
  */
 public class HouseholdSusceptibility implements SimulationListener {
 
-<span class="fc" id="L31">	private static final Logger log = LogManager.getLogger(HouseholdSusceptibility.class);</span>
+<span class="nc" id="L31">	private static final Logger log = LogManager.getLogger(HouseholdSusceptibility.class);</span>
 
 	/**
 	 * Susceptibility for each household.
 	 */
-<span class="fc" id="L36">	private final Object2DoubleMap&lt;String&gt; houseHoldSusceptibility = new Object2DoubleOpenHashMap&lt;&gt;();</span>
+<span class="nc" id="L36">	private final Object2DoubleMap&lt;String&gt; houseHoldSusceptibility = new Object2DoubleOpenHashMap&lt;&gt;();</span>
 
 	/**
 	 * Compliant status of households.
 	 */
-<span class="fc" id="L41">	private final Object2BooleanMap&lt;String&gt; nonCompliant = new Object2BooleanOpenHashMap&lt;&gt;();</span>
+<span class="nc" id="L41">	private final Object2BooleanMap&lt;String&gt; nonCompliant = new Object2BooleanOpenHashMap&lt;&gt;();</span>
 
 	private final Config config;
 
 	@Inject
-<span class="fc" id="L46">	public HouseholdSusceptibility(Config config) {</span>
-<span class="fc" id="L47">		this.config = config;</span>
-<span class="fc" id="L48">	}</span>
+<span class="nc" id="L46">	public HouseholdSusceptibility(Config config) {</span>
+<span class="nc" id="L47">		this.config = config;</span>
+<span class="nc" id="L48">	}</span>
 
 	@Override
 	public void init(EpisimSplittableRandom rnd, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; facilities, Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicles) {
 
-<span class="fc" id="L53">		DistrictLookup.Index index = null;</span>
-<span class="pc bpc" id="L54" title="1 of 2 branches missed.">		if (config.shp != null) {</span>
+<span class="nc" id="L53">		DistrictLookup.Index index = null;</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">		if (config.shp != null) {</span>
 <span class="nc" id="L55">			CoordinateTransformation ct = new IdentityTransformation();</span>
 			try {
 <span class="nc" id="L57">				index = new DistrictLookup.Index(config.shp.toFile(), ct, config.feature);</span>
@@ -60,11 +60,11 @@ public class HouseholdSusceptibility implements SimulationListener {
 <span class="nc" id="L60">			}</span>
 		}
 
-<span class="fc" id="L63">		int selected = 0;</span>
+<span class="nc" id="L63">		int selected = 0;</span>
 
-<span class="fc bfc" id="L65" title="All 2 branches covered.">		for (EpisimPerson p : persons.values()) {</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">		for (EpisimPerson p : persons.values()) {</span>
 
-<span class="pc bpc" id="L67" title="1 of 2 branches missed.">			if (index != null) {</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">			if (index != null) {</span>
 
 <span class="nc" id="L69">				double homeX = (double) p.getAttributes().getAttribute(&quot;homeX&quot;);</span>
 <span class="nc" id="L70">				double homeY = (double) p.getAttributes().getAttribute(&quot;homeY&quot;);</span>
@@ -82,46 +82,46 @@ public class HouseholdSusceptibility implements SimulationListener {
 
 			}
 
-<span class="fc" id="L85">			String homeId = getHomeId(p);</span>
+<span class="nc" id="L85">			String homeId = getHomeId(p);</span>
 
-<span class="pc bpc" id="L87" title="1 of 2 branches missed.">			if (config.pHouseholds &gt; 0)</span>
-<span class="fc" id="L88">				p.setSusceptibility(houseHoldSusceptibility.computeIfAbsent(homeId, (k) -&gt; sample(rnd)));</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">			if (config.pHouseholds &gt; 0)</span>
+<span class="nc" id="L88">				p.setSusceptibility(houseHoldSusceptibility.computeIfAbsent(homeId, (k) -&gt; sample(rnd)));</span>
 
-<span class="pc bpc" id="L90" title="1 of 2 branches missed.">			if (config.pNonVaccinable &gt; 0) {</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">			if (config.pNonVaccinable &gt; 0) {</span>
 <span class="nc bnc" id="L91" title="All 4 branches missed.">				if (nonCompliant.computeIfAbsent(homeId, (k) -&gt; rnd.nextDouble() &lt; config.pNonVaccinable)) {</span>
 <span class="nc" id="L92">					p.setVaccinable(false);</span>
 				}
 			}
-<span class="fc" id="L95">		}</span>
+<span class="nc" id="L95">		}</span>
 
-<span class="pc bpc" id="L97" title="1 of 2 branches missed.">		if (index != null)</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">		if (index != null)</span>
 <span class="nc" id="L98">			log.info(&quot;Selected {} persons by shape file&quot;, selected);</span>
-<span class="fc" id="L99">	}</span>
+<span class="nc" id="L99">	}</span>
 
 	/**
 	 * Samples susceptibility for a household.
 	 */
 	private double sample(EpisimSplittableRandom rnd) {
 
-<span class="fc bfc" id="L106" title="All 2 branches covered.">		if (rnd.nextDouble() &lt; config.pHouseholds)</span>
-<span class="fc" id="L107">			return config.susceptibility;</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">		if (rnd.nextDouble() &lt; config.pHouseholds)</span>
+<span class="nc" id="L107">			return config.susceptibility;</span>
 
-<span class="fc" id="L109">		return 1.0;</span>
+<span class="nc" id="L109">		return 1.0;</span>
 	}
 
 	private String getHomeId(EpisimPerson person) {
-<span class="fc" id="L113">		String home = (String) person.getAttributes().getAttribute(&quot;homeId&quot;);</span>
+<span class="nc" id="L113">		String home = (String) person.getAttributes().getAttribute(&quot;homeId&quot;);</span>
 		// fallback to person id if there is no home
-<span class="pc bpc" id="L115" title="1 of 2 branches missed.">		return home != null ? home : person.getPersonId().toString();</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">		return home != null ? home : person.getPersonId().toString();</span>
 	}
 
 	@Override
 	public String toString() {
-<span class="fc" id="L120">		return &quot;HouseholdSusceptibility{p=&quot; + config.pHouseholds + &quot;, susp=&quot; + config.susceptibility + &quot;}&quot;;</span>
+<span class="nc" id="L120">		return &quot;HouseholdSusceptibility{p=&quot; + config.pHouseholds + &quot;, susp=&quot; + config.susceptibility + &quot;}&quot;;</span>
 	}
 
 	public static Config newConfig() {
-<span class="fc" id="L124">		return new Config();</span>
+<span class="nc" id="L124">		return new Config();</span>
 	}
 
 
@@ -130,16 +130,16 @@ public class HouseholdSusceptibility implements SimulationListener {
 	 */
 	public static final class Config {
 
-<span class="fc" id="L133">		private double pHouseholds = 0;</span>
-<span class="fc" id="L134">		private double pNonVaccinable = 0;</span>
-<span class="fc" id="L135">		private double susceptibility = 5;</span>
+<span class="nc" id="L133">		private double pHouseholds = 0;</span>
+<span class="nc" id="L134">		private double pNonVaccinable = 0;</span>
+<span class="nc" id="L135">		private double susceptibility = 5;</span>
 
 		private Path shp;
 		private String feature;
 		private Set&lt;String&gt; selection;
 
-<span class="fc" id="L141">		private Config() {</span>
-<span class="fc" id="L142">		}</span>
+<span class="nc" id="L141">		private Config() {</span>
+<span class="nc" id="L142">		}</span>
 
 		/**
 		 * Modify the susceptibility of a certain percentage of households.
@@ -147,9 +147,9 @@ public class HouseholdSusceptibility implements SimulationListener {
 		 * @param susceptibility modified susceptibility
 		 */
 		public Config withSusceptibleHouseholds(double pHouseholds, double susceptibility) {
-<span class="fc" id="L150">			this.pHouseholds = pHouseholds;</span>
-<span class="fc" id="L151">			this.susceptibility = susceptibility;</span>
-<span class="fc" id="L152">			return this;</span>
+<span class="nc" id="L150">			this.pHouseholds = pHouseholds;</span>
+<span class="nc" id="L151">			this.susceptibility = susceptibility;</span>
+<span class="nc" id="L152">			return this;</span>
 		}
 
 		/**

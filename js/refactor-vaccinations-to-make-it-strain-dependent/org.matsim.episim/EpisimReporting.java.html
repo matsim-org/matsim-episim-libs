@@ -157,10 +157,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L157">		outDir = config.controller().getOutputDirectory();</span>
 
 		// file names depend on the run name
-<span class="fc bfc" id="L160" title="All 2 branches covered.">		if (config.controller().getRunId() != null) {</span>
-<span class="fc" id="L161">			base = outDir + &quot;/&quot; + config.controller().getRunId() + &quot;.&quot;;</span>
-<span class="pc bpc" id="L162" title="1 of 2 branches missed.">		} else if (!outDir.endsWith(&quot;/&quot;)) {</span>
-<span class="nc" id="L163">			base = outDir + &quot;/&quot;;</span>
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">		if (config.controller().getRunId() != null) {</span>
+<span class="nc" id="L161">			base = outDir + &quot;/&quot; + config.controller().getRunId() + &quot;.&quot;;</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">		} else if (!outDir.endsWith(&quot;/&quot;)) {</span>
+<span class="fc" id="L163">			base = outDir + &quot;/&quot;;</span>
 		} else
 <span class="fc" id="L165">			base = outDir;</span>
 
@@ -423,11 +423,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L423">					district.nCritical++;</span>
 <span class="fc" id="L424">					report.nTotalInfected++;</span>
 <span class="fc" id="L425">					district.nTotalInfected++;</span>
-<span class="pc bpc" id="L426" title="1 of 2 branches missed.">					if (isVaccinated) {</span>
-<span class="nc" id="L427">						report.nCriticalVaccinated++;</span>
-<span class="nc" id="L428">						district.nCriticalVaccinated++;</span>
-<span class="nc" id="L429">						report.nTotalInfectedVaccinated++;</span>
-<span class="nc" id="L430">						district.nTotalInfectedVaccinated++;</span>
+<span class="fc bfc" id="L426" title="All 2 branches covered.">					if (isVaccinated) {</span>
+<span class="fc" id="L427">						report.nCriticalVaccinated++;</span>
+<span class="fc" id="L428">						district.nCriticalVaccinated++;</span>
+<span class="fc" id="L429">						report.nTotalInfectedVaccinated++;</span>
+<span class="fc" id="L430">						district.nTotalInfectedVaccinated++;</span>
 					}
 					break;
 				case deceased:

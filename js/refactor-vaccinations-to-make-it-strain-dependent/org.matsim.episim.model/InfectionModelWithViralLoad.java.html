@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.ImmunityConfigGroup;
 import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.policy.Restriction;
@@ -29,12 +30,14 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 	private final PathogenConfigGroup pathogenConfig;
 
 	@Inject
-<span class="nc" id="L32">	public InfectionModelWithViralLoad(FaceMaskModel faceMaskModel, Config config) {</span>
-<span class="nc" id="L33">		this.maskModel = faceMaskModel;</span>
-<span class="nc" id="L34">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
-<span class="nc" id="L35">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
-<span class="nc" id="L36">		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
-<span class="nc" id="L37">	}</span>
+<span class="nc" id="L33">	public InfectionModelWithViralLoad(FaceMaskModel faceMaskModel, Config config) {</span>
+<span class="nc" id="L34">		this.maskModel = faceMaskModel;</span>
+<span class="nc" id="L35">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="nc" id="L36">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="nc" id="L37">		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
+
+<span class="nc" id="L39">		ImmunityConfigGroup.requireLegacyImmunity(config, getClass(), &quot;applies no immunity at all&quot;);</span>
+<span class="nc" id="L40">	}</span>
 
 
 	@Override
@@ -44,33 +47,33 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 										   double contactIntensity, double jointTimeInContainer) {
 
 		// ci corr can not be null, because sim is initialized with non null value
-<span class="nc" id="L47">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+<span class="nc" id="L50">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
 
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more, exp( - 1 * 1 * 100 ) \approx 0, and
 		// thus the infection proba becomes 1.  Which also means that changes in contactIntensity has no effect.  kai, mar'20
 
-<span class="nc" id="L52">		double susceptibility = (double) target.getAttributes().getAttribute(SUSCEPTIBILITY);</span>
-<span class="nc" id="L53">		double infectability = (double) infector.getAttributes().getAttribute(VIRAL_LOAD);</span>
+<span class="nc" id="L55">		double susceptibility = (double) target.getAttributes().getAttribute(SUSCEPTIBILITY);</span>
+<span class="nc" id="L56">		double infectability = (double) infector.getAttributes().getAttribute(VIRAL_LOAD);</span>
 
-<span class="nc" id="L55">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+<span class="nc" id="L58">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
 
 		// route-agnostic factors
-<span class="nc" id="L58">		double base = episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer</span>
-<span class="nc" id="L59">				* target.getSusceptibility()</span>
-<span class="nc" id="L60">				* strain.getInfectiousness();</span>
+<span class="nc" id="L61">		double base = episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer</span>
+<span class="nc" id="L62">				* target.getSusceptibility()</span>
+<span class="nc" id="L63">				* strain.getInfectiousness();</span>
 
 		// respiratory route only: ventilation / contact-intensity correction and face masks
-<span class="nc" id="L63">		double respiratoryModifier = ciCorrection</span>
-<span class="nc" id="L64">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
-<span class="nc" id="L65">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;</span>
+<span class="nc" id="L66">		double respiratoryModifier = ciCorrection</span>
+<span class="nc" id="L67">				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding</span>
+<span class="nc" id="L68">				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;</span>
 
 		// contact-side route split combined with the pathogen's per-route transmissibility
-<span class="nc" id="L68">		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();</span>
-<span class="nc" id="L69">		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;</span>
-<span class="nc" id="L70">		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();</span>
+<span class="nc" id="L71">		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();</span>
+<span class="nc" id="L72">		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;</span>
+<span class="nc" id="L73">		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();</span>
 		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
 
-<span class="nc" id="L73">		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));</span>
+<span class="nc" id="L76">		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
