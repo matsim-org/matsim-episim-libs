@@ -38,6 +38,7 @@
  import org.matsim.core.population.PopulationUtils;
  import org.matsim.episim.*;
  import org.matsim.episim.events.*;
+ import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.episim.model.LegacyAntibodyImmunityModel;
  import org.matsim.episim.model.LegacyCurveImmunityModel;
@@ -653,9 +654,9 @@
 			 private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 			 private final int age;
 			 /**
-			  * Virus strain of most recent (or current) infection.
+			  * Virus strain of each infection, in the same order as {@link #infectionDates}.
 			  */
-			 private VirusStrain strain;
+			 private final List<VirusStrain> strains = new ArrayList<>();
 			 /**
 			  * Antibody level at last infection.
 			  */
@@ -689,11 +690,31 @@
 
 			 @Override
 			 public VirusStrain getVirusStrain() {
-				 return strain;
+				 return strains.isEmpty() ? null : strains.get(strains.size() - 1);
+			 }
+
+			 @Override
+			 public VirusStrain getVirusStrain(int idx) {
+				 return strains.get(idx);
 			 }
 
 			 public void setVirusStrain(VirusStrain strain) {
-				 this.strain = strain;
+				 this.strains.add(strain);
+			 }
+
+			 @Override
+			 public int daysSinceInfection(int idx, int day) {
+				 return day - (int) Math.floor(infectionDates.getDouble(idx) / EpisimUtils.DAY);
+			 }
+
+			 @Override
+			 public VaccinationType getVaccinationType(int idx) {
+				 throw new UnsupportedOperationException("vaccinations are not replayed by this analysis");
+			 }
+
+			 @Override
+			 public int daysSinceVaccination(int idx, int day) {
+				 throw new UnsupportedOperationException("vaccinations are not replayed by this analysis");
 			 }
 
 //			 public void addVaccination(int day) {
