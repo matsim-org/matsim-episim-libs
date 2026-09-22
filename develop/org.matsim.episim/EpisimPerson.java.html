@@ -136,6 +136,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Maximal antibody level reached by agent w/ respect to each strain.
 	 */
 <span class="fc" id="L138">	private final Object2DoubleMap&lt;VirusStrain&gt; maxAntibodies = new Object2DoubleOpenHashMap&lt;&gt;();</span>
+
 	/**
 	 * Activity participation of the current day. Same length as {@link #trajectory}
 	 */
@@ -146,35 +147,35 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * check therefore, that the first infection is valued as the important
 	 * infection
 	 */
-<span class="fc" id="L149">	private EpisimInfectionEvent earliestInfection = null;</span>
+<span class="fc" id="L150">	private EpisimInfectionEvent earliestInfection = null;</span>
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
 	 */
-<span class="fc" id="L153">	private Id&lt;ActivityFacility&gt; infectionContainer = null;</span>
+<span class="fc" id="L154">	private Id&lt;ActivityFacility&gt; infectionContainer = null;</span>
 	/**
 	 * The infection type when the person got infected. Can be null if person was initially infected.
 	 */
-<span class="fc" id="L157">	private String infectionType = null;</span>
+<span class="fc" id="L158">	private String infectionType = null;</span>
 	/**
 	 * Current {@link DiseaseStatus}.
 	 */
-<span class="fc" id="L161">	private DiseaseStatus status = DiseaseStatus.susceptible;</span>
+<span class="fc" id="L162">	private DiseaseStatus status = DiseaseStatus.susceptible;</span>
 	/**
 	 * Current {@link QuarantineStatus}.
 	 */
-<span class="fc" id="L165">	private QuarantineStatus quarantineStatus = QuarantineStatus.no;</span>
+<span class="fc" id="L166">	private QuarantineStatus quarantineStatus = QuarantineStatus.no;</span>
 	/**
 	 * Current {@link TestStatus}.
 	 */
-<span class="fc" id="L169">	private TestStatus testStatus = TestStatus.untested;</span>
+<span class="fc" id="L170">	private TestStatus testStatus = TestStatus.untested;</span>
 	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
-<span class="fc" id="L173">	private int quarantineDate = Integer.MIN_VALUE;</span>
+<span class="fc" id="L174">	private int quarantineDate = Integer.MIN_VALUE;</span>
 	/**
 	 * Iteration when this person was tested. Negative if person was never tested.
 	 */
-<span class="fc" id="L177">	private int testDate = -1;</span>
+<span class="fc" id="L178">	private int testDate = -1;</span>
 	/**
 	 * Whether this person can be traced.
 	 */
@@ -182,53 +183,53 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Whether this person can be vaccinated.
 	 */
-<span class="fc" id="L185">	private boolean vaccinable = true;</span>
+<span class="fc" id="L186">	private boolean vaccinable = true;</span>
 	/**
 	 * Individual susceptibility of a person.
 	 */
-<span class="fc" id="L189">	private double susceptibility = 1;</span>
+<span class="fc" id="L190">	private double susceptibility = 1;</span>
 	/**
 	 * Antibody level at last infection.
 	 */
-<span class="fc" id="L193">	private double antibodyLevelAtInfection = 0.;</span>
+<span class="fc" id="L194">	private double antibodyLevelAtInfection = 0.;</span>
 	/**
 	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event.
 	 */
-<span class="fc" id="L197">	private double immuneResponseMultiplier = 1.0;</span>
+<span class="fc" id="L198">	private double immuneResponseMultiplier = 1.0;</span>
 
 	/**
 	 * Creates a traceable Episim person.
 	 */
 	public EpisimPerson(Id&lt;Person&gt; personId, Attributes attrs, EpisimReporting reporting) {
-<span class="fc" id="L203">		this(personId, attrs, true, reporting);</span>
-<span class="fc" id="L204">	}</span>
+<span class="fc" id="L204">		this(personId, attrs, true, reporting);</span>
+<span class="fc" id="L205">	}</span>
 
-<span class="fc" id="L206">	EpisimPerson(Id&lt;Person&gt; personId, Attributes attrs, boolean traceable, EpisimReporting reporting) {</span>
-<span class="fc" id="L207">		this.personId = personId;</span>
-<span class="fc" id="L208">		this.attributes = attrs;</span>
-<span class="fc" id="L209">		this.traceable = traceable;</span>
-<span class="fc" id="L210">		this.age = getAge(attrs);</span>
-<span class="fc" id="L211">		this.reporting = reporting;</span>
-<span class="fc" id="L212">	}</span>
+<span class="fc" id="L207">	EpisimPerson(Id&lt;Person&gt; personId, Attributes attrs, boolean traceable, EpisimReporting reporting) {</span>
+<span class="fc" id="L208">		this.personId = personId;</span>
+<span class="fc" id="L209">		this.attributes = attrs;</span>
+<span class="fc" id="L210">		this.traceable = traceable;</span>
+<span class="fc" id="L211">		this.age = getAge(attrs);</span>
+<span class="fc" id="L212">		this.reporting = reporting;</span>
+<span class="fc" id="L213">	}</span>
 
 	/**
 	 * Lookup age from attributes.
 	 */
 	private static int getAge(Attributes attrs) {
-<span class="fc" id="L218">		int age = -1;</span>
+<span class="fc" id="L219">		int age = -1;</span>
 
-<span class="fc bfc" id="L220" title="All 2 branches covered.">		for (String attr : attrs.getAsMap().keySet()) {</span>
-<span class="fc bfc" id="L221" title="All 2 branches covered.">			if (attr.contains(&quot;age&quot;)) {</span>
-<span class="fc" id="L222">				age = Integer.parseInt(attrs.getAttribute(attr).toString());</span>
-<span class="fc" id="L223">				break;</span>
+<span class="fc bfc" id="L221" title="All 2 branches covered.">		for (String attr : attrs.getAsMap().keySet()) {</span>
+<span class="fc bfc" id="L222" title="All 2 branches covered.">			if (attr.contains(&quot;age&quot;)) {</span>
+<span class="fc" id="L223">				age = Integer.parseInt(attrs.getAttribute(attr).toString());</span>
+<span class="fc" id="L224">				break;</span>
 			}
-<span class="fc" id="L225">		}</span>
+<span class="fc" id="L226">		}</span>
 
-<span class="fc" id="L227">		return age;</span>
+<span class="fc" id="L228">		return age;</span>
 	}
 
 	public List&lt;PerformedActivity&gt; getTrajectory() {
-<span class="fc" id="L231">		return trajectory;</span>
+<span class="fc" id="L232">		return trajectory;</span>
 	}
 
 	/**
@@ -238,198 +239,204 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	void read(ObjectInput in, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons) throws IOException {
 
-<span class="fc" id="L241">		int n = in.readInt();</span>
-<span class="fc" id="L242">		traceableContactPersons.clear();</span>
-<span class="fc bfc" id="L243" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L244">			Id&lt;Person&gt; id = Id.create(readChars(in), Person.class);</span>
-<span class="fc" id="L245">			traceableContactPersons.put(persons.get(id), in.readDouble());</span>
+<span class="fc" id="L242">		int n = in.readInt();</span>
+<span class="fc" id="L243">		traceableContactPersons.clear();</span>
+
+<span class="fc bfc" id="L245" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L246">			Id&lt;Person&gt; id = Id.create(readChars(in), Person.class);</span>
+<span class="fc" id="L247">			traceableContactPersons.put(persons.get(id), in.readDouble());</span>
 		}
 
-<span class="fc" id="L248">		n = in.readInt();</span>
-<span class="fc" id="L249">		statusChanges.clear();</span>
-<span class="fc bfc" id="L250" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L251">			int status = in.readInt();</span>
-<span class="fc" id="L252">			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());</span>
+<span class="fc" id="L250">		n = in.readInt();</span>
+<span class="fc" id="L251">		statusChanges.clear();</span>
+<span class="fc bfc" id="L252" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L253">			int status = in.readInt();</span>
+<span class="fc" id="L254">			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());</span>
 		}
 
-<span class="fc bfc" id="L255" title="All 2 branches covered.">		if (in.readBoolean()) {</span>
-<span class="fc" id="L256">			infectionContainer = Id.create(readChars(in), ActivityFacility.class);</span>
+<span class="fc bfc" id="L257" title="All 2 branches covered.">		if (in.readBoolean()) {</span>
+<span class="fc" id="L258">			infectionContainer = Id.create(readChars(in), ActivityFacility.class);</span>
 		}
 
-<span class="fc bfc" id="L259" title="All 2 branches covered.">		if (in.readBoolean()) {</span>
-<span class="fc" id="L260">			infectionType = readChars(in);</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">		if (in.readBoolean()) {</span>
+<span class="fc" id="L262">			infectionType = readChars(in);</span>
 		}
 
-<span class="fc" id="L263">		n = in.readInt();</span>
-<span class="fc" id="L264">		spentTime.clear();</span>
-<span class="fc bfc" id="L265" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L266">			String act = readChars(in);</span>
-<span class="fc" id="L267">			spentTime.put(act, in.readDouble());</span>
+<span class="fc" id="L265">		n = in.readInt();</span>
+<span class="fc" id="L266">		spentTime.clear();</span>
+<span class="fc bfc" id="L267" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L268">			String act = readChars(in);</span>
+<span class="fc" id="L269">			spentTime.put(act, in.readDouble());</span>
 		}
 
-<span class="fc" id="L270">		n = in.readInt();</span>
-<span class="pc bpc" id="L271" title="1 of 2 branches missed.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="nc" id="L272">			vaccinations.add(VaccinationType.values()[in.readInt()]);</span>
-<span class="nc" id="L273">			vaccinationDates.add(in.readInt());</span>
+<span class="fc" id="L272">		n = in.readInt();</span>
+<span class="pc bpc" id="L273" title="1 of 2 branches missed.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L274">			vaccinations.add(VaccinationType.ofId(in.readUTF()));</span>
+<span class="nc" id="L275">			vaccinationDates.add(in.readInt());</span>
 		}
 
-<span class="fc" id="L276">		n = in.readInt();</span>
-<span class="fc bfc" id="L277" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L278">			infectionDates.add(in.readDouble());</span>
-<span class="fc" id="L279">			virusStrains.add(VirusStrain.values()[in.readInt()]);</span>
+<span class="fc" id="L278">		n = in.readInt();</span>
+<span class="fc bfc" id="L279" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L280">			infectionDates.add(in.readDouble());</span>
+<span class="fc" id="L281">			String virusStrainName = in.readUTF();</span>
+<span class="fc" id="L282">			VirusStrain virusStrain = VirusStrain.of(virusStrainName);</span>
+<span class="fc" id="L283">			virusStrains.add(virusStrain);</span>
 		}
 
-<span class="fc" id="L282">		n = in.readInt();</span>
-<span class="fc bfc" id="L283" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L284">			VirusStrain strain = VirusStrain.values()[in.readInt()];</span>
-<span class="fc" id="L285">			antibodies.put(strain, in.readDouble());</span>
+<span class="fc" id="L286">		n = in.readInt();</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L288">			String virusStrainName = in.readUTF();</span>
+<span class="fc" id="L289">			VirusStrain strain = VirusStrain.of(virusStrainName);</span>
+<span class="fc" id="L290">			antibodies.put(strain, in.readDouble());</span>
 		}
 
-<span class="fc" id="L288">		n = in.readInt();</span>
-<span class="fc bfc" id="L289" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L290">			VirusStrain strain = VirusStrain.values()[in.readInt()];</span>
-<span class="fc" id="L291">			maxAntibodies.put(strain, in.readDouble());</span>
+<span class="fc" id="L293">		n = in.readInt();</span>
+<span class="fc bfc" id="L294" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L295">			String virusStrainName = in.readUTF();</span>
+<span class="fc" id="L296">			VirusStrain virusStrain = VirusStrain.of(virusStrainName);</span>
+<span class="fc" id="L297">			maxAntibodies.put(virusStrain, in.readDouble());</span>
 		}
 
-<span class="fc" id="L294">		status = DiseaseStatus.values()[in.readInt()];</span>
-<span class="fc" id="L295">		quarantineStatus = QuarantineStatus.values()[in.readInt()];</span>
-<span class="fc" id="L296">		quarantineDate = in.readInt();</span>
-<span class="fc" id="L297">		testStatus = TestStatus.values()[in.readInt()];</span>
-<span class="fc" id="L298">		testDate = in.readInt();</span>
-<span class="fc" id="L299">		traceable = in.readBoolean();</span>
+<span class="fc" id="L300">		status = DiseaseStatus.values()[in.readInt()];</span>
+<span class="fc" id="L301">		quarantineStatus = QuarantineStatus.values()[in.readInt()];</span>
+<span class="fc" id="L302">		quarantineDate = in.readInt();</span>
+<span class="fc" id="L303">		testStatus = TestStatus.values()[in.readInt()];</span>
+<span class="fc" id="L304">		testDate = in.readInt();</span>
+<span class="fc" id="L305">		traceable = in.readBoolean();</span>
 
 		// vaccinable, which is not restored from snapshot
-<span class="fc" id="L302">		in.readBoolean();</span>
+<span class="fc" id="L308">		in.readBoolean();</span>
 
-<span class="fc" id="L304">		susceptibility = in.readDouble();</span>
-<span class="fc" id="L305">		antibodyLevelAtInfection = in.readDouble();</span>
-<span class="fc" id="L306">		immuneResponseMultiplier = in.readDouble();</span>
+<span class="fc" id="L310">		susceptibility = in.readDouble();</span>
+<span class="fc" id="L311">		antibodyLevelAtInfection = in.readDouble();</span>
+<span class="fc" id="L312">		immuneResponseMultiplier = in.readDouble();</span>
 
-<span class="fc" id="L308">	}</span>
+<span class="fc" id="L314">	}</span>
 
 	/**
 	 * Writes person state to stream.
 	 */
 	void write(ObjectOutput out) throws IOException {
 
-<span class="fc" id="L315">		out.writeInt(traceableContactPersons.size());</span>
-<span class="fc bfc" id="L316" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;EpisimPerson&gt; kv : traceableContactPersons.object2DoubleEntrySet()) {</span>
-<span class="fc" id="L317">			writeChars(out, kv.getKey().getPersonId().toString());</span>
-<span class="fc" id="L318">			out.writeDouble(kv.getDoubleValue());</span>
-<span class="fc" id="L319">		}</span>
-
-<span class="fc" id="L321">		out.writeInt(statusChanges.size());</span>
-<span class="fc bfc" id="L322" title="All 2 branches covered.">		for (Map.Entry&lt;DiseaseStatus, Double&gt; e : statusChanges.entrySet()) {</span>
-<span class="fc" id="L323">			out.writeInt(e.getKey().ordinal());</span>
-<span class="fc" id="L324">			out.writeDouble(e.getValue());</span>
+<span class="fc" id="L321">		out.writeInt(traceableContactPersons.size());</span>
+<span class="fc bfc" id="L322" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;EpisimPerson&gt; kv : traceableContactPersons.object2DoubleEntrySet()) {</span>
+<span class="fc" id="L323">			writeChars(out, kv.getKey().getPersonId().toString());</span>
+<span class="fc" id="L324">			out.writeDouble(kv.getDoubleValue());</span>
 <span class="fc" id="L325">		}</span>
 
-<span class="fc bfc" id="L327" title="All 2 branches covered.">		out.writeBoolean(infectionContainer != null);</span>
-<span class="fc bfc" id="L328" title="All 2 branches covered.">		if (infectionContainer != null) {</span>
-<span class="fc" id="L329">			writeChars(out, infectionContainer.toString());</span>
+<span class="fc" id="L327">		out.writeInt(statusChanges.size());</span>
+<span class="fc bfc" id="L328" title="All 2 branches covered.">		for (Map.Entry&lt;DiseaseStatus, Double&gt; e : statusChanges.entrySet()) {</span>
+<span class="fc" id="L329">			out.writeInt(e.getKey().ordinal());</span>
+<span class="fc" id="L330">			out.writeDouble(e.getValue());</span>
+<span class="fc" id="L331">		}</span>
+
+<span class="fc bfc" id="L333" title="All 2 branches covered.">		out.writeBoolean(infectionContainer != null);</span>
+<span class="fc bfc" id="L334" title="All 2 branches covered.">		if (infectionContainer != null) {</span>
+<span class="fc" id="L335">			writeChars(out, infectionContainer.toString());</span>
 		}
 
-<span class="fc bfc" id="L332" title="All 2 branches covered.">		out.writeBoolean(infectionType != null);</span>
-<span class="fc bfc" id="L333" title="All 2 branches covered.">		if (infectionType != null) {</span>
-<span class="fc" id="L334">			writeChars(out, infectionType);</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">		out.writeBoolean(infectionType != null);</span>
+<span class="fc bfc" id="L339" title="All 2 branches covered.">		if (infectionType != null) {</span>
+<span class="fc" id="L340">			writeChars(out, infectionType);</span>
 		}
 
-<span class="fc" id="L337">		out.writeInt(spentTime.size());</span>
-<span class="fc bfc" id="L338" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;String&gt; kv : spentTime.object2DoubleEntrySet()) {</span>
-<span class="fc" id="L339">			writeChars(out, kv.getKey());</span>
-<span class="fc" id="L340">			out.writeDouble(kv.getDoubleValue());</span>
-<span class="fc" id="L341">		}</span>
+<span class="fc" id="L343">		out.writeInt(spentTime.size());</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;String&gt; kv : spentTime.object2DoubleEntrySet()) {</span>
+<span class="fc" id="L345">			writeChars(out, kv.getKey());</span>
+<span class="fc" id="L346">			out.writeDouble(kv.getDoubleValue());</span>
+<span class="fc" id="L347">		}</span>
 
-<span class="fc" id="L343">		out.writeInt(vaccinations.size());</span>
-<span class="pc bpc" id="L344" title="1 of 2 branches missed.">		for (int i = 0; i &lt; vaccinations.size(); i++) {</span>
-<span class="nc" id="L345">			out.writeInt(vaccinations.get(i).ordinal());</span>
-<span class="nc" id="L346">			out.writeInt(vaccinationDates.getInt(i));</span>
+<span class="fc" id="L349">		out.writeInt(vaccinations.size());</span>
+<span class="pc bpc" id="L350" title="1 of 2 branches missed.">		for (int i = 0; i &lt; vaccinations.size(); i++) {</span>
+<span class="nc" id="L351">			out.writeUTF(vaccinations.get(i).getId());</span>
+<span class="nc" id="L352">			out.writeInt(vaccinationDates.getInt(i));</span>
 		}
 
-<span class="fc" id="L349">		out.writeInt(infectionDates.size());</span>
-<span class="fc bfc" id="L350" title="All 2 branches covered.">		for (int i = 0; i &lt; infectionDates.size(); i++) {</span>
-<span class="fc" id="L351">			out.writeDouble(infectionDates.getDouble(i));</span>
-<span class="fc" id="L352">			out.writeInt(virusStrains.get(i).ordinal());</span>
+<span class="fc" id="L355">		out.writeInt(infectionDates.size());</span>
+<span class="fc bfc" id="L356" title="All 2 branches covered.">		for (int i = 0; i &lt; infectionDates.size(); i++) {</span>
+<span class="fc" id="L357">			out.writeDouble(infectionDates.getDouble(i));</span>
+<span class="fc" id="L358">			VirusStrain virusStrain = virusStrains.get(i);</span>
+<span class="fc" id="L359">			out.writeUTF(virusStrain.toString());</span>
 		}
 
-<span class="fc" id="L355">		out.writeInt(antibodies.size());</span>
-<span class="fc bfc" id="L356" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : antibodies.object2DoubleEntrySet()) {</span>
-<span class="fc" id="L357">			out.writeInt(kv.getKey().ordinal());</span>
-<span class="fc" id="L358">			out.writeDouble(kv.getDoubleValue());</span>
-<span class="fc" id="L359">		}</span>
+<span class="fc" id="L362">		out.writeInt(antibodies.size());</span>
+<span class="fc bfc" id="L363" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : antibodies.object2DoubleEntrySet()) {</span>
+<span class="fc" id="L364">			out.writeUTF(kv.getKey().toString());</span>
+<span class="fc" id="L365">			out.writeDouble(kv.getDoubleValue());</span>
+<span class="fc" id="L366">		}</span>
 
-<span class="fc" id="L361">		out.writeInt(maxAntibodies.size());</span>
-<span class="fc bfc" id="L362" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : maxAntibodies.object2DoubleEntrySet()) {</span>
-<span class="fc" id="L363">			out.writeInt(kv.getKey().ordinal());</span>
-<span class="fc" id="L364">			out.writeDouble(kv.getDoubleValue());</span>
-<span class="fc" id="L365">		}</span>
+<span class="fc" id="L368">		out.writeInt(maxAntibodies.size());</span>
+<span class="fc bfc" id="L369" title="All 2 branches covered.">		for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : maxAntibodies.object2DoubleEntrySet()) {</span>
+<span class="fc" id="L370">			out.writeUTF(kv.getKey().toString());</span>
+<span class="fc" id="L371">			out.writeDouble(kv.getDoubleValue());</span>
+<span class="fc" id="L372">		}</span>
 
-<span class="fc" id="L367">		out.writeInt(status.ordinal());</span>
-<span class="fc" id="L368">		out.writeInt(quarantineStatus.ordinal());</span>
-<span class="fc" id="L369">		out.writeInt(quarantineDate);</span>
-<span class="fc" id="L370">		out.writeInt(testStatus.ordinal());</span>
-<span class="fc" id="L371">		out.writeInt(testDate);</span>
-<span class="fc" id="L372">		out.writeBoolean(traceable);</span>
-<span class="fc" id="L373">		out.writeBoolean(vaccinable);</span>
-<span class="fc" id="L374">		out.writeDouble(susceptibility);</span>
-<span class="fc" id="L375">		out.writeDouble(antibodyLevelAtInfection);</span>
-<span class="fc" id="L376">		out.writeDouble(immuneResponseMultiplier);</span>
+<span class="fc" id="L374">		out.writeInt(status.ordinal());</span>
+<span class="fc" id="L375">		out.writeInt(quarantineStatus.ordinal());</span>
+<span class="fc" id="L376">		out.writeInt(quarantineDate);</span>
+<span class="fc" id="L377">		out.writeInt(testStatus.ordinal());</span>
+<span class="fc" id="L378">		out.writeInt(testDate);</span>
+<span class="fc" id="L379">		out.writeBoolean(traceable);</span>
+<span class="fc" id="L380">		out.writeBoolean(vaccinable);</span>
+<span class="fc" id="L381">		out.writeDouble(susceptibility);</span>
+<span class="fc" id="L382">		out.writeDouble(antibodyLevelAtInfection);</span>
+<span class="fc" id="L383">		out.writeDouble(immuneResponseMultiplier);</span>
 
-<span class="fc" id="L378">	}</span>
+<span class="fc" id="L385">	}</span>
 
 	public Id&lt;Person&gt; getPersonId() {
-<span class="fc" id="L381">		return personId;</span>
+<span class="fc" id="L388">		return personId;</span>
 	}
 
 	public DiseaseStatus getDiseaseStatus() {
-<span class="fc" id="L385">		return status;</span>
+<span class="fc" id="L392">		return status;</span>
 	}
 
 	public void setDiseaseStatus(double now, DiseaseStatus status) {
-<span class="fc" id="L389">		this.status = status;</span>
+<span class="fc" id="L396">		this.status = status;</span>
 
 		// when person goes back to susceptible, old states are removed
-<span class="pc bpc" id="L392" title="1 of 4 branches missed.">		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {</span>
-<span class="fc bfc" id="L393" title="All 2 branches covered.">			statusChanges.keySet().removeIf(p -&gt; p != DiseaseStatus.recovered);</span>
+<span class="fc bfc" id="L399" title="All 4 branches covered.">		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {</span>
+<span class="fc bfc" id="L400" title="All 2 branches covered.">			statusChanges.keySet().removeIf(p -&gt; p != DiseaseStatus.recovered);</span>
 		}
 
-<span class="fc bfc" id="L396" title="All 4 branches covered.">		if (!statusChanges.containsKey(status) || status == DiseaseStatus.recovered)</span>
-<span class="fc" id="L397">			statusChanges.put(status, now);</span>
+<span class="fc bfc" id="L403" title="All 4 branches covered.">		if (!statusChanges.containsKey(status) || status == DiseaseStatus.recovered)</span>
+<span class="fc" id="L404">			statusChanges.put(status, now);</span>
 
-<span class="fc" id="L399">		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));</span>
-<span class="fc" id="L400">	}</span>
+<span class="fc" id="L406">		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));</span>
+<span class="fc" id="L407">	}</span>
 
 	/**
 	 * Set and report initial infection.
 	 */
 	public void setInitialInfection(double now, VirusStrain strain) {
 
-<span class="fc" id="L407">		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain), getNumInfections()));</span>
+<span class="fc" id="L414">		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain), maxAntibodies.getDouble(strain), getNumInfections()));</span>
 
-<span class="fc" id="L409">		virusStrains.add(strain);</span>
-<span class="fc" id="L410">		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);</span>
-<span class="fc" id="L411">		infectionDates.add(now);</span>
+<span class="fc" id="L416">		virusStrains.add(strain);</span>
+<span class="fc" id="L417">		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);</span>
+<span class="fc" id="L418">		infectionDates.add(now);</span>
 
-<span class="fc" id="L413">		antibodyLevelAtInfection = antibodies.getDouble(strain);</span>
+<span class="fc" id="L420">		antibodyLevelAtInfection = antibodies.getDouble(strain);</span>
 
 		// TODO: add max antibodies
-<span class="fc" id="L416">	}</span>
+<span class="fc" id="L423">	}</span>
 
 	/**
 	 * Adds an infection possibility to this person. Will be executed in {@link #checkInfection()}
 	 */
 	synchronized public void possibleInfection(EpisimInfectionEvent event) {
-<span class="fc bfc" id="L422" title="All 4 branches covered.">		if (earliestInfection == null || event.compareTo(earliestInfection) &lt; 0) {</span>
-<span class="fc" id="L423">			earliestInfection = event;</span>
+<span class="fc bfc" id="L429" title="All 4 branches covered.">		if (earliestInfection == null || event.compareTo(earliestInfection) &lt; 0) {</span>
+<span class="fc" id="L430">			earliestInfection = event;</span>
 		}
-<span class="fc" id="L425">	}</span>
+<span class="fc" id="L432">	}</span>
 
 	/**
 	 * Adds a potential infection to the list.
 	 */
 	synchronized public void potentialInfection(EpisimPotentialInfectionEvent event) {
-<span class="nc" id="L431">		potentialInfectionEvents.add(event);</span>
-<span class="nc" id="L432">	}</span>
+<span class="nc" id="L438">		potentialInfectionEvents.add(event);</span>
+<span class="nc" id="L439">	}</span>
 
 	/**
 	 * Update state with a stored {@link EpisimInfectionEvent}.
@@ -437,51 +444,51 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @return the event if an infection has occurred.
 	 */
 	public EpisimInfectionEvent checkInfection() {
-<span class="fc bfc" id="L440" title="All 2 branches covered.">		if (earliestInfection != null) {</span>
+<span class="fc bfc" id="L447" title="All 2 branches covered.">		if (earliestInfection != null) {</span>
 
-<span class="fc" id="L442">			EpisimInfectionEvent event = this.earliestInfection;</span>
-<span class="fc" id="L443">			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);</span>
+<span class="fc" id="L449">			EpisimInfectionEvent event = this.earliestInfection;</span>
+<span class="fc" id="L450">			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);</span>
 
-<span class="fc" id="L445">			virusStrains.add(event.getVirusStrain());</span>
-<span class="fc" id="L446">			infectionContainer = (Id&lt;ActivityFacility&gt;) event.getContainerId();</span>
+<span class="fc" id="L452">			virusStrains.add(event.getVirusStrain());</span>
+<span class="fc" id="L453">			infectionContainer = (Id&lt;ActivityFacility&gt;) event.getContainerId();</span>
 
-<span class="fc" id="L448">			infectionType = event.getInfectionType();</span>
-<span class="fc" id="L449">			infectionDates.add(event.getTime());</span>
+<span class="fc" id="L455">			infectionType = event.getInfectionType();</span>
+<span class="fc" id="L456">			infectionDates.add(event.getTime());</span>
 
-<span class="fc" id="L451">			earliestInfection = null;</span>
-<span class="fc" id="L452">			antibodyLevelAtInfection = antibodies.getDouble(event.getVirusStrain());</span>
-<span class="fc" id="L453">			return event;</span>
+<span class="fc" id="L458">			earliestInfection = null;</span>
+<span class="fc" id="L459">			antibodyLevelAtInfection = antibodies.getDouble(event.getVirusStrain());</span>
+<span class="fc" id="L460">			return event;</span>
 		}
 
-<span class="fc" id="L456">		return null;</span>
+<span class="fc" id="L463">		return null;</span>
 	}
 
 	/**
 	 * Get all potential infection events.
 	 */
 	List&lt;EpisimPotentialInfectionEvent&gt; getPotentialInfections() {
-<span class="fc" id="L463">		return potentialInfectionEvents;</span>
+<span class="fc" id="L470">		return potentialInfectionEvents;</span>
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
-<span class="fc" id="L467">		return quarantineStatus;</span>
+<span class="fc" id="L474">		return quarantineStatus;</span>
 	}
 
 	public void setQuarantineStatus(QuarantineStatus quarantineStatus, int iteration) {
-<span class="fc" id="L471">		this.quarantineStatus = quarantineStatus;</span>
-<span class="fc" id="L472">		this.quarantineDate = iteration;</span>
+<span class="fc" id="L478">		this.quarantineStatus = quarantineStatus;</span>
+<span class="fc" id="L479">		this.quarantineDate = iteration;</span>
 
 		// this function should receive now instead of iteration
 		// only for testing currently
 		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
-<span class="fc" id="L477">	}</span>
+<span class="fc" id="L484">	}</span>
 
 	public VirusStrain getVirusStrain() {
 		// Backwards compatibility
-<span class="fc bfc" id="L481" title="All 2 branches covered.">		if (virusStrains.isEmpty())</span>
-<span class="fc" id="L482">			return VirusStrain.SARS_CoV_2;</span>
+<span class="fc bfc" id="L488" title="All 2 branches covered.">		if (virusStrains.isEmpty())</span>
+<span class="fc" id="L489">			return VirusStrain.SARS_CoV_2;</span>
 
-<span class="fc" id="L484">		return virusStrains.get(virusStrains.size() - 1);</span>
+<span class="fc" id="L491">		return virusStrains.get(virusStrains.size() - 1);</span>
 	}
 
 	/**
@@ -489,26 +496,27 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 *
 	 * @param idx index of infection starting at 0
 	 */
+	@Override
 	public VirusStrain getVirusStrain(int idx) {
-<span class="fc" id="L493">		return virusStrains.get(idx);</span>
+<span class="fc" id="L501">		return virusStrains.get(idx);</span>
 	}
 
 	/**
 	 * List of dates (in second format) on which agent was infected.
 	 */
 	public DoubleList getInfectionDates() {
-<span class="fc" id="L500">		return infectionDates;</span>
+<span class="fc" id="L508">		return infectionDates;</span>
 	}
 
 	/**
 	 * Number of received vaccinations.
 	 */
 	public int getNumVaccinations() {
-<span class="fc" id="L507">		return vaccinations.size();</span>
+<span class="fc" id="L515">		return vaccinations.size();</span>
 	}
 
 	public VaccinationStatus getVaccinationStatus() {
-<span class="fc bfc" id="L511" title="All 2 branches covered.">		return vaccinations.size() &gt; 0 ? VaccinationStatus.yes : VaccinationStatus.no;</span>
+<span class="fc bfc" id="L519" title="All 2 branches covered.">		return vaccinations.size() &gt; 0 ? VaccinationStatus.yes : VaccinationStatus.no;</span>
 	}
 
 	/**
@@ -516,18 +524,19 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	@Deprecated
 	public VaccinationType getVaccinationType() {
-<span class="fc" id="L519">		return vaccinations.get(0);</span>
+<span class="fc" id="L527">		return vaccinations.get(0);</span>
 	}
 
+	@Override
 	public VaccinationType getVaccinationType(int idx) {
-<span class="fc" id="L523">		return vaccinations.get(idx);</span>
+<span class="fc" id="L532">		return vaccinations.get(idx);</span>
 	}
 
 	/**
 	 * List of days that agent was infected on.
 	 */
 	public IntList getVaccinationDates() {
-<span class="fc" id="L530">		return vaccinationDates;</span>
+<span class="fc" id="L539">		return vaccinationDates;</span>
 	}
 
 	/**
@@ -535,54 +544,54 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	@Deprecated
 	public VaccinationStatus getReVaccinationStatus() {
-<span class="fc bfc" id="L538" title="All 2 branches covered.">		return vaccinations.size() &gt; 1 ? VaccinationStatus.yes : VaccinationStatus.no;</span>
+<span class="fc bfc" id="L547" title="All 2 branches covered.">		return vaccinations.size() &gt; 1 ? VaccinationStatus.yes : VaccinationStatus.no;</span>
 	}
 
 	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
-<span class="pc bpc" id="L542" title="1 of 2 branches missed.">		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException(&quot;Vaccination can only be set to yes.&quot;);</span>
+<span class="pc bpc" id="L551" title="1 of 2 branches missed.">		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException(&quot;Vaccination can only be set to yes.&quot;);</span>
 
-<span class="fc" id="L544">		vaccinations.add(type);</span>
-<span class="fc" id="L545">		vaccinationDates.add(iteration);</span>
+<span class="fc" id="L553">		vaccinations.add(type);</span>
+<span class="fc" id="L554">		vaccinationDates.add(iteration);</span>
 
-<span class="fc" id="L547">		reporting.reportVaccination(personId, iteration, type, vaccinations.size());</span>
-<span class="fc" id="L548">	}</span>
+<span class="fc" id="L556">		reporting.reportVaccination(personId, iteration, type, vaccinations.size());</span>
+<span class="fc" id="L557">	}</span>
 
 	public TestStatus getTestStatus() {
-<span class="fc" id="L551">		return testStatus;</span>
+<span class="fc" id="L560">		return testStatus;</span>
 	}
 
 	public void setTestStatus(TestStatus testStatus, int iteration) {
-<span class="fc" id="L555">		this.testStatus = testStatus;</span>
-<span class="fc" id="L556">		this.testDate = iteration;</span>
-<span class="fc" id="L557">	}</span>
+<span class="fc" id="L564">		this.testStatus = testStatus;</span>
+<span class="fc" id="L565">		this.testDate = iteration;</span>
+<span class="fc" id="L566">	}</span>
 
 	public double getSusceptibility() {
-<span class="fc" id="L560">		return susceptibility;</span>
+<span class="fc" id="L569">		return susceptibility;</span>
 	}
 
 	public void setSusceptibility(double susceptibility) {
-<span class="nc" id="L564">		this.susceptibility = susceptibility;</span>
-<span class="nc" id="L565">	}</span>
+<span class="nc" id="L573">		this.susceptibility = susceptibility;</span>
+<span class="nc" id="L574">	}</span>
 
 	/**
 	 * Immunity factor based on antibody level at infection.
 	 */
 	public double getAntibodyLevelAtInfection() {
-<span class="nc" id="L571">		return antibodyLevelAtInfection;</span>
+<span class="nc" id="L580">		return antibodyLevelAtInfection;</span>
 	}
 
 	/**
 	 * Get map with max antibodies reached per strain (before current infection).
 	 */
 	public Object2DoubleMap&lt;VirusStrain&gt; getMaxAntibodies() {
-<span class="nc" id="L578">		return maxAntibodies;</span>
+<span class="fc" id="L587">		return maxAntibodies;</span>
 	}
 
 	/**
 	 * Get max antibodies reached for a particular strain (before current infection).
 	 */
 	public double getMaxAntibodies(VirusStrain virusStrain) {
-<span class="fc" id="L585">		return maxAntibodies.getDouble(virusStrain);</span>
+<span class="fc" id="L594">		return maxAntibodies.getDouble(virusStrain);</span>
 	}
 
 	/**
@@ -591,23 +600,23 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public void updateMaxAntibodies(VirusStrain strain, double maxAb) {
 
-<span class="fc bfc" id="L594" title="All 4 branches covered.">		if (!this.maxAntibodies.containsKey(strain) || maxAb &gt; this.maxAntibodies.getDouble(strain)) {</span>
-<span class="fc" id="L595">			this.maxAntibodies.put(strain, maxAb);</span>
+<span class="fc bfc" id="L603" title="All 4 branches covered.">		if (!this.maxAntibodies.containsKey(strain) || maxAb &gt; this.maxAntibodies.getDouble(strain)) {</span>
+<span class="fc" id="L604">			this.maxAntibodies.put(strain, maxAb);</span>
 		}
 
-<span class="fc" id="L598">	}</span>
+<span class="fc" id="L607">	}</span>
 
 	public double getAntibodies(VirusStrain strain) {
-<span class="fc" id="L601">		return antibodies.getDouble(strain);</span>
+<span class="fc" id="L610">		return antibodies.getDouble(strain);</span>
 	}
 
 	public Object2DoubleMap&lt;VirusStrain&gt; getAntibodies() {
-<span class="fc" id="L605">		return antibodies;</span>
+<span class="fc" id="L614">		return antibodies;</span>
 	}
 
 	public double setAntibodies(VirusStrain strain, double value) {
 
-<span class="fc" id="L610">		return antibodies.put(strain, value);</span>
+<span class="fc" id="L619">		return antibodies.put(strain, value);</span>
 
 	}
 
@@ -620,11 +629,11 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @throws IllegalStateException when the requested status was never set
 	 */
 	public int daysSince(DiseaseStatus status, int currentDay) {
-<span class="pc bpc" id="L623" title="1 of 2 branches missed.">		if (!statusChanges.containsKey(status)) throw new IllegalStateException(&quot;Person was never &quot; + status);</span>
+<span class="pc bpc" id="L632" title="1 of 2 branches missed.">		if (!statusChanges.containsKey(status)) throw new IllegalStateException(&quot;Person was never &quot; + status);</span>
 
-<span class="fc" id="L625">		double day = Math.floor(statusChanges.get(status) / EpisimUtils.DAY);</span>
+<span class="fc" id="L634">		double day = Math.floor(statusChanges.get(status) / EpisimUtils.DAY);</span>
 
-<span class="fc" id="L627">		return currentDay - (int) day;</span>
+<span class="fc" id="L636">		return currentDay - (int) day;</span>
 	}
 
 	/**
@@ -632,11 +641,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 *
 	 * @param idx index starting at 0
 	 */
+	@Override
 	public int daysSinceInfection(int idx, int currentDay) {
-<span class="pc bpc" id="L636" title="1 of 2 branches missed.">		if (infectionDates.size() &lt;= idx) throw new IllegalStateException(&quot;Person did not had infection with index &quot; + idx);</span>
+<span class="pc bpc" id="L646" title="1 of 2 branches missed.">		if (infectionDates.size() &lt;= idx) throw new IllegalStateException(&quot;Person did not had infection with index &quot; + idx);</span>
 
-<span class="fc" id="L638">		double day = Math.floor(infectionDates.getDouble(idx) / EpisimUtils.DAY);</span>
-<span class="fc" id="L639">		return currentDay - (int) day;</span>
+<span class="fc" id="L648">		double day = Math.floor(infectionDates.getDouble(idx) / EpisimUtils.DAY);</span>
+<span class="fc" id="L649">		return currentDay - (int) day;</span>
 
 	}
 
@@ -644,29 +654,29 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Return days since status, or default value if this status was not attained.
 	 */
 	public int daysSinceOrElse(DiseaseStatus status, int currentDay, int defaultValue) {
-<span class="pc bpc" id="L647" title="1 of 2 branches missed.">		if (!hadDiseaseStatus(status)) return defaultValue;</span>
-<span class="nc" id="L648">		return daysSince(status, currentDay);</span>
+<span class="pc bpc" id="L657" title="1 of 2 branches missed.">		if (!hadDiseaseStatus(status)) return defaultValue;</span>
+<span class="nc" id="L658">		return daysSince(status, currentDay);</span>
 	}
 
 	/**
 	 * Return whether a person had (or currently has) a certain disease status.
 	 */
 	public boolean hadDiseaseStatus(DiseaseStatus status) {
-<span class="fc" id="L655">		return statusChanges.containsKey(status);</span>
+<span class="fc" id="L665">		return statusChanges.containsKey(status);</span>
 	}
 
 	/**
 	 * Return whether a person received certain vaccination type.
 	 */
 	public boolean hadVaccinationType(VaccinationType type) {
-<span class="fc" id="L662">		return vaccinations.contains(type);</span>
+<span class="fc" id="L672">		return vaccinations.contains(type);</span>
 	}
 
 	/**
 	 * Return whether a person was infected with certain virus strain.
 	 */
 	public boolean hadStrain(VirusStrain strain) {
-<span class="nc" id="L669">		return virusStrains.contains(strain);</span>
+<span class="nc" id="L679">		return virusStrains.contains(strain);</span>
 	}
 
 	/**
@@ -681,13 +691,13 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		// -&gt; api now marked as unstable and containing an api note, because it is used by the models it has to be public. chr, apr'20
 
 		//check removed; when starting simulation with immunisation history, quarantine date can very well be negative. -jr, nov'22
-<span class="pc bpc" id="L684" title="1 of 2 branches missed.">		if (quarantineDate == Integer.MIN_VALUE) {</span>
+<span class="pc bpc" id="L694" title="1 of 2 branches missed.">		if (quarantineDate == Integer.MIN_VALUE) {</span>
 
-<span class="nc" id="L686">			throw new IllegalStateException(&quot;Person was never quarantined&quot;);</span>
+<span class="nc" id="L696">			throw new IllegalStateException(&quot;Person was never quarantined&quot;);</span>
 
 		}
 
-<span class="fc" id="L690">		return currentDay - quarantineDate;</span>
+<span class="fc" id="L700">		return currentDay - quarantineDate;</span>
 	}
 
 	/**
@@ -696,19 +706,20 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @param currentDay current day (iteration)
 	 */
 	public int daysSince(VaccinationStatus status, int currentDay) {
-<span class="pc bpc" id="L699" title="1 of 2 branches missed.">		if (status != VaccinationStatus.yes) throw new IllegalArgumentException(&quot;Only supports querying when person was vaccinated&quot;);</span>
-<span class="pc bpc" id="L700" title="1 of 2 branches missed.">		if (vaccinations.isEmpty()) throw new IllegalStateException(&quot;Person was never vaccinated&quot;);</span>
+<span class="pc bpc" id="L709" title="1 of 2 branches missed.">		if (status != VaccinationStatus.yes) throw new IllegalArgumentException(&quot;Only supports querying when person was vaccinated&quot;);</span>
+<span class="pc bpc" id="L710" title="1 of 2 branches missed.">		if (vaccinations.isEmpty()) throw new IllegalStateException(&quot;Person was never vaccinated&quot;);</span>
 
-<span class="fc" id="L702">		return currentDay - vaccinationDates.getInt(vaccinationDates.size() - 1);</span>
+<span class="fc" id="L712">		return currentDay - vaccinationDates.getInt(vaccinationDates.size() - 1);</span>
 	}
 
 	/**
 	 * Days since the nth vaccination (starting at 0).
 	 */
+	@Override
 	public int daysSinceVaccination(int idx, int currentDay) {
-<span class="nc bnc" id="L709" title="All 2 branches missed.">		if (vaccinations.size() &lt;= idx) throw new IllegalStateException(&quot;Person did not receive vaccination with index &quot; + idx);</span>
+<span class="pc bpc" id="L720" title="1 of 2 branches missed.">		if (vaccinations.size() &lt;= idx) throw new IllegalStateException(&quot;Person did not receive vaccination with index &quot; + idx);</span>
 
-<span class="nc" id="L711">		return currentDay - vaccinationDates.getInt(idx);</span>
+<span class="fc" id="L722">		return currentDay - vaccinationDates.getInt(idx);</span>
 	}
 
 	/**
@@ -717,17 +728,17 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @param currentDay current day (iteration)
 	 */
 	public int daysSinceTest(int currentDay) {
-<span class="fc bfc" id="L720" title="All 2 branches covered.">		if (testDate &lt; 0)</span>
-<span class="fc" id="L721">			return Integer.MAX_VALUE;</span>
+<span class="fc bfc" id="L731" title="All 2 branches covered.">		if (testDate &lt; 0)</span>
+<span class="fc" id="L732">			return Integer.MAX_VALUE;</span>
 
-<span class="fc" id="L723">		return currentDay - testDate;</span>
+<span class="fc" id="L734">		return currentDay - testDate;</span>
 	}
 
 	/**
 	 * Number of times person was infected.
 	 */
 	public int getNumInfections() {
-<span class="fc" id="L730">		return infectionDates.size();</span>
+<span class="fc" id="L741">		return infectionDates.size();</span>
 	}
 
 	/**
@@ -736,28 +747,28 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @param threshold after how many days the status will expire
 	 */
 	public boolean isRecentlyRecovered(int currentDay, int threshold) {
-<span class="pc bpc" id="L739" title="1 of 8 branches missed.">		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible &amp;&amp; infectionDates.size() &gt;= 1 &amp;&amp; daysSince(DiseaseStatus.recovered, currentDay) &lt;= threshold);</span>
+<span class="pc bpc" id="L750" title="1 of 8 branches missed.">		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible &amp;&amp; infectionDates.size() &gt;= 1 &amp;&amp; daysSince(DiseaseStatus.recovered, currentDay) &lt;= threshold);</span>
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
-<span class="fc bfc" id="L744" title="All 4 branches covered.">		if (isTraceable() &amp;&amp; personWrapper.isTraceable()) {</span>
+<span class="fc bfc" id="L755" title="All 4 branches covered.">		if (isTraceable() &amp;&amp; personWrapper.isTraceable()) {</span>
 			// Always use the latest tracking date
-<span class="fc" id="L746">			traceableContactPersons.put(personWrapper, now);</span>
-<span class="fc" id="L747">			reporting.reportTracing(now, this, personWrapper);</span>
+<span class="fc" id="L757">			traceableContactPersons.put(personWrapper, now);</span>
+<span class="fc" id="L758">			reporting.reportTracing(now, this, personWrapper);</span>
 		}
-<span class="fc" id="L749">	}</span>
+<span class="fc" id="L760">	}</span>
 
 	/**
 	 * Get all traced contacts that happened after certain time.
 	 */
 	public synchronized List&lt;EpisimPerson&gt; getTraceableContactPersons(double after) {
 		// needs to be sorted or results will be non deterministic with multithreading
-<span class="fc" id="L756">		return traceableContactPersons.object2DoubleEntrySet()</span>
-<span class="fc bfc" id="L757" title="All 2 branches covered.">			.stream().filter(p -&gt; p.getDoubleValue() &gt;= after)</span>
-<span class="fc" id="L758">			.map(Map.Entry::getKey)</span>
-<span class="fc" id="L759">			.sorted(Comparator.comparing(EpisimPerson::getPersonId))</span>
-<span class="fc" id="L760">			.collect(Collectors.toList());</span>
+<span class="fc" id="L767">		return traceableContactPersons.object2DoubleEntrySet()</span>
+<span class="fc bfc" id="L768" title="All 2 branches covered.">			.stream().filter(p -&gt; p.getDoubleValue() &gt;= after)</span>
+<span class="fc" id="L769">			.map(Map.Entry::getKey)</span>
+<span class="fc" id="L770">			.sorted(Comparator.comparing(EpisimPerson::getPersonId))</span>
+<span class="fc" id="L771">			.collect(Collectors.toList());</span>
 
 		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
 		// would argue that it is not a problem to have a person in there multiple times.  kai, may'20
@@ -769,55 +780,55 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public void clearTraceableContractPersons(double before) {
 
-<span class="fc" id="L772">		int oldSize = traceableContactPersons.size();</span>
+<span class="fc" id="L783">		int oldSize = traceableContactPersons.size();</span>
 
-<span class="fc bfc" id="L774" title="All 2 branches covered.">		if (oldSize == 0) return;</span>
+<span class="fc bfc" id="L785" title="All 2 branches covered.">		if (oldSize == 0) return;</span>
 
-<span class="fc bfc" id="L776" title="All 2 branches covered.">		traceableContactPersons.keySet().removeIf(k -&gt; traceableContactPersons.getDouble(k) &lt; before);</span>
-<span class="fc" id="L777">	}</span>
+<span class="fc bfc" id="L787" title="All 2 branches covered.">		traceableContactPersons.keySet().removeIf(k -&gt; traceableContactPersons.getDouble(k) &lt; before);</span>
+<span class="fc" id="L788">	}</span>
 
 	/**
 	 * Returns whether the person can be traced.
 	 */
 	public boolean isTraceable() {
-<span class="fc" id="L783">		return traceable;</span>
+<span class="fc" id="L794">		return traceable;</span>
 	}
 
 	void setTraceable(boolean traceable) {
-<span class="fc" id="L787">		this.traceable = traceable;</span>
-<span class="fc" id="L788">	}</span>
+<span class="fc" id="L798">		this.traceable = traceable;</span>
+<span class="fc" id="L799">	}</span>
 
 	public boolean isVaccinable() {
-<span class="fc" id="L791">		return vaccinable;</span>
+<span class="fc" id="L802">		return vaccinable;</span>
 	}
 
 	/**
 	 * Set vaccinable status.
 	 */
 	public void setVaccinable(boolean vaccinable) {
-<span class="fc" id="L798">		this.vaccinable = vaccinable;</span>
-<span class="fc" id="L799">	}</span>
+<span class="fc" id="L809">		this.vaccinable = vaccinable;</span>
+<span class="fc" id="L810">	}</span>
 
 	public PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement, Id&lt;ActivityFacility&gt; facilityId) {
-<span class="fc" id="L802">		PerformedActivity act = new PerformedActivity(time, trajectoryElement, facilityId);</span>
-<span class="fc" id="L803">		trajectory.add(act);</span>
-<span class="fc" id="L804">		return act;</span>
+<span class="fc" id="L813">		PerformedActivity act = new PerformedActivity(time, trajectoryElement, facilityId);</span>
+<span class="fc" id="L814">		trajectory.add(act);</span>
+<span class="fc" id="L815">		return act;</span>
 	}
 
 	void setStartOfDay(DayOfWeek day) {
-<span class="fc" id="L808">		startOfDay[day.getValue() - 1] = trajectory.size();</span>
-<span class="fc" id="L809">	}</span>
+<span class="fc" id="L819">		startOfDay[day.getValue() - 1] = trajectory.size();</span>
+<span class="fc" id="L820">	}</span>
 
 	int getStartOfDay(DayOfWeek day) {
-<span class="fc" id="L812">		return startOfDay[day.getValue() - 1];</span>
+<span class="fc" id="L823">		return startOfDay[day.getValue() - 1];</span>
 	}
 
 	void setEndOfDay(DayOfWeek day) {
-<span class="fc" id="L816">		endOfDay[day.getValue() - 1] = trajectory.size();</span>
-<span class="fc" id="L817">	}</span>
+<span class="fc" id="L827">		endOfDay[day.getValue() - 1] = trajectory.size();</span>
+<span class="fc" id="L828">	}</span>
 
 	int getEndOfDay(DayOfWeek day) {
-<span class="fc" id="L820">		return endOfDay[day.getValue() - 1];</span>
+<span class="fc" id="L831">		return endOfDay[day.getValue() - 1];</span>
 	}
 
 	/**
@@ -829,14 +840,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public &lt;T&gt; T matchActivities(DayOfWeek day, Set&lt;String&gt; activities, BiFunction&lt;String, T, T&gt; reduce, T defaultValue) {
 
-<span class="fc" id="L832">		T result = defaultValue;</span>
-<span class="fc bfc" id="L833" title="All 2 branches covered.">		for (int i = getStartOfDay(day); i &lt; getEndOfDay(day); i++) {</span>
-<span class="fc" id="L834">			String act = trajectory.get(i).params.getContainerName();</span>
-<span class="fc bfc" id="L835" title="All 4 branches covered.">			if (activityParticipation.get(i) &amp;&amp; activities.contains(act))</span>
-<span class="fc" id="L836">				result = reduce.apply(act, result);</span>
+<span class="fc" id="L843">		T result = defaultValue;</span>
+<span class="fc bfc" id="L844" title="All 2 branches covered.">		for (int i = getStartOfDay(day); i &lt; getEndOfDay(day); i++) {</span>
+<span class="fc" id="L845">			String act = trajectory.get(i).params.getContainerName();</span>
+<span class="fc bfc" id="L846" title="All 4 branches covered.">			if (activityParticipation.get(i) &amp;&amp; activities.contains(act))</span>
+<span class="fc" id="L847">				result = reduce.apply(act, result);</span>
 		}
 
-<span class="fc" id="L839">		return result;</span>
+<span class="fc" id="L850">		return result;</span>
 	}
 
 	/**
@@ -847,14 +858,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public &lt;T&gt; T matchActivities(DayOfWeek day, BiFunction&lt;String, T, T&gt; reduce, T defaultValue) {
 
-<span class="nc" id="L850">		T result = defaultValue;</span>
-<span class="nc bnc" id="L851" title="All 2 branches missed.">		for (int i = getStartOfDay(day); i &lt; getEndOfDay(day); i++) {</span>
-<span class="nc" id="L852">			String act = trajectory.get(i).params.getContainerName();</span>
-<span class="nc bnc" id="L853" title="All 2 branches missed.">			if (activityParticipation.get(i))</span>
-<span class="nc" id="L854">				result = reduce.apply(act, result);</span>
+<span class="nc" id="L861">		T result = defaultValue;</span>
+<span class="nc bnc" id="L862" title="All 2 branches missed.">		for (int i = getStartOfDay(day); i &lt; getEndOfDay(day); i++) {</span>
+<span class="nc" id="L863">			String act = trajectory.get(i).params.getContainerName();</span>
+<span class="nc bnc" id="L864" title="All 2 branches missed.">			if (activityParticipation.get(i))</span>
+<span class="nc" id="L865">				result = reduce.apply(act, result);</span>
 		}
 
-<span class="nc" id="L857">		return result;</span>
+<span class="nc" id="L868">		return result;</span>
 	}
 
 	/**
@@ -862,108 +873,108 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Used during initialization. After that it should always return true.
 	 */
 	boolean hasActivity(DayOfWeek day) {
-<span class="fc bfc" id="L865" title="All 2 branches covered.">		return getStartOfDay(day) &lt; trajectory.size();</span>
+<span class="fc bfc" id="L876" title="All 2 branches covered.">		return getStartOfDay(day) &lt; trajectory.size();</span>
 	}
 
 	/**
 	 * Init participation bit set.
 	 */
 	void initParticipation() {
-<span class="fc" id="L872">		activityParticipation = new BitSet(trajectory.size());</span>
-<span class="fc" id="L873">		activityParticipation.set(0, trajectory.size(), true);</span>
-<span class="fc" id="L874">	}</span>
+<span class="fc" id="L883">		activityParticipation = new BitSet(trajectory.size());</span>
+<span class="fc" id="L884">		activityParticipation.set(0, trajectory.size(), true);</span>
+<span class="fc" id="L885">	}</span>
 
 	public BitSet getActivityParticipation() {
-<span class="fc" id="L877">		return activityParticipation;</span>
+<span class="fc" id="L888">		return activityParticipation;</span>
 	}
 
 	/**
 	 * Defines that day {@code target} has the same trajectory as {@code source}.
 	 */
 	void duplicateDay(DayOfWeek target, DayOfWeek source) {
-<span class="fc" id="L884">		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];</span>
-<span class="fc" id="L885">		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];</span>
-<span class="fc" id="L886">		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];</span>
-<span class="fc" id="L887">		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];</span>
-<span class="fc" id="L888">		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];</span>
-<span class="fc" id="L889">	}</span>
+<span class="fc" id="L895">		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];</span>
+<span class="fc" id="L896">		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];</span>
+<span class="fc" id="L897">		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];</span>
+<span class="fc" id="L898">		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];</span>
+<span class="fc" id="L899">		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];</span>
+<span class="fc" id="L900">	}</span>
 
 	/**
 	 * Reset all trajectory information.
 	 */
 	void resetTrajectory() {
-<span class="fc" id="L895">		trajectory.clear();</span>
-<span class="fc" id="L896">		Arrays.fill(startOfDay, 0);</span>
-<span class="fc" id="L897">		Arrays.fill(endOfDay, 0);</span>
-<span class="fc" id="L898">		Arrays.fill(firstFacilityId, null);</span>
-<span class="fc" id="L899">		Arrays.fill(lastFacilityId, null);</span>
-<span class="fc" id="L900">		Arrays.fill(staysInContainer, false);</span>
-<span class="fc" id="L901">	}</span>
+<span class="fc" id="L906">		trajectory.clear();</span>
+<span class="fc" id="L907">		Arrays.fill(startOfDay, 0);</span>
+<span class="fc" id="L908">		Arrays.fill(endOfDay, 0);</span>
+<span class="fc" id="L909">		Arrays.fill(firstFacilityId, null);</span>
+<span class="fc" id="L910">		Arrays.fill(lastFacilityId, null);</span>
+<span class="fc" id="L911">		Arrays.fill(staysInContainer, false);</span>
+<span class="fc" id="L912">	}</span>
 
 	@Override
 	public Attributes getAttributes() {
-<span class="fc" id="L905">		return attributes;</span>
+<span class="fc" id="L916">		return attributes;</span>
 	}
 
 	public int getAge() {
-<span class="pc bpc" id="L909" title="1 of 2 branches missed.">		assert age != -1 : &quot;Person=&quot; + getPersonId().toString() + &quot; has no age.&quot;;</span>
-<span class="pc bpc" id="L910" title="2 of 4 branches missed.">		assert age &gt;= 0 &amp;&amp; age &lt;= 120 : &quot;Age of person=&quot; + getPersonId().toString() + &quot; is not plausible. Age is=&quot; + age;</span>
+<span class="pc bpc" id="L920" title="1 of 2 branches missed.">		assert age != -1 : &quot;Person=&quot; + getPersonId().toString() + &quot; has no age.&quot;;</span>
+<span class="pc bpc" id="L921" title="2 of 4 branches missed.">		assert age &gt;= 0 &amp;&amp; age &lt;= 120 : &quot;Age of person=&quot; + getPersonId().toString() + &quot; is not plausible. Age is=&quot; + age;</span>
 
-<span class="fc" id="L912">		return age;</span>
+<span class="fc" id="L923">		return age;</span>
 	}
 
 	/**
 	 * Return the age of a person or the default age if no age is specified.
 	 */
 	public int getAgeOrDefault(int defaultAge) {
-<span class="fc bfc" id="L919" title="All 2 branches covered.">		return age != -1 ? age : defaultAge;</span>
+<span class="fc bfc" id="L930" title="All 2 branches covered.">		return age != -1 ? age : defaultAge;</span>
 	}
 
 	Id&lt;ActivityFacility&gt; getFirstFacilityId(DayOfWeek day) {
-<span class="fc" id="L923">		return firstFacilityId[day.getValue() - 1];</span>
+<span class="fc" id="L934">		return firstFacilityId[day.getValue() - 1];</span>
 	}
 
 	void setFirstFacilityId(Id&lt;ActivityFacility&gt; firstFacilityId, DayOfWeek day) {
-<span class="fc" id="L927">		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;</span>
-<span class="fc" id="L928">	}</span>
+<span class="fc" id="L938">		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;</span>
+<span class="fc" id="L939">	}</span>
 
 	Id&lt;ActivityFacility&gt; getLastFacilityId(DayOfWeek day) {
-<span class="fc" id="L931">		return lastFacilityId[day.getValue() - 1];</span>
+<span class="fc" id="L942">		return lastFacilityId[day.getValue() - 1];</span>
 	}
 
 	void setLastFacilityId(Id&lt;ActivityFacility&gt; lastFacilityId, DayOfWeek day, boolean stays) {
-<span class="fc" id="L935">		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;</span>
-<span class="fc" id="L936">		this.staysInContainer[day.getValue() - 1] = stays;</span>
-<span class="fc" id="L937">	}</span>
+<span class="fc" id="L946">		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;</span>
+<span class="fc" id="L947">		this.staysInContainer[day.getValue() - 1] = stays;</span>
+<span class="fc" id="L948">	}</span>
 
 	void setStaysInContainer(DayOfWeek day, boolean stays) {
-<span class="fc" id="L940">		this.staysInContainer[day.getValue() - 1] = stays;</span>
-<span class="fc" id="L941">	}</span>
+<span class="fc" id="L951">		this.staysInContainer[day.getValue() - 1] = stays;</span>
+<span class="fc" id="L952">	}</span>
 
 	boolean getStaysInContainer(DayOfWeek day) {
-<span class="fc" id="L944">		return staysInContainer[day.getValue() - 1];</span>
+<span class="fc" id="L955">		return staysInContainer[day.getValue() - 1];</span>
 	}
 
 	public Id&lt;ActivityFacility&gt; getInfectionContainer() {
-<span class="fc" id="L948">		return infectionContainer;</span>
+<span class="fc" id="L959">		return infectionContainer;</span>
 	}
 
 	public String getInfectionType() {
-<span class="fc" id="L952">		return infectionType;</span>
+<span class="fc" id="L963">		return infectionType;</span>
 	}
 
 	/**
 	 * Add amount of time to spent time for an activity.
 	 */
 	public synchronized void addSpentTime(String actType, double timeSpent) {
-<span class="fc" id="L959">		spentTime.mergeDouble(actType, timeSpent, Double::sum);</span>
-<span class="fc" id="L960">	}</span>
+<span class="fc" id="L970">		spentTime.mergeDouble(actType, timeSpent, Double::sum);</span>
+<span class="fc" id="L971">	}</span>
 
 	/**
 	 * Spent time of this person by activity.
 	 */
 	public Object2DoubleMap&lt;String&gt; getSpentTime() {
-<span class="fc" id="L966">		return spentTime;</span>
+<span class="fc" id="L977">		return spentTime;</span>
 	}
 
 	/**
@@ -972,7 +983,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @return
 	 */
 	public double getImmuneResponseMultiplier() {
-<span class="fc" id="L975">		return immuneResponseMultiplier;</span>
+<span class="fc" id="L986">		return immuneResponseMultiplier;</span>
 	}
 
 	/**
@@ -981,72 +992,72 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * @param immuneResponseMultiplier new immune response multiplier
 	 */
 	public void setImmuneResponseMultiplier(double immuneResponseMultiplier) {
-<span class="fc" id="L984">		this.immuneResponseMultiplier = immuneResponseMultiplier;</span>
-<span class="fc" id="L985">	}</span>
+<span class="fc" id="L995">		this.immuneResponseMultiplier = immuneResponseMultiplier;</span>
+<span class="fc" id="L996">	}</span>
 
 	@Override
 	public String toString() {
-<span class="nc" id="L989">		return &quot;EpisimPerson{&quot; +</span>
+<span class="nc" id="L1000">		return &quot;EpisimPerson{&quot; +</span>
 			&quot;personId=&quot; + personId +
 			'}';
 	}
 
 	private int findActivity(DayOfWeek day, double time) {
 		// do a linear search for matching activity
-<span class="fc" id="L996">		int last = getEndOfDay(day) - 1;</span>
-<span class="fc bfc" id="L997" title="All 2 branches covered.">		for (int i = getStartOfDay(day); i &lt; last; i++) {</span>
-<span class="fc bfc" id="L998" title="All 2 branches covered.">			if (trajectory.get(i + 1).time &gt; time)</span>
-<span class="fc" id="L999">				return i;</span>
+<span class="fc" id="L1007">		int last = getEndOfDay(day) - 1;</span>
+<span class="fc bfc" id="L1008" title="All 2 branches covered.">		for (int i = getStartOfDay(day); i &lt; last; i++) {</span>
+<span class="fc bfc" id="L1009" title="All 2 branches covered.">			if (trajectory.get(i + 1).time &gt; time)</span>
+<span class="fc" id="L1010">				return i;</span>
 		}
-<span class="fc" id="L1001">		return last;</span>
+<span class="fc" id="L1012">		return last;</span>
 	}
 
 	private int findFirstActivity(DayOfWeek day, double time) {
-<span class="fc" id="L1005">		int last = getEndOfDay(day) - 1;</span>
-<span class="pc bfc" id="L1006" title="All 2 branches covered.">		for (int i = getStartOfDay(day); i &lt; last; i++) {</span>
-<span class="pc bpc" id="L1007" title="1 of 2 branches missed.">			if (trajectory.get(i + 1).time &gt;= time)</span>
-<span class="fc" id="L1008">				return i;</span>
+<span class="fc" id="L1016">		int last = getEndOfDay(day) - 1;</span>
+<span class="pc bfc" id="L1017" title="All 2 branches covered.">		for (int i = getStartOfDay(day); i &lt; last; i++) {</span>
+<span class="pc bpc" id="L1018" title="1 of 2 branches missed.">			if (trajectory.get(i + 1).time &gt;= time)</span>
+<span class="fc" id="L1019">				return i;</span>
 		}
-<span class="fc" id="L1010">		return last;</span>
+<span class="fc" id="L1021">		return last;</span>
 	}
 
 	/**
 	 * Checks whether a certain activity is performed.
 	 */
 	boolean checkActivity(DayOfWeek day, double time) {
-<span class="fc" id="L1017">		return activityParticipation.get(findActivity(day, time));</span>
+<span class="fc" id="L1028">		return activityParticipation.get(findActivity(day, time));</span>
 	}
 
 	boolean checkFirstActivity(DayOfWeek day, double time) {
-<span class="fc" id="L1021">		return activityParticipation.get(findFirstActivity(day, time));</span>
+<span class="fc" id="L1032">		return activityParticipation.get(findFirstActivity(day, time));</span>
 	}
 
 	/**
 	 * Checks whether the next activity is performed.
 	 */
 	boolean checkNextActivity(DayOfWeek day, double time) {
-<span class="fc" id="L1028">		int idx = findActivity(day, time);</span>
+<span class="fc" id="L1039">		int idx = findActivity(day, time);</span>
 
-<span class="fc bfc" id="L1030" title="All 2 branches covered.">		if (idx &lt; getEndOfDay(day) - 1)</span>
-<span class="fc" id="L1031">			return activityParticipation.get(idx + 1);</span>
+<span class="fc bfc" id="L1041" title="All 2 branches covered.">		if (idx &lt; getEndOfDay(day) - 1)</span>
+<span class="fc" id="L1042">			return activityParticipation.get(idx + 1);</span>
 
-<span class="fc" id="L1033">		return true;</span>
+<span class="fc" id="L1044">		return true;</span>
 	}
 
 	public List&lt;PerformedActivity&gt; getActivities(DayOfWeek day) {
-<span class="fc" id="L1037">		int offset = getStartOfDay(day);</span>
-<span class="fc" id="L1038">		return trajectory.subList(offset, getEndOfDay(day));</span>
+<span class="fc" id="L1048">		int offset = getStartOfDay(day);</span>
+<span class="fc" id="L1049">		return trajectory.subList(offset, getEndOfDay(day));</span>
 	}
 
 	/**
 	 * Return the first activity of a person for specific day.
 	 */
 	PerformedActivity getFirstActivity(DayOfWeek day) {
-<span class="fc" id="L1045">		return trajectory.get(getStartOfDay(day));</span>
+<span class="fc" id="L1056">		return trajectory.get(getStartOfDay(day));</span>
 	}
 
 	PerformedActivity getLastActivity(DayOfWeek day) {
-<span class="fc" id="L1049">		return trajectory.get(getEndOfDay(day) - 1);</span>
+<span class="fc" id="L1060">		return trajectory.get(getEndOfDay(day) - 1);</span>
 	}
 
 	/**
@@ -1054,10 +1065,10 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	public PerformedActivity getActivity(DayOfWeek day, double time) {
 
-<span class="pc bpc" id="L1057" title="1 of 2 branches missed.">		assert getStartOfDay(day) &gt;= 0;</span>
-<span class="pc bpc" id="L1058" title="1 of 2 branches missed.">		assert getEndOfDay(day) &lt;= trajectory.size();</span>
+<span class="pc bpc" id="L1068" title="1 of 2 branches missed.">		assert getStartOfDay(day) &gt;= 0;</span>
+<span class="pc bpc" id="L1069" title="1 of 2 branches missed.">		assert getEndOfDay(day) &lt;= trajectory.size();</span>
 
-<span class="fc" id="L1060">		return trajectory.get(findActivity(day, time));</span>
+<span class="fc" id="L1071">		return trajectory.get(findActivity(day, time));</span>
 	}
 
 	/**
@@ -1067,12 +1078,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	@Nullable
 	public PerformedActivity getNextActivity(DayOfWeek day, double time) {
-<span class="fc" id="L1070">		int idx = findActivity(day, time);</span>
+<span class="fc" id="L1081">		int idx = findActivity(day, time);</span>
 
-<span class="fc bfc" id="L1072" title="All 2 branches covered.">		if (idx &lt; getEndOfDay(day) - 1)</span>
-<span class="fc" id="L1073">			return trajectory.get(idx + 1);</span>
+<span class="fc bfc" id="L1083" title="All 2 branches covered.">		if (idx &lt; getEndOfDay(day) - 1)</span>
+<span class="fc" id="L1084">			return trajectory.get(idx + 1);</span>
 
-<span class="fc" id="L1075">		return null;</span>
+<span class="fc" id="L1086">		return null;</span>
 	}
 
 	/**
@@ -1083,7 +1094,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * inform other persons later thanks to tracking).
 	 */
 	public boolean infectedButNotSerious() {
-<span class="fc bfc" id="L1086" title="All 6 branches covered.">		return (status == DiseaseStatus.infectedButNotContagious ||</span>
+<span class="fc bfc" id="L1097" title="All 6 branches covered.">		return (status == DiseaseStatus.infectedButNotContagious ||</span>
 			status == DiseaseStatus.contagious ||
 			status == DiseaseStatus.showingSymptoms);
 	}
@@ -1091,25 +1102,25 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Disease status of a person.
 	 */
-<span class="fc" id="L1094">	public enum DiseaseStatus {</span>
-<span class="fc" id="L1095">		susceptible, infectedButNotContagious, contagious, showingSymptoms,</span>
-<span class="fc" id="L1096">		seriouslySick, critical, seriouslySickAfterCritical, recovered, deceased</span>
+<span class="fc" id="L1105">	public enum DiseaseStatus {</span>
+<span class="fc" id="L1106">		susceptible, infectedButNotContagious, contagious, showingSymptoms,</span>
+<span class="fc" id="L1107">		seriouslySick, critical, seriouslySickAfterCritical, recovered, deceased</span>
 	}
 
 	/**
 	 * Quarantine status of a person.
 	 */
-<span class="fc" id="L1102">	public enum QuarantineStatus {full, atHome, testing, no}</span>
+<span class="fc" id="L1113">	public enum QuarantineStatus {full, atHome, testing, no}</span>
 
 	/**
 	 * Latest test result of this person.
 	 */
-<span class="fc" id="L1107">	public enum TestStatus {untested, positive, negative}</span>
+<span class="fc" id="L1118">	public enum TestStatus {untested, positive, negative}</span>
 
 	/**
 	 * Status of vaccination.
 	 */
-<span class="fc" id="L1112">	public enum VaccinationStatus {yes, no}</span>
+<span class="fc" id="L1123">	public enum VaccinationStatus {yes, no}</span>
 
 	/**
 	 * Stores when an activity is performed and in which context.
@@ -1124,17 +1135,17 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		/**
 		 * Creates a performed activity record.
 		 */
-<span class="fc" id="L1127">		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params, Id&lt;ActivityFacility&gt; facilityId) {</span>
-<span class="fc" id="L1128">			this.time = time;</span>
-<span class="fc" id="L1129">			this.params = params;</span>
-<span class="fc" id="L1130">			this.facilityId = facilityId;</span>
-<span class="fc" id="L1131">		}</span>
+<span class="fc" id="L1138">		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params, Id&lt;ActivityFacility&gt; facilityId) {</span>
+<span class="fc" id="L1139">			this.time = time;</span>
+<span class="fc" id="L1140">			this.params = params;</span>
+<span class="fc" id="L1141">			this.facilityId = facilityId;</span>
+<span class="fc" id="L1142">		}</span>
 
 		/**
 		 * Starting time of an activity.
 		 */
 		public double time() {
-<span class="nc" id="L1137">			return time;</span>
+<span class="nc" id="L1148">			return time;</span>
 		}
 
 		/**
@@ -1142,20 +1153,20 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		 */
 		public String actType() {
 			// container name is quite misleading and not the correct anymore.
-<span class="fc" id="L1145">			return params.getContainerName();</span>
+<span class="fc" id="L1156">			return params.getContainerName();</span>
 		}
 
 		/**
 		 * Facility Id for performed activity.
 		 */
 		public Id&lt;ActivityFacility&gt; getFacilityId() {
-<span class="fc" id="L1152">			return this.facilityId;</span>
+<span class="fc" id="L1163">			return this.facilityId;</span>
 		}
 
 
 		@Override
 		public String toString() {
-<span class="nc" id="L1158">			return &quot;PerformedActivity{&quot; +</span>
+<span class="nc" id="L1169">			return &quot;PerformedActivity{&quot; +</span>
 				&quot;time=&quot; + time +
 				&quot;, params=&quot; + params +
 				'}';

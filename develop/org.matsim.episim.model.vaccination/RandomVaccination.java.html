@@ -42,15 +42,15 @@ public class RandomVaccination implements VaccinationModel {
 
 <span class="fc" id="L43">		List&lt;EpisimPerson&gt; candidates = persons.values().stream()</span>
 <span class="fc" id="L44">				.filter(EpisimPerson::isVaccinable)</span>
-<span class="pc bpc" id="L45" title="1 of 4 branches missed.">				.filter(p -&gt; p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &amp;&amp; !p.isRecentlyRecovered(iteration, 180))</span>
+<span class="fc bfc" id="L45" title="All 4 branches covered.">				.filter(p -&gt; p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &amp;&amp; !p.isRecentlyRecovered(iteration, 180))</span>
 <span class="pc bpc" id="L46" title="1 of 4 branches missed.">				.filter(p -&gt; p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no))</span>
 <span class="pc bpc" id="L47" title="1 of 2 branches missed.">				.filter(p -&gt; p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no)</span>
 <span class="pc bpc" id="L48" title="3 of 4 branches missed.">				.filter(p -&gt; reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) &gt;= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)</span>
 <span class="fc" id="L49">				.collect(Collectors.toList());</span>
 
-<span class="pc bpc" id="L51" title="1 of 2 branches missed.">		if (candidates.isEmpty()) {</span>
-<span class="nc" id="L52">			log.warn(&quot;Not enough people to vaccinate left ({})&quot;, availableVaccinations);</span>
-<span class="nc" id="L53">			return 0;</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">		if (candidates.isEmpty()) {</span>
+<span class="fc" id="L52">			log.warn(&quot;Not enough people to vaccinate left ({})&quot;, availableVaccinations);</span>
+<span class="fc" id="L53">			return 0;</span>
 		}
 
 <span class="fc" id="L56">		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));</span>

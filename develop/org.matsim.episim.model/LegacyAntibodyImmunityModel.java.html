@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LegacyAntibodyImmunityModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">LegacyAntibodyImmunityModel.java</span></div><h1>LegacyAntibodyImmunityModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.Immunizable;
+import org.matsim.episim.VaccinationConfigGroup;
+
+/**
+ * Immunity from the antibody level a person carries.
+ *
+ * &lt;p&gt;Extraction of the code that computed immunity from antibodies before {@link ImmunityModel} existed: the
+ * three overrides of {@code AntibodyDependentTransitionModel} for the severity side and the immunity factors of
+ * {@code InfectionModelWithAntibodies} for the infection side. The formulas are unchanged, including the
+ * peculiarities that are almost certainly unintended but are current behaviour:&lt;/p&gt;
+ * &lt;ul&gt;
+ *     &lt;li&gt;severity reads {@code getMaxAntibodies}, the highest level ever reached, which never wanes, and which
+ *     already includes the boost of the very infection whose severity is being decided;&lt;/li&gt;
+ *     &lt;li&gt;the &quot;is this omicron&quot; list is long for {@code seriouslySick} but only BA.1/BA.2 for {@code critical};&lt;/li&gt;
+ *     &lt;li&gt;the guard that spares a person without previous immunity is active for {@code critical} and commented
+ *     out for {@code seriouslySick};&lt;/li&gt;
+ *     &lt;li&gt;{@code showingSymptoms} is not modified at all.&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;&lt;b&gt;One deliberate omission.&lt;/b&gt; The IgA term of {@code InfectionModelWithAntibodies} is not carried over. It
+ * needs the per-infection history, which {@link Immunizable} does not expose, and it is built on hard-coded
+ * SARS-CoV-2 lineage lists. No scenario in this repository binds that infection model, and the transitional
+ * composite routes protection against infection to the curves, so this path is unreachable today. Anyone binding
+ * this model for the infection side has to decide what the IgA term should become first.&lt;/p&gt;
+ */
+public class LegacyAntibodyImmunityModel implements ImmunityModel {
+
+	private final VaccinationConfigGroup vaccinationConfig;
+
+	@Inject
+<span class="fc" id="L36">	public LegacyAntibodyImmunityModel(VaccinationConfigGroup vaccinationConfig) {</span>
+<span class="fc" id="L37">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L38">	}</span>
+
+	@Override
+	public double getFactor(Immunizable person, VirusStrain strain, DiseaseStatus target, int day) {
+
+<span class="pc bpc" id="L43" title="2 of 5 branches missed.">		switch (target) {</span>
+			case infectedButNotContagious:
+<span class="nc" id="L45">				return remainingRisk(currentAntibodies(person, strain));</span>
+
+			case showingSymptoms:
+<span class="fc" id="L48">				return 1.0;</span>
+
+			case seriouslySick:
+<span class="fc" id="L51">				return remainingRisk(boosted(person, strain, omicronFactorForSeriouslySick(strain)));</span>
+
+			case critical:
+<span class="fc bfc" id="L54" title="All 4 branches covered.">				if (person.getNumVaccinations() == 0 &amp;&amp; person.getNumInfections() - 1 == 0)</span>
+<span class="fc" id="L55">					return 1.0;</span>
+
+<span class="fc" id="L57">				return remainingRisk(boosted(person, strain, omicronFactorForCritical(strain)));</span>
+
+			default:
+<span class="nc" id="L60">				throw new IllegalArgumentException(&quot;No protection is configured against disease status '&quot; + target</span>
+					+ &quot;'. Supported are infectedButNotContagious, showingSymptoms, seriouslySick and critical.&quot;);
+		}
+	}
+
+	@Override
+	public double getInfectivityFactor(Immunizable infector, VirusStrain strain, int day) {
+		// an infector with antibodies sheds less, but only a quarter of the effect is applied
+<span class="nc" id="L68">		return 1.0 - 0.25 * (1.0 - remainingRisk(infector.getAntibodyLevelAtInfection()));</span>
+	}
+
+	/**
+	 * Remaining risk for an antibody level, the shape shared by every use: {@code 1} at level zero, falling
+	 * towards {@code 0} as the level grows.
+	 */
+	private double remainingRisk(double antibodies) {
+<span class="fc" id="L76">		return 1.0 / (1.0 + Math.pow(antibodies, vaccinationConfig.getBeta()));</span>
+	}
+
+	/**
+	 * Highest antibody level ever reached, with the two modifications the severity code applies: four times as
+	 * much for a boostered person, and an extra factor for omicron strains. Note the direction: the factor
+	 * multiplies the antibody level, so it &lt;b&gt;increases&lt;/b&gt; protection rather than describing immune escape.
+	 */
+	private static double boosted(Immunizable person, VirusStrain strain, double omicronFactor) {
+<span class="fc" id="L85">		double antibodies = person.getMaxAntibodies(strain);</span>
+
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">		if (person.getNumVaccinations() &gt; 1)</span>
+<span class="nc" id="L88">			antibodies *= 4;</span>
+
+<span class="fc" id="L90">		return antibodies * omicronFactor;</span>
+	}
+
+	private static double omicronFactorForSeriouslySick(VirusStrain strain) {
+<span class="fc bfc" id="L94" title="All 2 branches covered.">		boolean isOmicron = strain.equals(VirusStrain.OMICRON_BA1)</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.OMICRON_BA2)</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">			|| strain.equals(VirusStrain.OMICRON_BA5)</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.BQ)</span>
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.EG)</span>
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.XBB_15)</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.XBB_19)</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.STRAIN_A)</span>
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">			|| strain.equals(VirusStrain.STRAIN_B)</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">			|| strain.toString().startsWith(&quot;A_&quot;)</span>
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">			|| strain.toString().startsWith(&quot;B_&quot;);</span>
+
+<span class="fc bfc" id="L106" title="All 2 branches covered.">		return isOmicron ? 3.7 : 1.0;</span>
+	}
+
+	/**
+	 * Deliberately shorter than {@link #omicronFactorForSeriouslySick}: the original code only listed BA.1 and BA.2 here.
+	 */
+	private static double omicronFactorForCritical(VirusStrain strain) {
+<span class="pc bpc" id="L113" title="1 of 4 branches missed.">		return strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) ? 3.7 : 1.0;</span>
+	}
+
+	/**
+	 * The current, waning antibody level, as opposed to the lifetime maximum used for severity. It is not part of
+	 * {@link Immunizable}, so this needs the concrete person; see {@code LegacyCurveImmunityModel.asPerson} for the same
+	 * problem on the other side.
+	 */
+	private static double currentAntibodies(Immunizable person, VirusStrain strain) {
+<span class="nc bnc" id="L122" title="All 2 branches missed.">		if (person instanceof EpisimPerson)</span>
+<span class="nc" id="L123">			return ((EpisimPerson) person).getAntibodies(strain);</span>
+
+<span class="nc" id="L125">		throw new IllegalArgumentException(&quot;Protection against infection reads the current antibody level, which &quot;</span>
+<span class="nc" id="L126">			+ &quot;only &quot; + EpisimPerson.class.getSimpleName() + &quot; provides, but got &quot; + person.getClass().getName());</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

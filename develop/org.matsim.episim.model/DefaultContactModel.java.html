@@ -145,74 +145,73 @@ public final class DefaultContactModel extends AbstractContactModel {
 <span class="fc" id="L145">			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());</span>
 <span class="fc" id="L146">			double jointTimeInContainer = calculateJointTimeInContainer(now, leavingParams, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);</span>
 
-			//forbid certain cross-activity interactions, keep track of contacts
+			// forbid certain cross-activity interactions (configured in ContactTransmissionConfigGroup), keep track of contacts
 <span class="fc bfc" id="L149" title="All 2 branches covered.">			if (container instanceof InfectionEventHandler.EpisimFacility) {</span>
-				//home can only interact with home, leisure or work
-<span class="fc bfc" id="L151" title="All 6 branches covered.">				if (infectionType.indexOf(&quot;home&quot;) &gt;= 0 &amp;&amp; infectionType.indexOf(&quot;leis&quot;) == -1 &amp;&amp; infectionType.indexOf(&quot;work&quot;) == -1</span>
-<span class="pc bpc" id="L152" title="1 of 4 branches missed.">						&amp;&amp; !(leavingPersonsActivity.startsWith(&quot;home&quot;) &amp;&amp; otherPersonsActivity.startsWith(&quot;home&quot;))) {</span>
-<span class="nc" id="L153">					continue;</span>
-<span class="pc bpc" id="L154" title="4 of 8 branches missed.">				} else if (infectionType.indexOf(&quot;edu&quot;) &gt;= 0 &amp;&amp; infectionType.indexOf(&quot;work&quot;) == -1 &amp;&amp; !(leavingPersonsActivity.startsWith(&quot;edu&quot;) &amp;&amp; otherPersonsActivity.startsWith(&quot;edu&quot;))) {</span>
-					//edu can only interact with work or edu
-<span class="nc" id="L156">					continue;</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">				if (!contactTransmission.isContactAllowed(leavingPersonsActivity, otherPersonsActivity)) {</span>
+<span class="fc" id="L151">					continue;</span>
 				}
-<span class="fc bfc" id="L158" title="All 2 branches covered.">				if (trackingEnabled) {</span>
-<span class="fc" id="L159">					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer, infectionType);</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">				if (trackingEnabled) {</span>
+<span class="fc" id="L154">					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer, infectionType);</span>
 				}
 
 				// Only a subset of contacts are reported at the moment
 				// tracking has to be enabled to report more contacts
-<span class="fc" id="L164">				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);</span>
+<span class="fc" id="L159">				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);</span>
 			}
 
-<span class="fc bfc" id="L167" title="All 2 branches covered.">			if (!AbstractContactModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {</span>
-<span class="fc" id="L168">				continue;</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">			if (!AbstractContactModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {</span>
+<span class="fc" id="L163">				continue;</span>
 			}
 
 			// person can only infect others 4 days after being contagious
-<span class="fc bfc" id="L172" title="All 2 branches covered.">			if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &amp;&amp;</span>
-<span class="fc bfc" id="L173" title="All 2 branches covered.">					personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) &gt; episimConfig.getDaysInfectious())</span>
-<span class="fc bfc" id="L174" title="All 2 branches covered.">					|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &amp;&amp;</span>
-<span class="fc bfc" id="L175" title="All 2 branches covered.">					contactPerson.daysSince(DiseaseStatus.contagious, iteration) &gt; episimConfig.getDaysInfectious()))</span>
-<span class="fc" id="L176">				continue;</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">			if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &amp;&amp;</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">					personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) &gt; episimConfig.getDaysInfectious())</span>
+<span class="fc bfc" id="L169" title="All 2 branches covered.">					|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &amp;&amp;</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">					contactPerson.daysSince(DiseaseStatus.contagious, iteration) &gt; episimConfig.getDaysInfectious()))</span>
+<span class="fc" id="L171">				continue;</span>
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
 			// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
-<span class="pc bpc" id="L180" title="3 of 4 branches missed.">			if (containerEnterTimeOfPersonLeaving &lt; 0 &amp;&amp; containerEnterTimeOfOtherPerson &lt; 0) {</span>
-<span class="nc" id="L181">				throw new IllegalStateException(&quot;should not happen&quot;);</span>
+<span class="pc bpc" id="L175" title="3 of 4 branches missed.">			if (containerEnterTimeOfPersonLeaving &lt; 0 &amp;&amp; containerEnterTimeOfOtherPerson &lt; 0) {</span>
+<span class="nc" id="L176">				throw new IllegalStateException(&quot;should not happen&quot;);</span>
 				// should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
 				// can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
 				// container from the beginning.  ????  kai, mar'20
 			}
 
-<span class="pc bpc" id="L187" title="2 of 4 branches missed.">			if (jointTimeInContainer &lt; 0 || jointTimeInContainer &gt; 86400 * 7) {</span>
-<span class="nc" id="L188">				log.warn(containerEnterTimeOfPersonLeaving);</span>
-<span class="nc" id="L189">				log.warn(containerEnterTimeOfOtherPerson);</span>
-<span class="nc" id="L190">				log.warn(now);</span>
-<span class="nc" id="L191">				throw new IllegalStateException(&quot;joint time in container is not plausible for personLeavingContainer=&quot; + personLeavingContainer.getPersonId() + &quot; and contactPerson=&quot; + contactPerson.getPersonId() + &quot;. Joint time is=&quot; + jointTimeInContainer);</span>
+<span class="pc bpc" id="L182" title="2 of 4 branches missed.">			if (jointTimeInContainer &lt; 0 || jointTimeInContainer &gt; 86400 * 7) {</span>
+<span class="nc" id="L183">				log.warn(containerEnterTimeOfPersonLeaving);</span>
+<span class="nc" id="L184">				log.warn(containerEnterTimeOfOtherPerson);</span>
+<span class="nc" id="L185">				log.warn(now);</span>
+<span class="nc" id="L186">				throw new IllegalStateException(&quot;joint time in container is not plausible for personLeavingContainer=&quot; + personLeavingContainer.getPersonId() + &quot; and contactPerson=&quot; + contactPerson.getPersonId() + &quot;. Joint time is=&quot; + jointTimeInContainer);</span>
 			}
 
-<span class="fc" id="L194">			double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());</span>
+<span class="fc" id="L189">			double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());</span>
+
+			// transmission-route weights for this activity/age pair (symmetric in person order); -1 marks an unknown age
+<span class="fc" id="L192">			TransmissionWeights transmissionWeights = contactTransmission.resolve(leavingPersonsActivity, otherPersonsActivity,</span>
+<span class="fc" id="L193">					personLeavingContainer.getAgeOrDefault(-1), contactPerson.getAgeOrDefault(-1));</span>
 
 			// need to differentiate which person might be the infector
-<span class="fc bfc" id="L197" title="All 2 branches covered.">			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {</span>
 
-<span class="fc" id="L199">				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),</span>
-						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-<span class="fc bfc" id="L201" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; prob)</span>
-<span class="fc" id="L202">					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);</span>
+<span class="fc" id="L198">				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),</span>
+						leavingParams, contactParams, transmissionWeights, contactIntensity, jointTimeInContainer);
+<span class="fc bfc" id="L200" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; prob)</span>
+<span class="fc" id="L201">					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);</span>
 
-<span class="fc" id="L204">			} else {</span>
-<span class="fc" id="L205">				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),</span>
-						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+<span class="fc" id="L203">			} else {</span>
+<span class="fc" id="L204">				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),</span>
+						contactParams, leavingParams, transmissionWeights, contactIntensity, jointTimeInContainer);
 
-<span class="fc bfc" id="L208" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; prob)</span>
-<span class="fc" id="L209">					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; prob)</span>
+<span class="fc" id="L208">					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);</span>
 			}
 		}
 
 		// Clear cached container
-<span class="fc" id="L214">		otherPersonsInContainer.clear();</span>
-<span class="fc" id="L215">	}</span>
+<span class="fc" id="L213">		otherPersonsInContainer.clear();</span>
+<span class="fc" id="L214">	}</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

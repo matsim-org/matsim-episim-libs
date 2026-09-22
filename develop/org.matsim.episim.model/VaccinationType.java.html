@@ -1,21 +1,105 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VaccinationType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">VaccinationType.java</span></div><h1>VaccinationType.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
 
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Enum for different types of vaccinations.
  */
-<span class="fc" id="L6">public enum VaccinationType implements ImmunityEvent {</span>
+public class VaccinationType implements ImmunityEvent {
 
-<span class="fc" id="L8">	generic,</span>
-<span class="fc" id="L9">	mRNA,</span>
-<span class="fc" id="L10">	vector,</span>
-<span class="fc" id="L11">	ba1Update,</span>
-<span class="fc" id="L12">	ba5Update,</span>
-<span class="fc" id="L13">	xbbUpdate,</span>
+<span class="fc" id="L11">	public static final VaccinationType generic = new VaccinationType(&quot;generic&quot;);</span>
+<span class="fc" id="L12">	public static final VaccinationType mRNA = new VaccinationType(&quot;mRNA&quot;);</span>
+<span class="fc" id="L13">	public static final VaccinationType vector = new VaccinationType(&quot;vector&quot;);</span>
+<span class="fc" id="L14">	public static final VaccinationType ba1Update = new VaccinationType(&quot;ba1Update&quot;);</span>
+<span class="fc" id="L15">	public static final VaccinationType ba5Update = new VaccinationType(&quot;ba5Update&quot;);</span>
+<span class="fc" id="L16">	public static final VaccinationType xbbUpdate = new VaccinationType(&quot;xbbUpdate&quot;);</span>
 
 	/**
 	 * Not a real vaccination, but used to describe the profile for persons that have been infected and gained a natural immunity.
 	 */
-<span class="fc" id="L18">	natural</span>
+<span class="fc" id="L21">	public static final VaccinationType natural = new VaccinationType(&quot;natural&quot;);</span>
 
+<span class="fc" id="L23">	private static final List&lt;VaccinationType&gt; STANDARD_OPTIONS = List.of(</span>
+		generic,
+		mRNA,
+		vector,
+		ba1Update,
+		ba5Update,
+		xbbUpdate,
+		natural
+	);
+
+<span class="fc" id="L33">	private static final Map&lt;String, VaccinationType&gt; VACCINATIONS_BY_NAME = new ConcurrentHashMap&lt;&gt;();</span>
+
+	static {
+<span class="fc bfc" id="L36" title="All 2 branches covered.">		for (VaccinationType type : STANDARD_OPTIONS) {</span>
+<span class="fc" id="L37">			VACCINATIONS_BY_NAME.put(type.name, type);</span>
+<span class="fc" id="L38">		}</span>
+<span class="fc" id="L39">	}</span>
+
+	private final String name;
+
+	/**
+	 * Private: every instance has to come from {@link #of(String)}, so that one name is one object. A public
+	 * constructor allowed a second object that is equal to the registered one by name.
+	 */
+<span class="fc" id="L47">	private VaccinationType(String name) {</span>
+<span class="fc" id="L48">		this.name = Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
+<span class="fc" id="L49">	}</span>
+
+	public static List&lt;VaccinationType&gt; getAllStandardOptions() {
+<span class="fc" id="L52">		return STANDARD_OPTIONS;</span>
+	}
+
+	/**
+	 * Returns the standard vaccination types in declaration order, followed by all further registered types sorted by id.
+	 * The standard order is kept so that outputs like {@code vaccinations.tsv} stay unchanged.
+	 */
+	public static List&lt;VaccinationType&gt; getAllOptions() {
+<span class="fc" id="L60">		List&lt;VaccinationType&gt; vaccinationTypes = new ArrayList&lt;&gt;(STANDARD_OPTIONS);</span>
+<span class="fc" id="L61">		VACCINATIONS_BY_NAME.values().stream()</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">			.filter(t -&gt; !STANDARD_OPTIONS.contains(t))</span>
+<span class="fc" id="L63">			.sorted(Comparator.comparing(VaccinationType::getId))</span>
+<span class="fc" id="L64">			.forEach(vaccinationTypes::add);</span>
+<span class="fc" id="L65">		return vaccinationTypes;</span>
+	}
+
+	/**
+	 * Returns the canonical instance for the given name, registering a new one when the name is first seen.
+	 */
+	public static VaccinationType of(String name) {
+<span class="fc" id="L72">		Objects.requireNonNull(name, &quot;Vaccination type name must not be null&quot;);</span>
+<span class="fc" id="L73">		return VACCINATIONS_BY_NAME.computeIfAbsent(name, VaccinationType::new);</span>
+	}
+
+	public static VaccinationType ofId(String s) {
+<span class="nc" id="L77">		return of(s);//in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
+	}
+
+	public String getName() {
+<span class="fc" id="L81">		return name;</span>
+	}
+
+	@Override
+	public boolean equals(Object o) {
+<span class="pc bpc" id="L86" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L87">		VaccinationType that = (VaccinationType) o;</span>
+<span class="fc" id="L88">		return Objects.equals(name, that.name);</span>
+	}
+
+	@Override
+	public int hashCode() {
+<span class="fc" id="L93">		return Objects.hashCode(name);</span>
+	}
+
+	public String getId() {
+<span class="fc" id="L97">		return getName(); //in the future we will expand vaccination not only to one pathogen and in this case we will have vaccination type depending on Pathogen. Now it is just name</span>
+	}
+
+	@Override
+	public String toString() {
+<span class="fc" id="L102">		return getId();</span>
+	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

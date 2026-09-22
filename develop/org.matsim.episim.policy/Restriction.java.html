@@ -59,7 +59,7 @@ public final class Restriction {
 	/**
 	 * Maps mask type to percentage of persons wearing it.
 	 */
-<span class="fc" id="L62">	private Map&lt;FaceMask, Double&gt; maskUsage = new EnumMap&lt;&gt;(FaceMask.class);</span>
+<span class="fc" id="L62">	private Map&lt;FaceMask, Double&gt; maskUsage = new LinkedHashMap&lt;&gt;();</span>
 
 	/**
 	 * Maps location-based remainingFraction to district name.
@@ -123,19 +123,26 @@ public final class Restriction {
 <span class="fc" id="L123">			double sum = 1 - total;</span>
 <span class="fc" id="L124">			this.maskUsage.put(FaceMask.NONE, sum);</span>
 
-<span class="fc bfc" id="L126" title="All 2 branches covered.">			for (FaceMask m : FaceMask.values()) {</span>
-<span class="fc bfc" id="L127" title="All 2 branches covered.">				if (maskUsage.containsKey(m)) {</span>
-<span class="fc" id="L128">					sum += maskUsage.get(m);</span>
-<span class="pc bpc" id="L129" title="1 of 2 branches missed.">					if (Double.isNaN(sum))</span>
-<span class="nc" id="L130">						throw new IllegalArgumentException(&quot;Mask usage contains NaN value!&quot;);</span>
+			// custom masks follow the standard ones in a deterministic order, so standard results are unchanged
+<span class="fc" id="L127">			List&lt;FaceMask&gt; masks = new ArrayList&lt;&gt;(FaceMask.getAllStandardOptions());</span>
+<span class="fc" id="L128">			maskUsage.keySet().stream()</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">					.filter(m -&gt; !masks.contains(m))</span>
+<span class="fc" id="L130">					.sorted(Comparator.comparing(FaceMask::getName))</span>
+<span class="fc" id="L131">					.forEach(masks::add);</span>
 
-<span class="fc" id="L132">					this.maskUsage.put(m, sum);</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">			for (FaceMask m : masks) {</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">				if (maskUsage.containsKey(m)) {</span>
+<span class="fc" id="L135">					sum += maskUsage.get(m);</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">					if (Double.isNaN(sum))</span>
+<span class="nc" id="L137">						throw new IllegalArgumentException(&quot;Mask usage contains NaN value!&quot;);</span>
+
+<span class="fc" id="L139">					this.maskUsage.put(m, sum);</span>
 				}
-			}
+<span class="fc" id="L141">			}</span>
 		}
 
-<span class="fc" id="L137">		this.locationBasedRf = locationBasedRf;</span>
-<span class="fc" id="L138">	}</span>
+<span class="fc" id="L144">		this.locationBasedRf = locationBasedRf;</span>
+<span class="fc" id="L145">	}</span>
 
 	/**
 	 * Create from other restriction.
@@ -144,29 +151,29 @@ public final class Restriction {
 	 */
 	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
 				@Nullable List&lt;String&gt; closed, @Nullable ClosingHours closingHours, @Nullable Map&lt;FaceMask, Double&gt; maskUsage, Map&lt;String, Double&gt; locationBasedRf,
-<span class="fc" id="L147">				@Nullable Double susceptibleRf, @Nullable Double vaccinatedRf, Restriction other) {</span>
-<span class="fc" id="L148">		this.remainingFraction = remainingFraction;</span>
-<span class="fc" id="L149">		this.ciCorrection = ciCorrection;</span>
-<span class="fc" id="L150">		this.maxGroupSize = maxGroupSize;</span>
-<span class="fc" id="L151">		this.reducedGroupSize = reducedGroupSize;</span>
-<span class="fc" id="L152">		this.closingHours = closingHours;</span>
-<span class="fc bfc" id="L153" title="All 2 branches covered.">		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);</span>
-<span class="fc" id="L154">		this.locationBasedRf = locationBasedRf;</span>
-<span class="fc" id="L155">		this.susceptibleRf = susceptibleRf;</span>
-<span class="fc" id="L156">		this.vaccinatedRf = vaccinatedRf;</span>
+<span class="fc" id="L154">				@Nullable Double susceptibleRf, @Nullable Double vaccinatedRf, Restriction other) {</span>
+<span class="fc" id="L155">		this.remainingFraction = remainingFraction;</span>
+<span class="fc" id="L156">		this.ciCorrection = ciCorrection;</span>
+<span class="fc" id="L157">		this.maxGroupSize = maxGroupSize;</span>
+<span class="fc" id="L158">		this.reducedGroupSize = reducedGroupSize;</span>
+<span class="fc" id="L159">		this.closingHours = closingHours;</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">		setCumulativeMaskUsage(other != null ? other.maskUsage : maskUsage);</span>
+<span class="fc" id="L161">		this.locationBasedRf = locationBasedRf;</span>
+<span class="fc" id="L162">		this.susceptibleRf = susceptibleRf;</span>
+<span class="fc" id="L163">		this.vaccinatedRf = vaccinatedRf;</span>
 
-<span class="pc bpc" id="L158" title="1 of 2 branches missed.">		if (closed != null) {</span>
-<span class="nc" id="L159">			this.closed = closed.stream().map(s -&gt; Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());</span>
+<span class="pc bpc" id="L165" title="1 of 2 branches missed.">		if (closed != null) {</span>
+<span class="nc" id="L166">			this.closed = closed.stream().map(s -&gt; Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());</span>
 		}
-<span class="fc" id="L161">	}</span>
+<span class="fc" id="L168">	}</span>
 
 
 	public void setLocationBasedRf(Map&lt;String, Double&gt; locationBasedRf) {
-<span class="fc" id="L165">		this.locationBasedRf = locationBasedRf;</span>
-<span class="fc" id="L166">	}</span>
+<span class="fc" id="L172">		this.locationBasedRf = locationBasedRf;</span>
+<span class="fc" id="L173">	}</span>
 
 	public Map&lt;String, Double&gt; getLocationBasedRf() {
-<span class="fc" id="L169">		return this.locationBasedRf;</span>
+<span class="fc" id="L176">		return this.locationBasedRf;</span>
 	}
 
 
@@ -175,29 +182,29 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-<span class="fc" id="L178">		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null,</span>
-<span class="fc" id="L179">				new ClosingHours(0, 0), Map.of(), new HashMap&lt;&gt;(), 1d, 1d);</span>
+<span class="fc" id="L185">		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null,</span>
+<span class="fc" id="L186">				new ClosingHours(0, 0), Map.of(), new HashMap&lt;&gt;(), 1d, 1d);</span>
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-<span class="fc" id="L186">		return new Restriction(remainingFraction, null, null, null,null, null, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L193">		return new Restriction(remainingFraction, null, null, null,null, null, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-<span class="fc" id="L193">		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L200">		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map&lt;FaceMask, Double&gt; maskUsage) {
-<span class="fc" id="L200">		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L207">		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
@@ -205,7 +212,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-<span class="nc" id="L208">		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance), new HashMap&lt;&gt;(), null, null);</span>
+<span class="nc" id="L215">		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance), new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
@@ -214,7 +221,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-<span class="fc" id="L217">		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate), new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L224">		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate), new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
@@ -222,28 +229,28 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map&lt;FaceMask, Double&gt; maskUsage) {
-<span class="fc" id="L225">		return new Restriction(null, null, null,null, null, null, maskUsage, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L232">		return new Restriction(null, null, null,null, null, null, maskUsage, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
 	 * Creates a restriction with certain facilities closed. Should not be combined with other restrictions.
 	 */
 	public static Restriction ofClosedFacilities(List&lt;String&gt; closed) {
-<span class="nc" id="L232">		return new Restriction(null, null, null,null, closed, null, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="nc" id="L239">		return new Restriction(null, null, null,null, closed, null, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-<span class="fc" id="L239">		return new Restriction(null, ciCorrection, null,null, null, null, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L246">		return new Restriction(null, ciCorrection, null,null, null, null, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
 	 * Creates a restriction with limited maximum group size of activities.
 	 */
 	public static Restriction ofGroupSize(int maxGroupSize) {
-<span class="fc" id="L246">		return new Restriction(null, null, maxGroupSize, null,null, null, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L253">		return new Restriction(null, null, maxGroupSize, null,null, null, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
@@ -253,7 +260,7 @@ public final class Restriction {
 	 * @param maxGroupSize maximum allowed group size
 	 */
 	public static Restriction ofReducedGroupSize(int maxGroupSize) {
-<span class="fc" id="L256">		return new Restriction(null, null, null, maxGroupSize, null, null, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L263">		return new Restriction(null, null, null, maxGroupSize, null, null, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
@@ -265,9 +272,9 @@ public final class Restriction {
 	 */
 	public static Restriction ofClosingHours(int fromHour, int toHour) {
 
-<span class="fc" id="L268">		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));</span>
+<span class="fc" id="L275">		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));</span>
 
-<span class="fc" id="L270">		return new Restriction(null, null, null, null,null, closed, null, new HashMap&lt;&gt;(), null, null);</span>
+<span class="fc" id="L277">		return new Restriction(null, null, null, null,null, closed, null, new HashMap&lt;&gt;(), null, null);</span>
 	}
 
 	/**
@@ -277,7 +284,7 @@ public final class Restriction {
 	 */
 	@Beta
 	public static Restriction ofSusceptibleRf(double remainingFraction) {
-<span class="fc" id="L280">		return new Restriction(null, null, null, null, null, null, null, new HashMap&lt;&gt;(), remainingFraction, null);</span>
+<span class="fc" id="L287">		return new Restriction(null, null, null, null, null, null, null, new HashMap&lt;&gt;(), remainingFraction, null);</span>
 	}
 
 	/**
@@ -287,14 +294,14 @@ public final class Restriction {
 	 */
 	@Beta
 	public static Restriction ofVaccinatedRf(double remainingFraction) {
-<span class="nc" id="L290">		return new Restriction(null, null, null, null, null, null, null, new HashMap&lt;&gt;(), null, remainingFraction);</span>
+<span class="nc" id="L297">		return new Restriction(null, null, null, null, null, null, null, new HashMap&lt;&gt;(), null, remainingFraction);</span>
 	}
 
 	/**
 	 * Creates a restriction with location-based remaining fractions.
 	 */
 	public static Restriction ofLocationBasedRf(Map&lt;String, Double&gt; locationBasedRf) {
-<span class="fc" id="L297">		return new Restriction(null, null, null, null, null, null, null, locationBasedRf, null, null);</span>
+<span class="fc" id="L304">		return new Restriction(null, null, null, null, null, null, null, locationBasedRf, null, null);</span>
 
 	}
 
@@ -303,33 +310,33 @@ public final class Restriction {
 	 */
 	public static Restriction fromConfig(Config config) {
 		// Could be integer or double
-<span class="fc" id="L306">		Map&lt;String, Number&gt; nameMap = (Map&lt;String, Number&gt;) config.getValue(&quot;masks&quot;).unwrapped();</span>
+<span class="fc" id="L313">		Map&lt;String, Number&gt; nameMap = (Map&lt;String, Number&gt;) config.getValue(&quot;masks&quot;).unwrapped();</span>
 
-<span class="fc" id="L308">		Map&lt;FaceMask, Double&gt; enumMap = new EnumMap&lt;&gt;(FaceMask.class);</span>
+<span class="fc" id="L315">		Map&lt;FaceMask, Double&gt; enumMap = new LinkedHashMap&lt;&gt;();</span>
 
-<span class="fc" id="L310">		Map&lt;String, Double&gt; locationBasedRf = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L317">		Map&lt;String, Double&gt; locationBasedRf = new HashMap&lt;&gt;();</span>
 
-<span class="pc bpc" id="L312" title="1 of 2 branches missed.">		if (!config.getIsNull(&quot;locationBasedRf&quot;)) {</span>
-<span class="fc" id="L313">			Map&lt;String, Double&gt; valueFromConfig = (Map&lt;String, Double&gt;) config.getValue(&quot;locationBasedRf&quot;).unwrapped();</span>
-<span class="pc bpc" id="L314" title="1 of 2 branches missed.">			if (valueFromConfig != null) {</span>
-<span class="fc" id="L315">				locationBasedRf = valueFromConfig;</span>
+<span class="pc bpc" id="L319" title="1 of 2 branches missed.">		if (!config.getIsNull(&quot;locationBasedRf&quot;)) {</span>
+<span class="fc" id="L320">			Map&lt;String, Double&gt; valueFromConfig = (Map&lt;String, Double&gt;) config.getValue(&quot;locationBasedRf&quot;).unwrapped();</span>
+<span class="pc bpc" id="L321" title="1 of 2 branches missed.">			if (valueFromConfig != null) {</span>
+<span class="fc" id="L322">				locationBasedRf = valueFromConfig;</span>
 			}
 		}
 
 
-<span class="pc bpc" id="L320" title="1 of 2 branches missed.">		if (nameMap != null)</span>
-<span class="fc" id="L321">			nameMap.forEach((k, v) -&gt; enumMap.put(FaceMask.valueOf(k), v.doubleValue()));</span>
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">		if (nameMap != null)</span>
+<span class="fc" id="L328">			nameMap.forEach((k, v) -&gt; enumMap.put(FaceMask.of(k), v.doubleValue()));</span>
 
-<span class="fc" id="L323">		return new Restriction(</span>
-<span class="fc bfc" id="L324" title="All 2 branches covered.">				config.getIsNull(&quot;fraction&quot;) ? null : config.getDouble(&quot;fraction&quot;),</span>
-<span class="fc bfc" id="L325" title="All 2 branches covered.">				config.getIsNull(&quot;ciCorrection&quot;) ? null : config.getDouble(&quot;ciCorrection&quot;),</span>
-<span class="fc bfc" id="L326" title="All 2 branches covered.">				config.getIsNull(&quot;maxGroupSize&quot;) ? null : config.getInt(&quot;maxGroupSize&quot;),</span>
-<span class="pc bpc" id="L327" title="1 of 4 branches missed.">				!config.hasPath(&quot;reducedGroupSize&quot;) || config.getIsNull(&quot;reducedGroupSize&quot;) ? null : config.getInt(&quot;reducedGroupSize&quot;),</span>
-<span class="pc bpc" id="L328" title="3 of 4 branches missed.">				!config.hasPath(&quot;closed&quot;) || config.getIsNull(&quot;closed&quot;) ? null : config.getStringList(&quot;closed&quot;),</span>
-<span class="pc bpc" id="L329" title="1 of 4 branches missed.">				!config.hasPath(&quot;closingHours&quot;) || config.getIsNull(&quot;closingHours&quot;) ? null : asClosingHours(config.getIntList(&quot;closingHours&quot;)),</span>
+<span class="fc" id="L330">		return new Restriction(</span>
+<span class="fc bfc" id="L331" title="All 2 branches covered.">				config.getIsNull(&quot;fraction&quot;) ? null : config.getDouble(&quot;fraction&quot;),</span>
+<span class="fc bfc" id="L332" title="All 2 branches covered.">				config.getIsNull(&quot;ciCorrection&quot;) ? null : config.getDouble(&quot;ciCorrection&quot;),</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">				config.getIsNull(&quot;maxGroupSize&quot;) ? null : config.getInt(&quot;maxGroupSize&quot;),</span>
+<span class="pc bpc" id="L334" title="1 of 4 branches missed.">				!config.hasPath(&quot;reducedGroupSize&quot;) || config.getIsNull(&quot;reducedGroupSize&quot;) ? null : config.getInt(&quot;reducedGroupSize&quot;),</span>
+<span class="pc bpc" id="L335" title="3 of 4 branches missed.">				!config.hasPath(&quot;closed&quot;) || config.getIsNull(&quot;closed&quot;) ? null : config.getStringList(&quot;closed&quot;),</span>
+<span class="pc bpc" id="L336" title="1 of 4 branches missed.">				!config.hasPath(&quot;closingHours&quot;) || config.getIsNull(&quot;closingHours&quot;) ? null : asClosingHours(config.getIntList(&quot;closingHours&quot;)),</span>
 				enumMap, locationBasedRf,
-<span class="fc bfc" id="L331" title="All 2 branches covered.">				config.getIsNull(&quot;susceptibleRf&quot;) ? null : config.getDouble(&quot;susceptibleRf&quot;),</span>
-<span class="fc bfc" id="L332" title="All 2 branches covered.">				config.getIsNull(&quot;vaccinatedRf&quot;) ? null : config.getDouble(&quot;vaccinatedRf&quot;),</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">				config.getIsNull(&quot;susceptibleRf&quot;) ? null : config.getDouble(&quot;susceptibleRf&quot;),</span>
+<span class="fc bfc" id="L339" title="All 2 branches covered.">				config.getIsNull(&quot;vaccinatedRf&quot;) ? null : config.getDouble(&quot;vaccinatedRf&quot;),</span>
 				null
 		);
 	}
@@ -339,21 +346,21 @@ public final class Restriction {
 	 */
 	private static ClosingHours asClosingHours(List&lt;Integer&gt; closingHours) {
 
-<span class="fc bfc" id="L342" title="All 2 branches covered.">		if (closingHours == null)</span>
-<span class="fc" id="L343">			return null;</span>
+<span class="fc bfc" id="L349" title="All 2 branches covered.">		if (closingHours == null)</span>
+<span class="fc" id="L350">			return null;</span>
 
-<span class="fc" id="L345">		return new ClosingHours(closingHours.get(0), closingHours.get(1));</span>
+<span class="fc" id="L352">		return new ClosingHours(closingHours.get(0), closingHours.get(1));</span>
 	}
 
 	/**
 	 * Creates a copy of a restriction.
 	 */
 	static Restriction clone(Restriction restriction) {
-<span class="fc" id="L352">		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.maxGroupSize, restriction.reducedGroupSize,</span>
-<span class="pc bpc" id="L353" title="1 of 2 branches missed.">				restriction.closed == null ? null : restriction.closed.stream().map(Objects::toString).collect(Collectors.toList()),</span>
+<span class="fc" id="L359">		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.maxGroupSize, restriction.reducedGroupSize,</span>
+<span class="pc bpc" id="L360" title="1 of 2 branches missed.">				restriction.closed == null ? null : restriction.closed.stream().map(Objects::toString).collect(Collectors.toList()),</span>
 				restriction.closingHours,
 				null,
-<span class="pc bpc" id="L356" title="1 of 2 branches missed.">				restriction.locationBasedRf == null ? new HashMap&lt;&gt;() : restriction.locationBasedRf,</span>
+<span class="pc bpc" id="L363" title="1 of 2 branches missed.">				restriction.locationBasedRf == null ? new HashMap&lt;&gt;() : restriction.locationBasedRf,</span>
 				restriction.susceptibleRf,
 				restriction.vaccinatedRf,
 				restriction);
@@ -364,21 +371,21 @@ public final class Restriction {
 	 */
 	public FaceMask determineMask(EpisimSplittableRandom rnd) {
 
-<span class="fc bfc" id="L367" title="All 2 branches covered.">		if (maskUsage.isEmpty()) return FaceMask.NONE;</span>
+<span class="fc bfc" id="L374" title="All 2 branches covered.">		if (maskUsage.isEmpty()) return FaceMask.NONE;</span>
 
-<span class="fc" id="L369">		double p = Double.NaN;</span>
-<span class="pc bpc" id="L370" title="1 of 2 branches missed.">		for (Map.Entry&lt;FaceMask, Double&gt; e : maskUsage.entrySet()) {</span>
+<span class="fc" id="L376">		double p = Double.NaN;</span>
+<span class="pc bpc" id="L377" title="1 of 2 branches missed.">		for (Map.Entry&lt;FaceMask, Double&gt; e : maskUsage.entrySet()) {</span>
 
-<span class="fc bfc" id="L372" title="All 2 branches covered.">			if (e.getValue() == 1d) return e.getKey();</span>
-<span class="fc bfc" id="L373" title="All 2 branches covered.">			else if (Double.isNaN(p))</span>
-<span class="fc" id="L374">				p =rnd.nextDouble();</span>
+<span class="fc bfc" id="L379" title="All 2 branches covered.">			if (e.getValue() == 1d) return e.getKey();</span>
+<span class="fc bfc" id="L380" title="All 2 branches covered.">			else if (Double.isNaN(p))</span>
+<span class="fc" id="L381">				p =rnd.nextDouble();</span>
 
-<span class="fc bfc" id="L376" title="All 2 branches covered.">			if (p &lt; e.getValue())</span>
-<span class="fc" id="L377">				return e.getKey();</span>
+<span class="fc bfc" id="L383" title="All 2 branches covered.">			if (p &lt; e.getValue())</span>
+<span class="fc" id="L384">				return e.getKey();</span>
 
-<span class="fc" id="L379">		}</span>
+<span class="fc" id="L386">		}</span>
 
-<span class="nc" id="L381">		throw new IllegalStateException(&quot;Could not determine mask. Probabilities are likely wrong.&quot;);</span>
+<span class="nc" id="L388">		throw new IllegalStateException(&quot;Could not determine mask. Probabilities are likely wrong.&quot;);</span>
 	}
 
 	/**
@@ -390,19 +397,19 @@ public final class Restriction {
 	 */
 	double calculateOverlap(double sod, boolean adjustFrom) {
 		// seconds of day
-<span class="fc" id="L393">		ClosingHours ch = closingHours;</span>
+<span class="fc" id="L400">		ClosingHours ch = closingHours;</span>
 
-<span class="fc bfc" id="L395" title="All 2 branches covered.">		if (adjustFrom) {</span>
-<span class="fc bfc" id="L396" title="All 2 branches covered.">			if (ch.overnight)</span>
-<span class="fc bfc" id="L397" title="All 2 branches covered.">				return sod &gt;= ch.from ? ch.length - (sod - ch.from) : ch.length - (sod + 86400 - ch.from);</span>
+<span class="fc bfc" id="L402" title="All 2 branches covered.">		if (adjustFrom) {</span>
+<span class="fc bfc" id="L403" title="All 2 branches covered.">			if (ch.overnight)</span>
+<span class="fc bfc" id="L404" title="All 2 branches covered.">				return sod &gt;= ch.from ? ch.length - (sod - ch.from) : ch.length - (sod + 86400 - ch.from);</span>
 
-<span class="fc" id="L399">			return ch.length - (sod - ch.from);</span>
+<span class="fc" id="L406">			return ch.length - (sod - ch.from);</span>
 		} else {
-<span class="fc bfc" id="L401" title="All 2 branches covered.">			if (ch.overnight)</span>
-<span class="fc bfc" id="L402" title="All 2 branches covered.">				return sod &lt;= ch.to ? ch.length - (ch.to - sod) : sod - ch.from;</span>
+<span class="fc bfc" id="L408" title="All 2 branches covered.">			if (ch.overnight)</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">				return sod &lt;= ch.to ? ch.length - (ch.to - sod) : sod - ch.from;</span>
 
 
-<span class="fc" id="L405">			return ch.length - (ch.to - sod);</span>
+<span class="fc" id="L412">			return ch.length - (ch.to - sod);</span>
 		}
 
 	}
@@ -414,38 +421,38 @@ public final class Restriction {
 	 */
 	public double overlapWithClosingHour(double from, double to) {
 
-<span class="pc bpc" id="L417" title="1 of 2 branches missed.">		if (closingHours == null)</span>
-<span class="nc" id="L418">			return 0;</span>
+<span class="pc bpc" id="L424" title="1 of 2 branches missed.">		if (closingHours == null)</span>
+<span class="nc" id="L425">			return 0;</span>
 
 		// closing of 0-24 needs to be handled separately, as overlap would be infinite
-<span class="fc bfc" id="L421" title="All 2 branches covered.">		if (closingHours.length &gt;= 86400)</span>
-<span class="fc" id="L422">			return Integer.MAX_VALUE;</span>
+<span class="fc bfc" id="L428" title="All 2 branches covered.">		if (closingHours.length &gt;= 86400)</span>
+<span class="fc" id="L429">			return Integer.MAX_VALUE;</span>
 
-<span class="fc" id="L424">		double fSod = from % 86400;</span>
-<span class="fc" id="L425">		double tSod = to % 86400;</span>
-<span class="fc" id="L426">		ClosingHours ch = closingHours;</span>
+<span class="fc" id="L431">		double fSod = from % 86400;</span>
+<span class="fc" id="L432">		double tSod = to % 86400;</span>
+<span class="fc" id="L433">		ClosingHours ch = closingHours;</span>
 
-<span class="fc" id="L428">		boolean containsFrom = ch.contains(fSod);</span>
-<span class="fc" id="L429">		boolean containsTo = ch.contains(tSod);</span>
-<span class="fc bfc" id="L430" title="All 2 branches covered.">		boolean actOvernight = tSod &lt; fSod;</span>
+<span class="fc" id="L435">		boolean containsFrom = ch.contains(fSod);</span>
+<span class="fc" id="L436">		boolean containsTo = ch.contains(tSod);</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">		boolean actOvernight = tSod &lt; fSod;</span>
 
-<span class="fc bfc" id="L432" title="All 4 branches covered.">		if (containsFrom &amp;&amp; containsTo) {</span>
+<span class="fc bfc" id="L439" title="All 4 branches covered.">		if (containsFrom &amp;&amp; containsTo) {</span>
 			// whole time nullified
-<span class="fc" id="L434">			return to - from;</span>
-<span class="fc bfc" id="L435" title="All 2 branches covered.">		} else if (containsFrom) {</span>
-<span class="fc" id="L436">			return calculateOverlap(fSod, true);</span>
-<span class="fc bfc" id="L437" title="All 2 branches covered.">		} else if (containsTo) {</span>
-<span class="fc" id="L438">			return calculateOverlap(tSod, false);</span>
+<span class="fc" id="L441">			return to - from;</span>
+<span class="fc bfc" id="L442" title="All 2 branches covered.">		} else if (containsFrom) {</span>
+<span class="fc" id="L443">			return calculateOverlap(fSod, true);</span>
+<span class="fc bfc" id="L444" title="All 2 branches covered.">		} else if (containsTo) {</span>
+<span class="fc" id="L445">			return calculateOverlap(tSod, false);</span>
 
-<span class="fc bfc" id="L440" title="All 4 branches covered.">		} else if (ch.includedIn(fSod, tSod) &amp;&amp; (ch.overnight == actOvernight)) {</span>
+<span class="fc bfc" id="L447" title="All 4 branches covered.">		} else if (ch.includedIn(fSod, tSod) &amp;&amp; (ch.overnight == actOvernight)) {</span>
 			// reduce by time of closing hour length
-<span class="fc" id="L442">			return ch.length;</span>
-<span class="pc bpc" id="L443" title="1 of 6 branches missed.">		} else if (actOvernight &amp;&amp; !ch.overnight &amp;&amp; tSod &gt;= ch.to) {</span>
+<span class="fc" id="L449">			return ch.length;</span>
+<span class="pc bpc" id="L450" title="1 of 6 branches missed.">		} else if (actOvernight &amp;&amp; !ch.overnight &amp;&amp; tSod &gt;= ch.to) {</span>
 			// also covered completely
-<span class="fc" id="L445">			return ch.length;</span>
+<span class="fc" id="L452">			return ch.length;</span>
 		}
 
-<span class="fc" id="L448">		return 0;</span>
+<span class="fc" id="L455">		return 0;</span>
 	}
 
 	/**
@@ -453,7 +460,7 @@ public final class Restriction {
 	 */
 	@Override
 	public String toString() {
-<span class="fc" id="L456">		return String.format(Locale.ENGLISH, &quot;%.2f_%.2f_%s&quot;, remainingFraction, ciCorrection, maskUsage);</span>
+<span class="fc" id="L463">		return String.format(Locale.ENGLISH, &quot;%.2f_%.2f_%s&quot;, remainingFraction, ciCorrection, maskUsage);</span>
 	}
 
 	/**
@@ -461,40 +468,39 @@ public final class Restriction {
 	 */
 	void update(Restriction r) {
 		// All values may be optional and are only set if present
-<span class="fc bfc" id="L464" title="All 2 branches covered.">		if (r.getRemainingFraction() != null)</span>
-<span class="fc" id="L465">			remainingFraction = r.getRemainingFraction();</span>
+<span class="fc bfc" id="L471" title="All 2 branches covered.">		if (r.getRemainingFraction() != null)</span>
+<span class="fc" id="L472">			remainingFraction = r.getRemainingFraction();</span>
 
-<span class="fc bfc" id="L467" title="All 2 branches covered.">		if (r.getCiCorrection() != null)</span>
-<span class="fc" id="L468">			ciCorrection = r.getCiCorrection();</span>
+<span class="fc bfc" id="L474" title="All 2 branches covered.">		if (r.getCiCorrection() != null)</span>
+<span class="fc" id="L475">			ciCorrection = r.getCiCorrection();</span>
 
-<span class="fc bfc" id="L470" title="All 2 branches covered.">		if (r.getMaxGroupSize() != null)</span>
-<span class="fc" id="L471">			maxGroupSize = r.getMaxGroupSize();</span>
+<span class="fc bfc" id="L477" title="All 2 branches covered.">		if (r.getMaxGroupSize() != null)</span>
+<span class="fc" id="L478">			maxGroupSize = r.getMaxGroupSize();</span>
 
-<span class="fc bfc" id="L473" title="All 2 branches covered.">		if (r.getReducedGroupSize() != null)</span>
-<span class="fc" id="L474">			reducedGroupSize = r.getReducedGroupSize();</span>
+<span class="fc bfc" id="L480" title="All 2 branches covered.">		if (r.getReducedGroupSize() != null)</span>
+<span class="fc" id="L481">			reducedGroupSize = r.getReducedGroupSize();</span>
 
-<span class="fc bfc" id="L476" title="All 2 branches covered.">		if (r.getSusceptibleRf() != null)</span>
-<span class="fc" id="L477">			susceptibleRf = r.getSusceptibleRf();</span>
+<span class="fc bfc" id="L483" title="All 2 branches covered.">		if (r.getSusceptibleRf() != null)</span>
+<span class="fc" id="L484">			susceptibleRf = r.getSusceptibleRf();</span>
 
-<span class="pc bpc" id="L479" title="1 of 2 branches missed.">		if (r.getVaccinatedRf() != null)</span>
-<span class="nc" id="L480">			vaccinatedRf = r.getVaccinatedRf();</span>
+<span class="pc bpc" id="L486" title="1 of 2 branches missed.">		if (r.getVaccinatedRf() != null)</span>
+<span class="nc" id="L487">			vaccinatedRf = r.getVaccinatedRf();</span>
 
-<span class="pc bpc" id="L482" title="1 of 2 branches missed.">		if (r.closed != null)</span>
-<span class="nc" id="L483">			closed = r.closed;</span>
+<span class="pc bpc" id="L489" title="1 of 2 branches missed.">		if (r.closed != null)</span>
+<span class="nc" id="L490">			closed = r.closed;</span>
 
-<span class="fc bfc" id="L485" title="All 2 branches covered.">		if (r.closingHours != null)</span>
-<span class="fc" id="L486">			closingHours = r.closingHours;</span>
+<span class="fc bfc" id="L492" title="All 2 branches covered.">		if (r.closingHours != null)</span>
+<span class="fc" id="L493">			closingHours = r.closingHours;</span>
 
-<span class="fc bfc" id="L488" title="All 2 branches covered.">		if (!r.maskUsage.isEmpty()) {</span>
-<span class="fc" id="L489">			maskUsage.clear();</span>
-<span class="fc" id="L490">			maskUsage.putAll(r.maskUsage);</span>
+<span class="fc bfc" id="L495" title="All 2 branches covered.">		if (!r.maskUsage.isEmpty()) {</span>
+<span class="fc" id="L496">			setCumulativeMaskUsage(r.maskUsage);</span>
 		}
-<span class="pc bpc" id="L492" title="1 of 4 branches missed.">		if (r.locationBasedRf !=null &amp;&amp; !r.locationBasedRf.isEmpty()) {</span>
-<span class="fc" id="L493">			locationBasedRf = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L494">			locationBasedRf.putAll(r.locationBasedRf);</span>
+<span class="pc bpc" id="L498" title="1 of 4 branches missed.">		if (r.locationBasedRf !=null &amp;&amp; !r.locationBasedRf.isEmpty()) {</span>
+<span class="fc" id="L499">			locationBasedRf = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L500">			locationBasedRf.putAll(r.locationBasedRf);</span>
 
 		}
-<span class="fc" id="L497">	}</span>
+<span class="fc" id="L503">	}</span>
 
 	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
@@ -506,170 +512,189 @@ public final class Restriction {
 	 */
 	void merge(Map&lt;String, Object&gt; restriction) {
 
-<span class="fc" id="L509">		Double otherRf = (Double) restriction.get(&quot;fraction&quot;);</span>
-<span class="fc" id="L510">		Double otherE = (Double) restriction.get(&quot;ciCorrection&quot;);</span>
-<span class="fc" id="L511">		Integer otherGroup = (Integer) restriction.get(&quot;maxGroupSize&quot;);</span>
-<span class="fc" id="L512">		Integer otherReduced = (Integer) restriction.get(&quot;reducedGroupSize&quot;);</span>
-<span class="fc" id="L513">		Double otherSRf = (Double) restriction.get(&quot;susceptibleRf&quot;);</span>
-<span class="fc" id="L514">		Double otherVRf = (Double) restriction.get(&quot;vaccinatedRf&quot;);</span>
-<span class="fc" id="L515">		ClosingHours otherClosingH = asClosingHours((List&lt;Integer&gt;) restriction.get(&quot;closingHours&quot;));</span>
+<span class="fc" id="L515">		Double otherRf = (Double) restriction.get(&quot;fraction&quot;);</span>
+<span class="fc" id="L516">		Double otherE = (Double) restriction.get(&quot;ciCorrection&quot;);</span>
+<span class="fc" id="L517">		Integer otherGroup = (Integer) restriction.get(&quot;maxGroupSize&quot;);</span>
+<span class="fc" id="L518">		Integer otherReduced = (Integer) restriction.get(&quot;reducedGroupSize&quot;);</span>
+<span class="fc" id="L519">		Double otherSRf = (Double) restriction.get(&quot;susceptibleRf&quot;);</span>
+<span class="fc" id="L520">		Double otherVRf = (Double) restriction.get(&quot;vaccinatedRf&quot;);</span>
+<span class="fc" id="L521">		ClosingHours otherClosingH = asClosingHours((List&lt;Integer&gt;) restriction.get(&quot;closingHours&quot;));</span>
 
-<span class="fc" id="L517">		Map&lt;FaceMask, Double&gt; otherMasks = new EnumMap&lt;&gt;(FaceMask.class);</span>
-<span class="fc" id="L518">		((Map&lt;String, Double&gt;) restriction.get(&quot;masks&quot;))</span>
-<span class="fc" id="L519">				.forEach((k, v) -&gt; otherMasks.put(FaceMask.valueOf(k), v));</span>
+<span class="fc" id="L523">		Map&lt;FaceMask, Double&gt; otherMasks = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L524">		((Map&lt;String, Double&gt;) restriction.get(&quot;masks&quot;))</span>
+<span class="fc" id="L525">				.forEach((k, v) -&gt; otherMasks.put(FaceMask.of(k), v));</span>
 
-<span class="fc" id="L521">		Map&lt;String, Double&gt; otherLocationBasedRf = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L522">		((Map&lt;String, Double&gt;) restriction.get(&quot;locationBasedRf&quot;)).forEach(((key, value) -&gt; otherLocationBasedRf.put(key, value)));</span>
+<span class="fc" id="L527">		Map&lt;String, Double&gt; otherLocationBasedRf = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L528">		((Map&lt;String, Double&gt;) restriction.get(&quot;locationBasedRf&quot;)).forEach(((key, value) -&gt; otherLocationBasedRf.put(key, value)));</span>
 
 		// If the new and old restrictions have equal Rfs, warn. If the new restriction does not
 		// have a value for Rf, keep the old value and use its localRf when the new one is absent.
-<span class="pc bpc" id="L526" title="1 of 6 branches missed.">		if (remainingFraction != null &amp;&amp; otherRf != null &amp;&amp; !remainingFraction.equals(otherRf)) {</span>
-<span class="fc" id="L527">			log.warn(&quot;Duplicated remainingFraction &quot; + remainingFraction + &quot; and &quot; + otherRf);</span>
-<span class="fc bfc" id="L528" title="All 2 branches covered.">		} else if (remainingFraction == null) {</span>
-<span class="fc" id="L529">			remainingFraction = otherRf;</span>
+<span class="pc bpc" id="L532" title="1 of 6 branches missed.">		if (remainingFraction != null &amp;&amp; otherRf != null &amp;&amp; !remainingFraction.equals(otherRf)) {</span>
+<span class="fc" id="L533">			log.warn(&quot;Duplicated remainingFraction &quot; + remainingFraction + &quot; and &quot; + otherRf);</span>
+<span class="fc bfc" id="L534" title="All 2 branches covered.">		} else if (remainingFraction == null) {</span>
+<span class="fc" id="L535">			remainingFraction = otherRf;</span>
 
-<span class="pc bpc" id="L531" title="1 of 6 branches missed.">			if (!locationBasedRf.isEmpty() &amp;&amp; !otherLocationBasedRf.isEmpty() &amp;&amp; !locationBasedRf.equals(otherLocationBasedRf)) {</span>
-<span class="nc" id="L532">				log.warn(&quot;Duplicated locationBasedRf usage; existing value=&quot; + locationBasedRf + &quot;; new value=&quot; + otherLocationBasedRf + &quot;; keeping existing value.&quot;);</span>
-<span class="fc bfc" id="L533" title="All 2 branches covered.">			} else if (locationBasedRf.isEmpty()) {</span>
-<span class="fc" id="L534">				locationBasedRf.putAll(otherLocationBasedRf);</span>
+<span class="pc bpc" id="L537" title="1 of 6 branches missed.">			if (!locationBasedRf.isEmpty() &amp;&amp; !otherLocationBasedRf.isEmpty() &amp;&amp; !locationBasedRf.equals(otherLocationBasedRf)) {</span>
+<span class="nc" id="L538">				log.warn(&quot;Duplicated locationBasedRf usage; existing value=&quot; + locationBasedRf + &quot;; new value=&quot; + otherLocationBasedRf + &quot;; keeping existing value.&quot;);</span>
+<span class="fc bfc" id="L539" title="All 2 branches covered.">			} else if (locationBasedRf.isEmpty()) {</span>
+<span class="fc" id="L540">				locationBasedRf.putAll(otherLocationBasedRf);</span>
 			}
 		} else {
-<span class="pc bpc" id="L537" title="2 of 4 branches missed.">			if ((locationBasedRf == null || locationBasedRf.isEmpty())</span>
-<span class="pc bpc" id="L538" title="1 of 4 branches missed.">					&amp;&amp; (!otherLocationBasedRf.isEmpty() || otherLocationBasedRf != null)) {</span>
+<span class="pc bpc" id="L543" title="2 of 4 branches missed.">			if ((locationBasedRf == null || locationBasedRf.isEmpty())</span>
+<span class="pc bpc" id="L544" title="1 of 4 branches missed.">					&amp;&amp; (!otherLocationBasedRf.isEmpty() || otherLocationBasedRf != null)) {</span>
 
-<span class="fc" id="L540">				log.warn(&quot;localRf removed during merge, as new remainingFraction was provided&quot;);</span>
+<span class="fc" id="L546">				log.warn(&quot;localRf removed during merge, as new remainingFraction was provided&quot;);</span>
 			}
 		}
 
 
-<span class="pc bpc" id="L545" title="3 of 6 branches missed.">		if (ciCorrection != null &amp;&amp; otherE != null &amp;&amp; !ciCorrection.equals(otherE))</span>
-<span class="nc" id="L546">			log.warn(&quot;Duplicated ci correction &quot; + ciCorrection + &quot; and &quot; + otherE);</span>
-<span class="fc bfc" id="L547" title="All 2 branches covered.">		else if (ciCorrection == null)</span>
-<span class="fc" id="L548">			ciCorrection = otherE;</span>
+<span class="pc bpc" id="L551" title="3 of 6 branches missed.">		if (ciCorrection != null &amp;&amp; otherE != null &amp;&amp; !ciCorrection.equals(otherE))</span>
+<span class="nc" id="L552">			log.warn(&quot;Duplicated ci correction &quot; + ciCorrection + &quot; and &quot; + otherE);</span>
+<span class="fc bfc" id="L553" title="All 2 branches covered.">		else if (ciCorrection == null)</span>
+<span class="fc" id="L554">			ciCorrection = otherE;</span>
 
-<span class="pc bpc" id="L550" title="3 of 6 branches missed.">		if (maxGroupSize != null &amp;&amp; otherGroup != null &amp;&amp; !maxGroupSize.equals(otherGroup))</span>
-<span class="nc" id="L551">			log.warn(&quot;Duplicated max group size &quot; + maxGroupSize + &quot; and &quot; + otherGroup);</span>
-<span class="fc bfc" id="L552" title="All 2 branches covered.">		else if (maxGroupSize == null)</span>
-<span class="fc" id="L553">			maxGroupSize = otherGroup;</span>
+<span class="pc bpc" id="L556" title="3 of 6 branches missed.">		if (maxGroupSize != null &amp;&amp; otherGroup != null &amp;&amp; !maxGroupSize.equals(otherGroup))</span>
+<span class="nc" id="L557">			log.warn(&quot;Duplicated max group size &quot; + maxGroupSize + &quot; and &quot; + otherGroup);</span>
+<span class="fc bfc" id="L558" title="All 2 branches covered.">		else if (maxGroupSize == null)</span>
+<span class="fc" id="L559">			maxGroupSize = otherGroup;</span>
 
-<span class="pc bpc" id="L555" title="3 of 6 branches missed.">		if (reducedGroupSize != null &amp;&amp; otherReduced != null &amp;&amp; !reducedGroupSize.equals(otherReduced))</span>
-<span class="nc" id="L556">			log.warn(&quot;Duplicated reduced group size &quot; + reducedGroupSize + &quot; and &quot; + otherReduced);</span>
-<span class="fc bfc" id="L557" title="All 2 branches covered.">		else if (reducedGroupSize == null)</span>
-<span class="fc" id="L558">			reducedGroupSize = otherReduced;</span>
+<span class="pc bpc" id="L561" title="3 of 6 branches missed.">		if (reducedGroupSize != null &amp;&amp; otherReduced != null &amp;&amp; !reducedGroupSize.equals(otherReduced))</span>
+<span class="nc" id="L562">			log.warn(&quot;Duplicated reduced group size &quot; + reducedGroupSize + &quot; and &quot; + otherReduced);</span>
+<span class="fc bfc" id="L563" title="All 2 branches covered.">		else if (reducedGroupSize == null)</span>
+<span class="fc" id="L564">			reducedGroupSize = otherReduced;</span>
 
-<span class="pc bpc" id="L560" title="1 of 6 branches missed.">		if (closingHours != null &amp;&amp; otherClosingH != null &amp;&amp; !closingHours.equals(otherClosingH))</span>
-<span class="fc" id="L561">			log.warn(&quot;Duplicated max closing hours &quot; + closingHours + &quot; and &quot; + otherClosingH);</span>
-<span class="fc bfc" id="L562" title="All 2 branches covered.">		else if (closingHours == null)</span>
-<span class="fc" id="L563">			closingHours = otherClosingH;</span>
+<span class="pc bpc" id="L566" title="1 of 6 branches missed.">		if (closingHours != null &amp;&amp; otherClosingH != null &amp;&amp; !closingHours.equals(otherClosingH))</span>
+<span class="fc" id="L567">			log.warn(&quot;Duplicated max closing hours &quot; + closingHours + &quot; and &quot; + otherClosingH);</span>
+<span class="fc bfc" id="L568" title="All 2 branches covered.">		else if (closingHours == null)</span>
+<span class="fc" id="L569">			closingHours = otherClosingH;</span>
 
-<span class="pc bpc" id="L565" title="5 of 6 branches missed.">		if (susceptibleRf != null &amp;&amp; otherSRf != null &amp;&amp; !susceptibleRf.equals(otherSRf))</span>
-<span class="nc" id="L566">			log.warn(&quot;Duplicated susceptible fraction &quot; + susceptibleRf + &quot; and &quot; + otherSRf);</span>
-<span class="pc bpc" id="L567" title="1 of 2 branches missed.">		else if (susceptibleRf == null)</span>
-<span class="fc" id="L568">			susceptibleRf = otherSRf;</span>
+<span class="pc bpc" id="L571" title="5 of 6 branches missed.">		if (susceptibleRf != null &amp;&amp; otherSRf != null &amp;&amp; !susceptibleRf.equals(otherSRf))</span>
+<span class="nc" id="L572">			log.warn(&quot;Duplicated susceptible fraction &quot; + susceptibleRf + &quot; and &quot; + otherSRf);</span>
+<span class="pc bpc" id="L573" title="1 of 2 branches missed.">		else if (susceptibleRf == null)</span>
+<span class="fc" id="L574">			susceptibleRf = otherSRf;</span>
 
-<span class="pc bpc" id="L570" title="5 of 6 branches missed.">		if (vaccinatedRf != null &amp;&amp; otherVRf != null &amp;&amp; !vaccinatedRf.equals(otherVRf))</span>
-<span class="nc" id="L571">			log.warn(&quot;Duplicated vaccinated fraction &quot; + vaccinatedRf + &quot; and &quot; + otherVRf);</span>
-<span class="pc bpc" id="L572" title="1 of 2 branches missed.">		else if (vaccinatedRf == null)</span>
-<span class="fc" id="L573">			vaccinatedRf = otherVRf;</span>
+<span class="pc bpc" id="L576" title="5 of 6 branches missed.">		if (vaccinatedRf != null &amp;&amp; otherVRf != null &amp;&amp; !vaccinatedRf.equals(otherVRf))</span>
+<span class="nc" id="L577">			log.warn(&quot;Duplicated vaccinated fraction &quot; + vaccinatedRf + &quot; and &quot; + otherVRf);</span>
+<span class="pc bpc" id="L578" title="1 of 2 branches missed.">		else if (vaccinatedRf == null)</span>
+<span class="fc" id="L579">			vaccinatedRf = otherVRf;</span>
 
-<span class="pc bpc" id="L575" title="3 of 6 branches missed.">		if (!maskUsage.isEmpty() &amp;&amp; !otherMasks.isEmpty() &amp;&amp; !maskUsage.equals(otherMasks)) {</span>
-<span class="nc" id="L576">			log.warn(&quot;Duplicated mask usage; existing value=&quot; + maskUsage + &quot;; new value=&quot; + otherMasks + &quot;; keeping existing value.&quot;);</span>
-<span class="nc" id="L577">			log.warn(&quot;(full new restriction=&quot; + restriction + &quot;)&quot;);</span>
-<span class="fc bfc" id="L578" title="All 2 branches covered.">		} else if (maskUsage.isEmpty())</span>
-<span class="fc" id="L579">			maskUsage.putAll(otherMasks);</span>
+<span class="pc bpc" id="L581" title="3 of 6 branches missed.">		if (!maskUsage.isEmpty() &amp;&amp; !otherMasks.isEmpty() &amp;&amp; !maskUsage.equals(otherMasks)) {</span>
+<span class="nc" id="L582">			log.warn(&quot;Duplicated mask usage; existing value=&quot; + maskUsage + &quot;; new value=&quot; + otherMasks + &quot;; keeping existing value.&quot;);</span>
+<span class="nc" id="L583">			log.warn(&quot;(full new restriction=&quot; + restriction + &quot;)&quot;);</span>
+<span class="fc bfc" id="L584" title="All 2 branches covered.">		} else if (maskUsage.isEmpty())</span>
+<span class="fc" id="L585">			setCumulativeMaskUsage(otherMasks);</span>
 
-<span class="fc" id="L581">	}</span>
+<span class="fc" id="L587">	}</span>
+
+	/**
+	 * Replaces the mask usage with the given cumulative probabilities, ordered ascending by probability.
+	 * {@link #determineMask(EpisimSplittableRandom)} relies on this order, but maps read from a config
+	 * (e.g. {@link Config#getValue(String)} unwrapped) do not preserve it. Equal probabilities keep the order of the
+	 * standard masks, followed by custom masks sorted by name, as in the constructor computing the probabilities.
+	 */
+	private void setCumulativeMaskUsage(@Nullable Map&lt;FaceMask, Double&gt; cumulative) {
+<span class="fc" id="L596">		maskUsage.clear();</span>
+<span class="pc bpc" id="L597" title="1 of 2 branches missed.">		if (cumulative == null)</span>
+<span class="nc" id="L598">			return;</span>
+
+<span class="fc" id="L600">		List&lt;FaceMask&gt; standard = FaceMask.values();</span>
+<span class="fc" id="L601">		cumulative.entrySet().stream()</span>
+<span class="fc" id="L602">				.sorted(Map.Entry.&lt;FaceMask, Double&gt;comparingByValue()</span>
+<span class="pc bpc" id="L603" title="1 of 2 branches missed.">						.thenComparingInt(e -&gt; standard.contains(e.getKey()) ? standard.indexOf(e.getKey()) : standard.size())</span>
+<span class="pc" id="L604">						.thenComparing(e -&gt; e.getKey().getName()))</span>
+<span class="fc" id="L605">				.forEachOrdered(e -&gt; maskUsage.put(e.getKey(), e.getValue()));</span>
+<span class="fc" id="L606">	}</span>
 
 	boolean isExtrapolate() {
-<span class="fc" id="L584">		return extrapolate;</span>
+<span class="fc" id="L609">		return extrapolate;</span>
 	}
 
 	void setExtrapolate(boolean extrapolate) {
-<span class="fc" id="L588">		this.extrapolate = extrapolate;</span>
-<span class="fc" id="L589">	}</span>
+<span class="fc" id="L613">		this.extrapolate = extrapolate;</span>
+<span class="fc" id="L614">	}</span>
 
 	public Double getRemainingFraction() {
-<span class="fc" id="L592">		return remainingFraction;</span>
+<span class="fc" id="L617">		return remainingFraction;</span>
 	}
 
 	void setRemainingFraction(double remainingFraction) {
-<span class="fc" id="L596">		this.remainingFraction = remainingFraction;</span>
-<span class="fc" id="L597">	}</span>
+<span class="fc" id="L621">		this.remainingFraction = remainingFraction;</span>
+<span class="fc" id="L622">	}</span>
 
 	public Double getCiCorrection() {
-<span class="fc" id="L600">		return ciCorrection;</span>
+<span class="fc" id="L625">		return ciCorrection;</span>
 	}
 
 	public boolean isClosed(Id&lt;?&gt; containerId) {
-<span class="pc bpc" id="L604" title="1 of 2 branches missed.">		if (closed == null)</span>
-<span class="fc" id="L605">			return false;</span>
+<span class="pc bpc" id="L629" title="1 of 2 branches missed.">		if (closed == null)</span>
+<span class="fc" id="L630">			return false;</span>
 
-<span class="nc" id="L607">		return closed.contains(containerId);</span>
+<span class="nc" id="L632">		return closed.contains(containerId);</span>
 	}
 
 	@Nullable
 	ClosingHours getClosingHours() {
-<span class="fc" id="L612">		return closingHours;</span>
+<span class="fc" id="L637">		return closingHours;</span>
 	}
 
 	/**
 	 * Whether closing hours are set.
 	 */
 	public boolean hasClosingHours() {
-<span class="fc bfc" id="L619" title="All 4 branches covered.">		return closingHours != null &amp;&amp; closingHours.to != closingHours.from;</span>
+<span class="fc bfc" id="L644" title="All 4 branches covered.">		return closingHours != null &amp;&amp; closingHours.to != closingHours.from;</span>
 	}
 
 	@Nullable
 	public Integer getMaxGroupSize() {
-<span class="fc" id="L624">		return maxGroupSize;</span>
+<span class="fc" id="L649">		return maxGroupSize;</span>
 	}
 
 	@Nullable
 	public Integer getReducedGroupSize() {
-<span class="fc" id="L629">		return reducedGroupSize;</span>
+<span class="fc" id="L654">		return reducedGroupSize;</span>
 	}
 
 	Map&lt;FaceMask, Double&gt; getMaskUsage() {
-<span class="fc" id="L633">		return maskUsage;</span>
+<span class="fc" id="L658">		return maskUsage;</span>
 	}
 
 	@Nullable
 	public Double getSusceptibleRf() {
-<span class="fc" id="L638">		return susceptibleRf;</span>
+<span class="fc" id="L663">		return susceptibleRf;</span>
 	}
 
 	@Nullable
 	public Double getVaccinatedRf() {
-<span class="fc" id="L643">		return vaccinatedRf;</span>
+<span class="fc" id="L668">		return vaccinatedRf;</span>
 	}
 
 	/**
 	 * Attributes of this restriction as map.
 	 */
 	public Map&lt;String, Object&gt; asMap() {
-<span class="fc" id="L650">		Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L651">		map.put(&quot;fraction&quot;, remainingFraction);</span>
-<span class="fc" id="L652">		map.put(&quot;ciCorrection&quot;, ciCorrection);</span>
-<span class="fc" id="L653">		map.put(&quot;maxGroupSize&quot;, maxGroupSize);</span>
-<span class="fc" id="L654">		map.put(&quot;reducedGroupSize&quot;, reducedGroupSize);</span>
+<span class="fc" id="L675">		Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L676">		map.put(&quot;fraction&quot;, remainingFraction);</span>
+<span class="fc" id="L677">		map.put(&quot;ciCorrection&quot;, ciCorrection);</span>
+<span class="fc" id="L678">		map.put(&quot;maxGroupSize&quot;, maxGroupSize);</span>
+<span class="fc" id="L679">		map.put(&quot;reducedGroupSize&quot;, reducedGroupSize);</span>
 
-<span class="pc bpc" id="L656" title="1 of 2 branches missed.">		if (closed != null)</span>
-<span class="nc" id="L657">			map.put(&quot;closed&quot;, closed.stream().map(Object::toString).collect(Collectors.toList()));</span>
+<span class="pc bpc" id="L681" title="1 of 2 branches missed.">		if (closed != null)</span>
+<span class="nc" id="L682">			map.put(&quot;closed&quot;, closed.stream().map(Object::toString).collect(Collectors.toList()));</span>
 
 		// Must be converted to map with strings
-<span class="fc" id="L660">		Map&lt;String, Double&gt; nameMap = new LinkedHashMap&lt;&gt;();</span>
-<span class="fc" id="L661">		maskUsage.forEach((k, v) -&gt; nameMap.put(k.name(), v));</span>
-<span class="fc" id="L662">		map.put(&quot;masks&quot;, nameMap);</span>
+<span class="fc" id="L685">		Map&lt;String, Double&gt; nameMap = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L686">		maskUsage.forEach((k, v) -&gt; nameMap.put(k.name, v));</span>
+<span class="fc" id="L687">		map.put(&quot;masks&quot;, nameMap);</span>
 
-<span class="fc bfc" id="L664" title="All 2 branches covered.">		if (closingHours != null) {</span>
-<span class="fc" id="L665">			map.put(&quot;closingHours&quot;, List.of(closingHours.from, closingHours.to));</span>
+<span class="fc bfc" id="L689" title="All 2 branches covered.">		if (closingHours != null) {</span>
+<span class="fc" id="L690">			map.put(&quot;closingHours&quot;, List.of(closingHours.from, closingHours.to));</span>
 		}
 
-<span class="fc" id="L668">		map.put(&quot;locationBasedRf&quot;, locationBasedRf);</span>
-<span class="fc" id="L669">		map.put(&quot;susceptibleRf&quot;, susceptibleRf);</span>
-<span class="fc" id="L670">		map.put(&quot;vaccinatedRf&quot;, vaccinatedRf);</span>
+<span class="fc" id="L693">		map.put(&quot;locationBasedRf&quot;, locationBasedRf);</span>
+<span class="fc" id="L694">		map.put(&quot;susceptibleRf&quot;, susceptibleRf);</span>
+<span class="fc" id="L695">		map.put(&quot;vaccinatedRf&quot;, vaccinatedRf);</span>
 
-<span class="fc" id="L672">		return map;</span>
+<span class="fc" id="L697">		return map;</span>
 	}
 
 	/**
@@ -697,47 +722,47 @@ public final class Restriction {
 		 */
 		public final int length;
 
-<span class="fc" id="L700">		ClosingHours(int from, int to) {</span>
-<span class="fc" id="L701">			this.from = from;</span>
-<span class="fc" id="L702">			this.to = to;</span>
-<span class="fc bfc" id="L703" title="All 2 branches covered.">			this.overnight = from &gt; to;</span>
-<span class="fc bfc" id="L704" title="All 2 branches covered.">			this.length = overnight ? (86400 - from) + to : to - from;</span>
-<span class="fc" id="L705">		}</span>
+<span class="fc" id="L725">		ClosingHours(int from, int to) {</span>
+<span class="fc" id="L726">			this.from = from;</span>
+<span class="fc" id="L727">			this.to = to;</span>
+<span class="fc bfc" id="L728" title="All 2 branches covered.">			this.overnight = from &gt; to;</span>
+<span class="fc bfc" id="L729" title="All 2 branches covered.">			this.length = overnight ? (86400 - from) + to : to - from;</span>
+<span class="fc" id="L730">		}</span>
 
 		/**
 		 * Check whether timestamp is contained in the closing hours.
 		 */
 		public boolean contains(double sod) {
-<span class="fc bfc" id="L711" title="All 2 branches covered.">			if (overnight) {</span>
-<span class="fc bfc" id="L712" title="All 4 branches covered.">				return sod &gt;= from || sod &lt;= to;</span>
+<span class="fc bfc" id="L736" title="All 2 branches covered.">			if (overnight) {</span>
+<span class="fc bfc" id="L737" title="All 4 branches covered.">				return sod &gt;= from || sod &lt;= to;</span>
 			} else
-<span class="fc bfc" id="L714" title="All 4 branches covered.">				return sod &gt;= from &amp;&amp; sod &lt;= to;</span>
+<span class="fc bfc" id="L739" title="All 4 branches covered.">				return sod &gt;= from &amp;&amp; sod &lt;= to;</span>
 		}
 
 		/**
 		 * Closing hour is completely included in this interval (as seconds of day).
 		 */
 		public boolean includedIn(double fSod, double tSod) {
-<span class="pc bpc" id="L721" title="1 of 4 branches missed.">			return fSod &lt; from &amp;&amp; tSod &gt; to;</span>
+<span class="pc bpc" id="L746" title="1 of 4 branches missed.">			return fSod &lt; from &amp;&amp; tSod &gt; to;</span>
 		}
 
 		@Override
 		public boolean equals(Object o) {
-<span class="pc bpc" id="L726" title="1 of 2 branches missed.">			if (this == o) return true;</span>
-<span class="pc bpc" id="L727" title="2 of 4 branches missed.">			if (o == null || getClass() != o.getClass()) return false;</span>
-<span class="fc" id="L728">			ClosingHours that = (ClosingHours) o;</span>
-<span class="pc bpc" id="L729" title="1 of 4 branches missed.">			return from == that.from &amp;&amp;</span>
+<span class="pc bpc" id="L751" title="1 of 2 branches missed.">			if (this == o) return true;</span>
+<span class="pc bpc" id="L752" title="2 of 4 branches missed.">			if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L753">			ClosingHours that = (ClosingHours) o;</span>
+<span class="pc bpc" id="L754" title="1 of 4 branches missed.">			return from == that.from &amp;&amp;</span>
 					to == that.to;
 		}
 
 		@Override
 		public int hashCode() {
-<span class="nc" id="L735">			return Objects.hash(from, to);</span>
+<span class="nc" id="L760">			return Objects.hash(from, to);</span>
 		}
 
 		@Override
 		public String toString() {
-<span class="fc" id="L740">			return &quot;ClosingHours{&quot; +</span>
+<span class="fc" id="L765">			return &quot;ClosingHours{&quot; +</span>
 					&quot;from=&quot; + from +
 					&quot;, to=&quot; + to +
 					'}';

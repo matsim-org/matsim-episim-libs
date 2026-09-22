@@ -68,155 +68,159 @@ public class EpisimEventsReader extends MatsimXmlParser {
 <span class="nc" id="L68">		delegate.characters(ch, start, length);</span>
 <span class="nc" id="L69">	}</span>
 
+
+
 	private MatsimEventsReader.CustomEventMapper getEpisimInfectionEventMapper() {
-<span class="nc" id="L72">		return event -&gt; {</span>
+<span class="nc" id="L74">		return event -&gt; {</span>
 
-<span class="nc" id="L74">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+<span class="nc" id="L76">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
 
-<span class="nc" id="L76">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
-<span class="nc" id="L77">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
-<span class="nc" id="L78">			Id&lt;Person&gt; infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));</span>
-<span class="nc" id="L79">			Id&lt;?&gt; container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);</span>
-<span class="nc" id="L80">			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);</span>
+<span class="nc" id="L78">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L79">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L80">			Id&lt;Person&gt; infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));</span>
+<span class="nc" id="L81">			Id&lt;?&gt; container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);</span>
+<span class="nc" id="L82">			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);</span>
 
 			// check for the presence of these attributes
-<span class="nc" id="L83">			double probability = -1;</span>
-<span class="nc" id="L84">			String attr = attributes.get(EpisimInfectionEvent.PROBABILITY);</span>
-<span class="nc bnc" id="L85" title="All 2 branches missed.">			if (attr != null)</span>
-<span class="nc" id="L86">				probability = Double.parseDouble(attr);</span>
+<span class="nc" id="L85">			double probability = -1;</span>
+<span class="nc" id="L86">			String attr = attributes.get(EpisimInfectionEvent.PROBABILITY);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L88">				probability = Double.parseDouble(attr);</span>
 
-<span class="nc" id="L88">			int groupSize = -1;</span>
-<span class="nc" id="L89">			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);</span>
-<span class="nc bnc" id="L90" title="All 2 branches missed.">			if (attr != null)</span>
-<span class="nc" id="L91">				groupSize = Integer.parseInt(attr);</span>
+<span class="nc" id="L90">			int groupSize = -1;</span>
+<span class="nc" id="L91">			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L93">				groupSize = Integer.parseInt(attr);</span>
 
-<span class="nc" id="L93">			VirusStrain virusStrain = null;</span>
-<span class="nc" id="L94">			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);</span>
-<span class="nc bnc" id="L95" title="All 2 branches missed.">			if (attr != null)</span>
-<span class="nc" id="L96">				virusStrain = VirusStrain.valueOf(attr);</span>
+<span class="nc" id="L95">			VirusStrain virusStrain = null;</span>
+<span class="nc" id="L96">			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L98">				virusStrain = VirusStrain.of(attr);</span>
 
-<span class="nc" id="L98">			double antibodies = -1;</span>
-<span class="nc bnc" id="L99" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
-<span class="nc" id="L100">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
+<span class="nc" id="L100">			double antibodies = -1;</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
+<span class="nc" id="L102">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
 			}
 
-<span class="nc" id="L103">			double maxAntibodies = -1;</span>
-<span class="nc bnc" id="L104" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {</span>
-<span class="nc" id="L105">				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));</span>
+<span class="nc" id="L105">			double maxAntibodies = -1;</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {</span>
+<span class="nc" id="L107">				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));</span>
 			}
 
-<span class="nc" id="L108">			int vaccinationCnt = -1;</span>
-<span class="nc" id="L109">			attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);</span>
-<span class="nc bnc" id="L110" title="All 2 branches missed.">			if (attr != null)</span>
-<span class="nc" id="L111">				vaccinationCnt = Integer.parseInt(attr);</span>
+<span class="nc" id="L110">			int vaccinationCnt = -1;</span>
+<span class="nc" id="L111">			attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L113">				vaccinationCnt = Integer.parseInt(attr);</span>
 
-<span class="nc" id="L113">			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies, maxAntibodies, vaccinationCnt);</span>
+<span class="nc" id="L115">			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies, maxAntibodies, vaccinationCnt);</span>
 		};
 	}
 
 	private MatsimEventsReader.CustomEventMapper getEpisimPotentialInfectionEventMapper() {
-<span class="nc" id="L118">		return event -&gt; {</span>
+<span class="nc" id="L120">		return event -&gt; {</span>
 
-<span class="nc" id="L120">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+<span class="nc" id="L122">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
 
-<span class="nc" id="L122">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
-<span class="nc" id="L123">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
-<span class="nc" id="L124">			Id&lt;Person&gt; infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));</span>
-<span class="nc" id="L125">			Id&lt;?&gt; container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);</span>
-<span class="nc" id="L126">			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);</span>
+<span class="nc" id="L124">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L125">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L126">			Id&lt;Person&gt; infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));</span>
+<span class="nc" id="L127">			Id&lt;?&gt; container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);</span>
+<span class="nc" id="L128">			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);</span>
 
-<span class="nc" id="L128">			double probability = Double.parseDouble(attributes.get(EpisimInfectionEvent.PROBABILITY));</span>
-<span class="nc" id="L129">			double unVacProb = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.UNVAC_PROBABILITY));</span>
+<span class="nc" id="L130">			double probability = Double.parseDouble(attributes.get(EpisimInfectionEvent.PROBABILITY));</span>
+<span class="nc" id="L131">			double unVacProb = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.UNVAC_PROBABILITY));</span>
 
-<span class="nc" id="L131">			int groupSize = Integer.parseInt(attributes.get(EpisimInfectionEvent.GROUP_SIZE));</span>
-<span class="nc" id="L132">			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));</span>
-<span class="nc" id="L133">			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));</span>
+<span class="nc" id="L133">			int groupSize = Integer.parseInt(attributes.get(EpisimInfectionEvent.GROUP_SIZE));</span>
+<span class="nc" id="L134">			String attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);</span>
+<span class="nc" id="L135">			VirusStrain virusStrain = VirusStrain.of(attr);</span>
+<span class="nc" id="L136">			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));</span>
 
-<span class="nc" id="L135">			double antibodies = -1;</span>
-<span class="nc bnc" id="L136" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
-<span class="nc" id="L137">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
+<span class="nc" id="L138">			double antibodies = -1;</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
+<span class="nc" id="L140">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
 			}
 
-<span class="nc" id="L140">			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, antibodies, rnd);</span>
+<span class="nc" id="L143">			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, antibodies, rnd);</span>
 
 		};
 	}
 
 	private MatsimEventsReader.CustomEventMapper getEpisimInitialInfectionEventMapper() {
-<span class="nc" id="L146">		return event -&gt; {</span>
+<span class="nc" id="L149">		return event -&gt; {</span>
 
-<span class="nc" id="L148">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+<span class="nc" id="L151">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
 
-<span class="nc" id="L150">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
-<span class="nc" id="L151">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
-<span class="nc" id="L152">			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));</span>
-<span class="nc" id="L153">			double antibodies = -1;</span>
-<span class="nc bnc" id="L154" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
-<span class="nc" id="L155">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
+<span class="nc" id="L153">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L154">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L155">			String attrStr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);</span>
+<span class="nc" id="L156">			VirusStrain virusStrain = VirusStrain.of(attrStr);</span>
+<span class="nc" id="L157">			double antibodies = -1;</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {</span>
+<span class="nc" id="L159">				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));</span>
 			}
 
-<span class="nc" id="L158">			double maxAntibodies = -1;</span>
-<span class="nc bnc" id="L159" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {</span>
-<span class="nc" id="L160">				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));</span>
+<span class="nc" id="L162">			double maxAntibodies = -1;</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {</span>
+<span class="nc" id="L164">				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));</span>
 			}
 
-<span class="nc" id="L163">			int vaccinationCnt = -1;</span>
-<span class="nc" id="L164">			String attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);</span>
-<span class="nc bnc" id="L165" title="All 2 branches missed.">			if (attr != null)</span>
-<span class="nc" id="L166">				vaccinationCnt = Integer.parseInt(attr);</span>
+<span class="nc" id="L167">			int vaccinationCnt = -1;</span>
+<span class="nc" id="L168">			String attr = attributes.get(EpisimInfectionEvent.NUM_VACCINATIONS);</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">			if (attr != null)</span>
+<span class="nc" id="L170">				vaccinationCnt = Integer.parseInt(attr);</span>
 
-<span class="nc" id="L168">			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies, vaccinationCnt);</span>
+<span class="nc" id="L172">			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies, vaccinationCnt);</span>
 		};
 	}
 
 	private MatsimEventsReader.CustomEventMapper getEpisimPersonStatusEventMapper() {
-<span class="nc" id="L173">		return event -&gt; {</span>
+<span class="nc" id="L177">		return event -&gt; {</span>
 
-<span class="nc" id="L175">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+<span class="nc" id="L179">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
 
-<span class="nc" id="L177">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
-<span class="nc" id="L178">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
-<span class="nc" id="L179">			DiseaseStatus diseaseStatus = DiseaseStatus.valueOf(attributes.get(EpisimPersonStatusEvent.DISEASE_STATUS));</span>
+<span class="nc" id="L181">			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L182">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L183">			DiseaseStatus diseaseStatus = DiseaseStatus.valueOf(attributes.get(EpisimPersonStatusEvent.DISEASE_STATUS));</span>
 
-<span class="nc" id="L181">			return new EpisimPersonStatusEvent(time, person, diseaseStatus);</span>
+<span class="nc" id="L185">			return new EpisimPersonStatusEvent(time, person, diseaseStatus);</span>
 		};
 	}
 
 	private MatsimEventsReader.CustomEventMapper getEpisimContactEventMapper() {
-<span class="nc" id="L186">		return event -&gt; {</span>
+<span class="nc" id="L190">		return event -&gt; {</span>
 
-<span class="nc" id="L188">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
+<span class="nc" id="L192">			Map&lt;String, String&gt; attributes = event.getAttributes();</span>
 
-<span class="nc" id="L190">			double time = Double.parseDouble(attributes.get(EpisimContactEvent.ATTRIBUTE_TIME));</span>
-<span class="nc" id="L191">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimContactEvent.ATTRIBUTE_PERSON));</span>
-<span class="nc" id="L192">			Id&lt;Person&gt; contactPerson = Id.createPersonId(attributes.get(EpisimContactEvent.CONTACT_PERSON));</span>
-<span class="nc" id="L193">			Id&lt;ActivityFacility&gt; container = Id.create(attributes.get(EpisimContactEvent.CONTAINER), ActivityFacility.class);</span>
+<span class="nc" id="L194">			double time = Double.parseDouble(attributes.get(EpisimContactEvent.ATTRIBUTE_TIME));</span>
+<span class="nc" id="L195">			Id&lt;Person&gt; person = Id.createPersonId(attributes.get(EpisimContactEvent.ATTRIBUTE_PERSON));</span>
+<span class="nc" id="L196">			Id&lt;Person&gt; contactPerson = Id.createPersonId(attributes.get(EpisimContactEvent.CONTACT_PERSON));</span>
+<span class="nc" id="L197">			Id&lt;ActivityFacility&gt; container = Id.create(attributes.get(EpisimContactEvent.CONTAINER), ActivityFacility.class);</span>
 
-<span class="nc" id="L195">			return new EpisimContactEvent(time, person, contactPerson, container, attributes.get(ActivityEndEvent.ATTRIBUTE_ACTTYPE).intern(),</span>
-<span class="nc" id="L196">					Double.parseDouble(attributes.get(EpisimContactEvent.DURATION)), Integer.parseInt(attributes.get(EpisimContactEvent.GROUP_SIZE)));</span>
+<span class="nc" id="L199">			return new EpisimContactEvent(time, person, contactPerson, container, attributes.get(ActivityEndEvent.ATTRIBUTE_ACTTYPE).intern(),</span>
+<span class="nc" id="L200">					Double.parseDouble(attributes.get(EpisimContactEvent.DURATION)), Integer.parseInt(attributes.get(EpisimContactEvent.GROUP_SIZE)));</span>
 		};
 	}
 
 	private MatsimEventsReader.CustomEventMapper getEpisimVaccinationEventMapper() {
-<span class="nc" id="L201">		return event -&gt; {</span>
+<span class="nc" id="L205">		return event -&gt; {</span>
 
-<span class="nc" id="L203">			Map&lt;String, String&gt; attr = event.getAttributes();</span>
-<span class="nc" id="L204">			return new EpisimVaccinationEvent(</span>
-<span class="nc" id="L205">					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),</span>
-<span class="nc" id="L206">					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),</span>
-<span class="nc" id="L207">					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),</span>
-<span class="nc" id="L208">					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))</span>
+<span class="nc" id="L207">			Map&lt;String, String&gt; attr = event.getAttributes();</span>
+<span class="nc" id="L208">			return new EpisimVaccinationEvent(</span>
+<span class="nc" id="L209">					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),</span>
+<span class="nc" id="L210">					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),</span>
+<span class="nc" id="L211">					VaccinationType.of(attr.get(EpisimVaccinationEvent.TYPE)),</span>
+<span class="nc" id="L212">					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))</span>
 			);
 		};
 	}
 
 	private MatsimEventsReader.CustomEventMapper getEpisimStartEventMapper() {
-<span class="nc" id="L214">		return event -&gt; {</span>
+<span class="nc" id="L218">		return event -&gt; {</span>
 
-<span class="nc" id="L216">			Map&lt;String, String&gt; attr = event.getAttributes();</span>
-<span class="nc" id="L217">			return new EpisimStartEvent(</span>
-<span class="nc" id="L218">					LocalDate.parse(attr.get(EpisimStartEvent.START_DATE)),</span>
-<span class="nc" id="L219">					attr.get(EpisimStartEvent.IMMUNIZATION)</span>
+<span class="nc" id="L220">			Map&lt;String, String&gt; attr = event.getAttributes();</span>
+<span class="nc" id="L221">			return new EpisimStartEvent(</span>
+<span class="nc" id="L222">					LocalDate.parse(attr.get(EpisimStartEvent.START_DATE)),</span>
+<span class="nc" id="L223">					attr.get(EpisimStartEvent.IMMUNIZATION)</span>
 			);
 		};
 	}
@@ -224,12 +228,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 	@Override
 	public void startTag(String name, Attributes atts, Stack&lt;String&gt; context) {
-<span class="nc" id="L227">		delegate.startTag(name, atts, context);</span>
-<span class="nc" id="L228">	}</span>
+<span class="nc" id="L231">		delegate.startTag(name, atts, context);</span>
+<span class="nc" id="L232">	}</span>
 
 	@Override
 	public void endTag(String name, String content, Stack&lt;String&gt; context) {
-<span class="nc" id="L232">		delegate.endTag(name, content, context);</span>
-<span class="nc" id="L233">	}</span>
+<span class="nc" id="L236">		delegate.endTag(name, content, context);</span>
+<span class="nc" id="L237">	}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

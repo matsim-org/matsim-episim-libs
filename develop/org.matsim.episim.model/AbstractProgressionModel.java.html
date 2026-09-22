@@ -51,8 +51,8 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 <span class="fc" id="L52">		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();</span>
 
-		// No transitions from susceptible
-<span class="fc bfc" id="L55" title="All 2 branches covered.">		if (status == EpisimPerson.DiseaseStatus.susceptible)</span>
+		// No transitions from susceptible or deceased
+<span class="fc bfc" id="L55" title="All 4 branches covered.">		if (status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.deceased)</span>
 <span class="fc" id="L56">			return;</span>
 
 <span class="fc" id="L58">		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);</span>
@@ -103,13 +103,21 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 <span class="fc" id="L103">			return false;</span>
 		}
 
-<span class="fc" id="L106">		EpisimPerson.DiseaseStatus next = statusTransitionModel.decideNextState(person, person.getDiseaseStatus(), day);</span>
-<span class="fc" id="L107">		int nextTransitionDay = decideTransitionDay(person, from, next);</span>
+		// deceased is terminal: no further transition, and a deceased person is no longer in quarantine
+<span class="fc bfc" id="L107" title="All 2 branches covered.">		if (from == EpisimPerson.DiseaseStatus.deceased) {</span>
+<span class="fc" id="L108">			nextStateAndDay.removeLong(id);</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">			if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)</span>
+<span class="fc" id="L110">				person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);</span>
+<span class="fc" id="L111">			return false;</span>
+		}
 
-<span class="fc" id="L109">		nextStateAndDay.put(id, compoundLong(next.ordinal(), nextTransitionDay));</span>
+<span class="fc" id="L114">		EpisimPerson.DiseaseStatus next = statusTransitionModel.decideNextState(person, person.getDiseaseStatus(), day);</span>
+<span class="fc" id="L115">		int nextTransitionDay = decideTransitionDay(person, from, next);</span>
+
+<span class="fc" id="L117">		nextStateAndDay.put(id, compoundLong(next.ordinal(), nextTransitionDay));</span>
 
 		// allow multiple updates on the same day
-<span class="fc bfc" id="L112" title="All 2 branches covered.">		return nextTransitionDay == 0;</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">		return nextTransitionDay == 0;</span>
 	}
 
 
@@ -122,45 +130,45 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 * Arbitrary function that can be overwritten to perform actions on state transitions.
 	 */
 	protected void onTransition(EpisimPerson person, double now, int day, EpisimPerson.DiseaseStatus from, EpisimPerson.DiseaseStatus to) {
-<span class="nc" id="L125">	}</span>
+<span class="nc" id="L133">	}</span>
 
 	@Override
 	public EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id&lt;Person&gt; personId) {
-<span class="fc" id="L129">		long value = nextStateAndDay.getOrDefault(personId, 0);</span>
-<span class="fc" id="L130">		int nextState = (int) (value &gt;&gt; 32);</span>
-<span class="fc" id="L131">		return EpisimPerson.DiseaseStatus.values()[nextState];</span>
+<span class="fc" id="L137">		long value = nextStateAndDay.getOrDefault(personId, 0);</span>
+<span class="fc" id="L138">		int nextState = (int) (value &gt;&gt; 32);</span>
+<span class="fc" id="L139">		return EpisimPerson.DiseaseStatus.values()[nextState];</span>
 	}
 
 	@Override
 	public int getNextTransitionDays(Id&lt;Person&gt; personId) {
-<span class="fc" id="L136">		long value = nextStateAndDay.getOrDefault(personId, 0);</span>
-<span class="pc bpc" id="L137" title="1 of 2 branches missed.">		if (value == 0)</span>
-<span class="nc" id="L138">			return -1;</span>
+<span class="fc" id="L144">		long value = nextStateAndDay.getOrDefault(personId, 0);</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">		if (value == 0)</span>
+<span class="fc" id="L146">			return -1;</span>
 
-<span class="fc" id="L140">		return (int) value;</span>
+<span class="fc" id="L148">		return (int) value;</span>
 	}
 
 	@Override
 	public boolean canProgress(EpisimReporting.InfectionReport report) {
-<span class="fc bfc" id="L145" title="All 4 branches covered.">		return report.nTotalInfected &gt; 0 || report.nInQuarantineFull + report.nInQuarantineHome &gt; 0;</span>
+<span class="fc bfc" id="L153" title="All 4 branches covered.">		return report.nTotalInfected &gt; 0 || report.nInQuarantineFull + report.nInQuarantineHome &gt; 0;</span>
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-<span class="fc" id="L150">		out.writeInt(nextStateAndDay.size());</span>
-<span class="fc bfc" id="L151" title="All 2 branches covered.">		for (Object2LongMap.Entry&lt;Id&lt;Person&gt;&gt; entry : nextStateAndDay.object2LongEntrySet()) {</span>
-<span class="fc" id="L152">			EpisimUtils.writeChars(out, entry.getKey().toString());</span>
-<span class="fc" id="L153">			out.writeLong(entry.getLongValue());</span>
-<span class="fc" id="L154">		}</span>
-<span class="fc" id="L155">	}</span>
+<span class="fc" id="L158">		out.writeInt(nextStateAndDay.size());</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">		for (Object2LongMap.Entry&lt;Id&lt;Person&gt;&gt; entry : nextStateAndDay.object2LongEntrySet()) {</span>
+<span class="fc" id="L160">			EpisimUtils.writeChars(out, entry.getKey().toString());</span>
+<span class="fc" id="L161">			out.writeLong(entry.getLongValue());</span>
+<span class="fc" id="L162">		}</span>
+<span class="fc" id="L163">	}</span>
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException {
-<span class="fc" id="L159">		int n = in.readInt();</span>
-<span class="fc bfc" id="L160" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
-<span class="fc" id="L161">			Id&lt;Person&gt; key = Id.createPersonId(EpisimUtils.readChars(in));</span>
-<span class="fc" id="L162">			nextStateAndDay.put(key, in.readLong());</span>
+<span class="fc" id="L167">		int n = in.readInt();</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">		for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L169">			Id&lt;Person&gt; key = Id.createPersonId(EpisimUtils.readChars(in));</span>
+<span class="fc" id="L170">			nextStateAndDay.put(key, in.readLong());</span>
 		}
-<span class="fc" id="L164">	}</span>
+<span class="fc" id="L172">	}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
