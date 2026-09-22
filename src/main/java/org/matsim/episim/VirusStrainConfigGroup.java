@@ -103,7 +103,6 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	 *     <li>Every strain that is imported with a positive number of infections needs a parameter set. Since strain names
 	 *     are resolved leniently while the config is read, this catches misspelled strain names.</li>
 	 *     <li>The pathogen of every configured strain needs a {@code pathogenParams} set in {@link PathogenConfigGroup}.</li>
-	 *     <li>Every configured strain needs an {@code antibodyParams} set in {@link AntibodyConfigGroup}.</li>
 	 * </ul>
 	 * All problems are reported at once. A config group that is not part of the config is checked with its defaults,
 	 * as these are used by the simulation.
@@ -141,20 +140,6 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 					+ "', which has no '" + PathogenConfigGroup.PathogenParams.SET_TYPE + "' in config group '"
 					+ PathogenConfigGroup.GROUPNAME + "'. Add a parameter set for this pathogen or check its name in '"
 					+ StrainParams.SET_TYPE + "'."));
-		}
-
-		AntibodyConfigGroup antibodies = moduleOrDefault(config, AntibodyConfigGroup.GROUPNAME, AntibodyConfigGroup.class, AntibodyConfigGroup::new);
-		if (antibodies != null) {
-			List<String> missing = new ArrayList<>();
-			for (VirusStrain strain : strains.keySet()) {
-				if (!antibodies.hasParams(strain))
-					missing.add(strain.getVirusStrainName());
-			}
-
-			if (!missing.isEmpty())
-				problems.add("Virus strains " + missing + " have no '" + AntibodyConfigGroup.AntibodyParams.SET_TYPE
-						+ "' in config group '" + AntibodyConfigGroup.GROUPNAME + "'. Add a parameter set with immunityEventKind '"
-						+ AntibodyConfigGroup.AntibodyParams.KIND_STRAIN + "' for each of these strains.");
 		}
 
 		if (!problems.isEmpty())

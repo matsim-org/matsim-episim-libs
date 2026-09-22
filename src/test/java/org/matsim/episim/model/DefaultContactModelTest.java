@@ -51,7 +51,8 @@ public class DefaultContactModelTest {
 
 		config = EpisimTestUtils.createTestConfig();
 		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		infectionModel = new DefaultInfectionModel(new DefaultFaceMaskModel(rnd), config);
+		infectionModel = new DefaultInfectionModel(new DefaultFaceMaskModel(rnd),
+				new LegacyCurveImmunityModel(ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class)), config);
 		model = new DefaultContactModel(rnd, config, reporting, infectionModel);
 		restrictions = episimConfig.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);

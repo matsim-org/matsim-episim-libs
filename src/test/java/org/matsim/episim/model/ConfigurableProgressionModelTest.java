@@ -1,5 +1,6 @@
 package org.matsim.episim.model;
 
+import org.matsim.episim.EpisimTestUtils;
 import com.google.common.primitives.Doubles;
 import com.typesafe.config.Config;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
@@ -70,7 +71,7 @@ public class ConfigurableProgressionModelTest {
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
-		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, vaccinationConfig, pathogenConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
+		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, vaccinationConfig, pathogenConfig, new DefaultDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig));
 		model.setIteration(1);
 	}
 
@@ -323,7 +324,7 @@ public class ConfigurableProgressionModelTest {
 				.build());
 
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
-		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, pathogenConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
+		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, pathogenConfig, new DefaultDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig));
 
 		List<Double> recoveredDays = new ArrayList<>();
 
@@ -425,7 +426,7 @@ public class ConfigurableProgressionModelTest {
 
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(1);
 		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, pathogenConfig,
-				new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig, pathogenConfig));
+				new DefaultDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(), vaccinationConfig, strainConfig, pathogenConfig));
 		model.setIteration(1);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);

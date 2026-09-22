@@ -21,7 +21,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.ContactTransmissionConfigGroup;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
@@ -209,15 +208,10 @@ public class InfluenzaCologneScenarioTest {
 				LocalDate.parse("2022-10-24"), LocalDate.parse("2022-12-31"), 4.0, 4.0);
 		episimConfig.setInfections_pers_per_day(INFLUENZA_STRAIN, influenzaImport);
 
-		// 6. antibody model: initial antibodies 0.0. AntibodyDependentTransitionModel.getSeriouslySickFactor applies
-		//    1 / (1 + ab^beta) even on a first infection, so the former placeholder 5.0 cut hospitalisation ~6-fold; 0.0 keeps the
-		//    factor at 1. The Cologne infection model does not read antibodies for susceptibility.
-		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
-		AntibodyConfigGroup.AntibodyParams influenzaAntibodies = antibodyConfig.getOrAddParams(INFLUENZA_STRAIN);
-		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
-			influenzaAntibodies.getInitialAntibodies().put(against, 0.0);
-			influenzaAntibodies.getAntibodyRefreshFactors().put(against, 1.0);
-		}
+		// 6. no antibody parameters on purpose: an influenza infection then induces no antibodies. The antibody-based
+		//    severity factor 1 / (1 + ab^beta) is applied even on a first infection, so the former placeholder 5.0 cut
+		//    hospitalisation ~6-fold; without antibodies it stays at 1. The Cologne infection model does not read
+		//    antibodies for susceptibility.
 	}
 
 	/**
@@ -323,10 +317,12 @@ public class InfluenzaCologneScenarioTest {
 	/**
 	 * The real thing: the full Cologne open scenario with influenza as the only circulating virus.
 	 *
-	 * <p>Heavy on purpose: downloads the full Cologne input set (25% sample) from the VSP SVN and simulates
-	 * {@value #ITERATIONS} days. It is run locally on a laptop, which is fine; it is intentionally not disabled,
-	 * so expect a long runtime when running the whole test suite.</p>
+	 * <p>Heavy: downloads the full Cologne input set (25% sample) from the VSP SVN and simulates
+	 * {@value #ITERATIONS} days, which took about ten minutes of the test suite. Disabled for that reason, and
+	 * because scenario runs of this size are moving to {@code matsim-episim}; run it by hand while working on the
+	 * influenza scenario. Everything above it still runs on every build.</p>
 	 */
+	@Disabled("takes ~10 minutes; scenario runs move to matsim-episim, run by hand when working on the scenario")
 	@Test
 	public void runsOnCologneScenario() throws Exception {
 

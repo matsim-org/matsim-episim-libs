@@ -35,6 +35,8 @@
  import org.matsim.episim.model.activity.DefaultParticipationModel;
  import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
  import org.matsim.episim.model.listener.HouseholdSusceptibility;
+ import org.matsim.episim.model.ImmunityModel;
+ import org.matsim.episim.model.LegacySplitImmunityModel;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
  import org.matsim.episim.model.testing.DefaultTestingModel;
@@ -115,12 +117,17 @@
 
 		 bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		 bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
+		 bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
 		 bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		 bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 		 bind(TestingModel.class).to(testingModel).in(Singleton.class);
 		 bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
-		 bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		 bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
+
+		 // antibody model
+		 AntibodyModel.Config antibodyConfig = new AntibodyModel.Config();
+		 antibodyConfig.setImmuneResponseSigma(3.0);
+		 bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
 		 bind(HouseholdSusceptibility.Config.class).toInstance(
 			 HouseholdSusceptibility.newConfig().withSusceptibleHouseholds(householdSusc, 5.0)
@@ -132,14 +139,6 @@
 		 listener.addBinding().to(HouseholdSusceptibility.class);
 
 
-	 }
-
-	 @Provides
-	 @Singleton
-	 public AntibodyConfigGroup antibodyConfigGroup(Config config) {
-		 AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
-		 antibodyConfig.setImmuneResponseSigma(3.0);
-		 return antibodyConfig;
 	 }
 
 	 @Provides

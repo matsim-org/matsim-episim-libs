@@ -38,7 +38,12 @@
  import org.matsim.core.population.PopulationUtils;
  import org.matsim.episim.*;
  import org.matsim.episim.events.*;
+ import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
+ import org.matsim.episim.model.LegacyAntibodyImmunityModel;
+ import org.matsim.episim.model.LegacyCurveImmunityModel;
+ import org.matsim.episim.model.ImmunityModel;
+ import org.matsim.episim.model.LegacySplitImmunityModel;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.util.EpisimSplittableRandom;
  import org.matsim.run.AnalysisCommand;
@@ -403,6 +408,8 @@
 		 private final Random rnd;
 		 private final ConfigHolder holder;
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
+		 /** Same split the simulation uses, so that a replay keeps matching the run it replays. */
+		 private final ImmunityModel immunityModel;
 		 private final Int2ObjectAVLTreeMap<Int2IntAVLTreeMap> postProcessHospitalAdmissionsByAge;
 
 
@@ -430,7 +437,9 @@
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
 
-			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig, holder.pathogenConfig);
+			 this.immunityModel = new LegacySplitImmunityModel(
+				 new LegacyCurveImmunityModel(holder.vaccinationConfig), new LegacyAntibodyImmunityModel(holder.vaccinationConfig));
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new EpisimSplittableRandom(1234), immunityModel, holder.episimConfig, holder.vaccinationConfig, holder.strainConfig, holder.pathogenConfig);
 
 //			 try {
 //				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
@@ -596,7 +605,7 @@
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
-			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
+			 double immunityFactor = immunityModel.getFactor(person, person.getVirusStrain(), EpisimPerson.DiseaseStatus.seriouslySick, day);
 
 			 return rnd.nextDouble() < ageFactor
 				 * strainFactor
@@ -611,7 +620,7 @@
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToCritical(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorCritical();
-			 double immunityFactor = transitionModel.getCriticalFactor(person, holder.vaccinationConfig, day); //todo: revert
+			 double immunityFactor = immunityModel.getFactor(person, person.getVirusStrain(), EpisimPerson.DiseaseStatus.critical, day); //todo: revert
 
 			 return rnd.nextDouble() < ageFactor
 				 * strainFactor
@@ -645,9 +654,9 @@
 			 private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 			 private final int age;
 			 /**
-			  * Virus strain of most recent (or current) infection.
+			  * Virus strain of each infection, in the same order as {@link #infectionDates}.
 			  */
-			 private VirusStrain strain;
+			 private final List<VirusStrain> strains = new ArrayList<>();
 			 /**
 			  * Antibody level at last infection.
 			  */
@@ -681,11 +690,31 @@
 
 			 @Override
 			 public VirusStrain getVirusStrain() {
-				 return strain;
+				 return strains.isEmpty() ? null : strains.get(strains.size() - 1);
+			 }
+
+			 @Override
+			 public VirusStrain getVirusStrain(int idx) {
+				 return strains.get(idx);
 			 }
 
 			 public void setVirusStrain(VirusStrain strain) {
-				 this.strain = strain;
+				 this.strains.add(strain);
+			 }
+
+			 @Override
+			 public int daysSinceInfection(int idx, int day) {
+				 return day - (int) Math.floor(infectionDates.getDouble(idx) / EpisimUtils.DAY);
+			 }
+
+			 @Override
+			 public VaccinationType getVaccinationType(int idx) {
+				 throw new UnsupportedOperationException("vaccinations are not replayed by this analysis");
+			 }
+
+			 @Override
+			 public int daysSinceVaccination(int idx, int day) {
+				 throw new UnsupportedOperationException("vaccinations are not replayed by this analysis");
 			 }
 
 //			 public void addVaccination(int day) {

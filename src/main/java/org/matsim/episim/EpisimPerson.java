@@ -496,6 +496,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 *
 	 * @param idx index of infection starting at 0
 	 */
+	@Override
 	public VirusStrain getVirusStrain(int idx) {
 		return virusStrains.get(idx);
 	}
@@ -526,6 +527,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return vaccinations.get(0);
 	}
 
+	@Override
 	public VaccinationType getVaccinationType(int idx) {
 		return vaccinations.get(idx);
 	}
@@ -639,6 +641,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 *
 	 * @param idx index starting at 0
 	 */
+	@Override
 	public int daysSinceInfection(int idx, int currentDay) {
 		if (infectionDates.size() <= idx) throw new IllegalStateException("Person did not had infection with index " + idx);
 
@@ -712,6 +715,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Days since the nth vaccination (starting at 0).
 	 */
+	@Override
 	public int daysSinceVaccination(int idx, int currentDay) {
 		if (vaccinations.size() <= idx) throw new IllegalStateException("Person did not receive vaccination with index " + idx);
 

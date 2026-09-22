@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
@@ -65,7 +66,21 @@ public class EpisimModule extends AbstractModule {
 		bind(ContactModel.class).to(DefaultContactModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
-		bind(AntibodyModel.class).to(DefaultAntibodyModel.class).in(Singleton.class);
+		// which of the two a run uses is decided by the configuration, see antibodyModel() below
+		bind(DefaultAntibodyModel.class).in(Singleton.class);
+		bind(NoAntibodyModel.class).in(Singleton.class);
+		// antibody parameters are calibrated for SARS-CoV-2 and not a config group; scenarios bind their own instance
+		bind(AntibodyModel.Config.class).toInstance(new AntibodyModel.Config());
+		// Both sources are bound explicitly because LegacySplitImmunityModel injects them and this injector
+		// requires explicit bindings. The legacy default is the curve-based source, which is what
+		// DefaultDiseaseStatusTransitionModel used through the former default methods of its interface.
+		// Modules that bind AgeDependentDiseaseStatusTransitionModel took severity from antibodies instead and
+		// therefore override the @Legacy binding with LegacySplitImmunityModel. Which of the two, legacy or
+		// explicit, the run uses is decided by the configuration, see immunityModel() below.
+		bind(LegacyCurveImmunityModel.class).in(Singleton.class);
+		bind(LegacyAntibodyImmunityModel.class).in(Singleton.class);
+		bind(ExplicitImmunityModel.class).in(Singleton.class);
+		bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacyCurveImmunityModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
@@ -127,6 +142,41 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
+	public ImmunityConfigGroup immunityConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class);
+	}
+
+	/**
+	 * Antibodies are only evolved when something reads them, which is the legacy immunity model. A scenario that
+	 * needs them for its own reason binds {@link AntibodyModel} itself and overrides this.
+	 */
+	@Provides
+	@Singleton
+	public AntibodyModel antibodyModel(ImmunityConfigGroup immunityConfig,
+									   Provider<DefaultAntibodyModel> antibodies, Provider<NoAntibodyModel> none) {
+		return immunityConfig.getModel() == ImmunityConfigGroup.Model.legacyCovid ? antibodies.get() : none.get();
+	}
+
+	/**
+	 * The immunity of the whole run, chosen by {@link ImmunityConfigGroup#getModel()}. The legacy implementation is
+	 * whatever the scenario bound as {@code @Legacy}; providers are injected so that the unused one is never built.
+	 */
+	@Provides
+	@Singleton
+	public ImmunityModel immunityModel(ImmunityConfigGroup immunityConfig,
+									   @Legacy Provider<ImmunityModel> legacy, Provider<ExplicitImmunityModel> explicit) {
+		switch (immunityConfig.getModel()) {
+			case legacyCovid:
+				return legacy.get();
+			case explicit:
+				return explicit.get();
+			default:
+				throw new IllegalStateException("Unknown immunity model: " + immunityConfig.getModel());
+		}
+	}
+
+	@Provides
+	@Singleton
 	public VirusStrainConfigGroup strainConfigGroup(Config config) {
 		return ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 	}
@@ -135,12 +185,6 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public PathogenConfigGroup pathogenConfigGroup(Config config) {
 		return ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
-	}
-
-	@Provides
-	@Singleton
-	public AntibodyConfigGroup antibodyConfigGroup(Config config) {
-		return ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
 	}
 
 	/** Provides the contact-transmission configuration. */

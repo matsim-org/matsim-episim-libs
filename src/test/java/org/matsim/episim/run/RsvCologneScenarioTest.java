@@ -15,12 +15,12 @@ package org.matsim.episim.run;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.ContactTransmissionConfigGroup;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
@@ -224,13 +224,8 @@ public class RsvCologneScenarioTest {
 				LocalDate.parse("2022-10-24"), LocalDate.parse("2022-12-31"), 6.0, 6.0);
 		episimConfig.setInfections_pers_per_day(RSV_STRAIN, rsvImport);
 
-		// 7. antibodies 0.0 keep getSeriouslySickFactor = 1/(1+ab^beta) at 1 (same neutralisation as influenza)
-		AntibodyConfigGroup antibodyConfig = ConfigUtils.addOrGetModule(config, AntibodyConfigGroup.class);
-		AntibodyConfigGroup.AntibodyParams rsvAntibodies = antibodyConfig.getOrAddParams(RSV_STRAIN);
-		for (VirusStrain against : virusStrainConfig.getVirusStrains()) {
-			rsvAntibodies.getInitialAntibodies().put(against, 0.0);
-			rsvAntibodies.getAntibodyRefreshFactors().put(against, 1.0);
-		}
+		// 7. no antibody parameters on purpose: an RSV infection then induces no antibodies, so the antibody-based
+		//    severity factor 1/(1+ab^beta) stays at 1 (same as influenza)
 	}
 
 	/**
@@ -343,10 +338,12 @@ public class RsvCologneScenarioTest {
 	/**
 	 * The real thing: the full Cologne open scenario with RSV as the only circulating virus.
 	 *
-	 * <p>Heavy on purpose: downloads the full Cologne input set (25% sample) from the VSP SVN and simulates
-	 * {@value #ITERATIONS} days. It is run locally on a laptop, which is fine; it is intentionally not disabled,
-	 * so expect a long runtime when running the whole test suite.</p>
+	 * <p>Heavy: downloads the full Cologne input set (25% sample) from the VSP SVN and simulates
+	 * {@value #ITERATIONS} days, which took about ten minutes of the test suite. Disabled for that reason, and
+	 * because scenario runs of this size are moving to {@code matsim-episim}; run it by hand while working on the
+	 * RSV scenario. Everything above it still runs on every build.</p>
 	 */
+	@Disabled("takes ~10 minutes; scenario runs move to matsim-episim, run by hand when working on the scenario")
 	@Test
 	public void runsOnCologneScenario() throws Exception {
 

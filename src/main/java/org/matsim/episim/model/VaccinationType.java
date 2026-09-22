@@ -40,7 +40,11 @@ public class VaccinationType implements ImmunityEvent {
 
 	private final String name;
 
-	public VaccinationType(String name) {
+	/**
+	 * Private: every instance has to come from {@link #of(String)}, so that one name is one object. A public
+	 * constructor allowed a second object that is equal to the registered one by name.
+	 */
+	private VaccinationType(String name) {
 		this.name = Objects.requireNonNull(name, "Vaccination type name must not be null");
 	}
 

@@ -25,11 +25,13 @@ public final class DefaultInfectionModel implements InfectionModel {
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 	private final PathogenConfigGroup pathogenConfig;
+	private final ImmunityModel immunityModel;
 	private int iteration;
 
 	@Inject
-	public DefaultInfectionModel(FaceMaskModel faceMaskModel, Config config) {
+	public DefaultInfectionModel(FaceMaskModel faceMaskModel, ImmunityModel immunityModel, Config config) {
 		this.maskModel = faceMaskModel;
+		this.immunityModel = immunityModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
@@ -54,11 +56,12 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
+		double susceptibility = immunityModel.getFactor(target, strain.getStrain(),
+			EpisimPerson.DiseaseStatus.infectedButNotContagious, iteration);
 
 		// route-agnostic factors
 		double base = episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer
-				* getInfectivity(infector, strain, vaccinationConfig, iteration)
+				* immunityModel.getInfectivityFactor(infector, strain.getStrain(), iteration)
 				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness();

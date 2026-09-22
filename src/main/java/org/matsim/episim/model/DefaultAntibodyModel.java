@@ -2,7 +2,6 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
-import org.matsim.episim.AntibodyConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VirusStrainConfigGroup;
@@ -22,14 +21,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	// optimistic: 46
 	//
 
-	private final AntibodyConfigGroup antibodyConfig;
+	private final AntibodyModel.Config antibodyConfig;
 	private final EpisimSplittableRandom localRnd;
 
 	private final Collection<VirusStrain> virusStrains;
 
 
 	@Inject
-	DefaultAntibodyModel(AntibodyConfigGroup antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {
+	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, VirusStrainConfigGroup virusStrainConfig) {
 		this.antibodyConfig = antibodyConfig;
 		this.virusStrains = virusStrainConfig.getVirusStrains();
 		localRnd = new EpisimSplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
@@ -126,7 +125,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		boolean firstImmunization = checkFirstImmunization(person);
 
 		// resolve the per-event maps once instead of rebuilding the whole nested map per strain
-		Map<VirusStrain, Double> initialAntibodiesForEvent = antibodyConfig.getParams(immunityEventType).getInitialAntibodies();
+		Map<VirusStrain, Double> initialAntibodiesForEvent = antibodyConfig.getInitialAntibodies(immunityEventType);
 
 		// 1st immunization:
 		if (firstImmunization) {
@@ -146,7 +145,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 
 		} else {
-			Map<VirusStrain, Double> refreshFactorsForEvent = antibodyConfig.getParams(immunityEventType).getAntibodyRefreshFactors();
+			Map<VirusStrain, Double> refreshFactorsForEvent = antibodyConfig.getAntibodyRefreshFactors(immunityEventType);
 
 			for (VirusStrain strain2 : virusStrains) {
 				// no entry: the existing antibody level against the strain is not refreshed

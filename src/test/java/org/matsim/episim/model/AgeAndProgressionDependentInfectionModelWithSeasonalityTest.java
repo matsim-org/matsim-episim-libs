@@ -1,5 +1,6 @@
 package org.matsim.episim.model;
 
+import org.matsim.episim.EpisimTestUtils;
 import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +45,7 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 				ConfigUtils.addOrGetModule(config, TracingConfigGroup.class),
 				ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class),
 				ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class),
-				new DefaultDiseaseStatusTransitionModel(rnd,
+				new DefaultDiseaseStatusTransitionModel(rnd, EpisimTestUtils.noImmunity(),
 						ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class),
 						ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class),
 						ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class)
@@ -54,6 +55,7 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 		model = new AgeAndProgressionDependentInfectionModelWithSeasonality(
 				new DefaultFaceMaskModel(rnd),
 				progression,
+				EpisimTestUtils.noImmunity(),
 				config,
 				reporting,
 				rnd

@@ -28,12 +28,15 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final Map<VirusStrain, double[]> susceptibility; //= new EnumMap<>(VirusStrain.class);
 	private final Map<VirusStrain, double[]> infectivity; //= new EnumMap<>(VirusStrain.class);
 
+	private final ImmunityModel immunityModel;
 	private double outdoorFactor;
 	private int iteration;
 
 	@Inject
-	AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {
+	AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ImmunityModel immunityModel,
+											  Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
+		this.immunityModel = immunityModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
@@ -89,7 +92,8 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams params = virusStrainConfig.getParams(infector.getVirusStrain());
-		susceptibility *= Math.min(getVaccinationEffectiveness(params, target, vaccinationConfig, iteration), getImmunityEffectiveness(params, target, vaccinationConfig, iteration));
+		susceptibility *= immunityModel.getFactor(target, params.getStrain(),
+			EpisimPerson.DiseaseStatus.infectedButNotContagious, iteration);
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 

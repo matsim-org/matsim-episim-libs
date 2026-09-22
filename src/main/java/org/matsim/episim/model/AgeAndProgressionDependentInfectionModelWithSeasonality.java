@@ -41,12 +41,15 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 	private double outdoorFactor;
 	private int iteration;
+	private final ImmunityModel immunityModel;
 	private double lastUnVac;
 
 	@Inject
 	AgeAndProgressionDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ProgressionModel progression,
-															Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {
+															ImmunityModel immunityModel, Config config,
+															EpisimReporting reporting, EpisimSplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
+		this.immunityModel = immunityModel;
 		this.progression = progression;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -92,7 +95,8 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
+		susceptibility *= immunityModel.getFactor(target, strain.getStrain(),
+			EpisimPerson.DiseaseStatus.infectedButNotContagious, iteration);
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
@@ -102,7 +106,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 		// route-agnostic factors
 		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer
-				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
+				* immunityModel.getInfectivityFactor(infector, strain.getStrain(), iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness();
@@ -119,6 +123,14 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));
 	}
 
+	/**
+	 * The probability the target would have had without their vaccination, reported for vaccinated persons only
+	 * (see {@code AbstractContactModel.potentialInfection}) as a vaccine-effectiveness diagnostic. It deliberately
+	 * still uses the static helpers: asking an {@link ImmunityModel} for "immunity without the vaccinations" would
+	 * mean exposing which source a factor came from, which is exactly what that interface hides. Note that
+	 * {@code InfectionModelWithAntibodies} already reads the same quantity as "without any immunity", so the two
+	 * never agreed on what it means.
+	 */
 	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, TransmissionWeights transmissionWeights, double contactIntensity, double jointTimeInContainer,
 		double indoorOutdoorFactor, double shedding, double intake) {
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value

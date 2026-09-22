@@ -32,6 +32,8 @@ import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
+import org.matsim.episim.model.ImmunityModel;
+import org.matsim.episim.model.LegacySplitImmunityModel;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.model.vaccination.VaccinationFromData;
@@ -141,6 +143,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	protected void configure() {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
+		bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 
