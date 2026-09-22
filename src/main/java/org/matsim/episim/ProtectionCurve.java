@@ -122,6 +122,18 @@ public final class ProtectionCurve {
 	}
 
 	/**
+	 * Whether this curve gives no protection at all, on any day. Written as {@code "0>0.0"}, but any curve whose
+	 * points are all zero says the same.
+	 */
+	public boolean isZero() {
+		for (double protection : points.values()) {
+			if (protection != 0.0)
+				return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Protection on the given day since the immunity event.
 	 *
 	 * @throws IllegalArgumentException for a negative day, i.e. an event that has not happened yet

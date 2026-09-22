@@ -6,6 +6,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.Pathogen;
+import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 
@@ -227,7 +228,15 @@ public class ImmunityConfigGroupTest {
 		for (VirusStrain strain : imported)
 			episim.setInfections_pers_per_day(strain, Map.of(LocalDate.parse("2022-09-26"), 3));
 		ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class).setModel(ImmunityConfigGroup.Model.explicit);
+		refractoryPeriod(config);
 		return config;
+	}
+
+	/** Without a way back to susceptible the curves of an infection could never be applied. */
+	private static void refractoryPeriod(Config config) {
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(Transition.config()
+			.from(DiseaseStatus.recovered, Transition.to(DiseaseStatus.susceptible, Transition.fixed(7)))
+			.build());
 	}
 
 	/** An infection source with a curve against every supported target for the given strains. */
@@ -324,4 +333,57 @@ public class ImmunityConfigGroupTest {
 		assertThatThrownBy(() -> check(config))
 			.hasMessageContaining("strain 'RSV_COVER_TYPPO', which has no 'strainParams'");
 	}
+
+	@Test
+	public void protectionLeftByAnInfectionNeedsAWayBackToSusceptible() {
+		VirusStrain flu = VirusStrain.of(new Pathogen("FLU_REFRACTORY"), "FLU_REFRACTORY");
+		Config config = coverageConfig(new VirusStrain[]{flu}, flu);
+		fullSource(ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class), flu, flu);
+
+		// the scenario describes immunity with curves but keeps agents in recovered forever
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(Transition.config()
+			.from(DiseaseStatus.contagious, Transition.to(DiseaseStatus.recovered, Transition.fixed(4)))
+			.build());
+
+		assertThatThrownBy(() -> check(config))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("FLU_REFRACTORY")
+			.hasMessageContaining("never become susceptible again");
+	}
+
+	@Test
+	public void infectionsWithoutProtectionDoNotNeedTheTransition() {
+		VirusStrain flu = VirusStrain.of(new Pathogen("FLU_REFRACTORY_ZERO"), "FLU_REFRACTORY_ZERO");
+		Config config = coverageConfig(new VirusStrain[]{flu}, flu);
+		ImmunityConfigGroup immunity = ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class);
+		for (DiseaseStatus against : ImmunityConfigGroup.SUPPORTED_TARGETS)
+			immunity.getOrAddSource(flu).setProtection(against, flu, ProtectionCurve.parse("0>0.0|400>0.0"));
+
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(Transition.config()
+			.from(DiseaseStatus.contagious, Transition.to(DiseaseStatus.recovered, Transition.fixed(4)))
+			.build());
+
+		// immunity is the recovered state itself here, which is the legacy way and stays allowed
+		check(config);
+	}
+
+	@Test
+	public void productCurvesDoNotNeedTheTransition() {
+		VirusStrain flu = VirusStrain.of(new Pathogen("FLU_REFRACTORY_PRODUCT"), "FLU_REFRACTORY_PRODUCT");
+		Config config = coverageConfig(new VirusStrain[]{flu}, flu);
+		ImmunityConfigGroup immunity = ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class);
+		for (DiseaseStatus against : ImmunityConfigGroup.SUPPORTED_TARGETS) {
+			immunity.getOrAddSource(flu).setProtection(against, flu, ProtectionCurve.NONE);
+			immunity.getOrAddSource(VaccinationType.of("FLU_SHOT_REFRACTORY"))
+				.setProtection(against, flu, ProtectionCurve.parse("0>0.6|180>0.2"));
+		}
+
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(Transition.config()
+			.from(DiseaseStatus.contagious, Transition.to(DiseaseStatus.recovered, Transition.fixed(4)))
+			.build());
+
+		// a vaccine protects agents who have not been infected yet, so it works without re-infection
+		check(config);
+	}
+
 }

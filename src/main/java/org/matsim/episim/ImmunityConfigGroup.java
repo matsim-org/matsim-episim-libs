@@ -254,11 +254,58 @@ public final class ImmunityConfigGroup extends ReflectiveConfigGroup {
 			source.collectProblems(problems);
 
 		// coverage needs complete sets; report incomplete ones first
-		if (problems.isEmpty())
+		if (problems.isEmpty()) {
 			checkCoverage(config, problems);
+			checkRefractoryPeriod(config, problems);
+		}
 
 		if (!problems.isEmpty())
 			throw new IllegalStateException(String.join("\n", problems));
+	}
+
+	/**
+	 * Checks that immunity left by an infection can reach anybody.
+	 *
+	 * <p>An agent in {@code recovered} is not a candidate for infection at all, whatever the curves say: the contact
+	 * model skips them. They can only be infected again after the progression config takes them back to
+	 * {@code susceptible}, so without that transition every curve of every infection source is dead, silently. This
+	 * holds across pathogens as well, because an agent has one disease status for all of them.</p>
+	 *
+	 * <p>Curves of products are not affected: they protect agents who have not been infected yet. A run whose
+	 * infection sources all say {@code "0>0.0"} is therefore fine without the transition.</p>
+	 *
+	 * <p>How <i>long</i> the state lasts is a modelling decision and not checked here; the point of the new model is
+	 * that protection is described by curves, so this transition should be a short refractory period.</p>
+	 */
+	private void checkRefractoryPeriod(Config config, List<String> problems) {
+
+		EpisimConfigGroup episimConfig = VirusStrainConfigGroup.moduleOrDefault(config, "episim",
+			EpisimConfigGroup.class, EpisimConfigGroup::new);
+		if (episimConfig == null)
+			return;
+
+		com.typesafe.config.Config progression = episimConfig.getProgressionConfig();
+		String path = DiseaseStatus.recovered.name() + "." + DiseaseStatus.susceptible.name();
+		if (progression.hasPath(path))
+			return;
+
+		List<String> withProtection = new ArrayList<>();
+		for (SourceParams source : sources.values()) {
+			if (source.getSourceKind() != SourceKind.infection)
+				continue;
+			for (ProtectionParams p : source.getProtections()) {
+				if (!p.getCurve().isZero()) {
+					withProtection.add(source.getSource().toString());
+					break;
+				}
+			}
+		}
+
+		if (!withProtection.isEmpty())
+			problems.add("Infections with " + withProtection + " leave protection behind, but 'progressionConfig' has no "
+				+ "transition from " + DiseaseStatus.recovered + " to " + DiseaseStatus.susceptible + ". Agents never become "
+				+ "susceptible again, so these curves would never be applied. Configure a short refractory period, or write "
+				+ "curves '0>0.0' if immunity is meant to be the " + DiseaseStatus.recovered + " state itself.");
 	}
 
 	/**
@@ -379,7 +426,7 @@ public final class ImmunityConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public static final class SourceParams extends ReflectiveConfigGroup {
 
-		static final String SET_TYPE = "immunitySource";
+		public static final String SET_TYPE = "immunitySource";
 
 		private static final String SOURCE = "source";
 		private static final String SOURCE_KIND = "sourceKind";
