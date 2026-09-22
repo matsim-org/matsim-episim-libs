@@ -8,6 +8,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.ImmunityModel;
+import org.matsim.episim.model.Legacy;
 import org.matsim.episim.model.LegacySplitImmunityModel;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
@@ -137,7 +138,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 
 		// Use age dependent progression model
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
-		bind(ImmunityModel.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
+		bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
 	}
 
 	/**
