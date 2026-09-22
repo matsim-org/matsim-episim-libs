@@ -33,6 +33,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControllerUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
+import org.matsim.episim.model.ImmunityModel;
 import org.matsim.episim.model.ProgressionModel;
 
 import java.io.*;
@@ -60,10 +61,12 @@ public final class EpisimRunner {
 	private final Provider<EpisimReporting> reportingProvider;
 	private final Provider<ProgressionModel> progressionProvider;
 	private final Provider<AntibodyModel> antibodyModelProvider;
+	private final Provider<ImmunityModel> immunityModelProvider;
 
 	@Inject
 	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider, Provider<ReplayHandler> replay,
-						Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider) {
+						Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider,
+						Provider<ImmunityModel> immunityModelProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
@@ -71,6 +74,7 @@ public final class EpisimRunner {
 		this.reportingProvider = reportingProvider;
 		this.progressionProvider = progressionProvider;
 		this.antibodyModelProvider = antibodyModelProvider;
+		this.immunityModelProvider = immunityModelProvider;
 	}
 
 	/**
@@ -85,6 +89,9 @@ public final class EpisimRunner {
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
 		final AntibodyModel antibodyModel = antibodyModelProvider.get();
+
+		// a module that binds the immunity model directly would overrule the configuration without a word
+		ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class).checkBoundModel(immunityModelProvider.get());
 
 		reporting.reportCpuTime(0, "Init", "start", -1);
 		// reporting will write events if necessary

@@ -48,6 +48,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
+
+		ImmunityConfigGroup.requireLegacyImmunity(config, getClass(), "takes susceptibility and infectivity from antibody levels");
 		this.reporting = reporting;
 		this.rnd = rnd;
 		this.susceptibility = new HashMap<>();

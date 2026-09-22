@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Immunity from the curves of {@link ImmunityConfigGroup}, without antibodies and without hard-coded rules.
@@ -35,7 +36,7 @@ public final class ExplicitImmunityModel implements ImmunityModel {
 
 	private static final Logger log = LogManager.getLogger(ExplicitImmunityModel.class);
 
-	private final ImmunityConfigGroup config;
+	private final ImmunityConfigGroup.Combinator combinator;
 
 	/**
 	 * Curves and covered pathogens per source, built once from the config group.
@@ -48,14 +49,15 @@ public final class ExplicitImmunityModel implements ImmunityModel {
 	private final double otherPathogensRisk;
 
 	/**
-	 * An event before the day that is asked about is only possible when a caller replays past days; warned about
-	 * once, because the question is asked in the contact loop.
+	 * An event after the day that is asked about is only possible when a caller replays past days; warned about
+	 * once, because the question is asked in the contact loop. Written from the threads of that loop, and losing a
+	 * race only costs a second log line.
 	 */
-	private boolean warnedAboutFutureEvent;
+	private final AtomicBoolean warnedAboutFutureEvent = new AtomicBoolean();
 
 	@Inject
 	public ExplicitImmunityModel(ImmunityConfigGroup config) {
-		this.config = config;
+		this.combinator = config.getCombinator();
 
 		for (SourceParams source : config.getSources())
 			index.put(source.getSource(), new SourceIndex(source));
@@ -131,13 +133,13 @@ public final class ExplicitImmunityModel implements ImmunityModel {
 	}
 
 	private double combine(double risk, double additional) {
-		switch (config.getCombinator()) {
+		switch (combinator) {
 			case min:
 				return Math.min(risk, additional);
 			case product:
 				return risk * additional;
 			default:
-				throw new IllegalStateException("Unknown combinator: " + config.getCombinator());
+				throw new IllegalStateException("Unknown combinator: " + combinator);
 		}
 	}
 
@@ -148,8 +150,7 @@ public final class ExplicitImmunityModel implements ImmunityModel {
 		if (days >= 0)
 			return false;
 
-		if (!warnedAboutFutureEvent) {
-			warnedAboutFutureEvent = true;
+		if (warnedAboutFutureEvent.compareAndSet(false, true)) {
 			log.warn("Immunity was asked for day {}, but {} happened {} days later; this event is ignored. "
 				+ "Further occurrences are not logged.", day, describe(source), -days);
 		}

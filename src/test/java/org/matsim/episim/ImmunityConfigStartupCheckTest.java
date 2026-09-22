@@ -1,11 +1,15 @@
 package org.matsim.episim;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import org.junit.Test;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.ImmunityModel;
+import org.matsim.episim.model.LegacyCurveImmunityModel;
 import org.matsim.episim.model.VirusStrain;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,4 +41,31 @@ public class ImmunityConfigStartupCheckTest {
 			.hasMessageContaining("STRAIN_OF_ImmunityConfigStartupCheckTest")
 			.hasMessageContaining("strainParams");
 	}
+
+	/**
+	 * A module that binds the immunity model directly wins over the provider that reads the configuration. Scenarios
+	 * in this repository bind their legacy implementation as {@code @Legacy}, but modules elsewhere may not.
+	 */
+	@Test
+	public void aDirectBindingThatOverrulesTheSettingStopsTheRun() {
+
+		AbstractModule bindsDirectly = new AbstractModule() {
+			@Override
+			protected void configure() {
+				bind(ImmunityModel.class).to(LegacyCurveImmunityModel.class).in(Singleton.class);
+			}
+		};
+
+		Injector injector = Guice.createInjector(Modules.override(
+			Modules.override(new EpisimModule()).with(new SyntheticScenario())).with(bindsDirectly));
+
+		Config config = injector.getInstance(Config.class);
+		ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class).setModel(ImmunityConfigGroup.Model.explicit);
+
+		assertThatThrownBy(() -> injector.getInstance(EpisimRunner.class).run(1))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("LegacyCurveImmunityModel")
+			.hasMessageContaining("@Legacy");
+	}
+
 }

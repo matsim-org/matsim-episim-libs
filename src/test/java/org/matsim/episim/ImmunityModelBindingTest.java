@@ -11,6 +11,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.DefaultAntibodyModel;
 import org.matsim.episim.model.ExplicitImmunityModel;
+import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.NoAntibodyModel;
 import org.matsim.episim.model.ImmunityModel;
 import org.matsim.episim.model.Legacy;
@@ -18,6 +19,7 @@ import org.matsim.episim.model.LegacyCurveImmunityModel;
 import org.matsim.episim.model.LegacySplitImmunityModel;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Which immunity implementation a run gets is decided by {@link ImmunityConfigGroup}, not by the scenario module.
@@ -80,6 +82,27 @@ public class ImmunityModelBindingTest {
 
 		assertThat(injector(ImmunityConfigGroup.Model.explicit, false).getInstance(AntibodyModel.class))
 			.isInstanceOf(NoAntibodyModel.class);
+	}
+
+
+	/**
+	 * Some infection models read antibodies directly or apply no immunity at all. Under {@code explicit} their runs
+	 * would look normal and give agents no protection, so they have to refuse to start.
+	 */
+	@Test
+	public void infectionModelsThatBypassTheImmunityModelRefuseExplicit() {
+		Config legacy = ConfigUtils.createConfig();
+		ConfigUtils.addOrGetModule(legacy, ImmunityConfigGroup.class).setModel(ImmunityConfigGroup.Model.legacyCovid);
+		ImmunityConfigGroup.requireLegacyImmunity(legacy, InfectionModelWithAntibodies.class, "reads antibodies");
+
+		Config explicit = ConfigUtils.createConfig();
+		ConfigUtils.addOrGetModule(explicit, ImmunityConfigGroup.class).setModel(ImmunityConfigGroup.Model.explicit);
+
+		assertThatThrownBy(() -> ImmunityConfigGroup.requireLegacyImmunity(explicit, InfectionModelWithAntibodies.class,
+			"reads antibodies"))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("InfectionModelWithAntibodies")
+			.hasMessageContaining("no protection against infection");
 	}
 
 }

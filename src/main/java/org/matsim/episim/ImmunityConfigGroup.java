@@ -4,8 +4,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.ConfigurableProgressionModel;
+import org.matsim.episim.model.ExplicitImmunityModel;
+import org.matsim.episim.model.ImmunityModel;
 import org.matsim.episim.model.ImmunityEvent;
 import org.matsim.episim.model.Pathogen;
 import org.matsim.episim.model.VaccinationType;
@@ -235,6 +239,54 @@ public final class ImmunityConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Refuses a run whose bound {@link ImmunityModel} is not the one this group asks for.
+	 *
+	 * <p>A module that binds {@code ImmunityModel} directly wins over the provider that reads {@link #MODEL}, so the
+	 * setting would be ignored without a word. That is how every scenario in this repository used to bind its legacy
+	 * implementation; they now bind it as {@code @Legacy}, but modules outside this repository do not know that yet.</p>
+	 *
+	 * @param bound the implementation the run actually got
+	 */
+	public void checkBoundModel(Object bound) {
+
+		boolean isExplicit = bound instanceof ExplicitImmunityModel;
+		if (isExplicit == (model == Model.explicit)) {
+			log.info("Immunity model: {} ('{}.{}' is {})", bound.getClass().getSimpleName(), GROUPNAME, MODEL, model);
+			return;
+		}
+
+		throw new IllegalStateException("'" + GROUPNAME + "." + MODEL + "' is " + model + ", but the run is using "
+			+ bound.getClass().getSimpleName() + ". A module binds " + ImmunityModel.class.getSimpleName()
+			+ " directly and overrules the setting; bind it with the @Legacy qualifier instead, so that the "
+			+ "configuration decides which model a run uses.");
+	}
+
+	/**
+	 * Refuses a run in which a component takes immunity from somewhere other than {@link org.matsim.episim.model.ImmunityModel}
+	 * while this group configures immunity.
+	 *
+	 * <p>Some infection models read antibody levels directly, or apply no immunity at all. They are consistent with
+	 * {@link Model#legacyCovid}, but under {@link Model#explicit} the configured curves would never reach the
+	 * infection probabilities: antibodies are not even evolved. The run would look normal and quietly give agents no
+	 * protection against infection, which is worse than not starting.</p>
+	 *
+	 * @param component the class that does not ask the immunity model, named in the message
+	 * @param what      what it does instead, e.g. "takes susceptibility from antibody levels"
+	 */
+	public static void requireLegacyImmunity(Config config, Class<?> component, String what) {
+
+		ImmunityConfigGroup immunity = ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class);
+		if (immunity.getModel() == Model.legacyCovid)
+			return;
+
+		throw new IllegalStateException(component.getSimpleName() + " " + what + " instead of asking the immunity model, "
+			+ "but '" + GROUPNAME + "." + MODEL + "' is " + immunity.getModel() + ". The configured curves would never be "
+			+ "applied and agents would have no protection against infection. Bind an infection model that asks the "
+			+ "immunity model, such as AgeAndProgressionDependentInfectionModelWithSeasonality, or set " + MODEL + " to "
+			+ Model.legacyCovid + ".");
+	}
+
+	/**
 	 * Checks the group before the simulation starts. Only with {@link Model#explicit}: with {@link Model#legacyCovid}
 	 * the group is not read, and settings that would be ignored are reported as a warning.
 	 */
@@ -272,7 +324,8 @@ public final class ImmunityConfigGroup extends ReflectiveConfigGroup {
 	 * holds across pathogens as well, because an agent has one disease status for all of them.</p>
 	 *
 	 * <p>Curves of products are not affected: they protect agents who have not been infected yet. A run whose
-	 * infection sources all say {@code "0>0.0"} is therefore fine without the transition.</p>
+	 * infection sources all say {@code "0>0.0"} is therefore fine without the transition &mdash; unless
+	 * {@link #OTHER_PATHOGENS_PROTECTION} is positive, because that protection comes from the same events.</p>
 	 *
 	 * <p>How <i>long</i> the state lasts is a modelling decision and not checked here; the point of the new model is
 	 * that protection is described by curves, so this transition should be a short refractory period.</p>
@@ -285,27 +338,39 @@ public final class ImmunityConfigGroup extends ReflectiveConfigGroup {
 			return;
 
 		com.typesafe.config.Config progression = episimConfig.getProgressionConfig();
+		// an empty config is not "no transitions": the progression model falls back to its own default, which does
+		// return agents to susceptible
+		if (progression.isEmpty())
+			progression = ConfigurableProgressionModel.DEFAULT_CONFIG;
+
 		String path = DiseaseStatus.recovered.name() + "." + DiseaseStatus.susceptible.name();
 		if (progression.hasPath(path))
 			return;
+
+		// an infection protects through its own curves and, for strains it does not list, through the default
+		boolean crossProtection = otherPathogensProtection != null && otherPathogensProtection > 0;
 
 		List<String> withProtection = new ArrayList<>();
 		for (SourceParams source : sources.values()) {
 			if (source.getSourceKind() != SourceKind.infection)
 				continue;
-			for (ProtectionParams p : source.getProtections()) {
-				if (!p.getCurve().isZero()) {
-					withProtection.add(source.getSource().toString());
-					break;
-				}
-			}
+
+			boolean protects = crossProtection;
+			for (ProtectionParams p : source.getProtections())
+				protects |= !p.getCurve().isZero();
+
+			if (protects)
+				withProtection.add(source.getSource().toString());
 		}
 
 		if (!withProtection.isEmpty())
-			problems.add("Infections with " + withProtection + " leave protection behind, but 'progressionConfig' has no "
-				+ "transition from " + DiseaseStatus.recovered + " to " + DiseaseStatus.susceptible + ". Agents never become "
-				+ "susceptible again, so these curves would never be applied. Configure a short refractory period, or write "
-				+ "curves '0>0.0' if immunity is meant to be the " + DiseaseStatus.recovered + " state itself.");
+			problems.add("Infections with " + withProtection + " leave protection behind"
+				+ (crossProtection ? " (through '" + OTHER_PATHOGENS_PROTECTION + "' if not through their curves)" : "")
+				+ ", but 'progressionConfig' has no transition from " + DiseaseStatus.recovered + " to "
+				+ DiseaseStatus.susceptible + ". Agents never become susceptible again, so this protection would never be "
+				+ "applied. Configure a short refractory period, or write curves '0>0.0' and set '"
+				+ OTHER_PATHOGENS_PROTECTION + "' to 0.0 if immunity is meant to be the " + DiseaseStatus.recovered
+				+ " state itself.");
 	}
 
 	/**

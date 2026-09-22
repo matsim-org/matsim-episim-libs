@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import com.typesafe.config.ConfigFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.matsim.core.config.Config;
@@ -384,6 +385,42 @@ public class ImmunityConfigGroupTest {
 
 		// a vaccine protects agents who have not been infected yet, so it works without re-infection
 		check(config);
+	}
+
+
+	/**
+	 * An empty progression config means the progression model uses its own default, which does return agents to
+	 * susceptible &mdash; rejecting it would be a false alarm.
+	 */
+	@Test
+	public void emptyProgressionConfigUsesTheDefaultWhichReturnsAgentsToSusceptible() {
+		VirusStrain flu = VirusStrain.of(new Pathogen("FLU_REFRACTORY_DEFAULT"), "FLU_REFRACTORY_DEFAULT");
+		Config config = coverageConfig(new VirusStrain[]{flu}, flu);
+		fullSource(ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class), flu, flu);
+
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(ConfigFactory.empty());
+
+		check(config);
+	}
+
+	@Test
+	public void crossPathogenProtectionAlsoNeedsAWayBackToSusceptible() {
+		VirusStrain flu = VirusStrain.of(new Pathogen("FLU_REFRACTORY_CROSS"), "FLU_REFRACTORY_CROSS");
+		Config config = coverageConfig(new VirusStrain[]{flu}, flu);
+		ImmunityConfigGroup immunity = ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class);
+		for (DiseaseStatus against : ImmunityConfigGroup.SUPPORTED_TARGETS)
+			immunity.getOrAddSource(flu).setProtection(against, flu, ProtectionCurve.NONE);
+
+		// the curves of the infection are zero, but it still protects against strains of other pathogens
+		immunity.setOtherPathogensProtection(0.3);
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setProgressionConfig(Transition.config()
+			.from(DiseaseStatus.contagious, Transition.to(DiseaseStatus.recovered, Transition.fixed(4)))
+			.build());
+
+		assertThatThrownBy(() -> check(config))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("otherPathogensProtection")
+			.hasMessageContaining("never become susceptible again");
 	}
 
 }

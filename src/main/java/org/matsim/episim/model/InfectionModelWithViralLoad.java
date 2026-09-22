@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.ImmunityConfigGroup;
 import org.matsim.episim.PathogenConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.policy.Restriction;
@@ -34,6 +35,8 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);
+
+		ImmunityConfigGroup.requireLegacyImmunity(config, getClass(), "applies no immunity at all");
 	}
 
 
