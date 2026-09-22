@@ -86,7 +86,7 @@ public class SyntheticScenario extends AbstractModule {
 	protected void configure() {
 		bind(ContactModel.class).to(params.contactModel).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
-		bind(ImmunityModel.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
+		bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 	}
 

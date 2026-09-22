@@ -117,7 +117,7 @@
 
 		 bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		 bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
-		 bind(ImmunityModel.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
+		 bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
 		 bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		 bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 		 bind(TestingModel.class).to(testingModel).in(Singleton.class);

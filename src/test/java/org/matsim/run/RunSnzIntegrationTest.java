@@ -133,7 +133,7 @@ public class RunSnzIntegrationTest {
 		protected void configure() {
 			bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 			bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
-			bind(ImmunityModel.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
+			bind(ImmunityModel.class).annotatedWith(Legacy.class).to(LegacySplitImmunityModel.class).in(Singleton.class);
 			bind(InfectionModel.class).to(AgeAndProgressionDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 			bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
 		}
