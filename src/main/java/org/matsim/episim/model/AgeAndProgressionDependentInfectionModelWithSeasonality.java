@@ -173,7 +173,9 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {
 
 			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);
-			return distribution.density(afterSymptomOnset) * scale;
+			PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);
+			return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(afterSymptomOnset)
+					: distribution.density(afterSymptomOnset) * scale;
 		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {
 
 			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());
@@ -181,17 +183,28 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);
 			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {
 
-				return distribution.density(transitionDays - daysSince) * scale;
+				int untilOnset = transitionDays - daysSince;
+				// the built-in curve is read at the distance to onset, i.e. mirrored; a configured profile is signed
+				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);
+				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(-untilOnset)
+						: distribution.density(untilOnset) * scale;
 
 			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {
 
 				// when next state is recovered the half of the interval is used
-				return distribution.density(daysSince - transitionDays / 2.0) * scale;
+				double sinceMidpoint = daysSince - transitionDays / 2.0;
+				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);
+				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(sinceMidpoint)
+						: distribution.density(sinceMidpoint) * scale;
 			}
 		}
 
 
 		return 0.0;
+	}
+
+	private PathogenConfigGroup.PathogenParams pathogenOf(EpisimPerson infector) {
+		return pathogenConfig.getParams(virusStrainConfig.getParams(infector.getVirusStrain()).getPathogen());
 	}
 
 	public static void main(String[] args) {

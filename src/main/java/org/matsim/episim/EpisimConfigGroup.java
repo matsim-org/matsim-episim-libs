@@ -324,9 +324,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(INFECTIONS_PER_DAY)
 	void setInfectionsPerDay(String capacity) {
 
-		// an empty value is written when all strains were removed, it must not bring back the default SARS-CoV-2 entry
+		// the config value is authoritative: replace the whole map (including the constructor's default SARS-CoV-2
+		// entry) rather than only adding to it, otherwise a strain cleared before writing (e.g. to seed a single
+		// other pathogen) silently reappears - with an empty per-day map - on the next read, and
+		// EpisimUtils.findValidEntry(emptyMap, 1, date) then falls back to seeding 1 infection/day of it.
+		infectionsPerDay.clear();
+
 		if (capacity == null || capacity.isBlank()) {
-			infectionsPerDay.clear();
 			return;
 		}
 

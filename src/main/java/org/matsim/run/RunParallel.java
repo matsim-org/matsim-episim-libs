@@ -173,6 +173,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			prepare = BatchRun.prepare(setup, params);
 
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
+		AtomicInteger failedTasks = new AtomicInteger();
 
 		// All config need to have the same base config (population, events, etc..)
 		Config baseConfig = prepare.runs.get(0).config;
@@ -250,6 +251,7 @@ public class RunParallel<T> implements Callable<Integer> {
 							post
 					), executor)
 					.exceptionally(t -> {
+						failedTasks.incrementAndGet();
 						log.error("Task {} failed", outputPath, t);
 						return null;
 					}));
@@ -273,6 +275,12 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		if (writer != null)
 			writer.close();
+
+		// the other tasks are still allowed to finish, but callers must not treat a partial batch as a result
+		if (failedTasks.get() > 0) {
+			log.error("{} of {} tasks failed", failedTasks.get(), futures.size());
+			return 1;
+		}
 
 		return 0;
 	}

@@ -20,11 +20,12 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 	private ConfigurableProgressionModel progression;
 	private AgeAndProgressionDependentInfectionModelWithSeasonality model;
 	private EpisimReporting reporting;
+	private Config config;
 
 	@Before
 	public void setUp() throws Exception {
 		EpisimSplittableRandom rnd = new EpisimSplittableRandom(0);
-		Config config = EpisimTestUtils.createTestConfig();
+		config = EpisimTestUtils.createTestConfig();
 
 		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class)
 				.setProgressionConfig(Transition.config()
@@ -36,6 +37,7 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 								to(DiseaseStatus.recovered, Transition.fixed(10))
 						)
 						.from(DiseaseStatus.showingSymptoms,
+								to(DiseaseStatus.seriouslySick, Transition.fixed(7)),
 								to(DiseaseStatus.recovered, Transition.fixed(7))
 						)
 						.build());
@@ -122,6 +124,44 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 		assertThat(model.getInfectivity(p))
 				.isCloseTo(0.40, offset);
 
+	}
+
+	/**
+	 * A configured profile replaces the built-in curve and is read with a signed offset: negative before symptom onset
+	 * (the built-in curve is read mirrored there), relative to the middle of the contagious period without symptoms.
+	 */
+	@Test
+	public void configuredInfectivityProfile() {
+		ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class).getParams(Pathogen.SARS_COV_2)
+				.setInfectivityProfile(java.util.Map.of(-4, 0.1, -2, 0.3, 0, 1.0, 3, 0.6, 5, 0.2));
+		Offset<Double> offset = Offset.offset(1e-9);
+
+		// contagious from day 1, symptoms 4 days later on day 5, see setUp
+		EpisimPerson symptomatic = drawPersonWithState(DiseaseStatus.infectedButNotContagious, DiseaseStatus.showingSymptoms);
+		model.setIteration(1);
+		assertThat(model.getInfectivity(symptomatic)).isCloseTo(0.1, offset);
+		model.setIteration(3);
+		assertThat(model.getInfectivity(symptomatic)).isCloseTo(0.3, offset);
+
+		progression.updateState(symptomatic, 5);
+		assertThat(symptomatic.getDiseaseStatus()).isEqualTo(DiseaseStatus.showingSymptoms);
+		model.setIteration(5);
+		assertThat(model.getInfectivity(symptomatic)).isCloseTo(1.0, offset);
+		model.setIteration(8);
+		assertThat(model.getInfectivity(symptomatic)).isCloseTo(0.6, offset);
+		model.setIteration(9);
+		assertThat(model.getInfectivity(symptomatic)).as("linear between days 3 and 5").isCloseTo(0.4, offset);
+		model.setIteration(11);
+		assertThat(model.getInfectivity(symptomatic)).as("outside the profile").isZero();
+
+		// contagious for 10 days without symptoms: offsets are relative to day 5
+		EpisimPerson asymptomatic = drawPersonWithState(DiseaseStatus.contagious, DiseaseStatus.recovered);
+		model.setIteration(1);
+		assertThat(model.getInfectivity(asymptomatic)).isCloseTo(0.1, offset);
+		model.setIteration(5);
+		assertThat(model.getInfectivity(asymptomatic)).isCloseTo(1.0, offset);
+		model.setIteration(8);
+		assertThat(model.getInfectivity(asymptomatic)).isCloseTo(0.6, offset);
 	}
 
 

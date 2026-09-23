@@ -1,7 +1,11 @@
 package org.matsim.episim;
 
 import org.junit.Test;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Map;
 
@@ -33,5 +37,26 @@ public class TracingConfigGroupTest {
 				.isEqualTo(expected)
 				.isNotEmpty();
 
+	}
+
+	@Test
+	public void emptyValuesSurviveWriteAndRead() throws IOException {
+
+		Config config = ConfigUtils.createConfig();
+		// non-default, so a lost value would show; the param name "strategy" is aliased to "replanning" on read
+		ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).setStrategy(TracingConfigGroup.Strategy.NONE);
+
+		File tmp = File.createTempFile("config", ".xml");
+		tmp.deleteOnExit();
+		ConfigUtils.writeConfig(config, tmp.toString());
+
+		TracingConfigGroup read = new TracingConfigGroup();
+		ConfigUtils.loadConfig(tmp.toString(), read);
+
+		assertThat(read.getQuarantineDuration()).isEmpty();
+		assertThat(read.getQuarantineStatus()).isEmpty();
+		assertThat(read.getQuarantineVaccinated()).isEmpty();
+		assertThat(read.getIgnoredActivities()).isEmpty();
+		assertThat(read.getStrategy()).isEqualTo(TracingConfigGroup.Strategy.NONE);
 	}
 }
