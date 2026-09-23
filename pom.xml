@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.matsim-org</groupId>
     <artifactId>matsim-episim-libs</artifactId>
-    <version>2027-SNAPSHOT</version>
+    <version>2027-SNAPSHOT-23.09.26</version>
 
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
@@ -58,9 +58,14 @@
         </repository>
 
         <repository>
-            <!-- Required for MATSim snaphots -->
             <id>ojo-snapshots</id>
-            <url>http://oss.jfrog.org/libs-snapshot</url>
+            <url>https://oss.jfrog.org/artifactory/libs-snapshot</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
 
         <!-- The following ones seem to be needed for some OSM stuff. /sh -->
@@ -71,7 +76,7 @@
 
         <repository>
             <id>slimjars</id>
-            <url>http://mvn.slimjars.com</url>
+            <url>https://mvn.slimjars.com</url>
         </repository>
 
         <repository>
@@ -83,10 +88,16 @@
 
     <distributionManagement>
         <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/matsim-org/matsim-episim-libs</url>
+            <id>episim-repository-releases</id>
+            <name>Episim Releases</name>
+            <url>https://maven.episim.info/releases</url>
         </repository>
+
+        <snapshotRepository>
+            <id>episim-repository-snapshots</id>
+            <name>Episim Snapshots</name>
+            <url>https://maven.episim.info/snapshots</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <dependencies>
@@ -312,6 +323,10 @@
                         </goals>
                         <configuration>
                             <outputFile>${project.basedir}/${project.build.finalName}.jar</outputFile>
+                            <!-- The shaded jar is written next to the project, so the artifact installed and deployed
+                                 for this module is the plain one and its pom has to keep every dependency. With the
+                                 reduced pom, a project depending on this module gets no MATSim, Guice or picocli. -->
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${mainClass}</mainClass>
