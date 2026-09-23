@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Pathogen.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">Pathogen.java</span></div><h1>Pathogen.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import java.util.Objects;
+
+/** A disease-causing organism whose variants are represented by {@link VirusStrain}. */
+public final class Pathogen {
+<span class="fc" id="L7">	public static final Pathogen SARS_COV_2 = new Pathogen(&quot;SARS_CoV_2&quot;);</span>
+
+	private final String name;
+
+	/**
+	 * Creates a pathogen with the given stable name.
+	 */
+<span class="fc" id="L14">	public Pathogen(String name) {</span>
+<span class="fc" id="L15">		this.name = Objects.requireNonNull(name, &quot;Pathogen name must not be null&quot;);</span>
+<span class="fc" id="L16">	}</span>
+
+	public String getName() {
+<span class="fc" id="L19">		return name;</span>
+	}
+
+	@Override
+	public boolean equals(Object o) {
+<span class="pc bpc" id="L24" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L25">		Pathogen pathogen = (Pathogen) o;</span>
+<span class="fc" id="L26">		return name.equals(pathogen.name);</span>
+	}
+
+	@Override
+	public int hashCode() {
+<span class="fc" id="L31">		return name.hashCode();</span>
+	}
+
+	@Override
+	public String toString() {
+<span class="fc" id="L36">		return name;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

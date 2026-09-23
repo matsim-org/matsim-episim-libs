@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimSplittableRandom.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.util</a> &gt; <span class="el_source">EpisimSplittableRandom.java</span></div><h1>EpisimSplittableRandom.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the &quot;Classpath&quot; exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package org.matsim.episim.util;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * A copy of the JDK {@link java.util.SplittableRandom} algorithm that exposes
+ * its current seed for deterministic snapshot persistence.
+ *
+ * &lt;p&gt;Like {@code SplittableRandom}, this class is not thread-safe.&lt;/p&gt;
+ */
+public final class EpisimSplittableRandom {
+
+	private static final long GOLDEN_GAMMA = 0x9e3779b97f4a7c15L;
+	private static final double DOUBLE_UNIT = 0x1.0p-53;
+	private static final String BAD_BOUND = &quot;bound must be positive&quot;;
+	private static final String BAD_RANGE = &quot;bound must be greater than origin&quot;;
+<span class="fc" id="L41">	private static final AtomicLong DEFAULT_GEN = new AtomicLong(initialSeed());</span>
+
+	/**
+	 * The seed. Updated only via method nextSeed.
+	 */
+	private long seed;
+
+	/**
+	 * The step value.
+	 */
+	private final long gamma;
+
+	/**
+	 * Creates a generator with the same sequence as a JDK
+	 * {@link java.util.SplittableRandom} created with the same seed.
+	 */
+	public EpisimSplittableRandom(long seed) {
+<span class="fc" id="L58">		this(seed, GOLDEN_GAMMA);</span>
+<span class="fc" id="L59">	}</span>
+
+	/**
+	 * Creates a generator with a process-local automatically generated seed.
+	 */
+<span class="nc" id="L64">	public EpisimSplittableRandom() {</span>
+<span class="nc" id="L65">		long s = DEFAULT_GEN.getAndAdd(2 * GOLDEN_GAMMA);</span>
+<span class="nc" id="L66">		this.seed = mix64(s);</span>
+<span class="nc" id="L67">		this.gamma = mixGamma(s + GOLDEN_GAMMA);</span>
+<span class="nc" id="L68">	}</span>
+
+	/**
+	 * Internal constructor used by all others except default constructor.
+	 */
+<span class="fc" id="L73">	private EpisimSplittableRandom(long seed, long gamma) {</span>
+<span class="fc" id="L74">		this.seed = seed;</span>
+<span class="fc" id="L75">		this.gamma = gamma;</span>
+<span class="fc" id="L76">	}</span>
+
+	/**
+	 * Computes Stafford variant 13 of 64bit mix function.
+	 * http://zimbry.blogspot.com/2011/09/better-bit-mixing-improving-on.html
+	 */
+	private static long mix64(long z) {
+<span class="fc" id="L83">		z = (z ^ (z &gt;&gt;&gt; 30)) * 0xbf58476d1ce4e5b9L;</span>
+<span class="fc" id="L84">		z = (z ^ (z &gt;&gt;&gt; 27)) * 0x94d049bb133111ebL;</span>
+<span class="fc" id="L85">		return z ^ (z &gt;&gt;&gt; 31);</span>
+	}
+
+	/**
+	 * Returns the 32 high bits of Stafford variant 4 mix64 function as int.
+	 * http://zimbry.blogspot.com/2011/09/better-bit-mixing-improving-on.html
+	 */
+	private static int mix32(long z) {
+<span class="fc" id="L93">		z = (z ^ (z &gt;&gt;&gt; 33)) * 0x62a9d9ed799705f5L;</span>
+<span class="fc" id="L94">		return (int)(((z ^ (z &gt;&gt;&gt; 28)) * 0xcb24d0a5c88c35b3L) &gt;&gt;&gt; 32);</span>
+	}
+
+	/**
+	 * Returns the gamma value to use for a new split instance.
+	 * Uses the 64bit mix function from MurmurHash3.
+	 * https://github.com/aappleby/smhasher/wiki/MurmurHash3
+	 */
+	private static long mixGamma(long z) {
+<span class="fc" id="L103">		z = (z ^ (z &gt;&gt;&gt; 33)) * 0xff51afd7ed558ccdL; // MurmurHash3 mix constants</span>
+<span class="fc" id="L104">		z = (z ^ (z &gt;&gt;&gt; 33)) * 0xc4ceb9fe1a85ec53L;</span>
+<span class="fc" id="L105">		z = (z ^ (z &gt;&gt;&gt; 33)) | 1L;                  // force to be odd</span>
+<span class="fc" id="L106">		int n = Long.bitCount(z ^ (z &gt;&gt;&gt; 1));       // ensure enough transitions</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">		return (n &lt; 24) ? z ^ 0xaaaaaaaaaaaaaaaaL : z;</span>
+	}
+
+	private static long initialSeed() {
+<span class="fc" id="L111">		return mix64(System.currentTimeMillis()) ^ mix64(System.nanoTime());</span>
+	}
+
+	private long nextSeed() {
+<span class="fc" id="L115">		return seed += gamma;</span>
+	}
+
+	private long internalNextLong(long origin, long bound) {
+<span class="fc" id="L119">		long r = mix64(nextSeed());</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">		if (origin &lt; bound) {</span>
+<span class="fc" id="L121">			long n = bound - origin;</span>
+<span class="fc" id="L122">			long m = n - 1;</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">			if ((n &amp; m) == 0L) {</span>
+<span class="nc" id="L124">				r = (r &amp; m) + origin;</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">			} else if (n &gt; 0L) {</span>
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">				for (long u = r &gt;&gt;&gt; 1; u + m - (r = u % n) &lt; 0L; u = mix64(nextSeed()) &gt;&gt;&gt; 1) {</span>
+					// Reject over-represented candidates.
+				}
+<span class="fc" id="L129">				r += origin;</span>
+			} else {
+<span class="pc bpc" id="L131" title="2 of 4 branches missed.">				while (r &lt; origin || r &gt;= bound) {</span>
+<span class="nc" id="L132">					r = mix64(nextSeed());</span>
+				}
+			}
+		}
+<span class="fc" id="L136">		return r;</span>
+	}
+
+	private int internalNextInt(int origin, int bound) {
+<span class="fc" id="L140">		int r = mix32(nextSeed());</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">		if (origin &lt; bound) {</span>
+<span class="fc" id="L142">			int n = bound - origin;</span>
+<span class="fc" id="L143">			int m = n - 1;</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">			if ((n &amp; m) == 0) {</span>
+<span class="nc" id="L145">				r = (r &amp; m) + origin;</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">			} else if (n &gt; 0) {</span>
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">				for (int u = r &gt;&gt;&gt; 1; u + m - (r = u % n) &lt; 0; u = mix32(nextSeed()) &gt;&gt;&gt; 1) {</span>
+					// Reject over-represented candidates.
+				}
+<span class="fc" id="L150">				r += origin;</span>
+			} else {
+<span class="pc bpc" id="L152" title="2 of 4 branches missed.">				while (r &lt; origin || r &gt;= bound) {</span>
+<span class="nc" id="L153">					r = mix32(nextSeed());</span>
+				}
+			}
+		}
+<span class="fc" id="L157">		return r;</span>
+	}
+
+	private double internalNextDouble(double origin, double bound) {
+<span class="fc" id="L161">		double r = (nextLong() &gt;&gt;&gt; 11) * DOUBLE_UNIT;</span>
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">		if (origin &lt; bound) {</span>
+<span class="fc" id="L163">			r = r * (bound - origin) + origin;</span>
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">			if (r &gt;= bound) {</span>
+<span class="nc" id="L165">				r = Double.longBitsToDouble(Double.doubleToLongBits(bound) - 1);</span>
+			}
+		}
+<span class="fc" id="L168">		return r;</span>
+	}
+
+	/**
+	 * Returns the current internal seed. It can be persisted and later supplied
+	 * to {@link #setSeed(long)} to continue the exact same sequence.
+	 */
+	public long getSeed() {
+<span class="fc" id="L176">		return seed;</span>
+	}
+
+	/**
+	 * Restores the current internal seed without changing this generator's
+	 * gamma value.
+	 */
+	public void setSeed(long seed) {
+<span class="fc" id="L184">		this.seed = seed;</span>
+<span class="fc" id="L185">	}</span>
+
+	/**
+	 * Creates an independent generator using the same splitting algorithm as
+	 * {@link java.util.SplittableRandom#split()}.
+	 */
+	public EpisimSplittableRandom split() {
+<span class="fc" id="L192">		return new EpisimSplittableRandom(nextLong(), mixGamma(nextSeed()));</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code int} value.
+	 */
+	public int nextInt() {
+<span class="fc" id="L199">		return mix32(nextSeed());</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code int} between zero (inclusive) and the bound
+	 * (exclusive).
+	 */
+	public int nextInt(int bound) {
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">		if (bound &lt;= 0) {</span>
+<span class="nc" id="L208">			throw new IllegalArgumentException(BAD_BOUND);</span>
+		}
+
+<span class="fc" id="L211">		int r = mix32(nextSeed());</span>
+<span class="fc" id="L212">		int m = bound - 1;</span>
+<span class="fc bfc" id="L213" title="All 2 branches covered.">		if ((bound &amp; m) == 0) {</span>
+<span class="fc" id="L214">			r &amp;= m;</span>
+		} else {
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">			for (int u = r &gt;&gt;&gt; 1; u + m - (r = u % bound) &lt; 0; u = mix32(nextSeed()) &gt;&gt;&gt; 1) {</span>
+				// Reject over-represented candidates.
+			}
+		}
+<span class="fc" id="L220">		return r;</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code int} between the origin (inclusive) and the
+	 * bound (exclusive).
+	 */
+	public int nextInt(int origin, int bound) {
+<span class="pc bpc" id="L228" title="1 of 2 branches missed.">		if (origin &gt;= bound) {</span>
+<span class="nc" id="L229">			throw new IllegalArgumentException(BAD_RANGE);</span>
+		}
+<span class="fc" id="L231">		return internalNextInt(origin, bound);</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code long} value.
+	 */
+	public long nextLong() {
+<span class="fc" id="L238">		return mix64(nextSeed());</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code long} between zero (inclusive) and the bound
+	 * (exclusive).
+	 */
+	public long nextLong(long bound) {
+<span class="pc bpc" id="L246" title="1 of 2 branches missed.">		if (bound &lt;= 0) {</span>
+<span class="nc" id="L247">			throw new IllegalArgumentException(BAD_BOUND);</span>
+		}
+
+<span class="fc" id="L250">		long r = mix64(nextSeed());</span>
+<span class="fc" id="L251">		long m = bound - 1;</span>
+<span class="fc bfc" id="L252" title="All 2 branches covered.">		if ((bound &amp; m) == 0L) {</span>
+<span class="fc" id="L253">			r &amp;= m;</span>
+		} else {
+<span class="pc bpc" id="L255" title="1 of 2 branches missed.">			for (long u = r &gt;&gt;&gt; 1; u + m - (r = u % bound) &lt; 0L; u = mix64(nextSeed()) &gt;&gt;&gt; 1) {</span>
+				// Reject over-represented candidates.
+			}
+		}
+<span class="fc" id="L259">		return r;</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code long} between the origin (inclusive) and the
+	 * bound (exclusive).
+	 */
+	public long nextLong(long origin, long bound) {
+<span class="pc bpc" id="L267" title="1 of 2 branches missed.">		if (origin &gt;= bound) {</span>
+<span class="nc" id="L268">			throw new IllegalArgumentException(BAD_RANGE);</span>
+		}
+<span class="fc" id="L270">		return internalNextLong(origin, bound);</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code double} between zero (inclusive) and one
+	 * (exclusive).
+	 */
+	public double nextDouble() {
+<span class="fc" id="L278">		return (mix64(nextSeed()) &gt;&gt;&gt; 11) * DOUBLE_UNIT;</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code double} between zero (inclusive) and the
+	 * bound (exclusive).
+	 */
+	public double nextDouble(double bound) {
+<span class="pc bpc" id="L286" title="1 of 2 branches missed.">		if (!(bound &gt; 0.0)) {</span>
+<span class="nc" id="L287">			throw new IllegalArgumentException(BAD_BOUND);</span>
+		}
+
+<span class="fc" id="L290">		double result = (mix64(nextSeed()) &gt;&gt;&gt; 11) * DOUBLE_UNIT * bound;</span>
+<span class="pc bpc" id="L291" title="1 of 2 branches missed.">		return result &lt; bound</span>
+<span class="fc" id="L292">				? result</span>
+<span class="nc" id="L293">				: Double.longBitsToDouble(Double.doubleToLongBits(bound) - 1);</span>
+	}
+
+	/**
+	 * Returns a pseudorandom {@code double} between the origin (inclusive) and
+	 * the bound (exclusive).
+	 */
+	public double nextDouble(double origin, double bound) {
+<span class="pc bpc" id="L301" title="1 of 2 branches missed.">		if (!(origin &lt; bound)) {</span>
+<span class="nc" id="L302">			throw new IllegalArgumentException(BAD_RANGE);</span>
+		}
+<span class="fc" id="L304">		return internalNextDouble(origin, bound);</span>
+	}
+
+	/**
+	 * Returns a pseudorandom boolean value.
+	 */
+	public boolean nextBoolean() {
+<span class="fc bfc" id="L311" title="All 2 branches covered.">		return mix32(nextSeed()) &lt; 0;</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

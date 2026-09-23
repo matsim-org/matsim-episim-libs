@@ -1,0 +1,761 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">EpisimUtils.java</span></div><h1>EpisimUtils.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
+import org.apache.commons.math3.fitting.AbstractCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoint;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
+import org.apache.commons.math3.linear.DiagonalMatrix;
+import org.apache.commons.math3.random.BitsStreamGenerator;
+import org.apache.commons.math3.util.FastMath;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.input.RestrictionInput;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.util.EpisimSplittableRandom;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+
+/**
+ * Common utility class for episim.
+ */
+public final class EpisimUtils {
+
+	/**
+	 * Seconds in one day.
+	 */
+
+	public static final double DAY = 24. * 3600;
+
+	private EpisimUtils() {
+	}
+
+	/**
+	 * Gets the day of a week for a certain start day and current iteration.
+	 * The {@link DayOfWeek} can be overwritten by the input config and does not necessarily match the reality.
+	 */
+	public static DayOfWeek getDayOfWeek(EpisimConfigGroup config, long iteration) {
+<span class="fc" id="L75">		LocalDate date = config.getStartDate().plusDays(iteration - 1);</span>
+
+		// check if date was re-mapped
+<span class="fc bfc" id="L78" title="All 2 branches covered.">		if (config.getInputDays().containsKey(date))</span>
+<span class="fc" id="L79">			return config.getInputDays().get(date);</span>
+
+<span class="fc" id="L81">		return date.getDayOfWeek();</span>
+	}
+
+	/**
+	 * Calculates the relative time based on iteration. Only used internally because start offset
+	 * has to be added too.
+	 */
+	private static double getCorrectedTime(double time, long iteration) {
+<span class="fc" id="L89">		return Math.min(time, 3600. * 24) + iteration * 24. * 3600;</span>
+	}
+
+	/**
+	 * Calculates the time based on the current iteration and start day.
+	 *
+	 * @param startDate offset of the start date
+	 * @param time      time relative to start of day
+	 * @see #getStartOffset(LocalDate)
+	 */
+	public static double getCorrectedTime(long startDate, double time, long iteration) {
+		// start date refers to iteration 1, therefore 1 has to be subtracted
+		// TODO: not yet working return startDate + getCorrectedTime(time, iteration - 1);
+
+<span class="fc" id="L103">		return getCorrectedTime(time, iteration);</span>
+	}
+
+	/**
+	 * Calculates the start offset in seconds of simulation start.
+	 */
+	public static long getStartOffset(LocalDate startDate) {
+<span class="fc" id="L110">		return startDate.atTime(LocalTime.MIDNIGHT).atZone(ZoneOffset.UTC).toEpochSecond();</span>
+	}
+
+	/**
+	 * Creates an output directory, with a name based on current config and contact intensity.
+	 */
+	public static void setOutputDirectory(Config config) {
+<span class="nc" id="L117">		StringBuilder outdir = new StringBuilder(&quot;output&quot;);</span>
+<span class="nc" id="L118">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">		for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {</span>
+<span class="nc" id="L121">			outdir.append(&quot;-&quot;);</span>
+<span class="nc" id="L122">			outdir.append(infectionParams.getContainerName());</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">			if (infectionParams.getContactIntensity() != 1.) {</span>
+<span class="nc" id="L124">				outdir.append(&quot;ci&quot;).append(infectionParams.getContactIntensity());</span>
+			}
+<span class="nc" id="L126">		}</span>
+<span class="nc" id="L127">		config.controller().setOutputDirectory(outdir.toString());</span>
+<span class="nc" id="L128">	}</span>
+
+	/**
+	 * String representation of arbitrary parameter.
+	 */
+	public static String asString(Object obj) {
+
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">		if (obj == null)</span>
+<span class="nc" id="L136">			return &quot;null&quot;;</span>
+
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">		if (obj instanceof Class)</span>
+<span class="nc" id="L139">			return ((Class) obj).getCanonicalName();</span>
+
+		//if (obj instanceof Double || obj instanceof Float) {
+		//	return FMT.format(obj);
+		//}
+
+<span class="fc" id="L145">		return obj.toString();</span>
+	}
+
+	/**
+	 * Extracts the current state of a {@link EpisimSplittableRandom} instance.
+	 */
+	public static long getSeed(EpisimSplittableRandom rnd) {
+<span class="fc" id="L152">		return rnd.getSeed();</span>
+	}
+
+	/**
+	 * Sets current seed of {@link EpisimSplittableRandom} instance.
+	 */
+	public static void setSeed(EpisimSplittableRandom rnd, long seed) {
+<span class="fc" id="L159">		rnd.setSeed(seed);</span>
+<span class="fc" id="L160">	}</span>
+
+	/**
+	 * Find the current valid entry from a map of dates and values.
+	 *
+	 * @param map          map of values, assumed to be sorted by date
+	 * @param defaultValue default value
+	 * @param date         date to search for
+	 * @return value from the map larger or equal to {@code date}
+	 */
+	public static &lt;K extends Comparable, T&gt; T findValidEntry(Map&lt;K, T&gt; map, T defaultValue, K date) {
+<span class="fc" id="L171">		T result = defaultValue;</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">		for (Map.Entry&lt;K, T&gt; kv : map.entrySet()) {</span>
+<span class="fc" id="L173">			K key = kv.getKey();</span>
+			// key &lt;= date
+<span class="fc bfc" id="L175" title="All 2 branches covered.">			if (key.compareTo(date) &lt;= 0) {</span>
+<span class="fc" id="L176">				result = kv.getValue();</span>
+			}
+<span class="fc" id="L178">		}</span>
+<span class="fc" id="L179">		return result;</span>
+	}
+
+	/**
+	 * Interpolate a value for the current day from a map of target dates and values.
+	 * E.g. if there are the entries 01.01=1 and 10.01=10 then interpolation for
+	 * 05.01 will be 5
+	 *
+	 * @param map  map of target values.
+	 * @param date date to interpolate.
+	 * @return interpolated values (or exact if entry is in map)
+	 */
+	public static double interpolateEntry(NavigableMap&lt;LocalDate, ? extends Number&gt; map, LocalDate date) {
+
+<span class="fc" id="L193">		Map.Entry&lt;LocalDate, ? extends Number&gt; floor = map.floorEntry(date);</span>
+
+<span class="fc bfc" id="L195" title="All 2 branches covered.">		if (floor == null)</span>
+<span class="fc" id="L196">			return map.firstEntry().getValue().doubleValue();</span>
+
+<span class="fc bfc" id="L198" title="All 2 branches covered.">		if (floor.getKey().equals(date))</span>
+<span class="fc" id="L199">			return floor.getValue().doubleValue();</span>
+
+<span class="fc" id="L201">		Map.Entry&lt;LocalDate, ? extends Number&gt; ceil = map.ceilingEntry(date);</span>
+
+		// there is no higher entry to interpolate
+<span class="fc bfc" id="L204" title="All 2 branches covered.">		if (ceil == null)</span>
+<span class="fc" id="L205">			return floor.getValue().doubleValue();</span>
+
+<span class="fc" id="L207">		double between = ChronoUnit.DAYS.between(floor.getKey(), ceil.getKey());</span>
+<span class="fc" id="L208">		double diff = ChronoUnit.DAYS.between(floor.getKey(), date);</span>
+<span class="fc" id="L209">		return floor.getValue().doubleValue() + diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;</span>
+	}
+
+	/**
+	 * Interpolate a value for specific key from a map of target keys and values.
+	 *
+	 * @param map map of target values.
+	 * @param key key to interpolate.
+	 * @return interpolated values (or exact if entry is in map)
+	 * @see #interpolateEntry(NavigableMap, LocalDate)
+	 */
+	public static &lt;T extends Number&gt; double interpolateEntry(NavigableMap&lt;T, ? extends Number&gt; map, T key) {
+
+<span class="fc" id="L222">		Map.Entry&lt;T, ? extends Number&gt; floor = map.floorEntry(key);</span>
+
+<span class="fc bfc" id="L224" title="All 2 branches covered.">		if (floor == null)</span>
+<span class="fc" id="L225">			return map.firstEntry().getValue().doubleValue();</span>
+
+<span class="fc bfc" id="L227" title="All 2 branches covered.">		if (floor.getKey().equals(key))</span>
+<span class="fc" id="L228">			return floor.getValue().doubleValue();</span>
+
+<span class="fc" id="L230">		Map.Entry&lt;T, ? extends Number&gt; ceil = map.ceilingEntry(key);</span>
+
+		// there is no higher entry to interpolate
+<span class="fc bfc" id="L233" title="All 2 branches covered.">		if (ceil == null)</span>
+<span class="fc" id="L234">			return floor.getValue().doubleValue();</span>
+
+<span class="fc" id="L236">		double between = floor.getKey().doubleValue() - ceil.getKey().doubleValue();</span>
+<span class="fc" id="L237">		double diff = floor.getKey().doubleValue() - key.doubleValue();</span>
+<span class="fc" id="L238">		return floor.getValue().doubleValue() + diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;</span>
+	}
+
+	/**
+	 * Compress directory recursively.
+	 */
+	public static void compressDirectory(String rootDir, String sourceDir, String runId, ArchiveOutputStream out) throws IOException {
+<span class="fc" id="L245">		File[] fileList = new File(sourceDir).listFiles();</span>
+<span class="pc bpc" id="L246" title="1 of 2 branches missed.">		if (fileList == null) return;</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">		for (File file : fileList) {</span>
+
+<span class="fc bfc" id="L249" title="All 2 branches covered.">			if (file.getName().equals(&quot;events.tar&quot;))</span>
+<span class="fc" id="L250">				assert true; // no op</span>
+				// Zip files (i.e. other snapshots or large files) are not added
+<span class="fc bfc" id="L252" title="All 4 branches covered.">			else if (file.getName().endsWith(&quot;.zip&quot;) || file.getName().endsWith(&quot;.txt.gz&quot;))</span>
+<span class="fc" id="L253">				continue;</span>
+
+<span class="pc bpc" id="L255" title="1 of 2 branches missed.">			if (file.isDirectory()) {</span>
+<span class="nc" id="L256">				compressDirectory(rootDir, sourceDir + &quot;/&quot; + file.getName(), runId, out);</span>
+			} else {
+				// Remove runId from the output name
+<span class="fc" id="L259">				String name = file.getName().replace(runId + &quot;.&quot;, &quot;&quot;);</span>
+<span class="fc" id="L260">				ArchiveEntry entry = out.createArchiveEntry(file, &quot;output&quot; + sourceDir.replace(rootDir, &quot;&quot;) + &quot;/&quot; + name);</span>
+<span class="fc" id="L261">				out.putArchiveEntry(entry);</span>
+<span class="fc" id="L262">				FileUtils.copyFile(file, out);</span>
+<span class="fc" id="L263">				out.closeArchiveEntry();</span>
+			}
+		}
+<span class="fc" id="L266">	}</span>
+
+	/**
+	 * Writes characters to output in null-terminated format.
+	 */
+	public static void writeChars(DataOutput out, String value) throws IOException {
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">		if (value == null) throw new IllegalArgumentException(&quot;Can not write null values!&quot;);</span>
+
+<span class="fc" id="L274">		byte[] bytes = value.getBytes(StandardCharsets.ISO_8859_1);</span>
+<span class="fc" id="L275">		out.writeInt(bytes.length);</span>
+<span class="fc" id="L276">		out.write(bytes);</span>
+<span class="fc" id="L277">	}</span>
+
+	/**
+	 * Read null-terminated strings from input stream.
+	 */
+	public static String readChars(DataInput in) throws IOException {
+<span class="fc" id="L283">		int length = in.readInt();</span>
+<span class="fc" id="L284">		byte[] content = new byte[length];</span>
+<span class="fc" id="L285">		in.readFully(content, 0, length);</span>
+<span class="fc" id="L286">		return new String(content, 0, length, StandardCharsets.ISO_8859_1);</span>
+	}
+
+	/**
+	 * Draw a gaussian distributed random number (mean=0, var=1).
+	 *
+	 * @param rnd splittable random instance
+	 * @see BitsStreamGenerator#nextGaussian()
+	 */
+	public static double nextGaussian(EpisimSplittableRandom rnd) {
+		// Normally this allows to generate two numbers, but one is thrown away because this function is stateless
+		// generate a new pair of gaussian numbers
+<span class="fc" id="L298">		final double x = rnd.nextDouble();</span>
+<span class="fc" id="L299">		final double y = rnd.nextDouble();</span>
+<span class="fc" id="L300">		final double alpha = 2 * FastMath.PI * x;</span>
+<span class="fc" id="L301">		final double r = FastMath.sqrt(-2 * FastMath.log(y));</span>
+<span class="fc" id="L302">		return r * FastMath.cos(alpha);</span>
+		// nextGaussian = r * FastMath.sin(alpha);
+	}
+
+	/**
+	 * Draws a log normal distributed random number according to X=e^{\mu+\sigma Z}, where Z is a standard normal distribution.
+	 *
+	 * @param rnd   splittable random instance
+	 * @param mu    mu ( median exp mu)
+	 * @param sigma sigma
+	 */
+	public static double nextLogNormal(EpisimSplittableRandom rnd, double mu, double sigma) {
+<span class="fc bfc" id="L314" title="All 2 branches covered.">		if (sigma == 0)</span>
+<span class="fc" id="L315">			return Math.exp(mu);</span>
+
+<span class="fc" id="L317">		return Math.exp(sigma * nextGaussian(rnd) + mu);</span>
+	}
+
+	/**
+	 * Draws a log-normal value using the distribution mean and sigma.
+	 */
+	public static double nextLogNormalFromMeanAndSigma(EpisimSplittableRandom rnd, double mean, double sigma) {
+<span class="nc" id="L324">		double mu = Math.log(mean) - sigma * sigma / 2;</span>
+<span class="nc" id="L325">		return nextLogNormal(rnd, mu, sigma);</span>
+	}
+
+	/**
+	 * Resolves an input path that can be configured with the environment variable EPISIM_INPUT.
+	 *
+	 * @param defaultPath default path if nothing else is set
+	 * @return path to input directory
+	 */
+	public static Path resolveInputPath(String defaultPath) {
+<span class="fc" id="L335">		String input = System.getenv(&quot;EPISIM_INPUT&quot;);</span>
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">		return Path.of(input != null ? input : defaultPath).toAbsolutePath().normalize();</span>
+	}
+
+	/**
+	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
+	 *
+	 * @param alpha modulate the amount reduction
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
+	 */
+	@Deprecated
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
+		Extrapolation extrapolate) throws IOException {
+<span class="nc" id="L348">		return new CreateRestrictionsFromCSV(episimConfig).setInput(input.toPath()).setAlpha(alpha).setExtrapolation(extrapolate).createPolicy();</span>
+	}
+
+	/**
+	 * Read a csv with date column into a map.
+	 */
+	public static NavigableMap&lt;LocalDate, Double&gt; readCSV(Path csv, CSVFormat format, String dateColumn, String valueColumn) {
+
+<span class="nc" id="L356">		NavigableMap&lt;LocalDate, Double&gt; map = new TreeMap&lt;&gt;();</span>
+
+<span class="nc" id="L358">		try (BufferedReader in = Files.newBufferedReader(csv)) {</span>
+
+<span class="nc" id="L360">			Iterable&lt;CSVRecord&gt; records = format.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+
+<span class="nc bnc" id="L362" title="All 2 branches missed.">			for (CSVRecord r : records) {</span>
+
+<span class="nc" id="L364">				LocalDate date = LocalDate.parse(r.get(dateColumn));</span>
+<span class="nc" id="L365">				map.put(date, Double.parseDouble(r.get(valueColumn)));</span>
+<span class="nc" id="L366">			}</span>
+
+<span class="nc" id="L368">		} catch (IOException e) {</span>
+<span class="nc" id="L369">			throw new UncheckedIOException(e);</span>
+<span class="nc" id="L370">		}</span>
+
+
+<span class="nc" id="L373">		return map;</span>
+	}
+
+	public static void setRestrictions(FixedPolicy.ConfigBuilder builder, String act, NavigableMap&lt;LocalDate, Double&gt; data, Extrapolation extrapolation) {
+
+<span class="nc" id="L378">		builder.clearAfter(LocalDate.MIN.toString(), act);</span>
+
+<span class="nc" id="L380">		List&lt;Double&gt; trend = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L382">		AtomicReference&lt;LocalDate&gt; start = new AtomicReference&lt;&gt;(LocalDate.parse(&quot;2020-02-28&quot;));</span>
+
+<span class="nc" id="L384">		RestrictionInput.resampleAvgWeekday(data, start.get(), (date, avg) -&gt; {</span>
+<span class="nc" id="L385">			trend.add(avg);</span>
+<span class="nc" id="L386">			start.set(date);</span>
+<span class="nc" id="L387">			builder.restrict(date, avg, act);</span>
+<span class="nc" id="L388">		});</span>
+
+<span class="nc" id="L390">		List&lt;Double&gt; recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());</span>
+<span class="nc" id="L391">		start.set(start.get().plusDays(7));</span>
+
+<span class="nc bnc" id="L393" title="All 2 branches missed.">		for (Double predict : RestrictionInput.extrapolate(recentTrend, 25, extrapolation)) {</span>
+<span class="nc" id="L394">			builder.restrict(start.get(), Math.min(predict, 1), act);</span>
+<span class="nc" id="L395">			start.set(start.get().plusDays(7));</span>
+<span class="nc" id="L396">		}</span>
+
+<span class="nc" id="L398">	}</span>
+
+	public static Map&lt;LocalDate, Double&gt; getOutdoorFractionsFromWeatherData(File weatherCSV, double rainThreshold,
+		Double temperatureIn, Double temperatureOut) throws IOException {
+<span class="nc bnc" id="L402" title="All 8 branches missed.">		if ((temperatureIn == null &amp;&amp; temperatureOut != null) || (temperatureIn != null &amp;&amp; temperatureOut == null)) {</span>
+<span class="nc" id="L403">			throw new RuntimeException(&quot;one temperature is null, the other one is given; don't know how to interpret that; aborting ...&quot;);</span>
+		}
+<span class="nc bnc" id="L405" title="All 2 branches missed.">		if (temperatureIn == null) {</span>
+<span class="nc" id="L406">			temperatureIn = 1.5;</span>
+<span class="nc" id="L407">			temperatureOut = 30.5;</span>
+			// should correspond to 0.0344 * tMax - 0.0518, which is what I found.  kai, nov'20
+		}
+
+
+<span class="nc" id="L412">		Reader in = new FileReader(weatherCSV);</span>
+<span class="nc" id="L413">		Iterable&lt;CSVRecord&gt; records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="nc" id="L414">		DateTimeFormatter fmt = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+
+<span class="nc" id="L416">		final Map&lt;LocalDate, Double&gt; outdoorFractions = new TreeMap&lt;&gt;();</span>
+<span class="nc" id="L417">		LocalDate date = null;</span>
+<span class="nc bnc" id="L418" title="All 2 branches missed.">		for (CSVRecord record : records) {</span>
+<span class="nc" id="L419">			date = LocalDate.parse(record.get(&quot;date&quot;), fmt);</span>
+<span class="nc bnc" id="L420" title="All 4 branches missed.">			if (record.get(&quot;tmax&quot;).isEmpty() || record.get(&quot;prcp&quot;).isEmpty()) {</span>
+//				System.out.println(&quot;Skipping day because tmax or prcp data is not available. Date: &quot; + date.toString());
+<span class="nc" id="L422">				continue;</span>
+			}
+
+<span class="nc" id="L425">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="nc" id="L426">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+
+<span class="nc" id="L428">			double outDoorFraction = (tMax - temperatureIn) / (temperatureOut - temperatureIn);</span>
+
+<span class="nc bnc" id="L430" title="All 2 branches missed.">			if (prcp &gt; rainThreshold) {</span>
+<span class="nc" id="L431">				outDoorFraction = outDoorFraction * 0.5;</span>
+			}
+
+<span class="nc bnc" id="L434" title="All 2 branches missed.">			if (outDoorFraction &gt; 1.) {</span>
+<span class="nc" id="L435">				outDoorFraction = 1.;</span>
+//				System.out.println(&quot;outDoorFraction is &gt; 1. Setting to 1. Date: &quot; + date.toString());
+			}
+<span class="nc bnc" id="L438" title="All 2 branches missed.">			if (outDoorFraction &lt; 0.) {</span>
+<span class="nc" id="L439">				outDoorFraction = 0.;</span>
+//				System.out.println(&quot;outDoorFraction is &lt; 1. Setting to 0. Date: &quot; + date.toString());
+			}
+<span class="nc" id="L442">			outdoorFractions.put(date, outDoorFraction);</span>
+<span class="nc" id="L443">		}</span>
+<span class="nc" id="L444">		return outdoorFractions;</span>
+	}
+
+	@SuppressWarnings(&quot;checkstyle:ParameterName&quot;)
+	public static Map&lt;LocalDate, Double&gt; getOutdoorFractions2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange) throws IOException {
+
+<span class="nc" id="L450">		Reader in = new FileReader(weatherCSV);</span>
+<span class="nc" id="L451">		Iterable&lt;CSVRecord&gt; records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="nc" id="L452">		DateTimeFormatter fmt = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+
+<span class="nc" id="L454">		LocalDate lastDate = null;</span>
+<span class="nc" id="L455">		final Map&lt;LocalDate, Double&gt; outdoorFractions = new TreeMap&lt;&gt;();</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">		for (CSVRecord record : records) {</span>
+//			System.out.println( record );
+<span class="nc" id="L458">			LocalDate date = LocalDate.parse(record.get(&quot;date&quot;), fmt);</span>
+<span class="nc bnc" id="L459" title="All 4 branches missed.">			if (record.get(&quot;tmax&quot;).isEmpty() || record.get(&quot;prcp&quot;).isEmpty()) {</span>
+//				System.out.println(&quot;Skipping day because tmax or prcp data is not available. Date: &quot; + date.toString());
+<span class="nc" id="L461">				continue;</span>
+			}
+
+<span class="nc" id="L464">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="nc" id="L465">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+
+<span class="nc" id="L467">			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));</span>
+<span class="nc" id="L468">			lastDate = date;</span>
+<span class="nc" id="L469">		}</span>
+
+<span class="nc" id="L471">		in = new FileReader(avgWeatherCSV);</span>
+<span class="nc" id="L472">		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="nc" id="L473">		Map&lt;String, Double&gt; tmaxPerDay = new HashMap&lt;String, Double&gt;();</span>
+<span class="nc" id="L474">		Map&lt;String, Double&gt; prcpPerDay = new HashMap&lt;String, Double&gt;();</span>
+
+<span class="nc bnc" id="L476" title="All 2 branches missed.">		for (CSVRecord record : records) {</span>
+<span class="nc" id="L477">			String monthDay = record.get(&quot;monthDay&quot;);</span>
+<span class="nc" id="L478">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="nc" id="L479">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+<span class="nc" id="L480">			tmaxPerDay.put(monthDay, tMax);</span>
+<span class="nc" id="L481">			prcpPerDay.put(monthDay, prcp);</span>
+<span class="nc" id="L482">		}</span>
+
+<span class="nc bnc" id="L484" title="All 2 branches missed.">		for (int i = 1; i &lt; 365 * 3; i++) {</span>
+<span class="nc" id="L485">			LocalDate date = lastDate.plusDays(i);</span>
+<span class="nc" id="L486">			int month = date.getMonth().getValue();</span>
+<span class="nc" id="L487">			int day = date.getDayOfMonth();</span>
+<span class="nc" id="L488">			String monthDay = month + &quot;-&quot; + day;</span>
+<span class="nc" id="L489">			double tMax = tmaxPerDay.get(monthDay);</span>
+<span class="nc" id="L490">			double prcp = prcpPerDay.get(monthDay);</span>
+<span class="nc" id="L491">			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));</span>
+		}
+
+//		System.exit(-1);
+<span class="nc" id="L495">		return outdoorFractions;</span>
+	}
+
+	@SuppressWarnings(&quot;checkstyle:ParameterName&quot;)
+	public static Map&lt;LocalDate, Double&gt; getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
+		//																																	// 18.5						25				18.5			18.5 -&gt; move to 15?
+<span class="fc" id="L501">		Reader in = new FileReader(weatherCSV);</span>
+<span class="fc" id="L502">		Iterable&lt;CSVRecord&gt; records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="fc" id="L503">		DateTimeFormatter fmt = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+
+<span class="fc" id="L505">		LocalDate lastDate = null;</span>
+<span class="fc" id="L506">		final Map&lt;LocalDate, Double&gt; outdoorFractions = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L507" title="All 2 branches covered.">		for (CSVRecord record : records) {</span>
+//			System.out.println( record );
+<span class="fc" id="L509">			LocalDate date = LocalDate.parse(record.get(&quot;date&quot;), fmt);</span>
+<span class="pc bpc" id="L510" title="2 of 4 branches missed.">			if (record.get(&quot;tmax&quot;).isEmpty() || record.get(&quot;prcp&quot;).isEmpty()) {</span>
+//				System.out.println(&quot;Skipping day because tmax or prcp data is not available. Date: &quot; + date.toString());
+<span class="nc" id="L512">				continue;</span>
+			}
+
+<span class="fc" id="L515">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="fc" id="L516">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+
+<span class="fc bfc" id="L518" title="All 2 branches covered.">			if (date.isBefore(LocalDate.parse(&quot;2021-01-01&quot;))) {</span>
+<span class="fc" id="L519">				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			} else {
+<span class="fc" id="L521">				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			}
+
+<span class="fc" id="L524">			lastDate = date;</span>
+<span class="fc" id="L525">		}</span>
+
+<span class="fc" id="L527">		in = new FileReader(avgWeatherCSV);</span>
+<span class="fc" id="L528">		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="fc" id="L529">		Map&lt;String, Double&gt; tmaxPerDay = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L530">		Map&lt;String, Double&gt; prcpPerDay = new HashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L532" title="All 2 branches covered.">		for (CSVRecord record : records) {</span>
+<span class="fc" id="L533">			String monthDay = record.get(&quot;monthDay&quot;);</span>
+<span class="fc" id="L534">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="fc" id="L535">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+<span class="fc" id="L536">			tmaxPerDay.put(monthDay, tMax);</span>
+<span class="fc" id="L537">			prcpPerDay.put(monthDay, prcp);</span>
+<span class="fc" id="L538">		}</span>
+
+<span class="fc bfc" id="L540" title="All 2 branches covered.">		for (int i = 1; i &lt; 365 * 3; i++) {</span>
+<span class="fc" id="L541">			LocalDate date = lastDate.plusDays(i);</span>
+<span class="fc" id="L542">			int month = date.getMonth().getValue();</span>
+<span class="fc" id="L543">			int day = date.getDayOfMonth();</span>
+<span class="fc" id="L544">			String monthDay = month + &quot;-&quot; + day;</span>
+<span class="fc" id="L545">			double tMax = tmaxPerDay.get(monthDay);</span>
+<span class="fc" id="L546">			double prcp = prcpPerDay.get(monthDay);</span>
+<span class="pc bpc" id="L547" title="1 of 2 branches missed.">			if (date.isBefore(LocalDate.parse(&quot;2021-01-01&quot;))) {</span>
+<span class="nc" id="L548">				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			} else {
+<span class="fc" id="L550">				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			}
+		}
+
+//		System.exit(-1);
+<span class="fc" id="L555">		return outdoorFractions;</span>
+	}
+
+	@SuppressWarnings(&quot;checkstyle:ParameterName&quot;)
+	public static Map&lt;LocalDate, Double&gt; getOutDoorFractionFromDateAndTemp2Fall2022Override(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double TmidFall2022, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
+
+<span class="nc" id="L561">		Reader in = new FileReader(weatherCSV);</span>
+<span class="nc" id="L562">		Iterable&lt;CSVRecord&gt; records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="nc" id="L563">		DateTimeFormatter fmt = DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd&quot;);</span>
+
+<span class="nc" id="L565">		LocalDate lastDate = null;</span>
+<span class="nc" id="L566">		final Map&lt;LocalDate, Double&gt; outdoorFractions = new TreeMap&lt;&gt;();</span>
+<span class="nc bnc" id="L567" title="All 2 branches missed.">		for (CSVRecord record : records) {</span>
+//			System.out.println( record );
+<span class="nc" id="L569">			LocalDate date = LocalDate.parse(record.get(&quot;date&quot;), fmt);</span>
+<span class="nc bnc" id="L570" title="All 4 branches missed.">			if (record.get(&quot;tmax&quot;).isEmpty() || record.get(&quot;prcp&quot;).isEmpty()) {</span>
+//				System.out.println(&quot;Skipping day because tmax or prcp data is not available. Date: &quot; + date.toString());
+<span class="nc" id="L572">				continue;</span>
+			}
+
+<span class="nc" id="L575">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="nc" id="L576">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+
+<span class="nc bnc" id="L578" title="All 2 branches missed.">			if (date.isBefore(LocalDate.parse(&quot;2021-01-01&quot;))) {</span>
+<span class="nc" id="L579">				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));</span>
+<span class="nc bnc" id="L580" title="All 4 branches missed.">			} else if (date.isAfter(LocalDate.parse(&quot;2022-01-01&quot;)) &amp;&amp; date.isBefore(LocalDate.parse(&quot;2023-01-01&quot;))) {</span>
+<span class="nc" id="L581">				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall2022, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			} else {
+<span class="nc" id="L583">				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			}
+
+<span class="nc" id="L586">			lastDate = date;</span>
+<span class="nc" id="L587">		}</span>
+
+<span class="nc" id="L589">		in = new FileReader(avgWeatherCSV);</span>
+<span class="nc" id="L590">		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);</span>
+<span class="nc" id="L591">		Map&lt;String, Double&gt; tmaxPerDay = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L592">		Map&lt;String, Double&gt; prcpPerDay = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L594" title="All 2 branches missed.">		for (CSVRecord record : records) {</span>
+<span class="nc" id="L595">			String monthDay = record.get(&quot;monthDay&quot;);</span>
+<span class="nc" id="L596">			double tMax = Double.parseDouble(record.get(&quot;tmax&quot;));</span>
+<span class="nc" id="L597">			double prcp = Double.parseDouble(record.get(&quot;prcp&quot;));</span>
+<span class="nc" id="L598">			tmaxPerDay.put(monthDay, tMax);</span>
+<span class="nc" id="L599">			prcpPerDay.put(monthDay, prcp);</span>
+<span class="nc" id="L600">		}</span>
+
+<span class="nc bnc" id="L602" title="All 2 branches missed.">		for (int i = 1; i &lt; 365 * 3; i++) {</span>
+<span class="nc" id="L603">			LocalDate date = lastDate.plusDays(i);</span>
+<span class="nc" id="L604">			int month = date.getMonth().getValue();</span>
+<span class="nc" id="L605">			int day = date.getDayOfMonth();</span>
+<span class="nc" id="L606">			String monthDay = month + &quot;-&quot; + day;</span>
+<span class="nc" id="L607">			double tMax = tmaxPerDay.get(monthDay);</span>
+<span class="nc" id="L608">			double prcp = prcpPerDay.get(monthDay);</span>
+<span class="nc bnc" id="L609" title="All 2 branches missed.">			if (date.isBefore(LocalDate.parse(&quot;2021-01-01&quot;))) {</span>
+<span class="nc" id="L610">				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			} else {
+<span class="nc" id="L612">				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));</span>
+			}
+		}
+
+//		System.exit(-1);
+<span class="nc" id="L617">		return outdoorFractions;</span>
+	}
+
+	@SuppressWarnings(&quot;checkstyle:ParameterName&quot;)
+	private static double getOutDoorFractionFromDateAndTemp(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold, double alpha) {
+
+		double tMid;
+<span class="fc" id="L624">		int date1 = 152; //01.06.</span>
+<span class="fc" id="L625">		int date2 = 213; //01.08.</span>
+<span class="fc bfc" id="L626" title="All 2 branches covered.">		if (date.isLeapYear()) {</span>
+<span class="fc" id="L627">			date1++;</span>
+<span class="fc" id="L628">			date2++;</span>
+		}
+//		final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
+<span class="fc bfc" id="L631" title="All 2 branches covered.">		if (date.getDayOfYear() &lt; date1) {</span>
+<span class="fc" id="L632">			tMid = TmidSpring;</span>
+<span class="fc bfc" id="L633" title="All 2 branches covered.">		} else if (date.getDayOfYear() &gt; date2) {</span>
+<span class="fc" id="L634">			tMid = TmidFall;</span>
+		} else {
+<span class="fc" id="L636">			double fraction = 1. * (date.getDayOfYear() - date1) / (date2 - date1);</span>
+<span class="fc" id="L637">			tMid = (1. - fraction) * TmidSpring + fraction * TmidFall;</span>
+		}
+<span class="fc" id="L639">		double tAllIn = tMid - Trange;</span>
+<span class="fc" id="L640">		double tAllOut = tMid + Trange;</span>
+
+<span class="fc" id="L642">		double outDoorFractionFromTemperature = (tMax - tAllIn) / (tAllOut - tAllIn);</span>
+
+<span class="fc bfc" id="L644" title="All 2 branches covered.">		if (prcp &gt; rainThreshold) outDoorFractionFromTemperature = outDoorFractionFromTemperature * 0.5;</span>
+<span class="fc bfc" id="L645" title="All 2 branches covered.">		if (outDoorFractionFromTemperature &gt; 1.) outDoorFractionFromTemperature = 1.;</span>
+<span class="fc bfc" id="L646" title="All 2 branches covered.">		if (outDoorFractionFromTemperature &lt; 0.) outDoorFractionFromTemperature = 0.;</span>
+
+//		System.out.println( date + &quot;; tMid=&quot; + tMid + &quot;; tMax=&quot; + tMax + &quot;; outDoorFraction=&quot; + outDoorFraction ) ;
+		double outDoorFractionFromDate;
+<span class="fc" id="L650">		int month = date.getMonthValue();</span>
+
+<span class="fc bfc" id="L652" title="All 4 branches covered.">		if (month &lt;= 3 || month &gt;= 11) {</span>
+<span class="fc" id="L653">			outDoorFractionFromDate = 0.0;</span>
+<span class="fc bfc" id="L654" title="All 4 branches covered.">		} else if (month == 7 || month == 8) {</span>
+<span class="fc" id="L655">			outDoorFractionFromDate = 1.0;</span>
+<span class="fc bfc" id="L656" title="All 6 branches covered.">		} else if (month == 4 || month == 5 || month == 6) {</span>
+<span class="fc" id="L657">			int lastMarch = 90;</span>
+<span class="fc" id="L658">			int firstJuly = 182;</span>
+<span class="fc bfc" id="L659" title="All 2 branches covered.">			if (date.isLeapYear()) {</span>
+<span class="fc" id="L660">				lastMarch++;</span>
+<span class="fc" id="L661">				firstJuly++;</span>
+			}
+<span class="fc" id="L663">			outDoorFractionFromDate = (double) (date.getDayOfYear() - lastMarch) / (double) (firstJuly - lastMarch);</span>
+<span class="pc bpc" id="L664" title="1 of 4 branches missed.">		} else if (month == 9 || month == 10) {</span>
+<span class="fc" id="L665">			int lastAugust = 243;</span>
+<span class="fc" id="L666">			int firstNovember = 305;</span>
+<span class="fc bfc" id="L667" title="All 2 branches covered.">			if (date.isLeapYear()) {</span>
+<span class="fc" id="L668">				lastAugust++;</span>
+<span class="fc" id="L669">				firstNovember++;</span>
+			}
+<span class="fc" id="L671">			outDoorFractionFromDate = 1 - (double) (date.getDayOfYear() - lastAugust) / (double) (firstNovember - lastAugust);</span>
+<span class="fc" id="L672">		} else {</span>
+<span class="nc" id="L673">			throw new RuntimeException(&quot;outDoorFractionFromDate not defined for month: &quot; + month);</span>
+		}
+
+<span class="fc" id="L676">		return alpha * outDoorFractionFromTemperature + (1 - alpha) * outDoorFractionFromDate;</span>
+	}
+
+	@SuppressWarnings(&quot;checkstyle:ParameterName&quot;)
+	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
+
+		double tMid;
+<span class="nc" id="L683">		int date1 = 152; //01.06.</span>
+<span class="nc" id="L684">		int date2 = 213; //01.08.</span>
+<span class="nc bnc" id="L685" title="All 2 branches missed.">		if (date.isLeapYear()) {</span>
+<span class="nc" id="L686">			date1++;</span>
+<span class="nc" id="L687">			date2++;</span>
+		}
+//		final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
+<span class="nc bnc" id="L690" title="All 2 branches missed.">		if (date.getDayOfYear() &lt; date1) {</span>
+<span class="nc" id="L691">			tMid = TmidSpring;</span>
+<span class="nc bnc" id="L692" title="All 2 branches missed.">		} else if (date.getDayOfYear() &gt; date2) {</span>
+<span class="nc" id="L693">			tMid = TmidFall;</span>
+		} else {
+<span class="nc" id="L695">			double fraction = 1. * (date.getDayOfYear() - date1) / (date2 - date1);</span>
+<span class="nc" id="L696">			tMid = (1. - fraction) * TmidSpring + fraction * TmidFall;</span>
+		}
+<span class="nc" id="L698">		double tAllIn = tMid - Trange;</span>
+<span class="nc" id="L699">		double tAllOut = tMid + Trange;</span>
+
+<span class="nc" id="L701">		double outDoorFraction = (tMax - tAllIn) / (tAllOut - tAllIn);</span>
+
+<span class="nc bnc" id="L703" title="All 2 branches missed.">		if (prcp &gt; rainThreshold) outDoorFraction = outDoorFraction * 0.5;</span>
+<span class="nc bnc" id="L704" title="All 2 branches missed.">		if (outDoorFraction &gt; 1.) outDoorFraction = 1.;</span>
+<span class="nc bnc" id="L705" title="All 2 branches missed.">		if (outDoorFraction &lt; 0.) outDoorFraction = 0.;</span>
+
+//		System.out.println( date + &quot;; tMid=&quot; + tMid + &quot;; tMax=&quot; + tMax + &quot;; outDoorFraction=&quot; + outDoorFraction ) ;
+
+
+<span class="nc" id="L710">		return outDoorFraction;</span>
+	}
+
+	/**
+	 * Type of interpolation of activity pattern.
+	 */
+<span class="fc" id="L716">	public enum Extrapolation {none, linear, exponential, regHospital}</span>
+
+	/**
+	 * Function fitter using least squares.
+	 * https://stackoverflow.com/questions/11335127/how-to-use-java-math-commons-curvefitter
+	 */
+	public static final class FuncFitter extends AbstractCurveFitter {
+
+		private final ParametricUnivariateFunction f;
+
+		/**
+		 * Creates a fitter for the given parametric function.
+		 */
+<span class="nc" id="L729">		public FuncFitter(ParametricUnivariateFunction f) {</span>
+<span class="nc" id="L730">			this.f = f;</span>
+<span class="nc" id="L731">		}</span>
+
+		protected LeastSquaresProblem getProblem(Collection&lt;WeightedObservedPoint&gt; points) {
+<span class="nc" id="L734">			final int len = points.size();</span>
+<span class="nc" id="L735">			final double[] target = new double[len];</span>
+<span class="nc" id="L736">			final double[] weights = new double[len];</span>
+<span class="nc" id="L737">			final double[] initialGuess = {1.0, 1.0};</span>
+
+<span class="nc" id="L739">			int i = 0;</span>
+<span class="nc bnc" id="L740" title="All 2 branches missed.">			for (WeightedObservedPoint point : points) {</span>
+<span class="nc" id="L741">				target[i] = point.getY();</span>
+<span class="nc" id="L742">				weights[i] = point.getWeight();</span>
+<span class="nc" id="L743">				i += 1;</span>
+<span class="nc" id="L744">			}</span>
+
+<span class="nc" id="L746">			final AbstractCurveFitter.TheoreticalValuesFunction model = new</span>
+				AbstractCurveFitter.TheoreticalValuesFunction(f, points);
+
+<span class="nc" id="L749">			return new LeastSquaresBuilder().</span>
+<span class="nc" id="L750">				maxEvaluations(Integer.MAX_VALUE).</span>
+<span class="nc" id="L751">				maxIterations(Integer.MAX_VALUE).</span>
+<span class="nc" id="L752">				start(initialGuess).</span>
+<span class="nc" id="L753">				target(target).</span>
+<span class="nc" id="L754">				weight(new DiagonalMatrix(weights)).</span>
+<span class="nc" id="L755">				model(model.getModelFunction(), model.getModelFunctionJacobian()).</span>
+<span class="nc" id="L756">				build();</span>
+		}
+
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

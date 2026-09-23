@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AntibodyDependentTransitionModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model.progression</a> &gt; <span class="el_source">AntibodyDependentTransitionModel.java</span></div><h1>AntibodyDependentTransitionModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model.progression;
+
+import com.google.inject.Inject;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.Immunizable;
+import org.matsim.episim.PathogenConfigGroup;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.model.ImmunityModel;
+import org.matsim.episim.model.VirusStrain;
+
+import java.util.NavigableMap;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
+
+/**
+ * Disease-status transition model that accounts for antibody levels.
+ */
+public class AntibodyDependentTransitionModel implements DiseaseStatusTransitionModel {
+
+	private final EpisimSplittableRandom rnd;
+	private final ImmunityModel immunityModel;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup strainConfig;
+	private final PathogenConfigGroup pathogenConfig;
+
+	/**
+	 * Whether this model reads the age-dependent pathogen configuration.
+	 */
+	private final boolean ageDependent;
+
+	@Inject
+	public AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                        VaccinationConfigGroup vaccinationConfig,
+	                                        VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig) {
+<span class="fc" id="L37">		this(rnd, immunityModel, vaccinationConfig, strainConfigGroup, pathogenConfig, false);</span>
+<span class="fc" id="L38">	}</span>
+
+	/**
+	 * Constructor for subclasses with age-dependent transitions.
+	 *
+	 * @param ageDependent whether the age-dependent pathogen configuration is used
+	 * @throws IllegalStateException if a configured strain lacks this progression variant, so that this does not fail at
+	 *                               the first transition during the simulation
+	 */
+	protected AntibodyDependentTransitionModel(EpisimSplittableRandom rnd, ImmunityModel immunityModel,
+	                                           VaccinationConfigGroup vaccinationConfig,
+	                                           VirusStrainConfigGroup strainConfigGroup, PathogenConfigGroup pathogenConfig,
+<span class="fc" id="L50">	                                           boolean ageDependent) {</span>
+<span class="fc" id="L51">		this.rnd = rnd;</span>
+<span class="fc" id="L52">		this.immunityModel = immunityModel;</span>
+<span class="fc" id="L53">		this.vaccinationConfig = vaccinationConfig;</span>
+<span class="fc" id="L54">		this.strainConfig = strainConfigGroup;</span>
+<span class="fc" id="L55">		this.pathogenConfig = pathogenConfig;</span>
+<span class="fc" id="L56">		this.ageDependent = ageDependent;</span>
+
+<span class="fc" id="L58">		pathogenConfig.checkProgressionConfigured(strainConfigGroup.getConfiguredStrains(), ageDependent, getClass().getSimpleName());</span>
+<span class="fc" id="L59">	}</span>
+
+	/**
+	 * Whether this model reads the age-dependent pathogen configuration.
+	 */
+	protected final boolean isAgeDependentTransition() {
+<span class="fc" id="L65">		return ageDependent;</span>
+	}
+
+	/**
+	 * Base disease-progression probabilities of the pathogen the person is currently infected with.
+	 */
+	protected final PathogenConfigGroup.ProgressionParams progressionParams(Immunizable person) {
+<span class="fc" id="L72">		return pathogenConfig.getProgressionParams(person.getVirusStrain().getPathogen(), isAgeDependentTransition());</span>
+	}
+
+	/**
+	 * Age used for the probability lookup in the given profile. A profile with a single bucket does not depend on
+	 * age, so the age is not read at all (persons without age are fine, as for the previously constant probabilities).
+	 * Otherwise the age-dependent variant requires a real age, while the age-independent variant falls back to
+	 * {@code 0} for a missing age.
+	 */
+	private int lookupAge(Immunizable person, NavigableMap&lt;Integer, Double&gt; profile) {
+<span class="fc bfc" id="L82" title="All 2 branches covered.">		if (profile.size() &lt;= 1){</span>
+<span class="fc" id="L83">			return 0;}</span>
+
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">		if (isAgeDependentTransition()){</span>
+<span class="fc" id="L86">			return person.getAge();}</span>
+
+<span class="nc bnc" id="L88" title="All 2 branches missed.">		return person instanceof EpisimPerson ? ((EpisimPerson) person).getAgeOrDefault(0) : person.getAge();</span>
+	}
+
+	@Override
+	public final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status, int day) {
+
+<span class="pc bpc" id="L94" title="1 of 8 branches missed.">		switch (status) {</span>
+			case infectedButNotContagious:
+<span class="fc" id="L96">				return EpisimPerson.DiseaseStatus.contagious;</span>
+			case contagious:
+
+<span class="fc bfc" id="L99" title="All 2 branches covered.">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToShowingSymptoms(person) * immunity(person, EpisimPerson.DiseaseStatus.showingSymptoms, day))</span>
+<span class="fc" id="L100">					return EpisimPerson.DiseaseStatus.showingSymptoms;</span>
+				else
+<span class="fc" id="L102">					return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case showingSymptoms:
+<span class="fc" id="L105">				if (rnd.nextDouble() &lt; getProbaOfTransitioningToSeriouslySick(person)</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?</span>
+<span class="fc" id="L107">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :</span>
+<span class="fc" id="L108">						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">						* immunity(person, EpisimPerson.DiseaseStatus.seriouslySick, day))</span>
+//						* (person.getNumInfections() &gt; 1 ? getFactorRecovered(person, day) : 1.0))
+<span class="fc" id="L111">					return EpisimPerson.DiseaseStatus.seriouslySick;</span>
+				else
+<span class="fc" id="L113">					return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case seriouslySick:
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)</span>
+<span class="fc" id="L117">						&amp;&amp; (rnd.nextDouble() &lt; getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">						* immunity(person, EpisimPerson.DiseaseStatus.critical, day)))</span>
+<span class="fc" id="L119">					return EpisimPerson.DiseaseStatus.critical;</span>
+				else
+<span class="fc" id="L121">					return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case critical:
+<span class="fc" id="L124">				double proba = getProbaOfTransitioningToDeceased(person);</span>
+<span class="pc bpc" id="L125" title="3 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
+<span class="nc" id="L126">					return DiseaseStatus.deceased;</span>
+				else
+<span class="fc" id="L128">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
+
+			case seriouslySickAfterCritical:
+<span class="fc" id="L131">				return EpisimPerson.DiseaseStatus.recovered;</span>
+
+			case recovered:
+<span class="fc" id="L134">				return EpisimPerson.DiseaseStatus.susceptible;</span>
+
+			default:
+<span class="nc" id="L137">				throw new IllegalStateException(&quot;No state transition defined for &quot; + person.getDiseaseStatus());</span>
+		}
+	}
+
+	/**
+	 * Probability that a person transitions from {@code showingSymptoms} to {@code seriouslySick} when person was already infected.
+	 */
+	protected double getFactorRecovered(EpisimPerson person, int day) {
+
+<span class="nc" id="L146">		int daysSince = person.daysSince(DiseaseStatus.recovered, day);</span>
+
+		//we assume about 20% loss of protection against severe progression every year
+<span class="nc" id="L149">		return Math.min(0.2 * (daysSince / 365), 1.0);</span>
+	}
+
+	/**
+	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
+	 */
+	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
+<span class="fc" id="L156">		PathogenConfigGroup.ProgressionParams params = progressionParams(person);</span>
+<span class="fc" id="L157">		return params.getSeriouslySickProbability(lookupAge(person, params.getSeriouslySickProbabilityByAge()));</span>
+	}
+
+	/**
+	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
+	 */
+	public double getProbaOfTransitioningToCritical(Immunizable person) {
+<span class="fc" id="L164">		PathogenConfigGroup.ProgressionParams params = progressionParams(person);</span>
+<span class="fc" id="L165">		return params.getCriticalProbability(lookupAge(person, params.getCriticalProbabilityByAge()));</span>
+	}
+
+	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
+<span class="fc" id="L169">		PathogenConfigGroup.ProgressionParams params = progressionParams(person);</span>
+<span class="fc" id="L170">		return params.getShowingSymptomsProbability(lookupAge(person, params.getShowingSymptomsProbabilityByAge()));</span>
+	}
+
+	/**
+	 * Remaining risk of the transition, given what the person's immune history protects them against.
+	 */
+	private double immunity(EpisimPerson person, EpisimPerson.DiseaseStatus target, int day) {
+<span class="fc" id="L177">		return immunityModel.getFactor(person, person.getVirusStrain(), target, day);</span>
+	}
+
+	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
+<span class="fc" id="L181">		PathogenConfigGroup.ProgressionParams params = progressionParams(person);</span>
+<span class="fc" id="L182">		return params.getDeathProbability(lookupAge(person, params.getDeathProbabilityByAge()));</span>
+	}
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

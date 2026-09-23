@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EpisimRunner.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">EpisimRunner.java</span></div><h1>EpisimRunner.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+import org.apache.commons.compress.archivers.*;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.events.Event;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.controler.ControllerUtils;
+import org.matsim.core.gbl.Gbl;
+import org.matsim.episim.model.AntibodyModel;
+import org.matsim.episim.model.ImmunityModel;
+import org.matsim.episim.model.ProgressionModel;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.DayOfWeek;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Main entry point and runner of one epidemic simulation.
+ * &lt;p&gt;
+ * Using the {@link #run(int)} method, this class will repeatedly loop over {@link InfectionEventHandler} with
+ * events provided by the {@link ReplayHandler}.
+ */
+public final class EpisimRunner {
+
+<span class="fc" id="L55">	private static final Logger log = LogManager.getLogger(EpisimRunner.class);</span>
+
+	private final Config config;
+	private final EventsManager manager;
+	private final Provider&lt;InfectionEventHandler&gt; handlerProvider;
+	private final Provider&lt;ReplayHandler&gt; replayProvider;
+	private final Provider&lt;EpisimReporting&gt; reportingProvider;
+	private final Provider&lt;ProgressionModel&gt; progressionProvider;
+	private final Provider&lt;AntibodyModel&gt; antibodyModelProvider;
+	private final Provider&lt;ImmunityModel&gt; immunityModelProvider;
+
+	@Inject
+	public EpisimRunner(Config config, EventsManager manager, Provider&lt;InfectionEventHandler&gt; handlerProvider, Provider&lt;ReplayHandler&gt; replay,
+						Provider&lt;EpisimReporting&gt; reportingProvider, Provider&lt;ProgressionModel&gt; progressionProvider, Provider&lt;AntibodyModel&gt; antibodyModelProvider,
+<span class="fc" id="L69">						Provider&lt;ImmunityModel&gt; immunityModelProvider) {</span>
+<span class="fc" id="L70">		this.config = config;</span>
+<span class="fc" id="L71">		this.handlerProvider = handlerProvider;</span>
+<span class="fc" id="L72">		this.manager = manager;</span>
+<span class="fc" id="L73">		this.replayProvider = replay;</span>
+<span class="fc" id="L74">		this.reportingProvider = reportingProvider;</span>
+<span class="fc" id="L75">		this.progressionProvider = progressionProvider;</span>
+<span class="fc" id="L76">		this.antibodyModelProvider = antibodyModelProvider;</span>
+<span class="fc" id="L77">		this.immunityModelProvider = immunityModelProvider;</span>
+<span class="fc" id="L78">	}</span>
+
+	/**
+	 * Main loop that performs the iterations of the simulation.
+	 *
+	 * @param maxIterations maximum number of iterations (inclusive)
+	 */
+	public void run(int maxIterations) {
+
+		// Construct these dependencies as late as possible, so all other configs etc have been fully configured
+<span class="fc" id="L88">		final ReplayHandler replay = replayProvider.get();</span>
+<span class="fc" id="L89">		final InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L90">		final EpisimReporting reporting = reportingProvider.get();</span>
+<span class="fc" id="L91">		final AntibodyModel antibodyModel = antibodyModelProvider.get();</span>
+
+		// a module that binds the immunity model directly would overrule the configuration without a word
+<span class="fc" id="L94">		ConfigUtils.addOrGetModule(config, ImmunityConfigGroup.class).checkBoundModel(immunityModelProvider.get());</span>
+
+<span class="fc" id="L96">		reporting.reportCpuTime(0, &quot;Init&quot;, &quot;start&quot;, -1);</span>
+		// reporting will write events if necessary
+<span class="fc" id="L98">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)</span>
+<span class="fc" id="L101">			manager.addHandler(reporting);</span>
+
+<span class="fc" id="L103">		ControllerUtils.checkConfigConsistencyAndWriteToLog(config, &quot;Just before starting iterations&quot;);</span>
+
+<span class="fc" id="L105">		handler.init(replay.getEvents());</span>
+
+<span class="fc" id="L107">		Path output = Path.of(config.controller().getOutputDirectory());</span>
+
+<span class="fc" id="L109">		int iteration = 1;</span>
+<span class="pc bpc" id="L110" title="1 of 4 branches missed.">		if (episimConfig.getStartFromSnapshot() != null &amp;&amp; episimConfig.getStartFromImmunization() != null) {</span>
+<span class="nc" id="L111">			throw new RuntimeException(&quot;Cannot start from snapshot and immunization history simultaneously. Choose one.&quot;);</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">		} else if (episimConfig.getStartFromSnapshot() != null) {</span>
+<span class="fc" id="L113">			reporting.close();</span>
+<span class="fc" id="L114">			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));</span>
+			try {
+<span class="fc" id="L116">				reporting.append(episimConfig.getStartDate().plusDays(iteration - 1).toString());</span>
+<span class="nc" id="L117">			} catch (IOException e) {</span>
+<span class="nc" id="L118">				log.error(&quot;Snapshot output could not be created&quot;, e);</span>
+<span class="nc" id="L119">				return;</span>
+<span class="fc" id="L120">			}</span>
+
+<span class="fc" id="L122">			handler.onSnapshotLoaded(iteration);</span>
+
+			// recalculate antibodies for every agent if starting from snapshot.
+			// The antibodies profile is generated using the immunity event history in the
+			// snapshot; the antibody model config of the snapshot simulation will
+			// be superceded by the config of the current simulation. Thus, the antibody development
+			// during the snapshot can be rewritten without modifying the immunity event history.
+<span class="fc" id="L129">			antibodyModel.recalculateAntibodiesAfterSnapshot(handler.getPersons(), iteration);</span>
+
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">		} else if (episimConfig.getStartFromImmunization() != null) {</span>
+
+<span class="nc" id="L133">			antibodyModel.init(handler.getPersons(), iteration);</span>
+<span class="nc" id="L134">			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));</span>
+		} else {
+<span class="fc" id="L136">			antibodyModel.init(handler.getPersons(), iteration);</span>
+		}
+
+<span class="fc" id="L139">		reporting.reportCpuTime(0, &quot;Init&quot;, &quot;finished&quot;, -1);</span>
+
+<span class="fc" id="L141">		log.info(&quot;Starting from iteration {}...&quot;, iteration);</span>
+
+<span class="fc bfc" id="L143" title="All 2 branches covered.">		for (; iteration &lt;= maxIterations; iteration++) {</span>
+
+<span class="fc bfc" id="L145" title="All 4 branches covered.">			if (episimConfig.getSnapshotInterval() &gt; 0 &amp;&amp; iteration % episimConfig.getSnapshotInterval() == 0) {</span>
+<span class="fc" id="L146">				writeSnapshot(output, iteration);</span>
+			}
+
+<span class="fc bfc" id="L149" title="All 2 branches covered.">			if (iteration % 10 == 0)</span>
+<span class="fc" id="L150">				Gbl.printMemoryUsage();</span>
+
+<span class="fc bfc" id="L152" title="All 2 branches covered.">			if (!doStep(replay, handler, reporting, iteration))</span>
+<span class="fc" id="L153">				break;</span>
+
+		}
+
+<span class="fc" id="L157">		handler.finish();</span>
+
+<span class="fc" id="L159">		reporting.close();</span>
+<span class="fc" id="L160">	}</span>
+
+	/**
+	 * Update events data and internal person data structure.
+	 *
+	 * @param events events grouped by day of week
+	 */
+	public void updateEvents(Map&lt;DayOfWeek, List&lt;Event&gt;&gt; events) {
+
+<span class="fc" id="L169">		ReplayHandler replay = replayProvider.get();</span>
+
+<span class="fc" id="L171">		replay.setEvents(events);</span>
+
+<span class="fc" id="L173">		InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L174">		handler.updateEvents(events);</span>
+<span class="fc" id="L175">	}</span>
+
+	/**
+	 * Reads and updates events as defined in given config.
+	 */
+	public void updateEvents(EpisimConfigGroup config) {
+<span class="fc" id="L181">		ReplayHandler replay = replayProvider.get();</span>
+<span class="fc" id="L182">		Map&lt;DayOfWeek, List&lt;Event&gt;&gt; events = replay.readEvents(config);</span>
+<span class="fc" id="L183">		updateEvents(events);</span>
+<span class="fc" id="L184">	}</span>
+
+	/**
+	 * Perform one iteration of simulation.
+	 *
+	 * @return false, when the simulation should end
+	 */
+	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
+
+<span class="fc" id="L193">		manager.resetHandlers(iteration);</span>
+<span class="fc" id="L194">		handler.reset(iteration);</span>
+
+<span class="fc" id="L196">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(this.config, EpisimConfigGroup.class);</span>
+
+<span class="fc bfc" id="L198" title="All 4 branches covered.">		if (episimConfig.isEndEarly() &amp;&amp; handler.isFinished())</span>
+<span class="fc" id="L199">			return false;</span>
+
+<span class="fc" id="L201">		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
+
+		// Process all events
+<span class="fc" id="L204">		replay.replayEvents(handler, day);</span>
+
+<span class="fc" id="L206">		reporting.flushEvents();</span>
+
+<span class="fc" id="L208">		return true;</span>
+	}
+
+
+	/**
+	 * Write snapshot into output directory.
+	 *
+	 * @param output    target output directory
+	 * @param iteration current iteration
+	 */
+	private void writeSnapshot(Path output, int iteration) {
+
+<span class="fc" id="L220">		InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L221">		EpisimReporting reporting = reportingProvider.get();</span>
+<span class="fc" id="L222">		ProgressionModel progressionModel = progressionProvider.get();</span>
+
+<span class="fc" id="L224">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+
+<span class="fc" id="L226">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
+
+<span class="fc" id="L228">		Path path = output.resolve(episimConfig.getSnapshotPrefix() + String.format(&quot;-%03d-%s.zip&quot;, iteration, date));</span>
+
+<span class="fc" id="L230">		log.info(&quot;Writing snapshot to {}&quot;, path);</span>
+
+<span class="fc" id="L232">		try (var out = Files.newOutputStream(path)) {</span>
+
+<span class="fc" id="L234">			ArchiveOutputStream archive = new ArchiveStreamFactory()</span>
+<span class="fc" id="L235">					.createArchiveOutputStream(&quot;zip&quot;, out);</span>
+
+			// Copy whole output to the snapshot
+<span class="fc" id="L238">			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controller().getRunId(), archive);</span>
+
+<span class="fc" id="L240">			archive.putArchiveEntry(new ZipArchiveEntry(&quot;iteration&quot;));</span>
+<span class="fc" id="L241">			ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
+<span class="fc" id="L242">			oos.writeInt(iteration);</span>
+<span class="fc" id="L243">			oos.flush();</span>
+<span class="fc" id="L244">			archive.closeArchiveEntry();</span>
+
+<span class="fc" id="L246">			writeObject(handler, &quot;state&quot;, archive);</span>
+<span class="fc" id="L247">			writeObject(reporting, &quot;reporting&quot;, archive);</span>
+
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">			if (progressionModel instanceof Externalizable)</span>
+<span class="fc" id="L250">				writeObject((Externalizable) progressionModel, &quot;progression&quot;, archive);</span>
+
+<span class="fc" id="L252">			archive.finish();</span>
+<span class="fc" id="L253">			archive.close();</span>
+
+<span class="nc" id="L255">		} catch (IOException e) {</span>
+<span class="nc" id="L256">			log.error(&quot;Could not write snapshot&quot;, e);</span>
+<span class="fc" id="L257">		}</span>
+
+<span class="fc" id="L259">		log.info(&quot;Snapshot for day {} written successfully&quot;, iteration);</span>
+
+<span class="fc" id="L261">	}</span>
+
+	/**
+	 * Read snapshot from disk and initialize simulation state.
+	 *
+	 * @param path path to snapshot archive
+	 * @return starting iteration
+	 */
+	private int readSnapshot(Path output, Path path) {
+
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">		if (!Files.exists(path))</span>
+<span class="nc" id="L272">			throw new IllegalArgumentException(&quot;Snapshot &quot; + path + &quot; does not exist.&quot;);</span>
+
+<span class="fc" id="L274">		InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L275">		EpisimReporting reporting = reportingProvider.get();</span>
+<span class="fc" id="L276">		ProgressionModel progressionModel = progressionProvider.get();</span>
+
+<span class="fc" id="L278">		int iteration = -1;</span>
+<span class="fc" id="L279">		try (var in = Files.newInputStream(path)) {</span>
+
+<span class="fc" id="L281">			ArchiveInputStream archive = new ArchiveStreamFactory()</span>
+<span class="fc" id="L282">					.createArchiveInputStream(&quot;zip&quot;, in);</span>
+
+<span class="fc" id="L284">			log.info(&quot;Copying output from {} into {}&quot;, path, output);</span>
+
+			ArchiveEntry entry;
+<span class="fc bfc" id="L287" title="All 2 branches covered.">			while ((entry = archive.getNextEntry()) != null) {</span>
+<span class="fc" id="L288">				String name = entry.getName();</span>
+
+				// copy to output
+<span class="fc bfc" id="L291" title="All 2 branches covered.">				if (name.startsWith(&quot;output&quot;))</span>
+<span class="fc" id="L292">					Files.copy(archive, output.resolve(name.replace(&quot;output/&quot;, &quot;&quot;)), StandardCopyOption.REPLACE_EXISTING);</span>
+
+<span class="fc bfc" id="L294" title="All 2 branches covered.">				if (name.equals(&quot;iteration&quot;)) {</span>
+<span class="fc" id="L295">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
+<span class="fc" id="L296">					iteration = ois.readInt();</span>
+				}
+
+<span class="fc bfc" id="L299" title="All 2 branches covered.">				if (name.equals(&quot;state&quot;)) {</span>
+<span class="fc" id="L300">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
+<span class="fc" id="L301">					handler.readExternal(ois);</span>
+				}
+
+<span class="fc bfc" id="L304" title="All 2 branches covered.">				if (name.equals(&quot;reporting&quot;)) {</span>
+<span class="fc" id="L305">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
+<span class="fc" id="L306">					reporting.readExternal(ois);</span>
+				}
+
+<span class="fc bfc" id="L309" title="All 2 branches covered.">				if (name.equals(&quot;progression&quot;)) {</span>
+<span class="fc" id="L310">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
+<span class="pc bpc" id="L311" title="1 of 2 branches missed.">					if (progressionModel instanceof Externalizable)</span>
+<span class="fc" id="L312">						((Externalizable) progressionModel).readExternal(ois);</span>
+					else
+<span class="nc" id="L314">						log.warn(&quot;Progression state present, but model is not Externalizable&quot;);</span>
+				}
+<span class="fc" id="L316">			}</span>
+
+<span class="fc" id="L318">			archive.close();</span>
+
+<span class="fc" id="L320">			return iteration;</span>
+
+<span class="nc" id="L322">		} catch (IOException | ClassNotFoundException e) {</span>
+<span class="nc" id="L323">			throw new IllegalStateException(&quot;Could not read snapshot&quot;, e);</span>
+		}
+
+	}
+
+	/**
+	 * Helper method to write object into archive.
+	 */
+	private void writeObject(Externalizable obj, String name, ArchiveOutputStream archive) throws IOException {
+<span class="fc" id="L332">		archive.putArchiveEntry(new ZipArchiveEntry(name));</span>
+<span class="fc" id="L333">		ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
+<span class="fc" id="L334">		obj.writeExternal(oos);</span>
+<span class="fc" id="L335">		oos.flush();</span>
+<span class="fc" id="L336">		archive.closeArchiveEntry();</span>
+<span class="fc" id="L337">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
