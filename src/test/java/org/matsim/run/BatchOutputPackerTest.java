@@ -34,6 +34,8 @@ class BatchOutputPackerTest {
 		writeRun(input.resolve("seed1"), "calibration1", 10, 20);
 		writeRun(input.resolve("seed2"), "calibration2", 30, 40);
 		writeRun(input.resolve("seed3"), "calibration3", 50, 60);
+		Files.writeString(Files.createDirectory(input.resolve("observed")).resolve("cases.tsv"),
+			"week\tcases\n2025-W39\t41\n", StandardCharsets.UTF_8);
 
 		Path output = temp.resolve("viewer");
 		new BatchOutputPacker(input, output, "Köln").pack();
@@ -46,6 +48,8 @@ class BatchOutputPackerTest {
 		assertThat(output.resolve("summaries/1.zip")).exists();
 		assertThat(Files.readString(output.resolve("notes.md")))
 			.isEqualTo("# Hello World Cologne Based Project\n");
+		assertThat(Files.readString(output.resolve("observed/cases.tsv")))
+			.isEqualTo("week\tcases\n2025-W39\t41\n");
 		assertThat(Files.readString(output.resolve("summaries/0.infectionLoc.csv.gz")))
 			.isEqualTo("map-calibration1");
 		assertZipUsesLocalSizes(output.resolve("summaries/0.zip"));
@@ -69,6 +73,7 @@ class BatchOutputPackerTest {
 			Files.readAllLines(input.resolve("_info.txt")));
 		assertThat(Files.readString(seedsOutput.resolve("notes.md")))
 			.isEqualTo("# Hello World Cologne Based Project\n");
+		assertThat(seedsOutput.resolve("observed/cases.tsv")).exists();
 		assertThat(Files.readString(seedsOutput.resolve("summaries/calibration1.infectionLoc.csv.gz")))
 			.isEqualTo("map-calibration1");
 		assertZipUsesLocalSizes(seedsOutput.resolve("summaries/calibration1.zip"));
