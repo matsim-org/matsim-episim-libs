@@ -859,10 +859,16 @@ public final class InfectionEventHandler implements Externalizable {
 		// Sum of antibodies
 		Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
+		// sequential: the progression model draws from the shared random generator
 		for (EpisimPerson person : personMap.values()) {
 			progressionModel.updateState(person, iteration);
-			antibodyModel.updateAntibodies(person, iteration);
+		}
 
+		// an antibody update reads and writes only its own person and draws no random numbers
+		personMap.values().parallelStream().forEach(person -> antibodyModel.updateAntibodies(person, iteration));
+
+		// sequential, so the floating point sum does not depend on the thread scheduling
+		for (EpisimPerson person : personMap.values()) {
 			for (Object2DoubleMap.Entry<VirusStrain> kv : person.getAntibodies().object2DoubleEntrySet()) {
 				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);
 			}
