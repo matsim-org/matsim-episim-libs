@@ -76,7 +76,7 @@ MATSim Episim,org.matsim.episim,EpisimReporting.InfectionsWriterFields,0,225,0,0
 MATSim Episim,org.matsim.episim,InfectionEpisodeWriter.HomeContainer,0,9,0,0,0,4,0,1,0,1
 MATSim Episim,org.matsim.episim,VaccinationConfigGroup.VaccinationParams,45,424,2,10,9,86,10,42,8,38
 MATSim Episim,org.matsim.episim,EpisimConfigGroup.WriteEvents,0,33,0,0,0,6,0,1,0,1
-MATSim Episim,org.matsim.episim,InfectionEventHandler,218,2674,31,181,39,466,31,113,3,35
+MATSim Episim,org.matsim.episim,InfectionEventHandler,218,2696,31,183,39,468,31,115,3,36
 MATSim Episim,org.matsim.episim,EpisimRunner,46,524,6,36,12,124,6,24,0,9
 MATSim Episim,org.matsim.episim,ContactTransmissionConfigGroup.ContactGroupParams,22,92,5,9,3,22,5,10,0,8
 MATSim Episim,org.matsim.episim,EpisimConfigGroup.FacilitiesHandling,0,15,0,0,0,3,0,1,0,1
