@@ -228,12 +228,24 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 */
 	private boolean excludeFromDiseaseStateProgression = false;
 
+
+	private Boolean commuterQuarantine = null;
+
+
 	public boolean isExcludeFromDiseaseStateProgression() {
 		return excludeFromDiseaseStateProgression;
 	}
 
 	public void setExcludeFromDiseaseStateProgression(boolean excludeFromDiseaseStateProgression) {
 		this.excludeFromDiseaseStateProgression = excludeFromDiseaseStateProgression;
+	}
+
+	public Boolean getCommuterQuarantine() {
+		return commuterQuarantine;
+	}
+
+	public void setCommuterQuarantine(Boolean commuterQuarantine) {
+		this.commuterQuarantine = commuterQuarantine;
 	}
 
 	/**

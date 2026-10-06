@@ -34,6 +34,7 @@ import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.SymmetricContactModelWithOdeCoupling.CommuterQuarantineMode;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -88,6 +89,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 	private static final String SINGLE_EVENT_FILE = "singleEventFile";
 	private static final String END_EARLY = "endEarly";
+	private static final String COMMUTER_QUARANTINE_MODE = "commuterQuarantineMode";
+	private static final String COMMUTER_QUARANTINE_INPUT = "commuterQuarantineInput";
+	private static final String COMMUTER_QUARANTINE_DATE = "commuterQuarantineDate";
+	private static final String COMMUTER_QUARANTINE_SHARE = "commuterQuarantineShare";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -188,6 +193,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private boolean endEarly = false;
 	private int threads = 2;
 	private String facilitiesPath = null;
+	private CommuterQuarantineMode commuterQuarantineMode = CommuterQuarantineMode.OFF;
+	private String commuterQuarantineInput = null;
+	private String commuterQuarantineDate = null;
+	private double commuterQuarantineShare = 1.0;
+
 
 
 	/**
@@ -283,6 +293,46 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(THREADS)
 	public int getThreads() {
 		return threads;
+	}
+
+	@StringGetter(COMMUTER_QUARANTINE_MODE)
+	public CommuterQuarantineMode getCommuterQuarantineMode() {
+		return commuterQuarantineMode;
+	}
+
+	@StringSetter(COMMUTER_QUARANTINE_MODE)
+	public void setCommuterQuarantineMode(CommuterQuarantineMode commuterQuarantineMode) {
+		this.commuterQuarantineMode = commuterQuarantineMode;
+	}
+
+	@StringGetter(COMMUTER_QUARANTINE_INPUT)
+	public String getCommuterQuarantineInput() {
+		return commuterQuarantineInput;
+	}
+
+	@StringSetter(COMMUTER_QUARANTINE_INPUT)
+	public void setCommuterQuarantineInput(String commuterQuarantineInput) {
+		this.commuterQuarantineInput = commuterQuarantineInput;
+	}
+
+	@StringGetter(COMMUTER_QUARANTINE_DATE)
+	public String getCommuterQuarantineDate() {
+		return commuterQuarantineDate;
+	}
+
+	@StringSetter(COMMUTER_QUARANTINE_DATE)
+	public void setCommuterQuarantineDate(String commuterQuarantineDate) {
+		this.commuterQuarantineDate = commuterQuarantineDate;
+	}
+
+	@StringGetter(COMMUTER_QUARANTINE_SHARE)
+	public double getCommuterQuarantineShare() {
+		return commuterQuarantineShare;
+	}
+
+	@StringSetter(COMMUTER_QUARANTINE_SHARE)
+	public void setCommuterQuarantineShare(double commuterQuarantineShare) {
+		this.commuterQuarantineShare = commuterQuarantineShare;
 	}
 
 	@StringGetter(WRITE_EVENTS)

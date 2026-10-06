@@ -36,10 +36,13 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -82,6 +85,16 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 	boolean odeInfTargetDistrictActive;
 
+	Set<Id<Person>> quarantinedAgents;
+	private int commuterQuarantineDay;
+
+	public enum CommuterQuarantineMode {
+		OFF,
+		COMMUTERS,
+		GENERAL,
+
+	}
+
 	@Inject
 		/* package */
 	SymmetricContactModelWithOdeCoupling(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
@@ -115,6 +128,56 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		this.odeInfTargetDistrictActive = episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("");
 
 
+
+
+		// COMMUTER QUARANTINE
+		CommuterQuarantineMode commuterQuarantineMode = episimConfig.getCommuterQuarantineMode();
+		LocalDate commuterQuarantineDate = LocalDate.parse(episimConfig.getCommuterQuarantineDate());
+		LocalDate startDate = episimConfig.getStartDate();
+		commuterQuarantineDay = (int) startDate.until(commuterQuarantineDate, ChronoUnit.DAYS);
+		List<Id<Person>> commutersList = null;
+		try {
+			commutersList = Files.lines(Path.of(episimConfig.getCommuterQuarantineInput()))
+				.skip(1)
+				.map(Id::createPersonId)
+				.collect(Collectors.toCollection(ArrayList::new));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		int nToQuarantine = (int) (commutersList.size() * episimConfig.getCommuterQuarantineShare());
+
+		if(commuterQuarantineMode.equals(CommuterQuarantineMode.OFF)){
+			quarantinedAgents = new HashSet<>();
+		} else if (commuterQuarantineMode.equals(CommuterQuarantineMode.COMMUTERS)) {
+			quarantinedAgents = sample(commutersList, nToQuarantine, rnd);
+		} else if (commuterQuarantineMode.equals(CommuterQuarantineMode.GENERAL)) {
+			List<Id<Person>> fullPopulation = new ArrayList<>(scenario.getPopulation().getPersons().keySet());
+			quarantinedAgents = sample(fullPopulation, nToQuarantine, rnd);
+		} else {
+			throw new RuntimeException("not valid option for quarantinedAgentsMode");
+		}
+
+
+//		for(Id<Person> p : quarantinedAgents) {
+//			if(scenario.getPopulation().getPersons().get(Id.createPersonId(p)) == null){
+//				System.out.println("Hi");
+//			}
+//		}
+//		System.out.println();
+	}
+
+
+	public static HashSet<Id<Person>> sample(List<Id<Person>> values, int n, SplittableRandom rnd) {
+
+		List<Id<Person>> copy = new ArrayList<>(values);
+
+		for (int i = 0; i < n; i++) {
+			int j = rnd.nextInt(i, copy.size());
+			Collections.swap(copy, i, j);
+		}
+
+		return new HashSet<>(copy.subList(0, n));
 	}
 
 
@@ -259,6 +322,23 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, containerReal, getRestrictions(), rnd)) {
 			return;
 		}
+
+
+		if (iteration >= commuterQuarantineDay) {
+			if (personLeavingContainer.getCommuterQuarantine() == null) {
+				personLeavingContainer.setCommuterQuarantine(
+					quarantinedAgents.contains(personLeavingContainer.getPersonId())
+				);
+			}
+
+			if (personLeavingContainer.getCommuterQuarantine()) {
+				return;
+			}
+		}
+//		// we jerry-rigged a way to quarantine commuters after a certain date.
+//		if(iteration >= commuterQuarantineDay && quarantinedAgents.contains(personLeavingContainer.getPersonId())) {
+//			return;
+//		}
 
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
