@@ -503,6 +503,51 @@ public class PathogenConfigGroupTest {
 				.isEqualTo(EpisimPerson.QuarantineStatus.full);
 	}
 
+	@Test
+	public void infectivityProfileIsOptionalAndSurvivesXmlRoundTrip() throws IOException {
+		PathogenConfigGroup group = new PathogenConfigGroup();
+		Config config = ConfigUtils.createConfig(group);
+
+		assertThat(group.getParams(Pathogen.SARS_COV_2).hasInfectivityProfile()).isFalse();
+
+		PathogenParams flu = group.getOrAddParams(INFLUENZA);
+		completeProgression(flu.getOrAddProgressionParams(false));
+		flu.setInfectivityProfile(Map.of(-2, 0.5, 0, 1.0, 2, 0.25));
+
+		PathogenConfigGroup copy = roundTrip(config);
+
+		assertThat(copy.getParams(INFLUENZA).getInfectivityProfile()).containsExactlyEntriesOf(
+				new java.util.TreeMap<>(Map.of(-2, 0.5, 0, 1.0, 2, 0.25)));
+		// an unset profile is written as an empty value and must stay unset
+		assertThat(copy.getParams(Pathogen.SARS_COV_2).hasInfectivityProfile()).isFalse();
+	}
+
+	@Test
+	public void infectivityProfileIsLinearInsideAndZeroOutside() {
+		PathogenParams flu = new PathogenConfigGroup().getOrAddParams(INFLUENZA);
+		flu.setInfectivityProfile(Map.of(-2, 0.5, 0, 1.0, 2, 0.25));
+
+		assertThat(flu.getInfectivity(0)).isEqualTo(1.0);
+		assertThat(flu.getInfectivity(-1)).isEqualTo(0.75);
+		assertThat(flu.getInfectivity(0.5)).isEqualTo(0.8125);
+		assertThat(flu.getInfectivity(-2.5)).isZero();
+		assertThat(flu.getInfectivity(2.5)).isZero();
+	}
+
+	@Test
+	public void infectivityProfileIsValidated() {
+		PathogenParams flu = new PathogenConfigGroup().getOrAddParams(INFLUENZA);
+
+		assertThatThrownBy(() -> flu.setInfectivityProfile(Map.of(0, -0.1)))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> flu.setInfectivityProfile(Map.of(0, Double.NaN)))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> flu.setInfectivityProfile(Map.of(-1, 0.0, 0, 0.0)))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> flu.getInfectivity(0))
+				.isInstanceOf(IllegalStateException.class);
+	}
+
 	private static PathogenConfigGroup roundTrip(Config config) throws IOException {
 		PathogenConfigGroup copy = new PathogenConfigGroup();
 		roundTrip(config, copy);

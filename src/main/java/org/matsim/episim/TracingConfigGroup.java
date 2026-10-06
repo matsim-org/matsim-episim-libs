@@ -165,7 +165,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(TRACING_DELAY)
 	void setTracingDelay(String delay) {
-		Map<String, String> map = SPLITTER.split(delay);
+		Map<String, String> map = splitMap(delay);
 		setTracingDelay_days(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
 		)));
@@ -202,7 +202,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(TRACING_PROBABILITY)
 	void setTracingProbability(String capacity) {
-		Map<String, String> map = SPLITTER.split(capacity);
+		Map<String, String> map = splitMap(capacity);
 		setTracingProbability(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
@@ -247,7 +247,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(CAPACITY)
 	void setTracingCapacity(String capacity) {
 
-		Map<String, String> map = SPLITTER.split(capacity);
+		Map<String, String> map = splitMap(capacity);
 		setTracingCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
 		)));
@@ -269,7 +269,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(QUARANTINE_VACCINATED)
 	void setQuarantineVaccinated(String value) {
-		Map<String, String> map = SPLITTER.split(value);
+		Map<String, String> map = splitMap(value);
 		setQuarantineVaccinated(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Boolean.parseBoolean(e.getValue())
 		)));
@@ -292,7 +292,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(QUARANTINE_DURATION)
 	void setQuarantineDuration(String value) {
-		Map<String, String> map = SPLITTER.split(value);
+		Map<String, String> map = splitMap(value);
 		setQuarantineDuration(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
 		)));
@@ -315,7 +315,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(QUARANTINE_STATUS)
 	void setQuarantineStatus(String value) {
-		Map<String, String> map = SPLITTER.split(value);
+		Map<String, String> map = splitMap(value);
 		setQuarantineStatus(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> EpisimPerson.QuarantineStatus.valueOf(e.getValue())
 		)));
@@ -396,6 +396,20 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.strategy = strategy;
 	}
 
+	/**
+	 * MATSim core's {@code ConfigAliases} renames every config name {@code strategy} to {@code replanning} on read
+	 * (meant for the old core module name, but registered without a path), so our own {@value #STRATEGY} parameter
+	 * arrives here under that name.
+	 */
+	@Override
+	public void handleAddUnknownParam(String paramName, String value) {
+		if ("replanning".equals(paramName)) {
+			addParam(STRATEGY, value);
+			return;
+		}
+		super.handleAddUnknownParam(paramName, value);
+	}
+
 	@StringGetter(LOCATION_THRESHOLD)
 	public int getLocationThreshold() {
 		return locationThreshold;
@@ -437,7 +451,16 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(IGNORED_ACTIVITIES)
 	public void setIgnoredActivities(String value) {
-		setIgnoredActivities(Splitter.on(";").splitToList(value));
+		// an empty list is written as an empty value; splitToList("") would read it back as [""]
+		setIgnoredActivities(value == null || value.isBlank() ? List.of() : Splitter.on(";").splitToList(value));
+	}
+
+	/**
+	 * Splits a {@code key=value;key=value} config value. An empty map is written as an empty value, which must be read
+	 * back as an empty map, but {@link Splitter.MapSplitter} rejects it.
+	 */
+	private static Map<String, String> splitMap(String value) {
+		return value == null || value.isBlank() ? Map.of() : SPLITTER.split(value);
 	}
 
 	@StringGetter(IGNORED_ACTIVITIES)
