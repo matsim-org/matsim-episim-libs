@@ -269,13 +269,18 @@ public final class EpisimPerson implements Immunizable, Attributable {
 			spentTime.put(act, in.readDouble());
 		}
 
+		// state set up before the snapshot is read (e.g. prior immunity at init) is replaced, not added to
 		n = in.readInt();
+		vaccinations.clear();
+		vaccinationDates.clear();
 		for (int i = 0; i < n; i++) {
 			vaccinations.add(VaccinationType.ofId(in.readUTF()));
 			vaccinationDates.add(in.readInt());
 		}
 
 		n = in.readInt();
+		infectionDates.clear();
+		virusStrains.clear();
 		for (int i = 0; i < n; i++) {
 			infectionDates.add(in.readDouble());
 			String virusStrainName = in.readUTF();
@@ -284,6 +289,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		}
 
 		n = in.readInt();
+		antibodies.clear();
 		for (int i = 0; i < n; i++) {
 			String virusStrainName = in.readUTF();
 			VirusStrain strain = VirusStrain.of(virusStrainName);
@@ -291,6 +297,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		}
 
 		n = in.readInt();
+		maxAntibodies.clear();
 		for (int i = 0; i < n; i++) {
 			String virusStrainName = in.readUTF();
 			VirusStrain virusStrain = VirusStrain.of(virusStrainName);

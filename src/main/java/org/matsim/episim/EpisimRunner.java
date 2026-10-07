@@ -121,6 +121,11 @@ public final class EpisimRunner {
 
 			handler.onSnapshotLoaded(iteration);
 
+			// vaccinations given by models at init (e.g. prior immunity) are already part of the restored state;
+			// they must not show up in the report of the first day after the snapshot
+			reporting.vaccinations.clear();
+			reporting.vaccinationStats.clear();
+
 			// recalculate antibodies for every agent if starting from snapshot.
 			// The antibodies profile is generated using the immunity event history in the
 			// snapshot; the antibody model config of the snapshot simulation will
