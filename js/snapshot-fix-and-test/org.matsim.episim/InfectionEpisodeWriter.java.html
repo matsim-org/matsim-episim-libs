@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InfectionEpisodeWriter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">InfectionEpisodeWriter.java</span></div><h1>InfectionEpisodeWriter.java</h1><pre class="source lang-java linenums">/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2026 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ * #L%
+ */
+package org.matsim.episim;
+
+import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.IdMap;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInitialInfectionEvent;
+import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.reporting.EpisimWriter;
+import org.matsim.facilities.ActivityFacility;
+
+import javax.annotation.Nullable;
+import java.io.BufferedWriter;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Writes the universal preprocessed output layer, consisting of {@code persons.tsv} and {@code infectionEpisodes.tsv}.
+ * &lt;p&gt;
+ * Both tables contain only facts of the model, independent of any metric and pathogen. Study-specific metrics like
+ * household secondary attack rates, serial and generation intervals, the share of infections at home or reinfections
+ * are derived from them in post-processing by joining and filtering. No such definitions are part of this class.
+ * &lt;p&gt;
+ * {@code persons.tsv} has one row per person and is written once after initialization:
+ * &lt;ul&gt;
+ *     &lt;li&gt;{@code personId}&lt;/li&gt;
+ *     &lt;li&gt;{@code homeIdAttribute}: attribute {@code homeId} of the population, empty if not present&lt;/li&gt;
+ *     &lt;li&gt;{@code homeContainerId}: container in which the person performs {@code home} activities during the simulation,
+ *     see {@link #findHomeContainer(EpisimPerson)}&lt;/li&gt;
+ *     &lt;li&gt;{@code homeContainerCount}: number of distinct home containers in the trajectory (expected 1)&lt;/li&gt;
+ *     &lt;li&gt;{@code age}: empty if unknown&lt;/li&gt;
+ *     &lt;li&gt;{@code district}: empty if not present&lt;/li&gt;
+ * &lt;/ul&gt;
+ * &lt;p&gt;
+ * {@code infectionEpisodes.tsv} has one row per infection of a person (person x episode). A row is written when the
+ * episode is closed, i.e. when the person becomes {@code susceptible} again, dies or the run ends:
+ * &lt;ul&gt;
+ *     &lt;li&gt;{@code personId}&lt;/li&gt;
+ *     &lt;li&gt;{@code episode}: number of the infection of this person, starting at 1&lt;/li&gt;
+ *     &lt;li&gt;{@code source}: {@code contact} ({@link EpisimInfectionEvent}) or {@code initial} ({@link EpisimInitialInfectionEvent}).
+ *     Initial infections come from two sources, the random disease import and the replay of an immunization history
+ *     (where days can be negative); both are written as {@code initial} and are not distinguished.&lt;/li&gt;
+ *     &lt;li&gt;{@code pathogen}, {@code strain}&lt;/li&gt;
+ *     &lt;li&gt;{@code infectorId}, {@code infectorEpisode}: infector and its episode number at the time of infection&lt;/li&gt;
+ *     &lt;li&gt;{@code infectorInHousehold}: {@code 1}/{@code 0} whether infector and infected have the same home container&lt;/li&gt;
+ *     &lt;li&gt;{@code infectedAtHome}: {@code 1}/{@code 0} whether the infection container is the home container of the infected&lt;/li&gt;
+ *     &lt;li&gt;{@code infectionType}, {@code facility}: as in {@code infectionEvents.txt}&lt;/li&gt;
+ *     &lt;li&gt;{@code date_infected}: date of the iteration of infection&lt;/li&gt;
+ *     &lt;li&gt;{@code day_&lt;status&gt;}: one column per {@link DiseaseStatus} except {@code susceptible}, containing the day
+ *     (iteration) this status was first reached within the episode&lt;/li&gt;
+ *     &lt;li&gt;{@code day_susceptibleAgain}: day of the transition back to {@code susceptible}&lt;/li&gt;
+ *     &lt;li&gt;{@code closedBy}: {@code susceptible}, {@code deceased} or {@code endOfRun}. {@code reinfected} is only written
+ *     if a person receives an initial infection while the previous episode is still open, which can only happen when
+ *     replaying an immunization history.&lt;/li&gt;
+ *     &lt;li&gt;{@code restored}: {@code 1} if the episode was open when a snapshot was loaded. The infector of such episodes
+ *     can not be restored and the source is derived from the stored infection container.&lt;/li&gt;
+ * &lt;/ul&gt;
+ * All infector related columns, {@code infectionType} and {@code facility} are empty for initial infections.
+ * The household columns are empty when a home container is unknown. Unreached stages are empty.
+ */
+final class InfectionEpisodeWriter {
+
+<span class="fc" id="L90">	private static final Logger log = LogManager.getLogger(InfectionEpisodeWriter.class);</span>
+
+	/**
+	 * Marker for an empty day.
+	 */
+	private static final int NONE = Integer.MIN_VALUE;
+
+	/**
+	 * All disease states that are written as day column.
+	 */
+<span class="fc" id="L100">	private static final DiseaseStatus[] STAGES = Arrays.stream(DiseaseStatus.values())</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">			.filter(s -&gt; s != DiseaseStatus.susceptible)</span>
+<span class="fc" id="L102">			.toArray(DiseaseStatus[]::new);</span>
+
+	private final EpisimWriter writer;
+	private final String filename;
+	private final LocalDate startDate;
+
+	/**
+	 * Currently open episodes.
+	 */
+<span class="fc" id="L111">	private final Map&lt;Id&lt;Person&gt;, Episode&gt; open = new ConcurrentHashMap&lt;&gt;();</span>
+
+	/**
+	 * Number of infections per person.
+	 */
+<span class="fc" id="L116">	private final Map&lt;Id&lt;Person&gt;, AtomicInteger&gt; numEpisodes = new ConcurrentHashMap&lt;&gt;();</span>
+
+	/**
+	 * Home containers as determined during initialization.
+	 */
+<span class="fc" id="L121">	private final Map&lt;Id&lt;Person&gt;, HomeContainer&gt; homeContainers = new IdMap&lt;&gt;(Person.class);</span>
+
+	/**
+	 * All persons of the simulation, used to look up the infector.
+	 */
+<span class="fc" id="L126">	private Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons = Map.of();</span>
+
+	private BufferedWriter out;
+
+<span class="fc" id="L130">	InfectionEpisodeWriter(EpisimWriter writer, String base, LocalDate startDate) {</span>
+<span class="fc" id="L131">		this.writer = writer;</span>
+<span class="fc" id="L132">		this.filename = base + &quot;infectionEpisodes.tsv&quot;;</span>
+<span class="fc" id="L133">		this.startDate = startDate;</span>
+<span class="fc" id="L134">	}</span>
+
+	/**
+	 * Header of {@code infectionEpisodes.tsv}.
+	 */
+	static String[] episodeHeader() {
+<span class="fc" id="L140">		List&lt;String&gt; header = new ArrayList&lt;&gt;(List.of(&quot;personId&quot;, &quot;episode&quot;, &quot;source&quot;, &quot;pathogen&quot;, &quot;strain&quot;, &quot;infectorId&quot;,</span>
+				&quot;infectorEpisode&quot;, &quot;infectorInHousehold&quot;, &quot;infectedAtHome&quot;, &quot;infectionType&quot;, &quot;facility&quot;, &quot;date_infected&quot;));
+
+<span class="fc bfc" id="L143" title="All 2 branches covered.">		for (DiseaseStatus stage : STAGES) {</span>
+<span class="fc" id="L144">			header.add(&quot;day_&quot; + stage.name());</span>
+		}
+
+<span class="fc" id="L147">		header.addAll(List.of(&quot;day_susceptibleAgain&quot;, &quot;closedBy&quot;, &quot;restored&quot;));</span>
+<span class="fc" id="L148">		return header.toArray(String[]::new);</span>
+	}
+
+	/**
+	 * Determine the home container of a person from its trajectory. These are the facilities of all activities, whose
+	 * container name starts with {@code home}. If there are multiple ones, the most frequent is used and ties are resolved
+	 * by the order in the trajectory.
+	 * &lt;p&gt;
+	 * For agents with events this is the facility id from the events, which is not necessarily equal to the {@code homeId}
+	 * attribute. Agents without events are put into a container created from {@code homeId} or {@code home_of_&lt;personId&gt;}.
+	 *
+	 * @return home container, with null id if the person has no home activity
+	 */
+	static HomeContainer findHomeContainer(EpisimPerson person) {
+
+<span class="fc" id="L163">		Object2IntMap&lt;Id&lt;ActivityFacility&gt;&gt; counts = new Object2IntLinkedOpenHashMap&lt;&gt;(2);</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">		for (EpisimPerson.PerformedActivity act : person.getTrajectory()) {</span>
+<span class="pc bpc" id="L165" title="2 of 6 branches missed.">			if (act.params != null &amp;&amp; act.facilityId != null &amp;&amp; act.params.getContainerName().startsWith(&quot;home&quot;))</span>
+<span class="fc" id="L166">				counts.mergeInt(act.facilityId, 1, Integer::sum);</span>
+<span class="fc" id="L167">		}</span>
+
+<span class="fc" id="L169">		Id&lt;ActivityFacility&gt; best = null;</span>
+<span class="fc" id="L170">		int max = 0;</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">		for (Object2IntMap.Entry&lt;Id&lt;ActivityFacility&gt;&gt; e : counts.object2IntEntrySet()) {</span>
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">			if (e.getIntValue() &gt; max) {</span>
+<span class="fc" id="L173">				best = e.getKey();</span>
+<span class="fc" id="L174">				max = e.getIntValue();</span>
+			}
+<span class="fc" id="L176">		}</span>
+
+<span class="fc" id="L178">		return new HomeContainer(best, counts.size());</span>
+	}
+
+	/**
+	 * Open the output file.
+	 *
+	 * @param append whether to append to an existing file, otherwise a new file with header is created
+	 */
+	void open(boolean append) {
+<span class="fc bfc" id="L187" title="All 2 branches covered.">		if (append)</span>
+<span class="fc" id="L188">			out = EpisimWriter.prepare(filename);</span>
+		else {
+<span class="fc" id="L190">			String[] header = episodeHeader();</span>
+<span class="fc" id="L191">			out = EpisimWriter.prepare(filename, header[0], header[1], (Object[]) Arrays.copyOfRange(header, 2, header.length));</span>
+		}
+<span class="fc" id="L193">	}</span>
+
+	/**
+	 * Write {@code persons.tsv} and remember the persons and their home containers.
+	 */
+	void writePersons(String personsFile, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons) {
+
+<span class="fc" id="L200">		this.persons = persons;</span>
+<span class="fc" id="L201">		homeContainers.clear();</span>
+
+<span class="fc" id="L203">		BufferedWriter personsOut = EpisimWriter.prepare(personsFile, &quot;personId&quot;, &quot;homeIdAttribute&quot;,</span>
+				&quot;homeContainerId&quot;, &quot;homeContainerCount&quot;, &quot;age&quot;, &quot;district&quot;);
+
+<span class="fc bfc" id="L206" title="All 2 branches covered.">		for (EpisimPerson person : persons.values()) {</span>
+<span class="fc" id="L207">			HomeContainer home = findHomeContainer(person);</span>
+<span class="fc" id="L208">			homeContainers.put(person.getPersonId(), home);</span>
+
+<span class="fc" id="L210">			int age = person.getAgeOrDefault(-1);</span>
+<span class="fc" id="L211">			writer.append(personsOut, new String[]{</span>
+<span class="fc" id="L212">					person.getPersonId().toString(),</span>
+<span class="fc" id="L213">					toString(person.getAttributes().getAttribute(&quot;homeId&quot;)),</span>
+<span class="fc" id="L214">					toString(home.id),</span>
+<span class="fc" id="L215">					String.valueOf(home.count),</span>
+<span class="fc bfc" id="L216" title="All 2 branches covered.">					age == -1 ? &quot;&quot; : String.valueOf(age),</span>
+<span class="fc" id="L217">					toString(person.getAttributes().getAttribute(&quot;district&quot;))</span>
+			});
+<span class="fc" id="L219">		}</span>
+
+<span class="fc" id="L221">		writer.close(personsOut);</span>
+<span class="fc" id="L222">	}</span>
+
+	/**
+	 * Open an episode for a contact infection.
+	 */
+	void openContact(EpisimInfectionEvent event, int day) {
+
+<span class="fc" id="L229">		Episode ep = new Episode(event.getPersonId(), nextEpisode(event.getPersonId()), &quot;contact&quot;, event.getVirusStrain(), day);</span>
+
+<span class="fc" id="L231">		Id&lt;ActivityFacility&gt; infectedHome = homeContainer(event.getPersonId());</span>
+<span class="fc" id="L232">		String facility = event.getContainerId().toString();</span>
+
+<span class="fc" id="L234">		ep.infectorId = event.getInfectorId().toString();</span>
+<span class="fc" id="L235">		ep.infectionType = event.getInfectionType();</span>
+<span class="fc" id="L236">		ep.facility = facility;</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">		ep.infectedAtHome = infectedHome == null ? &quot;&quot; : bool(infectedHome.toString().equals(facility));</span>
+
+<span class="fc" id="L239">		EpisimPerson infector = persons.get(event.getInfectorId());</span>
+<span class="pc bpc" id="L240" title="1 of 2 branches missed.">		if (infector != null)</span>
+<span class="fc" id="L241">			ep.infectorEpisode = String.valueOf(infector.getNumInfections());</span>
+
+<span class="fc" id="L243">		Id&lt;ActivityFacility&gt; infectorHome = homeContainer(event.getInfectorId());</span>
+<span class="pc bpc" id="L244" title="1 of 4 branches missed.">		if (infectedHome != null &amp;&amp; infectorHome != null)</span>
+<span class="fc" id="L245">			ep.infectorInHousehold = bool(infectedHome.equals(infectorHome));</span>
+
+<span class="fc" id="L247">		put(ep);</span>
+<span class="fc" id="L248">	}</span>
+
+	/**
+	 * Open an episode for an initial infection.
+	 */
+	void openInitial(EpisimInitialInfectionEvent event, int day) {
+<span class="fc" id="L254">		put(new Episode(event.getPersonId(), nextEpisode(event.getPersonId()), &quot;initial&quot;, event.getVirusStrain(), day));</span>
+<span class="fc" id="L255">	}</span>
+
+	/**
+	 * Record a status change of a person and close the episode if needed.
+	 */
+	void reportStatus(Id&lt;Person&gt; personId, DiseaseStatus status, int day) {
+
+		// the episode is opened by the infection event, which is reported after this status in case of contact infections
+<span class="fc bfc" id="L263" title="All 2 branches covered.">		if (status == DiseaseStatus.infectedButNotContagious)</span>
+<span class="fc" id="L264">			return;</span>
+
+<span class="fc bfc" id="L266" title="All 4 branches covered.">		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {</span>
+<span class="fc" id="L267">			Episode ep = open.remove(personId);</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">			if (ep == null)</span>
+<span class="nc" id="L269">				return;</span>
+
+<span class="fc" id="L271">			synchronized (ep) {</span>
+<span class="fc bfc" id="L272" title="All 2 branches covered.">				if (status == DiseaseStatus.susceptible)</span>
+<span class="fc" id="L273">					ep.susceptibleAgain = day;</span>
+				else
+<span class="fc" id="L275">					ep.reach(status, day);</span>
+
+<span class="fc" id="L277">				ep.closedBy = status.name();</span>
+<span class="fc" id="L278">			}</span>
+
+<span class="fc" id="L280">			write(ep);</span>
+<span class="fc" id="L281">			return;</span>
+		}
+
+<span class="fc" id="L284">		Episode ep = open.get(personId);</span>
+<span class="pc bpc" id="L285" title="1 of 2 branches missed.">		if (ep != null) {</span>
+<span class="fc" id="L286">			synchronized (ep) {</span>
+<span class="fc" id="L287">				ep.reach(status, day);</span>
+<span class="fc" id="L288">			}</span>
+		}
+<span class="fc" id="L290">	}</span>
+
+	/**
+	 * Restore the open episodes from the person state after a snapshot has been loaded.
+	 * Stages are taken from the stored status changes, the infector is unknown.
+	 *
+	 * @param iteration iteration at which the simulation continues
+	 */
+	void restore(Collection&lt;EpisimPerson&gt; persons, int iteration) {
+
+<span class="fc" id="L300">		open.clear();</span>
+<span class="fc" id="L301">		numEpisodes.clear();</span>
+
+<span class="fc bfc" id="L303" title="All 2 branches covered.">		for (EpisimPerson person : persons) {</span>
+
+<span class="fc" id="L305">			int n = person.getNumInfections();</span>
+<span class="fc bfc" id="L306" title="All 2 branches covered.">			if (n == 0)</span>
+<span class="fc" id="L307">				continue;</span>
+
+<span class="fc" id="L309">			numEpisodes.put(person.getPersonId(), new AtomicInteger(n));</span>
+
+<span class="fc" id="L311">			DiseaseStatus status = person.getDiseaseStatus();</span>
+<span class="fc bfc" id="L312" title="All 4 branches covered.">			if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased)</span>
+<span class="fc" id="L313">				continue;</span>
+
+<span class="pc bpc" id="L315" title="1 of 2 branches missed.">			int infected = person.hadDiseaseStatus(DiseaseStatus.infectedButNotContagious) ?</span>
+<span class="fc" id="L316">					startDay(person, DiseaseStatus.infectedButNotContagious, iteration) :</span>
+<span class="pc" id="L317">					(int) Math.floor(person.getInfectionDates().getDouble(n - 1) / EpisimUtils.DAY);</span>
+
+<span class="fc" id="L319">			Id&lt;ActivityFacility&gt; container = person.getInfectionContainer();</span>
+<span class="fc bfc" id="L320" title="All 2 branches covered.">			Episode ep = new Episode(person.getPersonId(), n, container != null ? &quot;contact&quot; : &quot;initial&quot;, person.getVirusStrain(), infected);</span>
+<span class="fc" id="L321">			ep.restored = true;</span>
+
+<span class="fc bfc" id="L323" title="All 2 branches covered.">			if (container != null) {</span>
+<span class="fc" id="L324">				Id&lt;ActivityFacility&gt; home = homeContainer(person.getPersonId());</span>
+<span class="fc" id="L325">				ep.facility = container.toString();</span>
+<span class="pc bpc" id="L326" title="1 of 2 branches missed.">				ep.infectionType = person.getInfectionType() == null ? &quot;&quot; : person.getInfectionType();</span>
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">				ep.infectedAtHome = home == null ? &quot;&quot; : bool(home.equals(container));</span>
+			}
+
+<span class="fc bfc" id="L330" title="All 2 branches covered.">			for (DiseaseStatus stage : STAGES) {</span>
+				// recovered is kept from previous episodes, it only belongs to this one if it is the current status
+<span class="fc bfc" id="L332" title="All 8 branches covered.">				if (stage == DiseaseStatus.infectedButNotContagious || !person.hadDiseaseStatus(stage) ||</span>
+						(stage == DiseaseStatus.recovered &amp;&amp; status != DiseaseStatus.recovered))
+<span class="fc" id="L334">					continue;</span>
+
+<span class="fc" id="L336">				int day = startDay(person, stage, iteration);</span>
+<span class="pc bpc" id="L337" title="1 of 2 branches missed.">				if (day &gt;= infected)</span>
+<span class="fc" id="L338">					ep.reach(stage, day);</span>
+			}
+
+<span class="fc" id="L341">			open.put(person.getPersonId(), ep);</span>
+<span class="fc" id="L342">		}</span>
+
+<span class="fc" id="L344">		log.info(&quot;Restored {} open infection episodes&quot;, open.size());</span>
+<span class="fc" id="L345">	}</span>
+
+	/**
+	 * Write all episodes that are still open and close the output.
+	 */
+	void close() {
+
+<span class="pc bpc" id="L352" title="1 of 2 branches missed.">		if (out == null)</span>
+<span class="nc" id="L353">			return;</span>
+
+<span class="fc" id="L355">		List&lt;Episode&gt; remaining = new ArrayList&lt;&gt;(open.values());</span>
+<span class="fc" id="L356">		open.clear();</span>
+<span class="fc" id="L357">		remaining.sort(Comparator.comparing(ep -&gt; ep.personId));</span>
+
+<span class="fc bfc" id="L359" title="All 2 branches covered.">		for (Episode ep : remaining) {</span>
+<span class="fc" id="L360">			synchronized (ep) {</span>
+<span class="fc" id="L361">				ep.closedBy = &quot;endOfRun&quot;;</span>
+<span class="fc" id="L362">			}</span>
+<span class="fc" id="L363">			write(ep);</span>
+<span class="fc" id="L364">		}</span>
+
+<span class="fc" id="L366">		writer.close(out);</span>
+<span class="fc" id="L367">		out = null;</span>
+<span class="fc" id="L368">	}</span>
+
+	private void put(Episode ep) {
+<span class="fc" id="L371">		Episode previous = open.put(ep.personId, ep);</span>
+<span class="pc bpc" id="L372" title="1 of 2 branches missed.">		if (previous != null) {</span>
+<span class="nc" id="L373">			log.warn(&quot;Person {} was infected while episode {} was still open&quot;, ep.personId, previous.episode);</span>
+<span class="nc" id="L374">			synchronized (previous) {</span>
+<span class="nc" id="L375">				previous.closedBy = &quot;reinfected&quot;;</span>
+<span class="nc" id="L376">			}</span>
+<span class="nc" id="L377">			write(previous);</span>
+		}
+<span class="fc" id="L379">	}</span>
+
+	private int nextEpisode(Id&lt;Person&gt; personId) {
+<span class="fc" id="L382">		return numEpisodes.computeIfAbsent(personId, k -&gt; new AtomicInteger()).incrementAndGet();</span>
+	}
+
+	@Nullable
+	private Id&lt;ActivityFacility&gt; homeContainer(Id&lt;Person&gt; personId) {
+<span class="fc" id="L387">		HomeContainer home = homeContainers.get(personId);</span>
+<span class="pc bpc" id="L388" title="1 of 2 branches missed.">		if (home == null) {</span>
+			// person was not present during initialization
+<span class="nc" id="L390">			EpisimPerson person = persons.get(personId);</span>
+<span class="nc bnc" id="L391" title="All 2 branches missed.">			return person != null ? findHomeContainer(person).id : null;</span>
+		}
+
+<span class="fc" id="L394">		return home.id;</span>
+	}
+
+	private void write(Episode ep) {
+		String[] row;
+<span class="fc" id="L399">		synchronized (ep) {</span>
+<span class="fc" id="L400">			row = ep.toRow(startDate);</span>
+<span class="fc" id="L401">		}</span>
+<span class="fc" id="L402">		writer.append(out, row);</span>
+<span class="fc" id="L403">	}</span>
+
+	/**
+	 * Day at which a status was reached.
+	 */
+	private static int startDay(EpisimPerson person, DiseaseStatus status, int iteration) {
+<span class="fc" id="L409">		return iteration - person.daysSince(status, iteration);</span>
+	}
+
+	private static String bool(boolean value) {
+<span class="fc bfc" id="L413" title="All 2 branches covered.">		return value ? &quot;1&quot; : &quot;0&quot;;</span>
+	}
+
+	private static String toString(@Nullable Object value) {
+<span class="fc bfc" id="L417" title="All 2 branches covered.">		return value == null ? &quot;&quot; : value.toString();</span>
+	}
+
+	/**
+	 * Home container of a person and the number of distinct home containers.
+	 */
+	static final class HomeContainer {
+
+		@Nullable
+		final Id&lt;ActivityFacility&gt; id;
+		final int count;
+
+<span class="fc" id="L429">		HomeContainer(@Nullable Id&lt;ActivityFacility&gt; id, int count) {</span>
+<span class="fc" id="L430">			this.id = id;</span>
+<span class="fc" id="L431">			this.count = count;</span>
+<span class="fc" id="L432">		}</span>
+	}
+
+	/**
+	 * State of one infection episode.
+	 */
+	private static final class Episode {
+
+		private final Id&lt;Person&gt; personId;
+		private final int episode;
+		private final String source;
+		private final VirusStrain strain;
+		private final int infected;
+<span class="fc" id="L445">		private final int[] days = new int[DiseaseStatus.values().length];</span>
+
+<span class="fc" id="L447">		private String infectorId = &quot;&quot;;</span>
+<span class="fc" id="L448">		private String infectorEpisode = &quot;&quot;;</span>
+<span class="fc" id="L449">		private String infectorInHousehold = &quot;&quot;;</span>
+<span class="fc" id="L450">		private String infectedAtHome = &quot;&quot;;</span>
+<span class="fc" id="L451">		private String infectionType = &quot;&quot;;</span>
+<span class="fc" id="L452">		private String facility = &quot;&quot;;</span>
+<span class="fc" id="L453">		private int susceptibleAgain = NONE;</span>
+		private String closedBy;
+		private boolean restored;
+
+<span class="fc" id="L457">		private Episode(Id&lt;Person&gt; personId, int episode, String source, VirusStrain strain, int day) {</span>
+<span class="fc" id="L458">			this.personId = personId;</span>
+<span class="fc" id="L459">			this.episode = episode;</span>
+<span class="fc" id="L460">			this.source = source;</span>
+<span class="fc" id="L461">			this.strain = strain;</span>
+<span class="fc" id="L462">			this.infected = day;</span>
+<span class="fc" id="L463">			Arrays.fill(days, NONE);</span>
+<span class="fc" id="L464">			days[DiseaseStatus.infectedButNotContagious.ordinal()] = day;</span>
+<span class="fc" id="L465">		}</span>
+
+		/**
+		 * Stores the day a status was reached, if it was not reached before.
+		 */
+		private void reach(DiseaseStatus status, int day) {
+<span class="pc bpc" id="L471" title="1 of 2 branches missed.">			if (days[status.ordinal()] == NONE)</span>
+<span class="fc" id="L472">				days[status.ordinal()] = day;</span>
+<span class="fc" id="L473">		}</span>
+
+		private String[] toRow(LocalDate startDate) {
+<span class="fc" id="L476">			List&lt;String&gt; row = new ArrayList&lt;&gt;(15 + STAGES.length);</span>
+<span class="fc" id="L477">			row.add(personId.toString());</span>
+<span class="fc" id="L478">			row.add(String.valueOf(episode));</span>
+<span class="fc" id="L479">			row.add(source);</span>
+<span class="fc" id="L480">			row.add(strain.getPathogen().getName());</span>
+<span class="fc" id="L481">			row.add(strain.toString());</span>
+<span class="fc" id="L482">			row.add(infectorId);</span>
+<span class="fc" id="L483">			row.add(infectorEpisode);</span>
+<span class="fc" id="L484">			row.add(infectorInHousehold);</span>
+<span class="fc" id="L485">			row.add(infectedAtHome);</span>
+<span class="fc" id="L486">			row.add(infectionType);</span>
+<span class="fc" id="L487">			row.add(facility);</span>
+<span class="fc" id="L488">			row.add(startDate.plusDays(infected - 1).toString());</span>
+
+<span class="fc bfc" id="L490" title="All 2 branches covered.">			for (DiseaseStatus stage : STAGES) {</span>
+<span class="fc" id="L491">				row.add(day(days[stage.ordinal()]));</span>
+			}
+
+<span class="fc" id="L494">			row.add(day(susceptibleAgain));</span>
+<span class="fc" id="L495">			row.add(closedBy);</span>
+<span class="fc bfc" id="L496" title="All 2 branches covered.">			row.add(restored ? &quot;1&quot; : &quot;0&quot;);</span>
+<span class="fc" id="L497">			return row.toArray(String[]::new);</span>
+		}
+
+		private static String day(int day) {
+<span class="fc bfc" id="L501" title="All 2 branches covered.">			return day == NONE ? &quot;&quot; : String.valueOf(day);</span>
+		}
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

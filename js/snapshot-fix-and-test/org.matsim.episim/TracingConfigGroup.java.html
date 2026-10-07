@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TracingConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">TracingConfigGroup.java</span></div><h1>TracingConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import org.matsim.core.config.ReflectiveConfigGroup;
+
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Config option specific to contact tracing and measures performed in {@link org.matsim.episim.model.ProgressionModel}.
+ */
+@SuppressWarnings(&quot;checkstyle:MethodName&quot;)
+public class TracingConfigGroup extends ReflectiveConfigGroup {
+
+<span class="fc" id="L17">	private static final Splitter.MapSplitter SPLITTER = Splitter.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+<span class="fc" id="L18">	private static final Joiner.MapJoiner JOINER = Joiner.on(&quot;;&quot;).withKeyValueSeparator(&quot;=&quot;);</span>
+
+	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = &quot;putTraceablePersonsInQuarantineAfterDay&quot;;
+	private static final String TRACING_DAYS_DISTANCE = &quot;tracingDaysDistance&quot;;
+	private static final String TRACING_PROBABILITY = &quot;tracingProbability&quot;;
+	private static final String TRACING_DELAY = &quot;tracingDelay&quot;;
+	private static final String QUARANTINE_VACCINATED = &quot;quarantineVaccinated&quot;;
+	private static final String QUARANTINE_DURATION = &quot;quarantineDuration&quot;;
+	private static final String QUARANTINE_STATUS = &quot;quarantineStatus&quot;;
+	private static final String MIN_DURATION = &quot;minDuration&quot;;
+	private static final String QUARANTINE_HOUSEHOLD = &quot;quarantineHousehold&quot;;
+	private static final String QUARANTINE_RELEASE = &quot;quarantineRelease&quot;;
+	private static final String TRACE_SUSCEPTIBLE = &quot;traceSusceptible&quot;;
+	private static final String EQUIPMENT_RATE = &quot;equipmentRate&quot;;
+	private static final String CAPACITY = &quot;tracingCapacity&quot;;
+	private static final String CAPACITY_TYPE = &quot;capacityType&quot;;
+	private static final String STRATEGY = &quot;strategy&quot;;
+	private static final String LOCATION_THRESHOLD = &quot;locationThreshold&quot;;
+	private static final String GREEN_PASS_DAYS = &quot;greenPassValidDays&quot;;
+	private static final String GREEN_PASS_BOOSTER_DAYS = &quot;greenPassBoosterValidDays&quot;;
+	private static final String IGNORED_ACTIVITIES = &quot;ignoredActivities&quot;;
+	private static final String GROUPNAME = &quot;episimTracing&quot;;
+
+	/**
+	 * Amount of persons traceable per day.
+	 */
+<span class="fc" id="L44">	private final Map&lt;LocalDate, Integer&gt; tracingCapacity = new TreeMap&lt;&gt;();</span>
+	/**
+	 * Probability of successfully tracing a person.
+	 */
+<span class="fc" id="L48">	private final Map&lt;LocalDate, Double&gt; tracingProbability = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Delay between showing symptoms and tracing of contact person.
+	 */
+<span class="fc" id="L53">	private final Map&lt;LocalDate, Integer&gt; tracingDelay = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Whether vaccinated persons should be put into quarantine.
+	 */
+<span class="fc" id="L58">	private final Map&lt;LocalDate, Boolean&gt; quarantineVaccinated = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Duration of quarantine in days.
+	 */
+<span class="fc" id="L63">	private final Map&lt;LocalDate, Integer&gt; quarantineDuration = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Quarantine to use after certain dates.
+	 */
+<span class="fc" id="L68">	private final Map&lt;LocalDate, EpisimPerson.QuarantineStatus&gt; quarantineStatus = new TreeMap&lt;&gt;();</span>
+
+	/**
+	 * Activities that will not be traced.
+	 */
+<span class="fc" id="L73">	private final Set&lt;String&gt; ignoredActivities = new HashSet&lt;&gt;();</span>
+
+	/**
+	 * Day after which tracing starts and puts persons into quarantine.
+	 */
+<span class="fc" id="L78">	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;</span>
+	/**
+	 * How many days the tracing works back.
+	 */
+<span class="fc" id="L82">	private int tracingDayDistance = 4;</span>
+
+	/**
+	 * Probability that a person is equipped with a tracing device.
+	 */
+<span class="fc" id="L87">	private double equipmentRate = 1.0;</span>
+
+	/**
+	 * Minimum duration in seconds for a contact to be relevant for tracing.
+	 */
+<span class="fc" id="L92">	private double minDuration = 0.0;</span>
+
+	/**
+	 * Members of the same household will be put always into quarantine.
+	 */
+<span class="fc" id="L97">	private boolean quarantineHouseholdMembers = false;</span>
+
+	/**
+	 * Trace contacts between two susceptible persons. (Uses a lot more RAM)
+	 */
+<span class="fc" id="L102">	private boolean traceSusceptible = true;</span>
+
+	/**
+	 * Defines if the capacity is either per (infected) person or per contact person.
+	 */
+<span class="fc" id="L107">	private CapacityType capacityType = CapacityType.PER_PERSON;</span>
+
+	/**
+	 * Tracing and containment strategy.
+	 */
+<span class="fc" id="L112">	private Strategy strategy = Strategy.INDIVIDUAL_ONLY;</span>
+
+	/**
+	 * Quarantine release strategy.
+	 */
+<span class="fc" id="L117">	private QuarantineRelease quarantineRelease = QuarantineRelease.SUSCEPTIBLE;</span>
+
+	/**
+	 * How many infections are required for location based tracing to trigger.
+	 */
+<span class="fc" id="L122">	private int locationThreshold = 4;</span>
+
+	/**
+	 * Overwrite green pass valid days, -1 means default value.
+	 */
+<span class="fc" id="L127">	private int greenPassValidDays = -1;</span>
+
+	/**
+	 * Valid days for persons with booster.
+	 */
+<span class="fc" id="L132">	private int greenPassBoosterValidDays = -1;</span>
+
+	/**
+	 * Default constructor.
+	 */
+	public TracingConfigGroup() {
+<span class="fc" id="L138">		super(GROUPNAME);</span>
+<span class="fc" id="L139">	}</span>
+
+	@StringGetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
+	public int getPutTraceablePersonsInQuarantineAfterDay() {
+<span class="fc" id="L143">		return putTraceablePersonsInQuarantineAfterDay;</span>
+	}
+
+	@StringSetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
+	public void setPutTraceablePersonsInQuarantineAfterDay(int putTraceablePersonsInQuarantineAfterDay) {
+		// yyyy change argument to date.  kai, jun'20
+<span class="fc" id="L149">		this.putTraceablePersonsInQuarantineAfterDay = putTraceablePersonsInQuarantineAfterDay;</span>
+<span class="fc" id="L150">	}</span>
+
+	@StringGetter(TRACING_DAYS_DISTANCE)
+	public int getTracingDayDistance() {
+<span class="fc" id="L154">		return tracingDayDistance;</span>
+	}
+
+	@StringSetter(TRACING_DAYS_DISTANCE)
+	public void setTracingPeriod_days(int tracingDayDistance) {
+<span class="fc" id="L159">		this.tracingDayDistance = tracingDayDistance;</span>
+<span class="fc" id="L160">	}</span>
+
+	public Map&lt;LocalDate, Integer&gt; getTracingDelay() {
+<span class="fc" id="L163">		return tracingDelay;</span>
+	}
+
+	@StringSetter(TRACING_DELAY)
+	void setTracingDelay(String delay) {
+<span class="fc" id="L168">		Map&lt;String, String&gt; map = splitMap(delay);</span>
+<span class="fc" id="L169">		setTracingDelay_days(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L170">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+		)));
+<span class="fc" id="L172">	}</span>
+
+	@StringGetter(TRACING_DELAY)
+	String getTracingDelayString() {
+<span class="fc" id="L176">		return JOINER.join(tracingDelay);</span>
+	}
+
+	/**
+	 * Set tracing delay valid throughout whole simulation.
+	 */
+	public void setTracingDelay_days(int tracingDelay) {
+<span class="fc" id="L183">		setTracingDelay_days(Map.of(LocalDate.of(1970, 1, 1), tracingDelay));</span>
+<span class="fc" id="L184">	}</span>
+
+	/**
+	 * Set tracing delay in days for individual points in time.
+	 */
+	public void setTracingDelay_days(Map&lt;LocalDate, Integer&gt; tracingDelay) {
+<span class="fc" id="L190">		this.tracingDelay.clear();</span>
+<span class="fc" id="L191">		this.tracingDelay.putAll(tracingDelay);</span>
+<span class="fc" id="L192">	}</span>
+
+	@StringGetter(TRACING_PROBABILITY)
+	public String getTracingProbabilityString() {
+<span class="fc" id="L196">		return JOINER.join(tracingProbability);</span>
+	}
+
+	public Map&lt;LocalDate, Double&gt; getTracingProbability() {
+<span class="fc" id="L200">		return tracingProbability;</span>
+	}
+
+	@StringSetter(TRACING_PROBABILITY)
+	void setTracingProbability(String capacity) {
+<span class="fc" id="L205">		Map&lt;String, String&gt; map = splitMap(capacity);</span>
+<span class="fc" id="L206">		setTracingProbability(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L207">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Double.parseDouble(e.getValue())</span>
+		)));
+<span class="fc" id="L209">	}</span>
+
+	public void setTracingProbability(Map&lt;LocalDate, Double&gt; tracingProbability) {
+<span class="fc" id="L212">		this.tracingProbability.clear();</span>
+<span class="fc" id="L213">		this.tracingProbability.putAll(tracingProbability);</span>
+<span class="fc" id="L214">	}</span>
+
+	/**
+	 * Sets one tracing probability valid throughout whole simulation.
+	 */
+	public void setTracingProbability(double tracingProbability) {
+<span class="fc" id="L220">		setTracingProbability(Map.of(LocalDate.of(1970, 1, 1), tracingProbability));</span>
+<span class="fc" id="L221">	}</span>
+
+	/**
+	 * Sets the tracing capacity for the whole simulation period.
+	 *
+	 * @param capacity number of persons to trace per day.
+	 * @see #setTracingCapacity_pers_per_day(Map)
+	 */
+	public void setTracingCapacity_pers_per_day(int capacity) {
+<span class="fc" id="L230">		setTracingCapacity_pers_per_day(Map.of(LocalDate.of(1970, 1, 1), capacity));</span>
+<span class="fc" id="L231">	}</span>
+
+	/**
+	 * Sets the tracing capacity for individual days. If a day has no entry the previous will be still valid.
+	 *
+	 * @param capacity map of dates to changes in capacity.
+	 */
+	public void setTracingCapacity_pers_per_day(Map&lt;LocalDate, Integer&gt; capacity) {
+<span class="fc" id="L239">		tracingCapacity.clear();</span>
+<span class="fc" id="L240">		tracingCapacity.putAll(capacity);</span>
+<span class="fc" id="L241">	}</span>
+
+	public Map&lt;LocalDate, Integer&gt; getTracingCapacity() {
+<span class="fc" id="L244">		return tracingCapacity;</span>
+	}
+
+	@StringSetter(CAPACITY)
+	void setTracingCapacity(String capacity) {
+
+<span class="fc" id="L250">		Map&lt;String, String&gt; map = splitMap(capacity);</span>
+<span class="fc" id="L251">		setTracingCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="fc" id="L252">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+		)));
+<span class="fc" id="L254">	}</span>
+
+	@StringGetter(CAPACITY)
+	String getTracingCapacityString() {
+<span class="fc" id="L258">		return JOINER.join(tracingCapacity);</span>
+	}
+
+	public void setQuarantineVaccinated(Map&lt;LocalDate, Boolean&gt; value) {
+<span class="fc" id="L262">		quarantineVaccinated.clear();</span>
+<span class="fc" id="L263">		quarantineVaccinated.putAll(value);</span>
+<span class="fc" id="L264">	}</span>
+
+	public Map&lt;LocalDate, Boolean&gt; getQuarantineVaccinated() {
+<span class="fc" id="L267">		return quarantineVaccinated;</span>
+	}
+
+	@StringSetter(QUARANTINE_VACCINATED)
+	void setQuarantineVaccinated(String value) {
+<span class="fc" id="L272">		Map&lt;String, String&gt; map = splitMap(value);</span>
+<span class="fc" id="L273">		setQuarantineVaccinated(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L274">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Boolean.parseBoolean(e.getValue())</span>
+		)));
+<span class="fc" id="L276">	}</span>
+
+	@StringGetter(QUARANTINE_VACCINATED)
+	String getQuarantineVaccinatedString() {
+<span class="fc" id="L280">		return JOINER.join(quarantineVaccinated);</span>
+	}
+
+
+	public void setQuarantineDuration(Map&lt;LocalDate, Integer&gt; value) {
+<span class="fc" id="L285">		quarantineDuration.clear();</span>
+<span class="fc" id="L286">		quarantineDuration.putAll(value);</span>
+<span class="fc" id="L287">	}</span>
+
+	public Map&lt;LocalDate, Integer&gt; getQuarantineDuration() {
+<span class="fc" id="L290">		return quarantineDuration;</span>
+	}
+
+	@StringSetter(QUARANTINE_DURATION)
+	void setQuarantineDuration(String value) {
+<span class="fc" id="L295">		Map&lt;String, String&gt; map = splitMap(value);</span>
+<span class="fc" id="L296">		setQuarantineDuration(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L297">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; Integer.parseInt(e.getValue())</span>
+		)));
+<span class="fc" id="L299">	}</span>
+
+	@StringGetter(QUARANTINE_DURATION)
+	String getQuarantineDurationString() {
+<span class="fc" id="L303">		return JOINER.join(quarantineDuration);</span>
+	}
+
+
+	public Map&lt;LocalDate, EpisimPerson.QuarantineStatus&gt; getQuarantineStatus() {
+<span class="fc" id="L308">		return quarantineStatus;</span>
+	}
+
+	public void setQuarantineStatus(Map&lt;LocalDate, EpisimPerson.QuarantineStatus&gt; value) {
+<span class="fc" id="L312">		quarantineStatus.clear();</span>
+<span class="fc" id="L313">		quarantineStatus.putAll(value);</span>
+<span class="fc" id="L314">	}</span>
+
+	@StringSetter(QUARANTINE_STATUS)
+	void setQuarantineStatus(String value) {
+<span class="fc" id="L318">		Map&lt;String, String&gt; map = splitMap(value);</span>
+<span class="fc" id="L319">		setQuarantineStatus(map.entrySet().stream().collect(Collectors.toMap(</span>
+<span class="nc" id="L320">				e -&gt; LocalDate.parse(e.getKey()), e -&gt; EpisimPerson.QuarantineStatus.valueOf(e.getValue())</span>
+		)));
+<span class="fc" id="L322">	}</span>
+
+	@StringGetter(QUARANTINE_STATUS)
+	String getQuarantineStatusString() {
+<span class="fc" id="L326">		return JOINER.join(quarantineStatus);</span>
+	}
+
+	@StringGetter(EQUIPMENT_RATE)
+	public double getEquipmentRate() {
+<span class="fc" id="L331">		return equipmentRate;</span>
+	}
+
+	@StringSetter(EQUIPMENT_RATE)
+	public void setEquipmentRate(double equipmentRate) {
+<span class="fc" id="L336">		this.equipmentRate = equipmentRate;</span>
+<span class="fc" id="L337">	}</span>
+
+	@StringGetter(QUARANTINE_RELEASE)
+	public QuarantineRelease getQuarantineRelease() {
+<span class="fc" id="L341">		return quarantineRelease;</span>
+	}
+
+	@StringSetter(QUARANTINE_RELEASE)
+	public void setQuarantineRelease(QuarantineRelease quarantineRelease) {
+<span class="fc" id="L346">		this.quarantineRelease = quarantineRelease;</span>
+<span class="fc" id="L347">	}</span>
+
+	@StringGetter(MIN_DURATION)
+	public double getMinDuration() {
+<span class="fc" id="L351">		return minDuration;</span>
+	}
+
+	@StringSetter(MIN_DURATION)
+	public void setMinContactDuration_sec(double minDuration) {
+<span class="fc" id="L356">		this.minDuration = minDuration;</span>
+<span class="fc" id="L357">	}</span>
+
+	@StringSetter(QUARANTINE_HOUSEHOLD)
+	public void setQuarantineHouseholdMembers(boolean quarantineHouseholdMembers) {
+<span class="fc" id="L361">		this.quarantineHouseholdMembers = quarantineHouseholdMembers;</span>
+<span class="fc" id="L362">	}</span>
+
+	@StringGetter(QUARANTINE_HOUSEHOLD)
+	public boolean getQuarantineHousehold() {
+<span class="fc" id="L366">		return quarantineHouseholdMembers;</span>
+	}
+
+	@StringGetter(TRACE_SUSCEPTIBLE)
+	public boolean getTraceSusceptible() {
+<span class="fc" id="L371">		return traceSusceptible;</span>
+	}
+
+	@StringSetter(TRACE_SUSCEPTIBLE)
+	public void setTraceSusceptible(boolean traceSusceptible) {
+<span class="fc" id="L376">		this.traceSusceptible = traceSusceptible;</span>
+<span class="fc" id="L377">	}</span>
+
+	@StringGetter(CAPACITY_TYPE)
+	public CapacityType getCapacityType() {
+<span class="fc" id="L381">		return capacityType;</span>
+	}
+
+	@StringSetter(CAPACITY_TYPE)
+	public void setCapacityType(CapacityType capacityType) {
+<span class="fc" id="L386">		this.capacityType = capacityType;</span>
+<span class="fc" id="L387">	}</span>
+
+	@StringGetter(STRATEGY)
+	public Strategy getStrategy() {
+<span class="fc" id="L391">		return strategy;</span>
+	}
+
+	@StringSetter(STRATEGY)
+	public void setStrategy(Strategy strategy) {
+<span class="fc" id="L396">		this.strategy = strategy;</span>
+<span class="fc" id="L397">	}</span>
+
+	/**
+	 * MATSim core's {@code ConfigAliases} renames every config name {@code strategy} to {@code replanning} on read
+	 * (meant for the old core module name, but registered without a path), so our own {@value #STRATEGY} parameter
+	 * arrives here under that name.
+	 */
+	@Override
+	public void handleAddUnknownParam(String paramName, String value) {
+<span class="pc bpc" id="L406" title="1 of 2 branches missed.">		if (&quot;replanning&quot;.equals(paramName)) {</span>
+<span class="fc" id="L407">			addParam(STRATEGY, value);</span>
+<span class="fc" id="L408">			return;</span>
+		}
+<span class="nc" id="L410">		super.handleAddUnknownParam(paramName, value);</span>
+<span class="nc" id="L411">	}</span>
+
+	@StringGetter(LOCATION_THRESHOLD)
+	public int getLocationThreshold() {
+<span class="fc" id="L415">		return locationThreshold;</span>
+	}
+
+	@StringSetter(LOCATION_THRESHOLD)
+	public void setLocationThreshold(int locationThreshold) {
+<span class="fc" id="L420">		this.locationThreshold = locationThreshold;</span>
+<span class="fc" id="L421">	}</span>
+
+	@StringGetter(GREEN_PASS_DAYS)
+	public int getGreenPassValidDays() {
+<span class="fc" id="L425">		return greenPassValidDays;</span>
+	}
+
+	@StringSetter(GREEN_PASS_DAYS)
+	public void setGreenPassValidDays(int greenPassValidDays) {
+<span class="fc" id="L430">		this.greenPassValidDays = greenPassValidDays;</span>
+<span class="fc" id="L431">	}</span>
+
+	@StringSetter(GREEN_PASS_BOOSTER_DAYS)
+	public void setGreenPassBoosterValidDays(int greenPassBoosterValidDays) {
+<span class="fc" id="L435">		this.greenPassBoosterValidDays = greenPassBoosterValidDays;</span>
+<span class="fc" id="L436">	}</span>
+
+	@StringGetter(GREEN_PASS_BOOSTER_DAYS)
+	public int getGreenPassBoosterValidDays() {
+<span class="fc" id="L440">		return greenPassBoosterValidDays;</span>
+	}
+
+	public Set&lt;String&gt; getIgnoredActivities() {
+<span class="fc" id="L444">		return ignoredActivities;</span>
+	}
+
+	public void setIgnoredActivities(Collection&lt;String&gt; value) {
+<span class="fc" id="L448">		ignoredActivities.clear();</span>
+<span class="fc" id="L449">		ignoredActivities.addAll(value);</span>
+<span class="fc" id="L450">	}</span>
+
+	@StringSetter(IGNORED_ACTIVITIES)
+	public void setIgnoredActivities(String value) {
+		// an empty list is written as an empty value; splitToList(&quot;&quot;) would read it back as [&quot;&quot;]
+<span class="pc bpc" id="L455" title="2 of 4 branches missed.">		setIgnoredActivities(value == null || value.isBlank() ? List.of() : Splitter.on(&quot;;&quot;).splitToList(value));</span>
+<span class="fc" id="L456">	}</span>
+
+	/**
+	 * Splits a {@code key=value;key=value} config value. An empty map is written as an empty value, which must be read
+	 * back as an empty map, but {@link Splitter.MapSplitter} rejects it.
+	 */
+	private static Map&lt;String, String&gt; splitMap(String value) {
+<span class="pc bpc" id="L463" title="1 of 4 branches missed.">		return value == null || value.isBlank() ? Map.of() : SPLITTER.split(value);</span>
+	}
+
+	@StringGetter(IGNORED_ACTIVITIES)
+	String getIgnoredActivitiesString() {
+<span class="fc" id="L468">		return Joiner.on(&quot;;&quot;).join(ignoredActivities);</span>
+	}
+
+	/**
+	 * Unit used to express tracing capacity.
+	 */
+<span class="fc" id="L474">	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}</span>
+
+	/**
+	 * Available contact-tracing strategies.
+	 */
+<span class="fc" id="L479">	public enum Strategy {</span>
+
+		/**
+		 * No tracing.
+		 */
+<span class="fc" id="L484">		NONE,</span>
+
+		/**
+		 * Trace contacts of individual persons.
+		 */
+<span class="fc" id="L489">		INDIVIDUAL_ONLY,</span>
+
+		/**
+		 * Put persons at location with lot of infections into quarantine.
+		 */
+<span class="fc" id="L494">		LOCATION,</span>
+
+		/**
+		 * Trace and test all contacts for persons that have been at specific location.
+		 */
+<span class="fc" id="L499">		LOCATION_WITH_TESTING,</span>
+
+		/**
+		 * Follow back all contacts of infected persons.
+		 */
+<span class="fc" id="L504">		IDENTIFY_SOURCE,</span>
+
+		/**
+		 * Randomly put persons into quarantine based on infection numbers.
+		 */
+<span class="fc" id="L509">		RANDOM</span>
+	}
+
+
+	/**
+	 * Defines, which person are released from quarantine.
+	 */
+<span class="fc" id="L516">	public enum QuarantineRelease {</span>
+
+		/**
+		 * Release persons only if they are still susceptible.
+		 */
+<span class="fc" id="L521">		SUSCEPTIBLE,</span>
+
+		/**
+		 * Release persons without showing symptoms.
+		 */
+<span class="fc" id="L526">		NON_SYMPTOMATIC</span>
+
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

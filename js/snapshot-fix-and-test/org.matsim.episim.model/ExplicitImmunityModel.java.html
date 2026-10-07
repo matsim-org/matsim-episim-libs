@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExplicitImmunityModel.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">ExplicitImmunityModel.java</span></div><h1>ExplicitImmunityModel.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.Immunizable;
+import org.matsim.episim.ImmunityConfigGroup;
+import org.matsim.episim.ImmunityConfigGroup.SourceKind;
+import org.matsim.episim.ImmunityConfigGroup.SourceParams;
+import org.matsim.episim.ProtectionCurve;
+
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * Immunity from the curves of {@link ImmunityConfigGroup}, without antibodies and without hard-coded rules.
+ *
+ * &lt;p&gt;Every past infection and vaccination is a source of immunity. Each source carries one curve per target and
+ * per strain that protection is asked against, on a time axis of days since that event. The curves of all events
+ * are combined with the configured combinator.&lt;/p&gt;
+ *
+ * &lt;p&gt;The last infection is the current episode when severity is asked about, so it is left out for every target
+ * except {@link DiseaseStatus#infectedButNotContagious}: otherwise the illness would protect against its own
+ * course, which is the defect the antibody based model has. Vaccinations are always counted, including one
+ * received during an episode, which is rare enough not to be worth a rule of its own.&lt;/p&gt;
+ */
+@Singleton
+public final class ExplicitImmunityModel implements ImmunityModel {
+
+<span class="fc" id="L37">	private static final Logger log = LogManager.getLogger(ExplicitImmunityModel.class);</span>
+
+	private final ImmunityConfigGroup.Combinator combinator;
+
+	/**
+	 * Curves and covered pathogens per source, built once from the config group.
+	 */
+<span class="fc" id="L44">	private final Map&lt;ImmunityEvent, SourceIndex&gt; index = new HashMap&lt;&gt;();</span>
+
+	/**
+	 * Remaining risk for strains of pathogens that a source does not describe.
+	 */
+	private final double otherPathogensRisk;
+
+	/**
+	 * An event after the day that is asked about is only possible when a caller replays past days; warned about
+	 * once, because the question is asked in the contact loop. Written from the threads of that loop, and losing a
+	 * race only costs a second log line.
+	 */
+<span class="fc" id="L56">	private final AtomicBoolean warnedAboutFutureEvent = new AtomicBoolean();</span>
+
+	@Inject
+<span class="fc" id="L59">	public ExplicitImmunityModel(ImmunityConfigGroup config) {</span>
+<span class="fc" id="L60">		this.combinator = config.getCombinator();</span>
+
+<span class="fc bfc" id="L62" title="All 2 branches covered.">		for (SourceParams source : config.getSources())</span>
+<span class="fc" id="L63">			index.put(source.getSource(), new SourceIndex(source));</span>
+
+<span class="fc" id="L65">		OptionalDouble other = config.getOtherPathogensProtection();</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">		this.otherPathogensRisk = other.isPresent() ? 1.0 - other.getAsDouble() : Double.NaN;</span>
+<span class="fc" id="L67">	}</span>
+
+	@Override
+	public double getFactor(Immunizable person, VirusStrain strain, DiseaseStatus target, int day) {
+
+<span class="fc bfc" id="L72" title="All 2 branches covered.">		if (!ImmunityConfigGroup.SUPPORTED_TARGETS.contains(target))</span>
+<span class="fc" id="L73">			throw new IllegalArgumentException(&quot;Immunity is not defined against &quot; + target + &quot;, supported are &quot;</span>
+				+ ImmunityConfigGroup.SUPPORTED_TARGETS);
+
+		// the last infection is the current episode, which must not protect against its own course
+<span class="fc bfc" id="L77" title="All 2 branches covered.">		int current = target == DiseaseStatus.infectedButNotContagious ? -1 : person.getNumInfections() - 1;</span>
+
+<span class="fc" id="L79">		double risk = 1.0;</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">		for (int i = 0; i &lt; person.getNumInfections(); i++) {</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">			if (i == current)</span>
+<span class="fc" id="L82">				continue;</span>
+
+<span class="fc" id="L84">			int days = person.daysSinceInfection(i, day);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">			if (isInFuture(days, person.getVirusStrain(i), day))</span>
+<span class="fc" id="L86">				continue;</span>
+
+<span class="fc" id="L88">			risk = combine(risk, riskFrom(person.getVirusStrain(i), strain, target, days));</span>
+		}
+
+<span class="fc bfc" id="L91" title="All 2 branches covered.">		for (int i = 0; i &lt; person.getNumVaccinations(); i++) {</span>
+
+<span class="fc" id="L93">			int days = person.daysSinceVaccination(i, day);</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">			if (isInFuture(days, person.getVaccinationType(i), day))</span>
+<span class="nc" id="L95">				continue;</span>
+
+<span class="fc" id="L97">			risk = combine(risk, riskFrom(person.getVaccinationType(i), strain, target, days));</span>
+		}
+
+<span class="fc" id="L100">		return risk;</span>
+	}
+
+	@Override
+	public double getInfectivityFactor(Immunizable infector, VirusStrain strain, int day) {
+		// how much immunity reduces shedding is not parametrised for any pathogen in this model yet
+<span class="fc" id="L106">		return 1.0;</span>
+	}
+
+	/**
+	 * Remaining risk left by one source event.
+	 */
+	private double riskFrom(ImmunityEvent source, VirusStrain strain, DiseaseStatus target, int days) {
+
+<span class="fc" id="L114">		SourceIndex entry = index.get(source);</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">		if (entry == null)</span>
+<span class="fc" id="L116">			throw new IllegalStateException(&quot;No '&quot; + SourceParams.SET_TYPE + &quot;' for &quot; + describe(source) + &quot; in config group '&quot;</span>
+				+ ImmunityConfigGroup.GROUPNAME + &quot;'. Describe the immunity it leaves behind, with curves '0&gt;0.0' if there is none.&quot;);
+
+<span class="fc" id="L119">		ProtectionCurve curve = entry.curve(target, strain);</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">		if (curve != null)</span>
+<span class="fc" id="L121">			return 1.0 - curve.protectionAt(days);</span>
+
+<span class="fc bfc" id="L123" title="All 2 branches covered.">		if (entry.covers(strain.getPathogen()))</span>
+<span class="fc" id="L124">			throw new IllegalStateException(describe(source) + &quot; describes pathogen '&quot; + strain.getPathogen() + &quot;' but has no &quot;</span>
+				+ &quot;protection against &quot; + target + &quot; for its strain '&quot; + strain + &quot;'. Every target has to be listed; &quot;
+				+ &quot;write curve '0&gt;0.0' for no protection.&quot;);
+
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">		if (Double.isNaN(otherPathogensRisk))</span>
+<span class="nc" id="L129">			throw new IllegalStateException(describe(source) + &quot; gives no curve for strain '&quot; + strain + &quot;' of another pathogen, &quot;</span>
+				+ &quot;and 'otherPathogensProtection' is not set in config group '&quot; + ImmunityConfigGroup.GROUPNAME + &quot;'.&quot;);
+
+<span class="fc" id="L132">		return otherPathogensRisk;</span>
+	}
+
+	private double combine(double risk, double additional) {
+<span class="pc bpc" id="L136" title="1 of 3 branches missed.">		switch (combinator) {</span>
+			case min:
+<span class="fc" id="L138">				return Math.min(risk, additional);</span>
+			case product:
+<span class="fc" id="L140">				return risk * additional;</span>
+			default:
+<span class="nc" id="L142">				throw new IllegalStateException(&quot;Unknown combinator: &quot; + combinator);</span>
+		}
+	}
+
+	/**
+	 * An event that has not happened on the day that is asked about cannot protect.
+	 */
+	private boolean isInFuture(int days, ImmunityEvent source, int day) {
+<span class="fc bfc" id="L150" title="All 2 branches covered.">		if (days &gt;= 0)</span>
+<span class="fc" id="L151">			return false;</span>
+
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">		if (warnedAboutFutureEvent.compareAndSet(false, true)) {</span>
+<span class="fc" id="L154">			log.warn(&quot;Immunity was asked for day {}, but {} happened {} days later; this event is ignored. &quot;</span>
+<span class="fc" id="L155">				+ &quot;Further occurrences are not logged.&quot;, day, describe(source), -days);</span>
+		}
+
+<span class="fc" id="L158">		return true;</span>
+	}
+
+	private static String describe(ImmunityEvent source) {
+<span class="fc bfc" id="L162" title="All 2 branches covered.">		return (source instanceof VirusStrain ? &quot;an infection with '&quot; : &quot;a vaccination with '&quot;) + source + &quot;'&quot;;</span>
+	}
+
+	/**
+	 * Curves of one source by target and strain, plus the pathogens it describes: its own one if it is an
+	 * infection, and every pathogen it lists a curve for. The same rule is used by the config check.
+	 */
+	private static final class SourceIndex {
+
+<span class="fc" id="L171">		private final Map&lt;DiseaseStatus, Map&lt;VirusStrain, ProtectionCurve&gt;&gt; curves = new EnumMap&lt;&gt;(DiseaseStatus.class);</span>
+<span class="fc" id="L172">		private final Set&lt;Pathogen&gt; covered = new HashSet&lt;&gt;();</span>
+
+<span class="fc" id="L174">		SourceIndex(SourceParams source) {</span>
+
+<span class="fc bfc" id="L176" title="All 2 branches covered.">			if (source.getSourceKind() == SourceKind.infection)</span>
+<span class="fc" id="L177">				covered.add(((VirusStrain) source.getSource()).getPathogen());</span>
+
+<span class="fc bfc" id="L179" title="All 2 branches covered.">			for (ImmunityConfigGroup.ProtectionParams p : source.getProtections()) {</span>
+<span class="fc" id="L180">				curves.computeIfAbsent(p.getAgainst(), k -&gt; new HashMap&lt;&gt;()).put(p.getStrain(), p.getCurve());</span>
+<span class="fc" id="L181">				covered.add(p.getStrain().getPathogen());</span>
+<span class="fc" id="L182">			}</span>
+<span class="fc" id="L183">		}</span>
+
+		ProtectionCurve curve(DiseaseStatus target, VirusStrain strain) {
+<span class="fc" id="L186">			Map&lt;VirusStrain, ProtectionCurve&gt; byStrain = curves.get(target);</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">			return byStrain == null ? null : byStrain.get(strain);</span>
+		}
+
+		boolean covers(Pathogen pathogen) {
+<span class="fc" id="L191">			return covered.contains(pathogen);</span>
+		}
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
