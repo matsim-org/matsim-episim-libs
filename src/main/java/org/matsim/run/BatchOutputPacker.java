@@ -61,6 +61,11 @@ public final class BatchOutputPacker {
 		".config.xml"
 	);
 
+	/**
+	 * Directory of the batch output holding observed data for the viewer; copied as is.
+	 */
+	public static final String OBSERVED_DIRECTORY = "observed";
+
 	private final Path input;
 	private final Path output;
 	private final String district;
@@ -104,6 +109,7 @@ public final class BatchOutputPacker {
 
 		Files.copy(input.resolve("metadata.yaml"), output.resolve("metadata.yaml"), StandardCopyOption.COPY_ATTRIBUTES);
 		copyOptional(input.resolve("notes.md"), output.resolve("notes.md"));
+		copyObserved();
 		Path summaries = Files.createDirectories(output.resolve("summaries"));
 
 		if (!keepSeeds && info.header.contains("seed")) {
@@ -117,6 +123,21 @@ public final class BatchOutputPacker {
 	private static void copyOptional(Path source, Path target) throws IOException {
 		if (Files.isRegularFile(source))
 			Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES);
+	}
+
+	/**
+	 * Copies the observed data the viewer compares the model with ({@code observed} in metadata.yaml refers to
+	 * these files relative to the run folder).
+	 */
+	private void copyObserved() throws IOException {
+		Path source = input.resolve(OBSERVED_DIRECTORY);
+		if (!Files.isDirectory(source)) return;
+
+		Path target = Files.createDirectories(output.resolve(OBSERVED_DIRECTORY));
+		try (DirectoryStream<Path> files = Files.newDirectoryStream(source, Files::isRegularFile)) {
+			for (Path file : files)
+				Files.copy(file, target.resolve(file.getFileName()), StandardCopyOption.COPY_ATTRIBUTES);
+		}
 	}
 
 	private void validateInput() {

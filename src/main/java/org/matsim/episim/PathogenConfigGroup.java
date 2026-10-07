@@ -31,6 +31,8 @@ import java.util.TreeMap;
  *     {@link ContactTransmissionConfigGroup};</li>
  *     <li>the <b>isolation at symptom onset</b> ({@code symptomaticIsolationProbabilityByAge},
  *     {@code symptomaticIsolationStatus});</li>
+ *     <li>an optional <b>infectivity profile</b> ({@code infectivityProfile}): relative infectivity by day, see
+ *     {@link PathogenParams#getInfectivity(double)};</li>
  *     <li>one or two nested {@link ProgressionParams} with the base disease-progression probabilities, one per
  *     variant ({@code ageDependent=false} for {@code DefaultDiseaseStatusTransitionModel} /
  *     {@code AntibodyDependentTransitionModel}, {@code ageDependent=true} for
@@ -256,6 +258,7 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		private static final String ROUTE_TRANSMISSIBILITY = "routeTransmissibility";
 		private static final String SYMPTOMATIC_ISOLATION = "symptomaticIsolationProbabilityByAge";
 		private static final String SYMPTOMATIC_ISOLATION_STATUS = "symptomaticIsolationStatus";
+		private static final String INFECTIVITY_PROFILE = "infectivityProfile";
 
 		/**
 		 * Pathogen this parameter set applies to.
@@ -278,6 +281,11 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 		 * Quarantine status of a person who isolates at symptom onset: {@code full} or {@code atHome}.
 		 */
 		private EpisimPerson.QuarantineStatus symptomaticIsolationStatus = EpisimPerson.QuarantineStatus.full;
+
+		/**
+		 * Relative infectivity by signed day offset; empty means not configured.
+		 */
+		private final NavigableMap<Integer, Double> infectivityProfile = new TreeMap<>();
 
 		/**
 		 * Disease-progression variants; index 0 is age-independent, index 1 age-dependent.
@@ -462,6 +470,82 @@ public class PathogenConfigGroup extends ReflectiveConfigGroup {
 				throw new IllegalArgumentException("'" + SYMPTOMATIC_ISOLATION_STATUS + "' must be 'full' or 'atHome' but was '"
 						+ status + "'; set '" + SYMPTOMATIC_ISOLATION + "' to 0 to disable isolation.");
 			this.symptomaticIsolationStatus = status;
+		}
+
+		@StringGetter(INFECTIVITY_PROFILE)
+		String getInfectivityProfileString() {
+			return JOINER.join(infectivityProfile);
+		}
+
+		@StringSetter(INFECTIVITY_PROFILE)
+		void setInfectivityProfileString(String config) {
+			// an unset profile is written as an empty value, which must be read back as unset
+			if (config == null || config.isBlank()) {
+				infectivityProfile.clear();
+				return;
+			}
+
+			Map<Integer, Double> parsed = new TreeMap<>();
+			for (Map.Entry<String, String> e : SPLITTER.split(config).entrySet())
+				parsed.put(Integer.parseInt(e.getKey().trim()), Double.parseDouble(e.getValue().trim()));
+			setInfectivityProfile(parsed);
+		}
+
+		/**
+		 * Set the infectivity profile, replacing the previous one; an empty map unsets it.
+		 *
+		 * @param values relative infectivity by signed day offset, see {@link #getInfectivity(double)}. Values must be
+		 *               finite and non-negative, and a non-empty profile needs at least one positive value.
+		 */
+		public void setInfectivityProfile(Map<Integer, Double> values) {
+			boolean positive = false;
+			for (Map.Entry<Integer, Double> e : values.entrySet()) {
+				double v = e.getValue();
+				if (!Double.isFinite(v) || v < 0.0)
+					throw new IllegalArgumentException("'" + INFECTIVITY_PROFILE + "' value for day " + e.getKey()
+							+ " must be finite and non-negative but was " + v + ".");
+				positive |= v > 0.0;
+			}
+			if (!values.isEmpty() && !positive)
+				throw new IllegalArgumentException("'" + INFECTIVITY_PROFILE + "' of pathogen '" + pathogen.getName()
+						+ "' is zero everywhere; leave it empty to use the infection model's built-in curve.");
+
+			infectivityProfile.clear();
+			infectivityProfile.putAll(values);
+		}
+
+		public NavigableMap<Integer, Double> getInfectivityProfile() {
+			return infectivityProfile;
+		}
+
+		/**
+		 * Whether an infectivity profile is configured. Without one the infection model uses its built-in curve.
+		 */
+		public boolean hasInfectivityProfile() {
+			return !infectivityProfile.isEmpty();
+		}
+
+		/**
+		 * Relative infectivity at a signed day offset from the reference point: symptom onset for an infection that
+		 * becomes symptomatic (negative before onset), the middle of the contagious period for one that does not.
+		 * Linear between configured days, zero outside the configured range. The values are relative: with a peak of
+		 * 1.0, {@code infectiousness} and {@code calibrationParameter} keep their meaning.
+		 *
+		 * @throws IllegalStateException if no profile is configured
+		 */
+		public double getInfectivity(double daysFromReference) {
+			if (infectivityProfile.isEmpty())
+				throw new IllegalStateException("No '" + INFECTIVITY_PROFILE + "' configured for pathogen '" + pathogen.getName() + "'.");
+
+			Map.Entry<Integer, Double> lower = infectivityProfile.floorEntry((int) Math.floor(daysFromReference));
+			Map.Entry<Integer, Double> upper = infectivityProfile.ceilingEntry((int) Math.ceil(daysFromReference));
+			if (lower == null || upper == null)
+				return 0.0;
+			if (lower.getKey().equals(upper.getKey()))
+				return lower.getValue();
+
+			double t = (daysFromReference - lower.getKey()) / (upper.getKey() - lower.getKey());
+			return lower.getValue() + t * (upper.getValue() - lower.getValue());
 		}
 
 		/**
