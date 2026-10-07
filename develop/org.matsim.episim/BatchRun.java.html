@@ -257,7 +257,7 @@ public interface BatchRun&lt;T&gt; {
 	 * Returns name of the region.
 	 */
 	default Metadata getMetadata() {
-<span class="nc" id="L260">		return Metadata.of(&quot;region&quot;, &quot;default&quot;);</span>
+<span class="fc" id="L260">		return Metadata.of(&quot;region&quot;, &quot;default&quot;);</span>
 	}
 
 	/**
@@ -302,7 +302,7 @@ public interface BatchRun&lt;T&gt; {
 	 * Return classes of {@link OutputAnalysis} that should be executed on each individual run.
 	 */
 	default Collection&lt;OutputAnalysis&gt; postProcessing() {
-<span class="nc" id="L305">		return List.of(new RValuesFromEvents().withArgs());</span>
+<span class="fc" id="L305">		return List.of(new RValuesFromEvents().withArgs());</span>
 	}
 
 	/**
@@ -486,18 +486,18 @@ public interface BatchRun&lt;T&gt; {
 		/**
 		 * End date for the ui.
 		 */
-<span class="nc" id="L489">		String endDate = null;</span>
+<span class="fc" id="L489">		String endDate = null;</span>
 
-<span class="nc" id="L491">		public Metadata(String region, String name) {</span>
-<span class="nc" id="L492">			this.region = region;</span>
-<span class="nc" id="L493">			this.name = name;</span>
-<span class="nc" id="L494">		}</span>
+<span class="fc" id="L491">		public Metadata(String region, String name) {</span>
+<span class="fc" id="L492">			this.region = region;</span>
+<span class="fc" id="L493">			this.name = name;</span>
+<span class="fc" id="L494">		}</span>
 
 		/**
 		 * Creates new metadata instance.
 		 */
 		public static Metadata of(String region, String name) {
-<span class="nc" id="L500">			return new Metadata(region, name);</span>
+<span class="fc" id="L500">			return new Metadata(region, name);</span>
 		}
 
 		/**

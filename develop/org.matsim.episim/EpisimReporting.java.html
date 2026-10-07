@@ -157,8 +157,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 <span class="fc" id="L157">		outDir = config.controller().getOutputDirectory();</span>
 
 		// file names depend on the run name
-<span class="pc bpc" id="L160" title="1 of 2 branches missed.">		if (config.controller().getRunId() != null) {</span>
-<span class="nc" id="L161">			base = outDir + &quot;/&quot; + config.controller().getRunId() + &quot;.&quot;;</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">		if (config.controller().getRunId() != null) {</span>
+<span class="fc" id="L161">			base = outDir + &quot;/&quot; + config.controller().getRunId() + &quot;.&quot;;</span>
 <span class="fc bfc" id="L162" title="All 2 branches covered.">		} else if (!outDir.endsWith(&quot;/&quot;)) {</span>
 <span class="fc" id="L163">			base = outDir + &quot;/&quot;;</span>
 		} else

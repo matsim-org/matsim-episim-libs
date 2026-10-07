@@ -132,17 +132,17 @@ public final class EpisimUtils {
 	 */
 	public static String asString(Object obj) {
 
-<span class="nc bnc" id="L135" title="All 2 branches missed.">		if (obj == null)</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">		if (obj == null)</span>
 <span class="nc" id="L136">			return &quot;null&quot;;</span>
 
-<span class="nc bnc" id="L138" title="All 2 branches missed.">		if (obj instanceof Class)</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">		if (obj instanceof Class)</span>
 <span class="nc" id="L139">			return ((Class) obj).getCanonicalName();</span>
 
 		//if (obj instanceof Double || obj instanceof Float) {
 		//	return FMT.format(obj);
 		//}
 
-<span class="nc" id="L145">		return obj.toString();</span>
+<span class="fc" id="L145">		return obj.toString();</span>
 	}
 
 	/**

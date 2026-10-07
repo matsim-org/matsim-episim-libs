@@ -265,35 +265,48 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 <span class="nc bnc" id="L265" title="All 2 branches missed.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
 <span class="nc" id="L267">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
-<span class="nc" id="L268">			return distribution.density(afterSymptomOnset) * scale;</span>
-<span class="nc bnc" id="L269" title="All 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
+<span class="nc" id="L268">			PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">			return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(afterSymptomOnset)</span>
+<span class="nc" id="L270">					: distribution.density(afterSymptomOnset) * scale;</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
 
-<span class="nc" id="L271">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
-<span class="nc" id="L272">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
-<span class="nc" id="L273">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
-<span class="nc bnc" id="L274" title="All 2 branches missed.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="nc" id="L273">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
+<span class="nc" id="L274">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
+<span class="nc" id="L275">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
-<span class="nc" id="L276">				return distribution.density(transitionDays - daysSince) * scale;</span>
+<span class="nc" id="L278">				int untilOnset = transitionDays - daysSince;</span>
+				// the built-in curve is read at the distance to onset, i.e. mirrored; a configured profile is signed
+<span class="nc" id="L280">				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(-untilOnset)</span>
+<span class="nc" id="L282">						: distribution.density(untilOnset) * scale;</span>
 
-<span class="nc bnc" id="L278" title="All 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
+<span class="nc bnc" id="L284" title="All 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
 
 				// when next state is recovered the half of the interval is used
-<span class="nc" id="L281">				return distribution.density(daysSince - transitionDays / 2.0) * scale;</span>
+<span class="nc" id="L287">				double sinceMidpoint = daysSince - transitionDays / 2.0;</span>
+<span class="nc" id="L288">				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(sinceMidpoint)</span>
+<span class="nc" id="L290">						: distribution.density(sinceMidpoint) * scale;</span>
 			}
 		}
 
 
-<span class="nc" id="L286">		return 0.0;</span>
+<span class="nc" id="L295">		return 0.0;</span>
+	}
+
+	private PathogenConfigGroup.PathogenParams pathogenOf(EpisimPerson infector) {
+<span class="nc" id="L299">		return pathogenConfig.getParams(virusStrainConfig.getParams(infector.getVirusStrain()).getPathogen());</span>
 	}
 
 	public static void main(String[] args) {
 		// test distribution
-<span class="nc" id="L291">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
+<span class="nc" id="L304">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
 
-<span class="nc bnc" id="L293" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
-<span class="nc" id="L294">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
+<span class="nc bnc" id="L306" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
+<span class="nc" id="L307">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
 		}
 
-<span class="nc" id="L297">	}</span>
+<span class="nc" id="L310">	}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

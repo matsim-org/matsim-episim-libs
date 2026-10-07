@@ -168,8 +168,8 @@ public final class PreparedRun {
 	 * Creates the output name of a run.
 	 */
 	public Object getOutputName(Run run) {
-<span class="nc" id="L171">		return Joiner.on(&quot;-&quot;).join(</span>
-<span class="nc" id="L172">				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -&gt; p + &quot;_&quot; + EpisimUtils.asString(v)).collect(Collectors.toList())</span>
+<span class="fc" id="L171">		return Joiner.on(&quot;-&quot;).join(</span>
+<span class="fc" id="L172">				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -&gt; p + &quot;_&quot; + EpisimUtils.asString(v)).collect(Collectors.toList())</span>
 		);
 	}
 

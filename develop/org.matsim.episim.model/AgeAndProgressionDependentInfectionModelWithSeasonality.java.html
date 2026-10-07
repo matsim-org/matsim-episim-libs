@@ -170,38 +170,51 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	 */
 	double getInfectivity(EpisimPerson infector) {
 
-<span class="pc bpc" id="L173" title="1 of 2 branches missed.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
-<span class="nc" id="L175">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
-<span class="nc" id="L176">			return distribution.density(afterSymptomOnset) * scale;</span>
-<span class="pc bpc" id="L177" title="1 of 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
+<span class="fc" id="L175">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
+<span class="fc" id="L176">			PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">			return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(afterSymptomOnset)</span>
+<span class="nc" id="L178">					: distribution.density(afterSymptomOnset) * scale;</span>
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
 
-<span class="fc" id="L179">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
-<span class="fc" id="L180">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
-<span class="fc" id="L181">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
-<span class="fc bfc" id="L182" title="All 2 branches covered.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+<span class="fc" id="L181">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
+<span class="fc" id="L182">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
+<span class="fc" id="L183">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
 
-<span class="fc" id="L184">				return distribution.density(transitionDays - daysSince) * scale;</span>
+<span class="fc" id="L186">				int untilOnset = transitionDays - daysSince;</span>
+				// the built-in curve is read at the distance to onset, i.e. mirrored; a configured profile is signed
+<span class="fc" id="L188">				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(-untilOnset)</span>
+<span class="fc" id="L190">						: distribution.density(untilOnset) * scale;</span>
 
-<span class="pc bpc" id="L186" title="1 of 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
 
 				// when next state is recovered the half of the interval is used
-<span class="fc" id="L189">				return distribution.density(daysSince - transitionDays / 2.0) * scale;</span>
+<span class="fc" id="L195">				double sinceMidpoint = daysSince - transitionDays / 2.0;</span>
+<span class="fc" id="L196">				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(sinceMidpoint)</span>
+<span class="fc" id="L198">						: distribution.density(sinceMidpoint) * scale;</span>
 			}
 		}
 
 
-<span class="nc" id="L194">		return 0.0;</span>
+<span class="nc" id="L203">		return 0.0;</span>
+	}
+
+	private PathogenConfigGroup.PathogenParams pathogenOf(EpisimPerson infector) {
+<span class="fc" id="L207">		return pathogenConfig.getParams(virusStrainConfig.getParams(infector.getVirusStrain()).getPathogen());</span>
 	}
 
 	public static void main(String[] args) {
 		// test distribution
-<span class="nc" id="L199">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
+<span class="nc" id="L212">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
 
-<span class="nc bnc" id="L201" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
-<span class="nc" id="L202">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
+<span class="nc" id="L215">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
 		}
 
-<span class="nc" id="L205">	}</span>
+<span class="nc" id="L218">	}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

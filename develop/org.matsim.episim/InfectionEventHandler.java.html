@@ -859,14 +859,20 @@ public final class InfectionEventHandler implements Externalizable {
 		// Sum of antibodies
 <span class="fc" id="L860">		Object2DoubleMap&lt;VirusStrain&gt; antibodies = new Object2DoubleOpenHashMap&lt;&gt;();</span>
 
-<span class="fc bfc" id="L862" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
-<span class="fc" id="L863">			progressionModel.updateState(person, iteration);</span>
-<span class="fc" id="L864">			antibodyModel.updateAntibodies(person, iteration);</span>
+		// sequential: the progression model draws from the shared random generator
+<span class="fc bfc" id="L863" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
+<span class="fc" id="L864">			progressionModel.updateState(person, iteration);</span>
+<span class="fc" id="L865">		}</span>
 
-<span class="fc bfc" id="L866" title="All 2 branches covered.">			for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : person.getAntibodies().object2DoubleEntrySet()) {</span>
-<span class="fc" id="L867">				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);</span>
-<span class="fc" id="L868">			}</span>
-<span class="fc" id="L869">		}</span>
+		// an antibody update reads and writes only its own person and draws no random numbers
+<span class="fc" id="L868">		personMap.values().parallelStream().forEach(person -&gt; antibodyModel.updateAntibodies(person, iteration));</span>
+
+		// sequential, so the floating point sum does not depend on the thread scheduling
+<span class="fc bfc" id="L871" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
+<span class="fc bfc" id="L872" title="All 2 branches covered.">			for (Object2DoubleMap.Entry&lt;VirusStrain&gt; kv : person.getAntibodies().object2DoubleEntrySet()) {</span>
+<span class="fc" id="L873">				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);</span>
+<span class="fc" id="L874">			}</span>
+<span class="fc" id="L875">		}</span>
 
 		// uncomment if you want immunization stats to be printed on a certain
 		// date or e.g. every month. This produces a lot of large files so use
@@ -876,161 +882,161 @@ public final class InfectionEventHandler implements Externalizable {
 // 		}
 
 
-<span class="fc" id="L879">		reporting.reportCpuTime(iteration, &quot;ProgressionModelParallel&quot;, &quot;start&quot;, -2);</span>
-<span class="fc" id="L880">		progressionModel.afterStateUpdates(personMap, iteration);</span>
-<span class="fc" id="L881">		reporting.reportCpuTime(iteration, &quot;ProgressionModelParallel&quot;, &quot;finished&quot;, -2);</span>
-<span class="fc" id="L882">		reporting.reportCpuTime(iteration, &quot;ProgressionModel&quot;, &quot;finished&quot;, -1);</span>
+<span class="fc" id="L885">		reporting.reportCpuTime(iteration, &quot;ProgressionModelParallel&quot;, &quot;start&quot;, -2);</span>
+<span class="fc" id="L886">		progressionModel.afterStateUpdates(personMap, iteration);</span>
+<span class="fc" id="L887">		reporting.reportCpuTime(iteration, &quot;ProgressionModelParallel&quot;, &quot;finished&quot;, -2);</span>
+<span class="fc" id="L888">		reporting.reportCpuTime(iteration, &quot;ProgressionModel&quot;, &quot;finished&quot;, -1);</span>
 
-<span class="fc" id="L884">		reporting.reportCpuTime(iteration, &quot;VaccinationModel&quot;, &quot;start&quot;, -1);</span>
+<span class="fc" id="L890">		reporting.reportCpuTime(iteration, &quot;VaccinationModel&quot;, &quot;start&quot;, -1);</span>
 
 		// vaccination:
-<span class="fc" id="L887">		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), -1, date);</span>
-<span class="fc bfc" id="L888" title="All 2 branches covered.">		vaccinationModel.handleVaccination(personMap, false, available &gt; 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);</span>
+<span class="fc" id="L893">		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), -1, date);</span>
+<span class="fc bfc" id="L894" title="All 2 branches covered.">		vaccinationModel.handleVaccination(personMap, false, available &gt; 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);</span>
 
 		// re-vaccination:
-<span class="fc" id="L891">		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), -1, date);</span>
-<span class="pc bpc" id="L892" title="1 of 2 branches missed.">		vaccinationModel.handleVaccination(personMap, true, available &gt; 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);</span>
+<span class="fc" id="L897">		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), -1, date);</span>
+<span class="pc bpc" id="L898" title="1 of 2 branches missed.">		vaccinationModel.handleVaccination(personMap, true, available &gt; 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);</span>
 
 		// additional vaccinations:
-<span class="pc bpc" id="L895" title="1 of 2 branches missed.">		for (VaccinationModel vaccination : vaccinations) {</span>
-<span class="nc" id="L896">			vaccination.handleVaccination(personMap, date, iteration, now);</span>
-<span class="nc" id="L897">		}</span>
+<span class="pc bpc" id="L901" title="1 of 2 branches missed.">		for (VaccinationModel vaccination : vaccinations) {</span>
+<span class="nc" id="L902">			vaccination.handleVaccination(personMap, date, iteration, now);</span>
+<span class="nc" id="L903">		}</span>
 
-<span class="fc" id="L899">		reporting.reportCpuTime(iteration, &quot;VaccinationModel&quot;, &quot;finished&quot;, -1);</span>
+<span class="fc" id="L905">		reporting.reportCpuTime(iteration, &quot;VaccinationModel&quot;, &quot;finished&quot;, -1);</span>
 
-<span class="fc" id="L901">		this.iteration = iteration;</span>
+<span class="fc" id="L907">		this.iteration = iteration;</span>
 
-<span class="fc" id="L903">		reporting.reportCpuTime(iteration, &quot;HandleInfections&quot;, &quot;start&quot;, -1);</span>
-<span class="fc" id="L904">		Object2IntMap infected = this.initialInfections.handleInfections(personMap, iteration);</span>
-<span class="fc" id="L905">		reporting.reportCpuTime(iteration, &quot;HandleInfections&quot;, &quot;finished&quot;, -1);</span>
+<span class="fc" id="L909">		reporting.reportCpuTime(iteration, &quot;HandleInfections&quot;, &quot;start&quot;, -1);</span>
+<span class="fc" id="L910">		Object2IntMap infected = this.initialInfections.handleInfections(personMap, iteration);</span>
+<span class="fc" id="L911">		reporting.reportCpuTime(iteration, &quot;HandleInfections&quot;, &quot;finished&quot;, -1);</span>
 
-<span class="fc" id="L907">		reporting.reportCpuTime(iteration, &quot;Reporting&quot;, &quot;start&quot;, -1);</span>
-<span class="fc" id="L908">		Map&lt;String, EpisimReporting.InfectionReport&gt; reports = reporting.createReports(personMap.values(), iteration);</span>
+<span class="fc" id="L913">		reporting.reportCpuTime(iteration, &quot;Reporting&quot;, &quot;start&quot;, -1);</span>
+<span class="fc" id="L914">		Map&lt;String, EpisimReporting.InfectionReport&gt; reports = reporting.createReports(personMap.values(), iteration);</span>
 
-<span class="fc" id="L910">		reporting.reportAntibodyLevel(antibodies, personMap.size(), iteration);</span>
-<span class="fc" id="L911">		this.report = reports.get(&quot;total&quot;);</span>
+<span class="fc" id="L916">		reporting.reportAntibodyLevel(antibodies, personMap.size(), iteration);</span>
+<span class="fc" id="L917">		this.report = reports.get(&quot;total&quot;);</span>
 
-<span class="fc" id="L913">		reporting.reporting(reports, iteration, report.date);</span>
-<span class="fc" id="L914">		reporting.reportCpuTime(iteration, &quot;ReportTimeUse&quot;, &quot;start&quot;, -2);</span>
-<span class="fc" id="L915">		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);</span>
-<span class="fc" id="L916">		reporting.reportCpuTime(iteration, &quot;ReportTimeUse&quot;, &quot;finished&quot;, -2);</span>
-<span class="fc" id="L917">		reporting.reportDiseaseImport(infected, iteration, report.date);</span>
+<span class="fc" id="L919">		reporting.reporting(reports, iteration, report.date);</span>
+<span class="fc" id="L920">		reporting.reportCpuTime(iteration, &quot;ReportTimeUse&quot;, &quot;start&quot;, -2);</span>
+<span class="fc" id="L921">		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);</span>
+<span class="fc" id="L922">		reporting.reportCpuTime(iteration, &quot;ReportTimeUse&quot;, &quot;finished&quot;, -2);</span>
+<span class="fc" id="L923">		reporting.reportDiseaseImport(infected, iteration, report.date);</span>
 
-<span class="fc" id="L919">		ImmutableMap&lt;String, Restriction&gt; im = ImmutableMap.copyOf(this.restrictions);</span>
-<span class="fc" id="L920">		policy.updateRestrictions(report, im);</span>
+<span class="fc" id="L925">		ImmutableMap&lt;String, Restriction&gt; im = ImmutableMap.copyOf(this.restrictions);</span>
+<span class="fc" id="L926">		policy.updateRestrictions(report, im);</span>
 
-<span class="fc" id="L922">		reporting.reportCpuTime(iteration, &quot;TestingModel&quot;, &quot;start&quot;, -1);</span>
-<span class="fc" id="L923">		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
-<span class="fc" id="L924">		testingModel.setIteration(iteration);</span>
-<span class="fc" id="L925">		testingModel.beforeStateUpdates(personMap, iteration, this.report);</span>
+<span class="fc" id="L928">		reporting.reportCpuTime(iteration, &quot;TestingModel&quot;, &quot;start&quot;, -1);</span>
+<span class="fc" id="L929">		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
+<span class="fc" id="L930">		testingModel.setIteration(iteration);</span>
+<span class="fc" id="L931">		testingModel.beforeStateUpdates(personMap, iteration, this.report);</span>
 
-<span class="fc" id="L927">		activityParticipationModel.setRestrictionsForIteration(iteration, im);</span>
+<span class="fc" id="L933">		activityParticipationModel.setRestrictionsForIteration(iteration, im);</span>
 
-<span class="fc bfc" id="L929" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
+<span class="fc bfc" id="L935" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
 			// update person activity participation for the day
-<span class="fc" id="L931">			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),</span>
-<span class="fc" id="L932">					person.getStartOfDay(day), person.getActivities(day));</span>
+<span class="fc" id="L937">			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),</span>
+<span class="fc" id="L938">					person.getStartOfDay(day), person.getActivities(day));</span>
 
-<span class="fc" id="L934">			testingModel.performTesting(person, iteration);</span>
+<span class="fc" id="L940">			testingModel.performTesting(person, iteration);</span>
 
-<span class="fc" id="L936">			activityParticipationModel.applyQuarantine(person, person.getActivityParticipation(), person.getStartOfDay(day), person.getActivities(day));</span>
+<span class="fc" id="L942">			activityParticipationModel.applyQuarantine(person, person.getActivityParticipation(), person.getStartOfDay(day), person.getActivities(day));</span>
 
-<span class="fc" id="L938">		}</span>
-<span class="fc" id="L939">		reporting.reportCpuTime(iteration, &quot;TestingModel&quot;, &quot;finished&quot;, -1);</span>
+<span class="fc" id="L944">		}</span>
+<span class="fc" id="L945">		reporting.reportCpuTime(iteration, &quot;TestingModel&quot;, &quot;finished&quot;, -1);</span>
 
-<span class="fc" id="L941">		handlers.forEach(h -&gt; {</span>
-<span class="fc" id="L942">			h.setRestrictionsForIteration(iteration, im);</span>
-<span class="fc" id="L943">			EpisimUtils.setSeed(h.getRnd(), rnd.nextLong());</span>
-<span class="fc" id="L944">		});</span>
+<span class="fc" id="L947">		handlers.forEach(h -&gt; {</span>
+<span class="fc" id="L948">			h.setRestrictionsForIteration(iteration, im);</span>
+<span class="fc" id="L949">			EpisimUtils.setSeed(h.getRnd(), rnd.nextLong());</span>
+<span class="fc" id="L950">		});</span>
 
-<span class="fc" id="L946">		reporting.reportRestrictions(restrictions, iteration, report.date);</span>
-<span class="fc" id="L947">		reporting.reportCpuTime(iteration, &quot;Reporting&quot;, &quot;finished&quot;, -1);</span>
+<span class="fc" id="L952">		reporting.reportRestrictions(restrictions, iteration, report.date);</span>
+<span class="fc" id="L953">		reporting.reportCpuTime(iteration, &quot;Reporting&quot;, &quot;finished&quot;, -1);</span>
 
-<span class="fc bfc" id="L949" title="All 2 branches covered.">		for (SimulationListener l : listener) {</span>
-<span class="fc" id="L950">			l.onIterationStart(iteration, date);</span>
-<span class="fc" id="L951">		}</span>
-<span class="fc" id="L952">	}</span>
+<span class="fc bfc" id="L955" title="All 2 branches covered.">		for (SimulationListener l : listener) {</span>
+<span class="fc" id="L956">			l.onIterationStart(iteration, date);</span>
+<span class="fc" id="L957">		}</span>
+<span class="fc" id="L958">	}</span>
 
 	public Collection&lt;EpisimPerson&gt; getPersons() {
-<span class="fc" id="L955">		return Collections.unmodifiableCollection(personMap.values());</span>
+<span class="fc" id="L961">		return Collections.unmodifiableCollection(personMap.values());</span>
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 
-<span class="fc" id="L961">		out.writeLong(EpisimUtils.getSeed(rnd));</span>
-<span class="fc" id="L962">		out.writeInt(initialInfections.getInfectionsLeft());</span>
-<span class="fc" id="L963">		out.writeInt(iteration);</span>
+<span class="fc" id="L967">		out.writeLong(EpisimUtils.getSeed(rnd));</span>
+<span class="fc" id="L968">		out.writeInt(initialInfections.getInfectionsLeft());</span>
+<span class="fc" id="L969">		out.writeInt(iteration);</span>
 
-<span class="fc" id="L965">		out.writeInt(restrictions.size());</span>
-<span class="fc bfc" id="L966" title="All 2 branches covered.">		for (Map.Entry&lt;String, Restriction&gt; e : restrictions.entrySet()) {</span>
-<span class="fc" id="L967">			writeChars(out, e.getKey());</span>
-<span class="fc" id="L968">			writeChars(out, e.getValue().asMap().toString());</span>
-<span class="fc" id="L969">		}</span>
-
-<span class="fc" id="L971">		out.writeInt(personMap.size());</span>
-<span class="fc bfc" id="L972" title="All 2 branches covered.">		for (Map.Entry&lt;Id&lt;Person&gt;, EpisimPerson&gt; e : personMap.entrySet()) {</span>
-<span class="fc" id="L973">			writeChars(out, e.getKey().toString());</span>
-<span class="fc" id="L974">			e.getValue().write(out);</span>
+<span class="fc" id="L971">		out.writeInt(restrictions.size());</span>
+<span class="fc bfc" id="L972" title="All 2 branches covered.">		for (Map.Entry&lt;String, Restriction&gt; e : restrictions.entrySet()) {</span>
+<span class="fc" id="L973">			writeChars(out, e.getKey());</span>
+<span class="fc" id="L974">			writeChars(out, e.getValue().asMap().toString());</span>
 <span class="fc" id="L975">		}</span>
 
-<span class="fc" id="L977">		out.writeInt(vehicleMap.size());</span>
-<span class="fc bfc" id="L978" title="All 2 branches covered.">		for (Map.Entry&lt;Id&lt;Vehicle&gt;, EpisimVehicle&gt; e : vehicleMap.entrySet()) {</span>
+<span class="fc" id="L977">		out.writeInt(personMap.size());</span>
+<span class="fc bfc" id="L978" title="All 2 branches covered.">		for (Map.Entry&lt;Id&lt;Person&gt;, EpisimPerson&gt; e : personMap.entrySet()) {</span>
 <span class="fc" id="L979">			writeChars(out, e.getKey().toString());</span>
 <span class="fc" id="L980">			e.getValue().write(out);</span>
 <span class="fc" id="L981">		}</span>
 
-<span class="fc" id="L983">		out.writeInt(pseudoFacilityMap.size());</span>
-<span class="fc bfc" id="L984" title="All 2 branches covered.">		for (Map.Entry&lt;Id&lt;ActivityFacility&gt;, EpisimFacility&gt; e : pseudoFacilityMap.entrySet()) {</span>
+<span class="fc" id="L983">		out.writeInt(vehicleMap.size());</span>
+<span class="fc bfc" id="L984" title="All 2 branches covered.">		for (Map.Entry&lt;Id&lt;Vehicle&gt;, EpisimVehicle&gt; e : vehicleMap.entrySet()) {</span>
 <span class="fc" id="L985">			writeChars(out, e.getKey().toString());</span>
 <span class="fc" id="L986">			e.getValue().write(out);</span>
 <span class="fc" id="L987">		}</span>
-<span class="fc" id="L988">	}</span>
+
+<span class="fc" id="L989">		out.writeInt(pseudoFacilityMap.size());</span>
+<span class="fc bfc" id="L990" title="All 2 branches covered.">		for (Map.Entry&lt;Id&lt;ActivityFacility&gt;, EpisimFacility&gt; e : pseudoFacilityMap.entrySet()) {</span>
+<span class="fc" id="L991">			writeChars(out, e.getKey().toString());</span>
+<span class="fc" id="L992">			e.getValue().write(out);</span>
+<span class="fc" id="L993">		}</span>
+<span class="fc" id="L994">	}</span>
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException {
 
-<span class="fc" id="L993">		long storedSeed = in.readLong();</span>
-<span class="pc bpc" id="L994" title="1 of 2 branches missed.">		if (episimConfig.getSnapshotSeed() == EpisimConfigGroup.SnapshotSeed.restore) {</span>
-<span class="fc" id="L995">			EpisimUtils.setSeed(rnd, storedSeed);</span>
-<span class="nc bnc" id="L996" title="All 2 branches missed.">		} else if (episimConfig.getSnapshotSeed() == EpisimConfigGroup.SnapshotSeed.reseed) {</span>
-<span class="nc" id="L997">			log.info(&quot;Reseeding snapshot with {}&quot;, config.global().getRandomSeed());</span>
-<span class="nc" id="L998">			EpisimUtils.setSeed(rnd, config.global().getRandomSeed());</span>
+<span class="fc" id="L999">		long storedSeed = in.readLong();</span>
+<span class="pc bpc" id="L1000" title="1 of 2 branches missed.">		if (episimConfig.getSnapshotSeed() == EpisimConfigGroup.SnapshotSeed.restore) {</span>
+<span class="fc" id="L1001">			EpisimUtils.setSeed(rnd, storedSeed);</span>
+<span class="nc bnc" id="L1002" title="All 2 branches missed.">		} else if (episimConfig.getSnapshotSeed() == EpisimConfigGroup.SnapshotSeed.reseed) {</span>
+<span class="nc" id="L1003">			log.info(&quot;Reseeding snapshot with {}&quot;, config.global().getRandomSeed());</span>
+<span class="nc" id="L1004">			EpisimUtils.setSeed(rnd, config.global().getRandomSeed());</span>
 		}
 
-<span class="fc" id="L1001">		initialInfections.setInfectionsLeft(in.readInt());</span>
-<span class="fc" id="L1002">		iteration = in.readInt();</span>
+<span class="fc" id="L1007">		initialInfections.setInfectionsLeft(in.readInt());</span>
+<span class="fc" id="L1008">		iteration = in.readInt();</span>
 
-<span class="fc" id="L1004">		int r = in.readInt();</span>
-<span class="fc bfc" id="L1005" title="All 2 branches covered.">		for (int i = 0; i &lt; r; i++) {</span>
-<span class="fc" id="L1006">			String act = readChars(in);</span>
-<span class="fc" id="L1007">			restrictions.put(act, Restriction.fromConfig(ConfigFactory.parseString(readChars(in))));</span>
+<span class="fc" id="L1010">		int r = in.readInt();</span>
+<span class="fc bfc" id="L1011" title="All 2 branches covered.">		for (int i = 0; i &lt; r; i++) {</span>
+<span class="fc" id="L1012">			String act = readChars(in);</span>
+<span class="fc" id="L1013">			restrictions.put(act, Restriction.fromConfig(ConfigFactory.parseString(readChars(in))));</span>
 		}
 
-<span class="fc" id="L1010">		int persons = in.readInt();</span>
-<span class="fc bfc" id="L1011" title="All 2 branches covered.">		for (int i = 0; i &lt; persons; i++) {</span>
-<span class="fc" id="L1012">			Id&lt;Person&gt; id = Id.create(readChars(in), Person.class);</span>
-<span class="fc" id="L1013">			personMap.get(id).read(in, personMap);</span>
+<span class="fc" id="L1016">		int persons = in.readInt();</span>
+<span class="fc bfc" id="L1017" title="All 2 branches covered.">		for (int i = 0; i &lt; persons; i++) {</span>
+<span class="fc" id="L1018">			Id&lt;Person&gt; id = Id.create(readChars(in), Person.class);</span>
+<span class="fc" id="L1019">			personMap.get(id).read(in, personMap);</span>
 		}
 
-<span class="fc" id="L1016">		int vehicles = in.readInt();</span>
-<span class="fc bfc" id="L1017" title="All 2 branches covered.">		for (int i = 0; i &lt; vehicles; i++) {</span>
-<span class="fc" id="L1018">			Id&lt;Vehicle&gt; id = Id.create(readChars(in), Vehicle.class);</span>
-<span class="fc" id="L1019">			vehicleMap.get(id).read(in, personMap);</span>
+<span class="fc" id="L1022">		int vehicles = in.readInt();</span>
+<span class="fc bfc" id="L1023" title="All 2 branches covered.">		for (int i = 0; i &lt; vehicles; i++) {</span>
+<span class="fc" id="L1024">			Id&lt;Vehicle&gt; id = Id.create(readChars(in), Vehicle.class);</span>
+<span class="fc" id="L1025">			vehicleMap.get(id).read(in, personMap);</span>
 		}
 
-<span class="fc" id="L1022">		int container = in.readInt();</span>
-<span class="fc bfc" id="L1023" title="All 2 branches covered.">		for (int i = 0; i &lt; container; i++) {</span>
-<span class="fc" id="L1024">			Id&lt;ActivityFacility&gt; id = Id.create(readChars(in), ActivityFacility.class);</span>
-<span class="fc" id="L1025">			pseudoFacilityMap.get(id).read(in, personMap);</span>
+<span class="fc" id="L1028">		int container = in.readInt();</span>
+<span class="fc bfc" id="L1029" title="All 2 branches covered.">		for (int i = 0; i &lt; container; i++) {</span>
+<span class="fc" id="L1030">			Id&lt;ActivityFacility&gt; id = Id.create(readChars(in), ActivityFacility.class);</span>
+<span class="fc" id="L1031">			pseudoFacilityMap.get(id).read(in, personMap);</span>
 		}
 
 
-<span class="fc" id="L1029">		ImmutableMap&lt;String, Restriction&gt; im = ImmutableMap.copyOf(this.restrictions);</span>
+<span class="fc" id="L1035">		ImmutableMap&lt;String, Restriction&gt; im = ImmutableMap.copyOf(this.restrictions);</span>
 
-<span class="fc" id="L1031">		policy.restore(episimConfig.getStartDate().plusDays(iteration), im);</span>
-<span class="fc" id="L1032">		handlers.forEach(h -&gt; h.setRestrictionsForIteration(iteration, im));</span>
-<span class="fc" id="L1033">	}</span>
+<span class="fc" id="L1037">		policy.restore(episimConfig.getStartDate().plusDays(iteration), im);</span>
+<span class="fc" id="L1038">		handlers.forEach(h -&gt; h.setRestrictionsForIteration(iteration, im));</span>
+<span class="fc" id="L1039">	}</span>
 
 	/**
 	 * Execute trajectory events.
@@ -1040,58 +1046,58 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	void handleEvents(DayOfWeek day, List&lt;Event&gt; events) {
 
-<span class="fc bfc" id="L1043" title="All 2 branches covered.">		if (handlers.size() &gt; 1) {</span>
-<span class="fc" id="L1044">			var futures = new CompletableFuture[handlers.size()];</span>
-<span class="fc bfc" id="L1045" title="All 2 branches covered.">			for (int i = 0; i &lt; handlers.size(); i++) {</span>
-<span class="fc" id="L1046">				ReplayEventsTask task = new ReplayEventsTask(handlers.get(i), events, i, handlers.size());</span>
-<span class="fc" id="L1047">				futures[i] = CompletableFuture.runAsync(task, executor);</span>
+<span class="fc bfc" id="L1049" title="All 2 branches covered.">		if (handlers.size() &gt; 1) {</span>
+<span class="fc" id="L1050">			var futures = new CompletableFuture[handlers.size()];</span>
+<span class="fc bfc" id="L1051" title="All 2 branches covered.">			for (int i = 0; i &lt; handlers.size(); i++) {</span>
+<span class="fc" id="L1052">				ReplayEventsTask task = new ReplayEventsTask(handlers.get(i), events, i, handlers.size());</span>
+<span class="fc" id="L1053">				futures[i] = CompletableFuture.runAsync(task, executor);</span>
 			}
 
 			try {
-<span class="fc" id="L1051">				CompletableFuture.allOf(futures).join();</span>
-<span class="nc" id="L1052">			} catch (CompletionException e) {</span>
-<span class="nc" id="L1053">				log.error(&quot;A TrajectoryHandler caused the exception: &quot;, e.getCause());</span>
-<span class="nc" id="L1054">				executor.shutdown();</span>
-<span class="nc" id="L1055">				throw e;</span>
-<span class="fc" id="L1056">			}</span>
-<span class="fc" id="L1057">		} else {</span>
+<span class="fc" id="L1057">				CompletableFuture.allOf(futures).join();</span>
+<span class="nc" id="L1058">			} catch (CompletionException e) {</span>
+<span class="nc" id="L1059">				log.error(&quot;A TrajectoryHandler caused the exception: &quot;, e.getCause());</span>
+<span class="nc" id="L1060">				executor.shutdown();</span>
+<span class="nc" id="L1061">				throw e;</span>
+<span class="fc" id="L1062">			}</span>
+<span class="fc" id="L1063">		} else {</span>
 
 			// single threaded task is run directly
-<span class="fc" id="L1060">			ReplayEventsTask task = new ReplayEventsTask(handlers.get(0), events, 0, 1);</span>
-<span class="fc" id="L1061">			task.run();</span>
+<span class="fc" id="L1066">			ReplayEventsTask task = new ReplayEventsTask(handlers.get(0), events, 0, 1);</span>
+<span class="fc" id="L1067">			task.run();</span>
 
 		}
 
 		// store the infections for a day
-<span class="fc" id="L1066">		List&lt;Event&gt; infections = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L1072">		List&lt;Event&gt; infections = new ArrayList&lt;&gt;();</span>
 
 		// &quot;execute&quot; collected infections
-<span class="fc bfc" id="L1069" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
+<span class="fc bfc" id="L1075" title="All 2 branches covered.">		for (EpisimPerson person : personMap.values()) {</span>
 			EpisimInfectionEvent e;
-<span class="fc bfc" id="L1071" title="All 2 branches covered.">			if ((e = person.checkInfection()) != null)</span>
-<span class="fc" id="L1072">				infections.add(e);</span>
+<span class="fc bfc" id="L1077" title="All 2 branches covered.">			if ((e = person.checkInfection()) != null)</span>
+<span class="fc" id="L1078">				infections.add(e);</span>
 
-<span class="pc bpc" id="L1074" title="1 of 2 branches missed.">			if (!person.getPotentialInfections().isEmpty()) {</span>
-<span class="nc" id="L1075">				infections.addAll(person.getPotentialInfections());</span>
-<span class="nc" id="L1076">				person.getPotentialInfections().clear();</span>
+<span class="pc bpc" id="L1080" title="1 of 2 branches missed.">			if (!person.getPotentialInfections().isEmpty()) {</span>
+<span class="nc" id="L1081">				infections.addAll(person.getPotentialInfections());</span>
+<span class="nc" id="L1082">				person.getPotentialInfections().clear();</span>
 			}
 
-<span class="fc" id="L1079">		}</span>
+<span class="fc" id="L1085">		}</span>
 
 		// report infections in order
-<span class="fc" id="L1082">		infections.stream().sorted()</span>
-<span class="fc" id="L1083">				.forEach(reporting::reportInfection);</span>
+<span class="fc" id="L1088">		infections.stream().sorted()</span>
+<span class="fc" id="L1089">				.forEach(reporting::reportInfection);</span>
 
 
-<span class="fc" id="L1086">		int totalContacts = handlers.stream().mapToInt(TrajectoryHandler::getNumContacts).sum();</span>
+<span class="fc" id="L1092">		int totalContacts = handlers.stream().mapToInt(TrajectoryHandler::getNumContacts).sum();</span>
 
-<span class="fc" id="L1088">		reporting.reportTotalContacts(totalContacts);</span>
+<span class="fc" id="L1094">		reporting.reportTotalContacts(totalContacts);</span>
 
-<span class="fc bfc" id="L1090" title="All 2 branches covered.">		for (SimulationListener l : listener) {</span>
-<span class="fc" id="L1091">			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));</span>
-<span class="fc" id="L1092">		}</span>
+<span class="fc bfc" id="L1096" title="All 2 branches covered.">		for (SimulationListener l : listener) {</span>
+<span class="fc" id="L1097">			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));</span>
+<span class="fc" id="L1098">		}</span>
 
-<span class="fc" id="L1094">	}</span>
+<span class="fc" id="L1100">	}</span>
 
 
 	/**
@@ -1099,25 +1105,25 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	void initImmunization(Path history) {
 
-<span class="nc" id="L1102">		log.info(&quot;Reading immunization from {}&quot;, history);</span>
+<span class="nc" id="L1108">		log.info(&quot;Reading immunization from {}&quot;, history);</span>
 
-<span class="nc" id="L1104">		InitialImmunizationHandler handler = new InitialImmunizationHandler(personMap,episimConfig, antibodyModel,progressionModel);</span>
-<span class="nc" id="L1105">		List&lt;String&gt; days = AnalysisCommand.forEachEvent(history, handler, true, handler);</span>
+<span class="nc" id="L1110">		InitialImmunizationHandler handler = new InitialImmunizationHandler(personMap,episimConfig, antibodyModel,progressionModel);</span>
+<span class="nc" id="L1111">		List&lt;String&gt; days = AnalysisCommand.forEachEvent(history, handler, true, handler);</span>
 
 
-<span class="nc bnc" id="L1108" title="All 2 branches missed.">		if (handler.isContinueProcessingEvents()) {</span>
-<span class="nc" id="L1109">			throw new RuntimeException(&quot;Immunisation history is not long enough (only contains &quot; + days.size() + &quot; days)&quot;);</span>
+<span class="nc bnc" id="L1114" title="All 2 branches missed.">		if (handler.isContinueProcessingEvents()) {</span>
+<span class="nc" id="L1115">			throw new RuntimeException(&quot;Immunisation history is not long enough (only contains &quot; + days.size() + &quot; days)&quot;);</span>
 		}
 
-<span class="nc" id="L1112">	}</span>
+<span class="nc" id="L1118">	}</span>
 
 	/**
 	 * Container that is always a vehicle.
 	 */
 	public static final class EpisimVehicle extends EpisimContainer&lt;Vehicle&gt; {
 		EpisimVehicle(Id&lt;Vehicle&gt; vehicleId) {
-<span class="fc" id="L1119">			super(vehicleId);</span>
-<span class="fc" id="L1120">		}</span>
+<span class="fc" id="L1125">			super(vehicleId);</span>
+<span class="fc" id="L1126">		}</span>
 	}
 
 	/**
@@ -1125,8 +1131,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	public static final class EpisimFacility extends EpisimContainer&lt;ActivityFacility&gt; {
 		EpisimFacility(Id&lt;ActivityFacility&gt; facilityId) {
-<span class="fc" id="L1128">			super(facilityId);</span>
-<span class="fc" id="L1129">		}</span>
+<span class="fc" id="L1134">			super(facilityId);</span>
+<span class="fc" id="L1135">		}</span>
 	}
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
