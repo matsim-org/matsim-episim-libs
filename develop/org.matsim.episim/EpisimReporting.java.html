@@ -265,15 +265,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void append(String date) throws IOException {
 
 		// Copy non prefixed files to base output
-<span class="pc bpc" id="L268" title="1 of 2 branches missed.">		if (!base.equals(outDir))</span>
-<span class="nc bnc" id="L269" title="All 2 branches missed.">			for (String file : List.of(&quot;infections.txt&quot;, &quot;infectionEvents.txt&quot;, &quot;restrictions.txt&quot;, &quot;timeUse.txt&quot;, &quot;diseaseImport.tsv&quot;,</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">		if (!base.equals(outDir))</span>
+<span class="fc bfc" id="L269" title="All 2 branches covered.">			for (String file : List.of(&quot;infections.txt&quot;, &quot;infectionEvents.txt&quot;, &quot;restrictions.txt&quot;, &quot;timeUse.txt&quot;, &quot;diseaseImport.tsv&quot;,</span>
 				&quot;outdoorFraction.tsv&quot;, &quot;strains.tsv&quot;, &quot;antibodies.tsv&quot;, &quot;vaccinations.tsv&quot;, &quot;vaccinationsDetailed.tsv&quot;, &quot;events.tar&quot;,
 				&quot;infectionEpisodes.tsv&quot;, &quot;persons.tsv&quot;)) {
-<span class="nc" id="L272">				Path path = Path.of(outDir, file);</span>
-<span class="nc bnc" id="L273" title="All 2 branches missed.">				if (Files.exists(path)) {</span>
-<span class="nc" id="L274">					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc" id="L272">				Path path = Path.of(outDir, file);</span>
+<span class="pc bpc" id="L273" title="1 of 2 branches missed.">				if (Files.exists(path)) {</span>
+<span class="fc" id="L274">					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);</span>
 				}
-<span class="nc" id="L276">			}</span>
+<span class="fc" id="L276">			}</span>
 
 <span class="fc" id="L278">		infectionReport = EpisimWriter.prepare(base + &quot;infections.txt&quot;);</span>
 <span class="fc" id="L279">		infectionEvents = EpisimWriter.prepare(base + &quot;infectionEvents.txt&quot;);</span>

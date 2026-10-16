@@ -34,13 +34,13 @@ public interface SimulationListener {
 	 * @see #init(EpisimSplittableRandom, Map, Map, Map)
 	 */
 	default void onSnapshotLoaded(int iteration, EpisimSplittableRandom rnd, Map&lt;Id&lt;Person&gt;, EpisimPerson&gt; persons, Map&lt;Id&lt;ActivityFacility&gt;, InfectionEventHandler.EpisimFacility&gt; facilities, Map&lt;Id&lt;Vehicle&gt;, InfectionEventHandler.EpisimVehicle&gt; vehicles) {
-<span class="nc" id="L37">	}</span>
+<span class="fc" id="L37">	}</span>
 
 	/**
 	 * Called just before iteration is about to start and events for the day will be handled.
 	 */
 	default void onIterationStart(int iteration, LocalDate date) {
-<span class="nc" id="L43">	}</span>
+<span class="fc" id="L43">	}</span>
 
 	/**
 	 * Called after an iteration has finished and all trajectories and infection events have been handled.

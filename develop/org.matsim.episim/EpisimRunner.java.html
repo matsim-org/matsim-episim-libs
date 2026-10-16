@@ -121,43 +121,48 @@ public final class EpisimRunner {
 
 <span class="fc" id="L122">			handler.onSnapshotLoaded(iteration);</span>
 
+			// vaccinations given by models at init (e.g. prior immunity) are already part of the restored state;
+			// they must not show up in the report of the first day after the snapshot
+<span class="fc" id="L126">			reporting.vaccinations.clear();</span>
+<span class="fc" id="L127">			reporting.vaccinationStats.clear();</span>
+
 			// recalculate antibodies for every agent if starting from snapshot.
 			// The antibodies profile is generated using the immunity event history in the
 			// snapshot; the antibody model config of the snapshot simulation will
 			// be superceded by the config of the current simulation. Thus, the antibody development
 			// during the snapshot can be rewritten without modifying the immunity event history.
-<span class="fc" id="L129">			antibodyModel.recalculateAntibodiesAfterSnapshot(handler.getPersons(), iteration);</span>
+<span class="fc" id="L134">			antibodyModel.recalculateAntibodiesAfterSnapshot(handler.getPersons(), iteration);</span>
 
-<span class="pc bpc" id="L131" title="1 of 2 branches missed.">		} else if (episimConfig.getStartFromImmunization() != null) {</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">		} else if (episimConfig.getStartFromImmunization() != null) {</span>
 
-<span class="nc" id="L133">			antibodyModel.init(handler.getPersons(), iteration);</span>
-<span class="nc" id="L134">			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));</span>
+<span class="nc" id="L138">			antibodyModel.init(handler.getPersons(), iteration);</span>
+<span class="nc" id="L139">			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));</span>
 		} else {
-<span class="fc" id="L136">			antibodyModel.init(handler.getPersons(), iteration);</span>
+<span class="fc" id="L141">			antibodyModel.init(handler.getPersons(), iteration);</span>
 		}
 
-<span class="fc" id="L139">		reporting.reportCpuTime(0, &quot;Init&quot;, &quot;finished&quot;, -1);</span>
+<span class="fc" id="L144">		reporting.reportCpuTime(0, &quot;Init&quot;, &quot;finished&quot;, -1);</span>
 
-<span class="fc" id="L141">		log.info(&quot;Starting from iteration {}...&quot;, iteration);</span>
+<span class="fc" id="L146">		log.info(&quot;Starting from iteration {}...&quot;, iteration);</span>
 
-<span class="fc bfc" id="L143" title="All 2 branches covered.">		for (; iteration &lt;= maxIterations; iteration++) {</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">		for (; iteration &lt;= maxIterations; iteration++) {</span>
 
-<span class="fc bfc" id="L145" title="All 4 branches covered.">			if (episimConfig.getSnapshotInterval() &gt; 0 &amp;&amp; iteration % episimConfig.getSnapshotInterval() == 0) {</span>
-<span class="fc" id="L146">				writeSnapshot(output, iteration);</span>
+<span class="fc bfc" id="L150" title="All 4 branches covered.">			if (episimConfig.getSnapshotInterval() &gt; 0 &amp;&amp; iteration % episimConfig.getSnapshotInterval() == 0) {</span>
+<span class="fc" id="L151">				writeSnapshot(output, iteration);</span>
 			}
 
-<span class="fc bfc" id="L149" title="All 2 branches covered.">			if (iteration % 10 == 0)</span>
-<span class="fc" id="L150">				Gbl.printMemoryUsage();</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">			if (iteration % 10 == 0)</span>
+<span class="fc" id="L155">				Gbl.printMemoryUsage();</span>
 
-<span class="fc bfc" id="L152" title="All 2 branches covered.">			if (!doStep(replay, handler, reporting, iteration))</span>
-<span class="fc" id="L153">				break;</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">			if (!doStep(replay, handler, reporting, iteration))</span>
+<span class="fc" id="L158">				break;</span>
 
 		}
 
-<span class="fc" id="L157">		handler.finish();</span>
+<span class="fc" id="L162">		handler.finish();</span>
 
-<span class="fc" id="L159">		reporting.close();</span>
-<span class="fc" id="L160">	}</span>
+<span class="fc" id="L164">		reporting.close();</span>
+<span class="fc" id="L165">	}</span>
 
 	/**
 	 * Update events data and internal person data structure.
@@ -166,22 +171,22 @@ public final class EpisimRunner {
 	 */
 	public void updateEvents(Map&lt;DayOfWeek, List&lt;Event&gt;&gt; events) {
 
-<span class="fc" id="L169">		ReplayHandler replay = replayProvider.get();</span>
+<span class="fc" id="L174">		ReplayHandler replay = replayProvider.get();</span>
 
-<span class="fc" id="L171">		replay.setEvents(events);</span>
+<span class="fc" id="L176">		replay.setEvents(events);</span>
 
-<span class="fc" id="L173">		InfectionEventHandler handler = handlerProvider.get();</span>
-<span class="fc" id="L174">		handler.updateEvents(events);</span>
-<span class="fc" id="L175">	}</span>
+<span class="fc" id="L178">		InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L179">		handler.updateEvents(events);</span>
+<span class="fc" id="L180">	}</span>
 
 	/**
 	 * Reads and updates events as defined in given config.
 	 */
 	public void updateEvents(EpisimConfigGroup config) {
-<span class="fc" id="L181">		ReplayHandler replay = replayProvider.get();</span>
-<span class="fc" id="L182">		Map&lt;DayOfWeek, List&lt;Event&gt;&gt; events = replay.readEvents(config);</span>
-<span class="fc" id="L183">		updateEvents(events);</span>
-<span class="fc" id="L184">	}</span>
+<span class="fc" id="L186">		ReplayHandler replay = replayProvider.get();</span>
+<span class="fc" id="L187">		Map&lt;DayOfWeek, List&lt;Event&gt;&gt; events = replay.readEvents(config);</span>
+<span class="fc" id="L188">		updateEvents(events);</span>
+<span class="fc" id="L189">	}</span>
 
 	/**
 	 * Perform one iteration of simulation.
@@ -190,22 +195,22 @@ public final class EpisimRunner {
 	 */
 	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
 
-<span class="fc" id="L193">		manager.resetHandlers(iteration);</span>
-<span class="fc" id="L194">		handler.reset(iteration);</span>
+<span class="fc" id="L198">		manager.resetHandlers(iteration);</span>
+<span class="fc" id="L199">		handler.reset(iteration);</span>
 
-<span class="fc" id="L196">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(this.config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L201">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(this.config, EpisimConfigGroup.class);</span>
 
-<span class="fc bfc" id="L198" title="All 4 branches covered.">		if (episimConfig.isEndEarly() &amp;&amp; handler.isFinished())</span>
-<span class="fc" id="L199">			return false;</span>
+<span class="fc bfc" id="L203" title="All 4 branches covered.">		if (episimConfig.isEndEarly() &amp;&amp; handler.isFinished())</span>
+<span class="fc" id="L204">			return false;</span>
 
-<span class="fc" id="L201">		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
+<span class="fc" id="L206">		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);</span>
 
 		// Process all events
-<span class="fc" id="L204">		replay.replayEvents(handler, day);</span>
+<span class="fc" id="L209">		replay.replayEvents(handler, day);</span>
 
-<span class="fc" id="L206">		reporting.flushEvents();</span>
+<span class="fc" id="L211">		reporting.flushEvents();</span>
 
-<span class="fc" id="L208">		return true;</span>
+<span class="fc" id="L213">		return true;</span>
 	}
 
 
@@ -217,48 +222,48 @@ public final class EpisimRunner {
 	 */
 	private void writeSnapshot(Path output, int iteration) {
 
-<span class="fc" id="L220">		InfectionEventHandler handler = handlerProvider.get();</span>
-<span class="fc" id="L221">		EpisimReporting reporting = reportingProvider.get();</span>
-<span class="fc" id="L222">		ProgressionModel progressionModel = progressionProvider.get();</span>
+<span class="fc" id="L225">		InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L226">		EpisimReporting reporting = reportingProvider.get();</span>
+<span class="fc" id="L227">		ProgressionModel progressionModel = progressionProvider.get();</span>
 
-<span class="fc" id="L224">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="fc" id="L229">		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
 
-<span class="fc" id="L226">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
+<span class="fc" id="L231">		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();</span>
 
-<span class="fc" id="L228">		Path path = output.resolve(episimConfig.getSnapshotPrefix() + String.format(&quot;-%03d-%s.zip&quot;, iteration, date));</span>
+<span class="fc" id="L233">		Path path = output.resolve(episimConfig.getSnapshotPrefix() + String.format(&quot;-%03d-%s.zip&quot;, iteration, date));</span>
 
-<span class="fc" id="L230">		log.info(&quot;Writing snapshot to {}&quot;, path);</span>
+<span class="fc" id="L235">		log.info(&quot;Writing snapshot to {}&quot;, path);</span>
 
-<span class="fc" id="L232">		try (var out = Files.newOutputStream(path)) {</span>
+<span class="fc" id="L237">		try (var out = Files.newOutputStream(path)) {</span>
 
-<span class="fc" id="L234">			ArchiveOutputStream archive = new ArchiveStreamFactory()</span>
-<span class="fc" id="L235">					.createArchiveOutputStream(&quot;zip&quot;, out);</span>
+<span class="fc" id="L239">			ArchiveOutputStream archive = new ArchiveStreamFactory()</span>
+<span class="fc" id="L240">					.createArchiveOutputStream(&quot;zip&quot;, out);</span>
 
 			// Copy whole output to the snapshot
-<span class="fc" id="L238">			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controller().getRunId(), archive);</span>
+<span class="fc" id="L243">			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controller().getRunId(), archive);</span>
 
-<span class="fc" id="L240">			archive.putArchiveEntry(new ZipArchiveEntry(&quot;iteration&quot;));</span>
-<span class="fc" id="L241">			ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
-<span class="fc" id="L242">			oos.writeInt(iteration);</span>
-<span class="fc" id="L243">			oos.flush();</span>
-<span class="fc" id="L244">			archive.closeArchiveEntry();</span>
+<span class="fc" id="L245">			archive.putArchiveEntry(new ZipArchiveEntry(&quot;iteration&quot;));</span>
+<span class="fc" id="L246">			ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
+<span class="fc" id="L247">			oos.writeInt(iteration);</span>
+<span class="fc" id="L248">			oos.flush();</span>
+<span class="fc" id="L249">			archive.closeArchiveEntry();</span>
 
-<span class="fc" id="L246">			writeObject(handler, &quot;state&quot;, archive);</span>
-<span class="fc" id="L247">			writeObject(reporting, &quot;reporting&quot;, archive);</span>
+<span class="fc" id="L251">			writeObject(handler, &quot;state&quot;, archive);</span>
+<span class="fc" id="L252">			writeObject(reporting, &quot;reporting&quot;, archive);</span>
 
-<span class="pc bpc" id="L249" title="1 of 2 branches missed.">			if (progressionModel instanceof Externalizable)</span>
-<span class="fc" id="L250">				writeObject((Externalizable) progressionModel, &quot;progression&quot;, archive);</span>
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">			if (progressionModel instanceof Externalizable)</span>
+<span class="fc" id="L255">				writeObject((Externalizable) progressionModel, &quot;progression&quot;, archive);</span>
 
-<span class="fc" id="L252">			archive.finish();</span>
-<span class="fc" id="L253">			archive.close();</span>
+<span class="fc" id="L257">			archive.finish();</span>
+<span class="fc" id="L258">			archive.close();</span>
 
-<span class="nc" id="L255">		} catch (IOException e) {</span>
-<span class="nc" id="L256">			log.error(&quot;Could not write snapshot&quot;, e);</span>
-<span class="fc" id="L257">		}</span>
+<span class="nc" id="L260">		} catch (IOException e) {</span>
+<span class="nc" id="L261">			log.error(&quot;Could not write snapshot&quot;, e);</span>
+<span class="fc" id="L262">		}</span>
 
-<span class="fc" id="L259">		log.info(&quot;Snapshot for day {} written successfully&quot;, iteration);</span>
+<span class="fc" id="L264">		log.info(&quot;Snapshot for day {} written successfully&quot;, iteration);</span>
 
-<span class="fc" id="L261">	}</span>
+<span class="fc" id="L266">	}</span>
 
 	/**
 	 * Read snapshot from disk and initialize simulation state.
@@ -268,59 +273,59 @@ public final class EpisimRunner {
 	 */
 	private int readSnapshot(Path output, Path path) {
 
-<span class="pc bpc" id="L271" title="1 of 2 branches missed.">		if (!Files.exists(path))</span>
-<span class="nc" id="L272">			throw new IllegalArgumentException(&quot;Snapshot &quot; + path + &quot; does not exist.&quot;);</span>
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">		if (!Files.exists(path))</span>
+<span class="nc" id="L277">			throw new IllegalArgumentException(&quot;Snapshot &quot; + path + &quot; does not exist.&quot;);</span>
 
-<span class="fc" id="L274">		InfectionEventHandler handler = handlerProvider.get();</span>
-<span class="fc" id="L275">		EpisimReporting reporting = reportingProvider.get();</span>
-<span class="fc" id="L276">		ProgressionModel progressionModel = progressionProvider.get();</span>
+<span class="fc" id="L279">		InfectionEventHandler handler = handlerProvider.get();</span>
+<span class="fc" id="L280">		EpisimReporting reporting = reportingProvider.get();</span>
+<span class="fc" id="L281">		ProgressionModel progressionModel = progressionProvider.get();</span>
 
-<span class="fc" id="L278">		int iteration = -1;</span>
-<span class="fc" id="L279">		try (var in = Files.newInputStream(path)) {</span>
+<span class="fc" id="L283">		int iteration = -1;</span>
+<span class="fc" id="L284">		try (var in = Files.newInputStream(path)) {</span>
 
-<span class="fc" id="L281">			ArchiveInputStream archive = new ArchiveStreamFactory()</span>
-<span class="fc" id="L282">					.createArchiveInputStream(&quot;zip&quot;, in);</span>
+<span class="fc" id="L286">			ArchiveInputStream archive = new ArchiveStreamFactory()</span>
+<span class="fc" id="L287">					.createArchiveInputStream(&quot;zip&quot;, in);</span>
 
-<span class="fc" id="L284">			log.info(&quot;Copying output from {} into {}&quot;, path, output);</span>
+<span class="fc" id="L289">			log.info(&quot;Copying output from {} into {}&quot;, path, output);</span>
 
 			ArchiveEntry entry;
-<span class="fc bfc" id="L287" title="All 2 branches covered.">			while ((entry = archive.getNextEntry()) != null) {</span>
-<span class="fc" id="L288">				String name = entry.getName();</span>
+<span class="fc bfc" id="L292" title="All 2 branches covered.">			while ((entry = archive.getNextEntry()) != null) {</span>
+<span class="fc" id="L293">				String name = entry.getName();</span>
 
 				// copy to output
-<span class="fc bfc" id="L291" title="All 2 branches covered.">				if (name.startsWith(&quot;output&quot;))</span>
-<span class="fc" id="L292">					Files.copy(archive, output.resolve(name.replace(&quot;output/&quot;, &quot;&quot;)), StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc bfc" id="L296" title="All 2 branches covered.">				if (name.startsWith(&quot;output&quot;))</span>
+<span class="fc" id="L297">					Files.copy(archive, output.resolve(name.replace(&quot;output/&quot;, &quot;&quot;)), StandardCopyOption.REPLACE_EXISTING);</span>
 
-<span class="fc bfc" id="L294" title="All 2 branches covered.">				if (name.equals(&quot;iteration&quot;)) {</span>
-<span class="fc" id="L295">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
-<span class="fc" id="L296">					iteration = ois.readInt();</span>
-				}
-
-<span class="fc bfc" id="L299" title="All 2 branches covered.">				if (name.equals(&quot;state&quot;)) {</span>
+<span class="fc bfc" id="L299" title="All 2 branches covered.">				if (name.equals(&quot;iteration&quot;)) {</span>
 <span class="fc" id="L300">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
-<span class="fc" id="L301">					handler.readExternal(ois);</span>
+<span class="fc" id="L301">					iteration = ois.readInt();</span>
 				}
 
-<span class="fc bfc" id="L304" title="All 2 branches covered.">				if (name.equals(&quot;reporting&quot;)) {</span>
+<span class="fc bfc" id="L304" title="All 2 branches covered.">				if (name.equals(&quot;state&quot;)) {</span>
 <span class="fc" id="L305">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
-<span class="fc" id="L306">					reporting.readExternal(ois);</span>
+<span class="fc" id="L306">					handler.readExternal(ois);</span>
 				}
 
-<span class="fc bfc" id="L309" title="All 2 branches covered.">				if (name.equals(&quot;progression&quot;)) {</span>
+<span class="fc bfc" id="L309" title="All 2 branches covered.">				if (name.equals(&quot;reporting&quot;)) {</span>
 <span class="fc" id="L310">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
-<span class="pc bpc" id="L311" title="1 of 2 branches missed.">					if (progressionModel instanceof Externalizable)</span>
-<span class="fc" id="L312">						((Externalizable) progressionModel).readExternal(ois);</span>
-					else
-<span class="nc" id="L314">						log.warn(&quot;Progression state present, but model is not Externalizable&quot;);</span>
+<span class="fc" id="L311">					reporting.readExternal(ois);</span>
 				}
-<span class="fc" id="L316">			}</span>
 
-<span class="fc" id="L318">			archive.close();</span>
+<span class="fc bfc" id="L314" title="All 2 branches covered.">				if (name.equals(&quot;progression&quot;)) {</span>
+<span class="fc" id="L315">					ObjectInputStream ois = new ObjectInputStream(archive);</span>
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">					if (progressionModel instanceof Externalizable)</span>
+<span class="fc" id="L317">						((Externalizable) progressionModel).readExternal(ois);</span>
+					else
+<span class="nc" id="L319">						log.warn(&quot;Progression state present, but model is not Externalizable&quot;);</span>
+				}
+<span class="fc" id="L321">			}</span>
 
-<span class="fc" id="L320">			return iteration;</span>
+<span class="fc" id="L323">			archive.close();</span>
 
-<span class="nc" id="L322">		} catch (IOException | ClassNotFoundException e) {</span>
-<span class="nc" id="L323">			throw new IllegalStateException(&quot;Could not read snapshot&quot;, e);</span>
+<span class="fc" id="L325">			return iteration;</span>
+
+<span class="nc" id="L327">		} catch (IOException | ClassNotFoundException e) {</span>
+<span class="nc" id="L328">			throw new IllegalStateException(&quot;Could not read snapshot&quot;, e);</span>
 		}
 
 	}
@@ -329,12 +334,12 @@ public final class EpisimRunner {
 	 * Helper method to write object into archive.
 	 */
 	private void writeObject(Externalizable obj, String name, ArchiveOutputStream archive) throws IOException {
-<span class="fc" id="L332">		archive.putArchiveEntry(new ZipArchiveEntry(name));</span>
-<span class="fc" id="L333">		ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
-<span class="fc" id="L334">		obj.writeExternal(oos);</span>
-<span class="fc" id="L335">		oos.flush();</span>
-<span class="fc" id="L336">		archive.closeArchiveEntry();</span>
-<span class="fc" id="L337">	}</span>
+<span class="fc" id="L337">		archive.putArchiveEntry(new ZipArchiveEntry(name));</span>
+<span class="fc" id="L338">		ObjectOutputStream oos = new ObjectOutputStream(archive);</span>
+<span class="fc" id="L339">		obj.writeExternal(oos);</span>
+<span class="fc" id="L340">		oos.flush();</span>
+<span class="fc" id="L341">		archive.closeArchiveEntry();</span>
+<span class="fc" id="L342">	}</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

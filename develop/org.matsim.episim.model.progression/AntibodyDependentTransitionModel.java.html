@@ -122,7 +122,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 			case critical:
 <span class="fc" id="L124">				double proba = getProbaOfTransitioningToDeceased(person);</span>
-<span class="pc bpc" id="L125" title="3 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
+<span class="pc bpc" id="L125" title="1 of 4 branches missed.">				if (proba != 0 &amp;&amp; rnd.nextDouble() &lt; proba)</span>
 <span class="nc" id="L126">					return DiseaseStatus.deceased;</span>
 				else
 <span class="fc" id="L128">					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;</span>
