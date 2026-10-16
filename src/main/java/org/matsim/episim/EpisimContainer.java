@@ -44,6 +44,12 @@ import static org.matsim.episim.EpisimUtils.*;
 public class EpisimContainer<T> {
 	private final Id<T> containerId;
 
+	/** Snapshot marker: no activity stored for the person. */
+	private static final int NO_ACTIVITY_INDEX = -1;
+
+	/** Snapshot marker: the person has the unspecific activity (persons in vehicles). */
+	private static final int UNSPECIFIC_ACTIVITY_INDEX = -2;
+
 	private static final Logger log = LogManager.getLogger(EpisimContainer.class);
 
 	/**
@@ -107,13 +113,21 @@ public class EpisimContainer<T> {
 		this.persons.clear();
 		this.personsAsList.clear();
 		this.containerEnterTimes.clear();
+		this.personActivities.clear();
 
 		int n = in.readInt();
 		for (int i = 0; i < n; i++) {
 			Id<Person> id = Id.create(readChars(in), Person.class);
+			EpisimPerson person = persons.get(id);
 			this.persons.add(id.index());
-			personsAsList.add(persons.get(id));
+			personsAsList.add(person);
 			containerEnterTimes.put(id.index(), in.readDouble());
+
+			int activity = in.readInt();
+			if (activity == UNSPECIFIC_ACTIVITY_INDEX)
+				personActivities.put(id.index(), EpisimPerson.UNSPECIFIC_ACTIVITY);
+			else if (activity != NO_ACTIVITY_INDEX)
+				personActivities.put(id.index(), person.getTrajectory().get(activity));
 		}
 	}
 
@@ -126,7 +140,28 @@ public class EpisimContainer<T> {
 		for (EpisimPerson p : personsAsList) {
 			writeChars(out, p.getPersonId().toString());
 			out.writeDouble(containerEnterTimes.get(p.getPersonId().index()));
+			out.writeInt(activityIndex(p));
 		}
+	}
+
+	/**
+	 * The activity of a person in this container is one of the person's trajectory and is stored as its position there.
+	 */
+	private int activityIndex(EpisimPerson person) {
+
+		EpisimPerson.PerformedActivity activity = personActivities.get(person.getPersonId().index());
+		if (activity == null)
+			return NO_ACTIVITY_INDEX;
+		if (activity == EpisimPerson.UNSPECIFIC_ACTIVITY)
+			return UNSPECIFIC_ACTIVITY_INDEX;
+
+		List<EpisimPerson.PerformedActivity> trajectory = person.getTrajectory();
+		for (int i = 0; i < trajectory.size(); i++) {
+			if (trajectory.get(i) == activity)
+				return i;
+		}
+		throw new IllegalStateException("Activity of person " + person.getPersonId() + " in container " + containerId
+				+ " is not part of its trajectory");
 	}
 
 	boolean containsPerson(EpisimPerson person) {
