@@ -1,8 +1,10 @@
 package org.matsim.episim.analysis;
 
 import com.google.common.base.Joiner;
+import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMaps;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2IntSortedMap;
 import org.apache.commons.csv.CSVFormat;
@@ -11,6 +13,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.population.PopulationUtils;
@@ -23,28 +26,32 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 /**
- * Runnable class, see command description.
+ * Runnable class, see command description. As post-processing it uses the population of the injected scenario.
+ * <p>
+ * {@code post.incidenceByAge.tsv} has one row for every complete week of the run (Tuesday to Monday, labelled with the
+ * Monday), also for weeks without infections, so that runs which only differ by seed can be averaged row by row.
  */
 @CommandLine.Command(
 		name = "extractInfectionsByAge",
 		description = "Extract age distribution of infected people using events and population."
 )
-public class ExtractInfectionsByAge implements Callable<Integer> {
+public class ExtractInfectionsByAge implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(ExtractInfectionsByAge.class);
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
-	@CommandLine.Option(names = "--population", description = "Path to population file", required = true)
-	private Path p;
+	@CommandLine.Option(names = "--population", description = "Path or URL of the population file, required on the command line")
+	private String p;
 
 	@CommandLine.Option(names = "--district", description = "District to filter for", required = true)
 	private String district = null;
@@ -57,6 +64,9 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--attr", defaultValue = "microm:modeled:age", description = "Name of the age attribute")
 	private String ageAttr;
+
+	@Inject(optional = true)
+	private Scenario scenario;
 
 	private Population population;
 	private Int2IntSortedMap groupSizes;
@@ -73,24 +83,16 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 			return 2;
 		}
 
-		population = PopulationUtils.readPopulation(this.p.toString());
-		groupSizes = new Int2IntAVLTreeMap();
-
-		// Aggregate by age group
-		for (Person p : population.getPersons().values()) {
-			if (district != null) {
-				if (!district.equals(p.getAttributes().getAttribute("district")))
-					continue;
-			}
-
-			groupSizes.merge(getAgeGroup((Integer) p.getAttributes().getAttribute(ageAttr)), 1, Integer::sum);
+		if (p == null) {
+			log.error("--population is required on the command line.");
+			return 2;
 		}
 
-		log.info("Age groups: {}", groupSizes);
+		population = PopulationUtils.readPopulation(p);
 
 		AnalysisCommand.forEachScenario(output, path -> {
 			try {
-				readScenario(path);
+				analyzeOutput(path);
 			} catch (Exception e) {
 				log.warn("Could not process scenario: {}", path, e);
 			}
@@ -101,31 +103,50 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 		return 0;
 	}
 
-	private void readScenario(Path path) throws IOException {
+	@Override
+	public void analyzeOutput(Path path) throws IOException {
+
+		if (population == null) {
+			if (scenario != null)
+				population = scenario.getPopulation();
+			else if (p != null)
+				population = PopulationUtils.readPopulation(p);
+			else
+				throw new IllegalStateException("No scenario injected and no --population given");
+		}
+
+		if (groupSizes == null)
+			groupSizes = countGroupSizes();
 
 		String id = AnalysisCommand.getScenarioPrefix(path);
-		Map<String, Int2IntMap> infections = new LinkedHashMap<>();
+		Map<LocalDate, Int2IntMap> infections = new TreeMap<>();
+		int withoutAge = 0;
 
-		CSVParser parser = new CSVParser(Files.newBufferedReader(path.resolve((id + "infectionEvents.txt"))),
-				CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader());
+		try (CSVParser parser = new CSVParser(Files.newBufferedReader(path.resolve((id + "infectionEvents.txt"))),
+				CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader())) {
 
-		for (CSVRecord record : parser) {
+			for (CSVRecord record : parser) {
 
-			String infected = record.get("infected");
-			Person p = population.getPersons().get(Id.createPersonId(infected));
+				Person p = population.getPersons().get(Id.createPersonId(record.get("infected")));
 
-			if (district != null) {
-				if (!district.equals(p.getAttributes().getAttribute("district")))
+				if (p == null || !district.equals(p.getAttributes().getAttribute("district")))
 					continue;
-			}
 
-			Int2IntMap date = infections.computeIfAbsent(calcDate(record), (k) -> new Int2IntOpenHashMap());
-			Object age = p.getAttributes().getAttribute(ageAttr);
-			if (age != null)
-				date.merge((int) age, 1, Integer::sum);
-			else
-				log.warn("Person {} without age attribute, has {}", p, p.getAttributes().getAsMap().keySet());
+				Object age = p.getAttributes().getAttribute(ageAttr);
+				if (age == null) {
+					withoutAge++;
+					continue;
+				}
+
+				infections.computeIfAbsent(calcDate(LocalDate.parse(record.get("date"))), (k) -> new Int2IntOpenHashMap())
+						.merge((int) age, 1, Integer::sum);
+			}
 		}
+
+		if (withoutAge > 0)
+			log.warn("{} infected persons without attribute {} in {}", withoutAge, ageAttr, path);
+
+		List<LocalDate> weeks = completeWeeks(path.resolve(id + "infections.txt"));
 
 		BufferedWriter bw = Files.newBufferedWriter(path.resolve(id + "post.incidenceByAge.tsv"));
 		bw.write("date\t");
@@ -137,33 +158,19 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 
 		bw.write(String.format("%d+", ageGroups.get(ageGroups.size() - 1)));
 
-		for (Map.Entry<String, Int2IntMap> e : infections.entrySet()) {
+		for (LocalDate week : weeks) {
+
+			Int2IntMap byGroup = new Int2IntOpenHashMap();
+			for (Int2IntMap.Entry e : infections.getOrDefault(week, Int2IntMaps.EMPTY_MAP).int2IntEntrySet())
+				byGroup.merge(getAgeGroup(e.getIntKey()), e.getIntValue(), Integer::sum);
 
 			bw.write("\n");
-			bw.write(e.getKey());
-			bw.write("\t");
+			bw.write(week.toString());
 
-			Int2IntMap day = e.getValue();
-
-			int group = 0;
-			double aggr = 0;
-
-			for (int i = 0; i < 100; i++) {
-
-				int g = getAgeGroup(i);
-				if (group == g) {
-					aggr += day.get(i);
-				} else {
-
-					bw.write(calcIncidence(group, aggr));
-					bw.write('\t');
-
-					group = g;
-					aggr = 0;
-				}
+			for (int group : ageGroups) {
+				bw.write("\t");
+				bw.write(calcIncidence(group, byGroup.get(group)));
 			}
-
-			bw.write(calcIncidence(group, aggr));
 		}
 
 		bw.close();
@@ -175,10 +182,10 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 		bw.write("date\t");
 		bw.write(Joiner.on("\t").join(IntStream.range(1, 100).boxed().toArray()));
 
-		for (Map.Entry<String, Int2IntMap> e : infections.entrySet()) {
+		for (Map.Entry<LocalDate, Int2IntMap> e : infections.entrySet()) {
 
 			bw.write("\n");
-			bw.write(e.getKey());
+			bw.write(e.getKey().toString());
 			bw.write("\t");
 
 			Int2IntMap day = e.getValue();
@@ -254,27 +261,68 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	}
 
 	/**
+	 * Number of persons in the district per age group.
+	 */
+	private Int2IntSortedMap countGroupSizes() {
+		Int2IntSortedMap sizes = new Int2IntAVLTreeMap();
+
+		for (Person p : population.getPersons().values()) {
+			if (!district.equals(p.getAttributes().getAttribute("district")))
+				continue;
+
+			Object age = p.getAttributes().getAttribute(ageAttr);
+			if (age != null)
+				sizes.merge(getAgeGroup((int) age), 1, Integer::sum);
+		}
+
+		log.info("Age groups: {}", sizes);
+		return sizes;
+	}
+
+	/**
+	 * Labels of all weeks whose seven days lie within the simulated days listed in {@code infections.txt}.
+	 */
+	private static List<LocalDate> completeWeeks(Path infectionsFile) throws IOException {
+		LocalDate first = null;
+		LocalDate last = null;
+
+		try (CSVParser parser = new CSVParser(Files.newBufferedReader(infectionsFile),
+				CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader())) {
+			for (CSVRecord record : parser) {
+				LocalDate date = LocalDate.parse(record.get("date"));
+				if (first == null || date.isBefore(first)) first = date;
+				if (last == null || date.isAfter(last)) last = date;
+			}
+		}
+
+		List<LocalDate> weeks = new ArrayList<>();
+		if (first == null)
+			return weeks;
+
+		LocalDate lastWeek = last.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+		for (LocalDate week = calcDate(first.plusDays(6)); !week.isAfter(lastWeek); week = week.plusWeeks(1))
+			weeks.add(week);
+
+		return weeks;
+	}
+
+	/**
 	 * Calculate incidence per 100k.
 	 */
 	private String calcIncidence(int group, double aggr) {
 
-		double scale = 100_000d / groupSizes.get(group);
-		return String.valueOf(aggr * scale);
+		int size = groupSizes.get(group);
+		if (size == 0)
+			return "NaN";
+
+		return String.valueOf(aggr * 100_000d / size);
 	}
 
 	/**
-	 * Calculate date of infection from record.
+	 * Week of an infection date: the date itself if it is a Monday, else the next Monday.
 	 */
-	private String calcDate(CSVRecord record) {
-		LocalDate date = LocalDate.parse(record.get("date"));
-
-		// if not monday, go to next monday
-		int day = date.getDayOfWeek().getValue();
-		if (day != 1) {
-			date = date.plusDays(8 - day);
-		}
-
-		return date.toString();
+	private static LocalDate calcDate(LocalDate date) {
+		return date.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
 	}
 
 	/**
