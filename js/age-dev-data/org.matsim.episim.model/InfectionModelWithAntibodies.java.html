@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InfectionModelWithAntibodies.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">InfectionModelWithAntibodies.java</span></div><h1>InfectionModelWithAntibodies.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import com.google.inject.Inject;
+import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.RealDistribution;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.*;
+import org.matsim.episim.policy.Restriction;
+
+import java.util.*;
+
+import org.matsim.episim.util.EpisimSplittableRandom;
+
+/**
+ * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
+ */
+public final class InfectionModelWithAntibodies implements InfectionModel {
+
+	private final FaceMaskModel maskModel;
+	private final ProgressionModel progression;
+	private final EpisimConfigGroup episimConfig;
+	private final EpisimReporting reporting;
+	private final EpisimSplittableRandom rnd;
+	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
+	private final PathogenConfigGroup pathogenConfig;
+
+	private final Map&lt;VirusStrain, double[]&gt; susceptibility; //= new EnumMap&lt;&gt;(VirusStrain.class);
+	private final Map&lt;VirusStrain, double[]&gt; infectivity; //= new EnumMap&lt;&gt;(VirusStrain.class);
+	private final RealDistribution distribution;
+
+	/**
+	 * Scale infectivity to 1.0.
+	 */
+	private final double scale;
+
+	private double outdoorFactor;
+	private int iteration;
+	private double lastUnVac;
+
+	@Inject
+	InfectionModelWithAntibodies(FaceMaskModel faceMaskModel, ProgressionModel progression,
+<span class="nc" id="L44">															Config config, EpisimReporting reporting, EpisimSplittableRandom rnd) {</span>
+<span class="nc" id="L45">		this.maskModel = faceMaskModel;</span>
+<span class="nc" id="L46">		this.progression = progression;</span>
+<span class="nc" id="L47">		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);</span>
+<span class="nc" id="L48">		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);</span>
+<span class="nc" id="L49">		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);</span>
+<span class="nc" id="L50">		this.pathogenConfig = ConfigUtils.addOrGetModule(config, PathogenConfigGroup.class);</span>
+
+<span class="nc" id="L52">		ImmunityConfigGroup.requireLegacyImmunity(config, getClass(), &quot;takes susceptibility and infectivity from antibody levels&quot;);</span>
+<span class="nc" id="L53">		this.reporting = reporting;</span>
+<span class="nc" id="L54">		this.rnd = rnd;</span>
+<span class="nc" id="L55">		this.susceptibility = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L56">		this.infectivity = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L58">		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig, virusStrainConfig.getVirusStrains());</span>
+
+		// based on https://arxiv.org/abs/2007.06602
+<span class="nc" id="L61">		distribution = new NormalDistribution(0.5, 2.6);</span>
+<span class="nc" id="L62">		scale = 1 / distribution.density(distribution.getNumericalMean());</span>
+<span class="nc" id="L63">	}</span>
+
+	@Override
+	public void setIteration(int iteration) {
+<span class="nc" id="L67">		this.outdoorFactor = InfectionModelWithSeasonality.interpolateOutdoorFraction(episimConfig, iteration);</span>
+<span class="nc" id="L68">		this.iteration = iteration;</span>
+<span class="nc" id="L69">		reporting.reportOutdoorFraction(this.outdoorFactor, iteration);</span>
+
+<span class="nc" id="L71">	}</span>
+
+	@Override
+	public double getLastUnVacInfectionProbability() {
+<span class="nc" id="L75">		return lastUnVac;</span>
+	}
+
+	@Override
+	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions,
+										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   TransmissionWeights transmissionWeights,
+										   double contactIntensity, double jointTimeInContainer) {
+
+		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
+<span class="nc" id="L85">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+
+<span class="nc" id="L87">		double susceptibility = this.susceptibility.get(infector.getVirusStrain())[target.getAge()];</span>
+<span class="nc" id="L88">		double infectivity = this.infectivity.get(infector.getVirusStrain())[infector.getAge()];</span>
+
+<span class="nc" id="L90">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+
+<span class="nc" id="L92">		double relativeAntibodyLevelTarget = target.getAntibodies(infector.getVirusStrain());</span>
+
+<span class="nc" id="L94">		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);</span>
+<span class="nc" id="L95">		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;</span>
+<span class="nc" id="L96">		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;</span>
+
+		//reduced infectivity if infector has antibodies
+<span class="nc" id="L99">		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));</span>
+<span class="nc" id="L100">		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));</span>
+
+<span class="nc" id="L102">			double igaFactor = 0.0;</span>
+<span class="nc" id="L103">			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">			if (target.hadStrain(infector.getVirusStrain())) {</span>
+
+<span class="nc" id="L106">				int lastInfectionWithStrain = 0;</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">				for (int ii = 0; ii &lt; target.getNumInfections(); ii++) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">					if (Objects.equals(target.getVirusStrain(ii),infector.getVirusStrain())) {</span>
+<span class="nc" id="L109">						lastInfectionWithStrain = ii;</span>
+					}
+				}
+//				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
+<span class="nc" id="L113">				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
+
+			}
+
+<span class="nc" id="L117">			ArrayList&lt;VirusStrain&gt; strainsLineA = new ArrayList&lt;VirusStrain&gt;();</span>
+<span class="nc" id="L118">			strainsLineA.add(VirusStrain.OMICRON_BA1);</span>
+<span class="nc" id="L119">			strainsLineA.add(VirusStrain.OMICRON_BA2);</span>
+<span class="nc" id="L120">			strainsLineA.add(VirusStrain.OMICRON_BA5);</span>
+<span class="nc" id="L121">			strainsLineA.add(VirusStrain.STRAIN_A);</span>
+<span class="nc" id="L122">			strainsLineA.add(VirusStrain.STRAIN_B);</span>
+<span class="nc" id="L123">			strainsLineA.add(VirusStrain.BQ);</span>
+<span class="nc" id="L124">			strainsLineA.add(VirusStrain.XBB_15);</span>
+<span class="nc" id="L125">			strainsLineA.add(VirusStrain.XBB_19);</span>
+<span class="nc" id="L126">			strainsLineA.add(VirusStrain.EG);</span>
+
+<span class="nc" id="L128">			ArrayList&lt;VirusStrain&gt; strainsLineB = new ArrayList&lt;VirusStrain&gt;();</span>
+<span class="nc" id="L129">			strainsLineB.add(VirusStrain.OMICRON_BA1);</span>
+<span class="nc" id="L130">			strainsLineB.add(VirusStrain.OMICRON_BA2);</span>
+<span class="nc" id="L131">			strainsLineB.add(VirusStrain.OMICRON_BA5);</span>
+<span class="nc" id="L132">			strainsLineB.add(VirusStrain.STRAIN_A);</span>
+<span class="nc" id="L133">			strainsLineB.add(VirusStrain.STRAIN_B);</span>
+<span class="nc" id="L134">			strainsLineB.add(VirusStrain.BQ);</span>
+<span class="nc" id="L135">			strainsLineB.add(VirusStrain.XBB_15);</span>
+<span class="nc" id="L136">			strainsLineB.add(VirusStrain.XBB_19);</span>
+<span class="nc" id="L137">			strainsLineB.add(VirusStrain.EG);</span>
+
+<span class="nc bnc" id="L139" title="All 2 branches missed.">			if (vaccinationConfig.getUseIgA()) {</span>
+
+<span class="nc bnc" id="L141" title="All 2 branches missed.">				for (VirusStrain str : virusStrainConfig.getVirusStrains()) {</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">					if (str.toString().startsWith(&quot;A_&quot;))</span>
+<span class="nc" id="L143">						strainsLineA.add(str);</span>
+<span class="nc" id="L144">				}</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">				for (VirusStrain str : virusStrainConfig.getVirusStrains()) {</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">					if (str.toString().startsWith(&quot;B_&quot;))</span>
+<span class="nc" id="L147">						strainsLineB.add(str);</span>
+<span class="nc" id="L148">				}</span>
+			}
+
+//			if (vaccinationConfig.getUseIgA()) {
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">				if(strainsLineA.contains(infector.getVirusStrain())){</span>
+<span class="nc" id="L154">					int lastInfectionWithStrain = 0;</span>
+<span class="nc" id="L155">					boolean targetHadStrain = false;</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">					for (int ii = 0; ii &lt; target.getNumInfections(); ii++) {</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">						if (strainsLineA.contains(target.getVirusStrain(ii))) {</span>
+<span class="nc" id="L158">							targetHadStrain = true;</span>
+<span class="nc" id="L159">							lastInfectionWithStrain = ii;</span>
+						}
+					}
+
+<span class="nc bnc" id="L163" title="All 2 branches missed.">					if (targetHadStrain) {</span>
+<span class="nc" id="L164">						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
+<span class="nc" id="L165">						fac = fac / 1.4;</span>
+<span class="nc" id="L166">						igaFactor = Math.max(fac, igaFactor);</span>
+					}
+				}
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">				if(strainsLineB.contains(infector.getVirusStrain())){</span>
+<span class="nc" id="L171">					int lastInfectionWithStrain = 0;</span>
+<span class="nc" id="L172">					boolean targetHadStrain = false;</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">					for (int ii = 0; ii &lt; target.getNumInfections(); ii++) {</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">						if (strainsLineB.contains(target.getVirusStrain(ii))) {</span>
+<span class="nc" id="L175">							targetHadStrain = true;</span>
+<span class="nc" id="L176">							lastInfectionWithStrain = ii;</span>
+						}
+					}
+
+<span class="nc bnc" id="L180" title="All 2 branches missed.">					if (targetHadStrain) {</span>
+<span class="nc" id="L181">						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));</span>
+<span class="nc" id="L182">						fac = fac / 1.4;</span>
+<span class="nc" id="L183">						igaFactor = Math.max(fac, igaFactor);</span>
+					}
+				}
+
+//				if(strainsLineA.contains(infector.getVirusStrain()) || strainsLineB.contains(infector.getVirusStrain())){
+//					int lastInfectionWithStrain = 0;
+//					boolean targetHadStrain = false;
+//					for (int ii = 0; ii &lt; target.getNumInfections();  ii++) {
+//						if (strainsLineA.contains(target.getVirusStrain(ii)) || strainsLineB.contains(target.getVirusStrain(ii))){
+//							targetHadStrain = true;
+//							lastInfectionWithStrain = ii;
+//						}
+//					}
+//
+//					if (targetHadStrain) {
+//						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
+//						fac = fac / 1.4 / 1.4;
+//						igaFactor = Math.max(fac, igaFactor);
+//					}
+//				}
+
+<span class="nc" id="L204">				susceptibility = susceptibility * (1.0 - igaFactor);</span>
+//			}
+<span class="nc" id="L206">		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, transmissionWeights, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);</span>
+		// remaining risk --&gt; lower val, lower risk, max risk at 1
+<span class="nc" id="L208">		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));</span>
+
+		// route-agnostic factors
+<span class="nc" id="L211">		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer</span>
+<span class="nc" id="L212">				* target.getSusceptibility()</span>
+<span class="nc" id="L213">				* getInfectivity(infector)</span>
+<span class="nc" id="L214">				* strain.getInfectiousness()</span>
+				* immunityFactor;
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+<span class="nc" id="L218">		double respiratoryModifier = ciCorrection * shedding * intake * indoorOutdoorFactor;</span>
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+<span class="nc" id="L221">		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();</span>
+<span class="nc" id="L222">		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;</span>
+<span class="nc" id="L223">		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();</span>
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+<span class="nc" id="L226">		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));</span>
+	}
+
+	private double calcInfectionProbabilityWoImmunity(EpisimPerson target, EpisimPerson infector, Map&lt;String, Restriction&gt; restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, TransmissionWeights transmissionWeights, double contactIntensity, double jointTimeInContainer,
+		double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
+
+		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
+<span class="nc" id="L233">		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());</span>
+
+<span class="nc" id="L235">		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());</span>
+
+<span class="nc" id="L237">		double relativeAntibodyLevel = 0.0;</span>
+
+		// route-agnostic factors
+<span class="nc" id="L240">		double base = episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer</span>
+<span class="nc" id="L241">				* target.getSusceptibility()</span>
+<span class="nc" id="L242">				* getInfectivity(infector)</span>
+<span class="nc" id="L243">				* strain.getInfectiousness()</span>
+<span class="nc" id="L244">				/ (1.0 + Math.pow(relativeAntibodyLevel, vaccinationConfig.getBeta()));</span>
+
+		// respiratory route only: ventilation / contact-intensity correction, face masks, indoor-outdoor dilution
+<span class="nc" id="L247">		double respiratoryModifier = ciCorrection * shedding * intake * indoorOutdoorFactor;</span>
+
+		// contact-side route split combined with the pathogen's per-route transmissibility
+<span class="nc" id="L250">		TransmissionWeights pathogenWeights = pathogenConfig.getParams(strain.getPathogen()).getRouteTransmissibility();</span>
+<span class="nc" id="L251">		double viaRespiratory = transmissionWeights.getRespiratory() * pathogenWeights.getRespiratory() * respiratoryModifier;</span>
+<span class="nc" id="L252">		double viaDirectContact = transmissionWeights.getDirectContact() * pathogenWeights.getDirectContact();</span>
+		// fomite: double viaFomite = transmissionWeights.getFomite() * pathogenWeights.getFomite();
+
+<span class="nc" id="L255">		return 1 - Math.exp(-base * (viaRespiratory + viaDirectContact /* fomite: + viaFomite */));</span>
+	}
+
+	/**
+	 * Calculates infectivity of infector depending on disease progression.
+	 *
+	 * @apiNote package private for testing
+	 */
+	double getInfectivity(EpisimPerson infector) {
+
+<span class="nc bnc" id="L265" title="All 2 branches missed.">		if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+
+<span class="nc" id="L267">			int afterSymptomOnset = infector.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, iteration);</span>
+<span class="nc" id="L268">			PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">			return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(afterSymptomOnset)</span>
+<span class="nc" id="L270">					: distribution.density(afterSymptomOnset) * scale;</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">		} else if (infector.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious) {</span>
+
+<span class="nc" id="L273">			EpisimPerson.DiseaseStatus nextDiseaseStatus = progression.getNextDiseaseStatus(infector.getPersonId());</span>
+<span class="nc" id="L274">			int transitionDays = progression.getNextTransitionDays(infector.getPersonId());</span>
+<span class="nc" id="L275">			int daysSince = infector.daysSince(infector.getDiseaseStatus(), iteration);</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">			if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.showingSymptoms) {</span>
+
+<span class="nc" id="L278">				int untilOnset = transitionDays - daysSince;</span>
+				// the built-in curve is read at the distance to onset, i.e. mirrored; a configured profile is signed
+<span class="nc" id="L280">				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(-untilOnset)</span>
+<span class="nc" id="L282">						: distribution.density(untilOnset) * scale;</span>
+
+<span class="nc bnc" id="L284" title="All 2 branches missed.">			} else if (nextDiseaseStatus == EpisimPerson.DiseaseStatus.recovered) {</span>
+
+				// when next state is recovered the half of the interval is used
+<span class="nc" id="L287">				double sinceMidpoint = daysSince - transitionDays / 2.0;</span>
+<span class="nc" id="L288">				PathogenConfigGroup.PathogenParams pathogen = pathogenOf(infector);</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">				return pathogen.hasInfectivityProfile() ? pathogen.getInfectivity(sinceMidpoint)</span>
+<span class="nc" id="L290">						: distribution.density(sinceMidpoint) * scale;</span>
+			}
+		}
+
+
+<span class="nc" id="L295">		return 0.0;</span>
+	}
+
+	private PathogenConfigGroup.PathogenParams pathogenOf(EpisimPerson infector) {
+<span class="nc" id="L299">		return pathogenConfig.getParams(virusStrainConfig.getParams(infector.getVirusStrain()).getPathogen());</span>
+	}
+
+	public static void main(String[] args) {
+		// test distribution
+<span class="nc" id="L304">		NormalDistribution dist = new NormalDistribution(0.5, 2.6);</span>
+
+<span class="nc bnc" id="L306" title="All 2 branches missed.">		for(int i = -5; i &lt;= 10; i++) {</span>
+<span class="nc" id="L307">			System.out.println(i + &quot; &quot; + dist.density(i));</span>
+		}
+
+<span class="nc" id="L310">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

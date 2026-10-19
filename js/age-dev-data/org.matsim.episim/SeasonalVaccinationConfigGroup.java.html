@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeasonalVaccinationConfigGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim</a> &gt; <span class="el_source">SeasonalVaccinationConfigGroup.java</span></div><h1>SeasonalVaccinationConfigGroup.java</h1><pre class="source lang-java linenums">package org.matsim.episim;
+
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
+import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VaccinationType;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+
+/**
+ * Yearly vaccination campaigns, such as the seasonal influenza vaccination, read by
+ * {@link org.matsim.episim.model.vaccination.SeasonalVaccinationModel}.
+ *
+ * &lt;p&gt;One parameter set {@code season} per campaign, with the product that is given, the share of the agents of each age who are
+ * vaccinated in the season, and the timing of the campaign. Without a season the model does nothing, which is the state of the
+ * scenarios without vaccination.&lt;/p&gt;
+ */
+public final class SeasonalVaccinationConfigGroup extends ReflectiveConfigGroup {
+
+	public static final String GROUPNAME = &quot;seasonalVaccination&quot;;
+
+<span class="fc" id="L30">	private final Map&lt;String, Season&gt; seasons = new LinkedHashMap&lt;&gt;();</span>
+
+	/**
+	 * A group without a campaign.
+	 */
+	public SeasonalVaccinationConfigGroup() {
+<span class="fc" id="L36">		super(GROUPNAME);</span>
+<span class="fc" id="L37">	}</span>
+
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+<span class="nc bnc" id="L41" title="All 2 branches missed.">		if (Season.SET_TYPE.equals(type))</span>
+<span class="nc" id="L42">			return new Season();</span>
+
+<span class="nc" id="L44">		throw new IllegalArgumentException(&quot;Unknown parameter set type: &quot; + type);</span>
+	}
+
+	/** The campaigns, in the order of the config. */
+	public Collection&lt;Season&gt; getSeasons() {
+<span class="fc" id="L49">		return Collections.unmodifiableCollection(seasons.values());</span>
+	}
+
+	/** A campaign, added to the group; the name of the season has to be new. */
+	public Season addSeason(String name, VaccinationType product, Map&lt;Integer, Double&gt; shareByAge, NavigableMap&lt;LocalDate, Double&gt; timing) {
+<span class="fc" id="L54">		Season season = new Season();</span>
+<span class="fc" id="L55">		season.setSeason(name);</span>
+<span class="fc" id="L56">		season.setProduct(product);</span>
+<span class="fc" id="L57">		season.setShareByAge(shareByAge);</span>
+<span class="fc" id="L58">		season.setTiming(timing);</span>
+<span class="fc" id="L59">		addParameterSet(season);</span>
+<span class="fc" id="L60">		return season;</span>
+	}
+
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">		if (!Season.SET_TYPE.equals(set.getName()))</span>
+<span class="nc" id="L66">			throw new IllegalStateException(&quot;Unknown parameter set type: &quot; + set.getName());</span>
+
+<span class="fc" id="L68">		Season season = (Season) set;</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">		if (seasons.containsKey(season.getSeason()))</span>
+<span class="fc" id="L70">			throw new IllegalArgumentException(&quot;Season '&quot; + season.getSeason() + &quot;' is configured twice in config group '&quot; + GROUPNAME + &quot;'&quot;);</span>
+
+<span class="fc" id="L72">		seasons.put(season.getSeason(), season);</span>
+<span class="fc" id="L73">		super.addParameterSet(set);</span>
+<span class="fc" id="L74">	}</span>
+
+	@Override
+	protected void checkConsistency(Config config) {
+<span class="fc" id="L78">		super.checkConsistency(config);</span>
+
+<span class="fc" id="L80">		List&lt;String&gt; problems = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L81">		List&lt;Season&gt; sorted = new ArrayList&lt;&gt;(seasons.values());</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">		for (Season season : sorted)</span>
+<span class="fc" id="L83">			season.collectProblems(problems);</span>
+
+<span class="fc" id="L85">		sorted.sort((a, b) -&gt; a.firstDay().compareTo(b.firstDay()));</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">		for (int i = 1; i &lt; sorted.size(); i++)</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">			if (!sorted.get(i).firstDay().isAfter(sorted.get(i - 1).lastDay()))</span>
+<span class="fc" id="L88">				problems.add(&quot;The campaigns of &quot; + sorted.get(i - 1).getSeason() + &quot; and &quot; + sorted.get(i).getSeason() + &quot; overlap&quot;);</span>
+
+		// every product needs the protection it gives and a neutral entry for the infection model
+<span class="fc" id="L91">		ConfigGroup immunity = config.getModules().get(ImmunityConfigGroup.GROUPNAME);</span>
+<span class="fc" id="L92">		ConfigGroup vaccination = config.getModules().get(VaccinationConfigGroup.GROUPNAME);</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">		for (Season season : sorted) {</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">			if (season.getProduct() == null)</span>
+<span class="nc" id="L95">				continue;</span>
+<span class="pc bpc" id="L96" title="1 of 4 branches missed.">			if (immunity instanceof ImmunityConfigGroup &amp;&amp; ((ImmunityConfigGroup) immunity).getSource(season.getProduct()) == null)</span>
+<span class="fc" id="L97">				problems.add(&quot;The product '&quot; + season.getProduct() + &quot;' of season &quot; + season.getSeason() + &quot; has no source in config group '&quot;</span>
+						+ ImmunityConfigGroup.GROUPNAME + &quot;'&quot;);
+<span class="pc bpc" id="L99" title="1 of 4 branches missed.">			if (vaccination instanceof VaccinationConfigGroup &amp;&amp; !((VaccinationConfigGroup) vaccination).hasParams(season.getProduct()))</span>
+<span class="fc" id="L100">				problems.add(&quot;The product '&quot; + season.getProduct() + &quot;' of season &quot; + season.getSeason() + &quot; has no entry in config group '&quot;</span>
+						+ VaccinationConfigGroup.GROUPNAME + &quot;', the infection model needs one&quot;);
+<span class="fc" id="L102">		}</span>
+
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">		if (!problems.isEmpty())</span>
+<span class="fc" id="L105">			throw new IllegalStateException(&quot;Config group '&quot; + GROUPNAME + &quot;':\n&quot; + String.join(&quot;\n&quot;, problems));</span>
+<span class="nc" id="L106">	}</span>
+
+	/**
+	 * One campaign: the product, who gets it, and when.
+	 */
+	public static final class Season extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = &quot;season&quot;;
+
+		private static final String SEASON = &quot;season&quot;;
+		private static final String PRODUCT = &quot;product&quot;;
+		private static final String SHARE_BY_AGE = &quot;shareByAge&quot;;
+		private static final String TIMING = &quot;timing&quot;;
+
+<span class="fc" id="L120">		private String season = &quot;&quot;;</span>
+<span class="fc" id="L121">		private String product = &quot;&quot;;</span>
+
+		/** Share of the agents of an age who are vaccinated in the season, between the keys linear, the first and the last held. */
+<span class="fc" id="L124">		private final NavigableMap&lt;Integer, Double&gt; shareByAge = new TreeMap&lt;&gt;();</span>
+
+		/** Cumulative share of the vaccinations of the season at the end of a day, between the dates linear. */
+<span class="fc" id="L127">		private final NavigableMap&lt;LocalDate, Double&gt; timing = new TreeMap&lt;&gt;();</span>
+
+		Season() {
+<span class="fc" id="L130">			super(SET_TYPE);</span>
+<span class="fc" id="L131">		}</span>
+
+		/** The season of the campaign, for example {@code 2022/23}. */
+		@StringGetter(SEASON)
+		public String getSeason() {
+<span class="fc" id="L136">			return season;</span>
+		}
+
+		@StringSetter(SEASON)
+		public void setSeason(String season) {
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">			this.season = season == null ? &quot;&quot; : season.strip();</span>
+<span class="fc" id="L142">		}</span>
+
+		@StringGetter(PRODUCT)
+		String getProductName() {
+<span class="nc" id="L146">			return product;</span>
+		}
+
+		@StringSetter(PRODUCT)
+		void setProductName(String product) {
+<span class="nc bnc" id="L151" title="All 2 branches missed.">			this.product = product == null ? &quot;&quot; : product.strip();</span>
+<span class="nc" id="L152">		}</span>
+
+		/** The product the vaccinated agents get, {@code null} if it is not set. */
+		public VaccinationType getProduct() {
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">			return product.isEmpty() ? null : VaccinationType.of(product);</span>
+		}
+
+		public void setProduct(VaccinationType product) {
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">			this.product = product == null ? &quot;&quot; : product.toString();</span>
+<span class="fc" id="L161">		}</span>
+
+		@StringGetter(SHARE_BY_AGE)
+		String getShareByAgeString() {
+<span class="nc" id="L165">			StringBuilder text = new StringBuilder();</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">			shareByAge.forEach((age, share) -&gt; text.append(text.length() &gt; 0 ? &quot;;&quot; : &quot;&quot;).append(age).append(&quot;=&quot;).append(share));</span>
+<span class="nc" id="L167">			return text.toString();</span>
+		}
+
+		@StringSetter(SHARE_BY_AGE)
+		void setShareByAgeString(String text) {
+<span class="nc" id="L172">			Map&lt;Integer, Double&gt; parsed = new TreeMap&lt;&gt;();</span>
+<span class="nc bnc" id="L173" title="All 4 branches missed.">			if (text != null &amp;&amp; !text.isBlank()) {</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">				for (String entry : text.split(&quot;;&quot;)) {</span>
+<span class="nc" id="L175">					String[] parts = entry.split(&quot;=&quot;);</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">					if (parts.length != 2)</span>
+<span class="nc" id="L177">						throw new IllegalArgumentException(&quot;'&quot; + entry + &quot;' in &quot; + SHARE_BY_AGE + &quot; is not of the form age=share&quot;);</span>
+<span class="nc" id="L178">					parsed.put(Integer.parseInt(parts[0].strip()), Double.parseDouble(parts[1].strip()));</span>
+				}
+			}
+<span class="nc" id="L181">			setShareByAge(parsed);</span>
+<span class="nc" id="L182">		}</span>
+
+		public Map&lt;Integer, Double&gt; getShareByAge() {
+<span class="nc" id="L185">			return Collections.unmodifiableNavigableMap(shareByAge);</span>
+		}
+
+		/**
+		 * Sets the share of the agents of each age who are vaccinated in the season.
+		 *
+		 * @throws IllegalArgumentException if a share is not between 0 and 1
+		 */
+		public void setShareByAge(Map&lt;Integer, Double&gt; shares) {
+<span class="fc bfc" id="L194" title="All 2 branches covered.">			for (Map.Entry&lt;Integer, Double&gt; e : shares.entrySet())</span>
+<span class="pc bpc" id="L195" title="1 of 4 branches missed.">				if (!(e.getValue() &gt;= 0.0 &amp;&amp; e.getValue() &lt;= 1.0))</span>
+<span class="fc" id="L196">					throw new IllegalArgumentException(&quot;The share &quot; + e.getValue() + &quot; of age &quot; + e.getKey() + &quot; is not between 0 and 1&quot;);</span>
+<span class="fc" id="L197">			shareByAge.clear();</span>
+<span class="fc" id="L198">			shareByAge.putAll(shares);</span>
+<span class="fc" id="L199">		}</span>
+
+		/** The share of the agents of this age who are vaccinated in the season. */
+		public double shareAt(int age) {
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">			return shareByAge.isEmpty() ? 0.0 : EpisimUtils.interpolateEntry(shareByAge, age);</span>
+		}
+
+		@StringGetter(TIMING)
+		String getTimingString() {
+<span class="nc" id="L208">			StringBuilder text = new StringBuilder();</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">			timing.forEach((date, share) -&gt; text.append(text.length() &gt; 0 ? &quot;;&quot; : &quot;&quot;).append(date).append(&quot;=&quot;).append(share));</span>
+<span class="nc" id="L210">			return text.toString();</span>
+		}
+
+		@StringSetter(TIMING)
+		void setTimingString(String text) {
+<span class="nc" id="L215">			NavigableMap&lt;LocalDate, Double&gt; parsed = new TreeMap&lt;&gt;();</span>
+<span class="nc bnc" id="L216" title="All 4 branches missed.">			if (text != null &amp;&amp; !text.isBlank()) {</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">				for (String entry : text.split(&quot;;&quot;)) {</span>
+<span class="nc" id="L218">					String[] parts = entry.split(&quot;=&quot;);</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">					if (parts.length != 2)</span>
+<span class="nc" id="L220">						throw new IllegalArgumentException(&quot;'&quot; + entry + &quot;' in &quot; + TIMING + &quot; is not of the form date=share&quot;);</span>
+<span class="nc" id="L221">					parsed.put(LocalDate.parse(parts[0].strip()), Double.parseDouble(parts[1].strip()));</span>
+				}
+			}
+<span class="nc" id="L224">			setTiming(parsed);</span>
+<span class="nc" id="L225">		}</span>
+
+		public NavigableMap&lt;LocalDate, Double&gt; getTiming() {
+<span class="nc" id="L228">			return Collections.unmodifiableNavigableMap(timing);</span>
+		}
+
+		/** The cumulative share of the vaccinations of the season at the end of the day of each date; see {@link #cumulativeShare}. */
+		public void setTiming(NavigableMap&lt;LocalDate, Double&gt; cumulative) {
+<span class="fc" id="L233">			timing.clear();</span>
+<span class="fc" id="L234">			timing.putAll(cumulative);</span>
+<span class="fc" id="L235">		}</span>
+
+		/** The day before the first entry has the share 0: the first campaign day is the day after the first date. */
+		public LocalDate firstDay() {
+<span class="fc" id="L239">			return timing.firstKey().plusDays(1);</span>
+		}
+
+		/** The day on which the share reaches its last value. */
+		public LocalDate lastDay() {
+<span class="fc" id="L244">			return timing.lastKey();</span>
+		}
+
+		/**
+		 * The share of the vaccinations of the season that are done at the end of {@code date}: 0 up to the first date, linear between
+		 * the dates, the last value after the last date.
+		 */
+		public double cumulativeShare(LocalDate date) {
+<span class="pc bpc" id="L252" title="1 of 4 branches missed.">			if (timing.isEmpty() || !date.isAfter(timing.firstKey()))</span>
+<span class="fc" id="L253">				return 0.0;</span>
+<span class="fc bfc" id="L254" title="All 2 branches covered.">			if (!date.isBefore(timing.lastKey()))</span>
+<span class="fc" id="L255">				return timing.lastEntry().getValue();</span>
+
+<span class="fc" id="L257">			Map.Entry&lt;LocalDate, Double&gt; before = timing.floorEntry(date);</span>
+<span class="fc" id="L258">			Map.Entry&lt;LocalDate, Double&gt; after = timing.higherEntry(date);</span>
+<span class="fc" id="L259">			double span = java.time.temporal.ChronoUnit.DAYS.between(before.getKey(), after.getKey());</span>
+<span class="fc" id="L260">			double done = java.time.temporal.ChronoUnit.DAYS.between(before.getKey(), date);</span>
+<span class="fc" id="L261">			return before.getValue() + (after.getValue() - before.getValue()) * done / span;</span>
+		}
+
+		private void collectProblems(List&lt;String&gt; problems) {
+<span class="fc" id="L265">			String label = &quot;Season '&quot; + season + &quot;'&quot;;</span>
+<span class="pc bpc" id="L266" title="1 of 2 branches missed.">			if (season.isEmpty())</span>
+<span class="nc" id="L267">				problems.add(&quot;A '&quot; + SET_TYPE + &quot;' has no '&quot; + SEASON + &quot;'&quot;);</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">			if (product.isEmpty())</span>
+<span class="nc" id="L269">				problems.add(label + &quot; has no '&quot; + PRODUCT + &quot;'&quot;);</span>
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">			if (shareByAge.isEmpty())</span>
+<span class="nc" id="L271">				problems.add(label + &quot; has no '&quot; + SHARE_BY_AGE + &quot;', so nobody would be vaccinated&quot;);</span>
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">			if (timing.size() &lt; 2) {</span>
+<span class="nc" id="L273">				problems.add(label + &quot; needs at least two dates in '&quot; + TIMING + &quot;'&quot;);</span>
+<span class="nc" id="L274">				return;</span>
+			}
+
+<span class="fc" id="L277">			double previous = 0.0;</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">			for (Map.Entry&lt;LocalDate, Double&gt; e : timing.entrySet()) {</span>
+<span class="pc bpc" id="L279" title="2 of 4 branches missed.">				if (!(e.getValue() &gt;= previous &amp;&amp; e.getValue() &lt;= 1.0))</span>
+<span class="nc" id="L280">					problems.add(label + &quot;: the cumulative share &quot; + e.getValue() + &quot; at &quot; + e.getKey()</span>
+							+ &quot; falls or is above 1 (it must not fall and must stay between 0 and 1)&quot;);
+<span class="fc" id="L282">				previous = e.getValue();</span>
+<span class="fc" id="L283">			}</span>
+<span class="pc bpc" id="L284" title="1 of 2 branches missed.">			if (timing.firstEntry().getValue() != 0.0)</span>
+<span class="nc" id="L285">				problems.add(label + &quot;: the first date of '&quot; + TIMING + &quot;' has to have the share 0, it is the day before the campaign&quot;);</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">			if (timing.lastEntry().getValue() != 1.0)</span>
+<span class="fc" id="L287">				problems.add(label + &quot;: the last date of '&quot; + TIMING + &quot;' has to have the share 1, otherwise the coverage is not reached&quot;);</span>
+<span class="fc" id="L288">		}</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

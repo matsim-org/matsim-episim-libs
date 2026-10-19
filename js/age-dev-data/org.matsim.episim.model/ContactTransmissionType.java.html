@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ContactTransmissionType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">ContactTransmissionType.java</span></div><h1>ContactTransmissionType.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+/**
+ * Defines the route by which a pathogen can be transmitted between hosts.
+ *
+ * &lt;p&gt;A transmission route describes the mechanism of exposure and therefore
+ * determines how potentially infectious interactions should be modeled.
+ * Different routes may require fundamentally different exposure models.
+ * For example, respiratory transmission may depend on co-presence, distance,
+ * duration, and ventilation, while direct-contact transmission requires
+ * physical interaction between hosts, and fomite transmission involves an
+ * intermediate contaminated object or surface.
+ *
+ * &lt;p&gt;The transmission route is a property of the pathogen and defines which
+ * types of exposure can result in transmission.
+ */
+<span class="fc" id="L17">public enum ContactTransmissionType {</span>
+	/** Transmission through respiratory droplets or aerosols. */
+<span class="fc" id="L19">	RESPIRATORY,</span>
+
+	/** Transmission through direct physical contact between hosts. */
+<span class="fc" id="L22">	DIRECT_CONTACT,</span>
+
+	/** Transmission through contaminated objects or surfaces. */
+	//FOMITE //We do not have necessary to do it now, and we do not have this logic in facilities, it is future improvement
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

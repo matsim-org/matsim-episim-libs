@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FaceMask.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">MATSim Episim</a> &gt; <a href="index.source.html" class="el_package">org.matsim.episim.model</a> &gt; <span class="el_source">FaceMask.java</span></div><h1>FaceMask.java</h1><pre class="source lang-java linenums">package org.matsim.episim.model;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Type of face mask a person can wear, to decrease shedding rate, virus intake etc.
+ * Standard masks are predefined; further masks can be registered by name via {@link #of(String, Double, Double)}.
+ */
+public class FaceMask {
+
+	// Mask types need to be ordered by effectiveness
+	// Values based on Eikenberry et al. https://arxiv.org/pdf/2004.03251.pdf, chapter 2.3
+<span class="fc" id="L17">	public static final FaceMask NONE = new FaceMask(&quot;NONE&quot;, 1d, 1d);</span>
+//	CLOTH(0.6, 0.5),
+//	SURGICAL(0.3, 0.2),
+//	N95(0.15, 0.025);
+
+	// values based on Kriegel
+<span class="fc" id="L23">	public static final FaceMask CLOTH = new FaceMask(&quot;CLOTH&quot;, 0.8, 0.7);</span>
+<span class="fc" id="L24">	public static final FaceMask SURGICAL = new FaceMask(&quot;SURGICAL&quot;, 0.8, 0.7);</span>
+<span class="fc" id="L25">	public static final FaceMask N95 = new FaceMask(&quot;N95&quot;, 0.6, 0.2);</span>
+
+<span class="fc" id="L27">	private static final List&lt;FaceMask&gt; STANDARD_OPTIONS = List.of(NONE, CLOTH, SURGICAL, N95);</span>
+
+<span class="fc" id="L29">	private static final Map&lt;String, FaceMask&gt; FACE_MASK = new ConcurrentHashMap&lt;&gt;();</span>
+
+	static {
+<span class="fc bfc" id="L32" title="All 2 branches covered.">		for (FaceMask mask : STANDARD_OPTIONS) {</span>
+<span class="fc" id="L33">			FACE_MASK.put(mask.name, mask);</span>
+<span class="fc" id="L34">		}</span>
+<span class="fc" id="L35">	}</span>
+
+	public final String name;
+	public final double shedding;
+	public final double intake;
+
+	/**
+	 * Creates a face mask. Use {@link #of(String, Double, Double)} to register it for name based lookup.
+	 */
+<span class="fc" id="L44">	public FaceMask(String name, double shedding, double intake) {</span>
+<span class="fc" id="L45">		this.name = name;</span>
+<span class="fc" id="L46">		this.shedding = shedding;</span>
+<span class="fc" id="L47">		this.intake = intake;</span>
+<span class="fc" id="L48">	}</span>
+
+	/**
+	 * Returns the standard face masks.
+	 */
+	public static List&lt;FaceMask&gt; values() {
+<span class="fc" id="L54">		return STANDARD_OPTIONS;</span>
+	}
+
+	/**
+	 * Returns the registered face mask with the given name.
+	 *
+	 * @throws IllegalArgumentException if no face mask with this name has been registered
+	 */
+	public static FaceMask of(String name) {
+<span class="fc" id="L63">		Objects.requireNonNull(name, &quot;FaceMask name must not be null&quot;);</span>
+<span class="fc" id="L64">		FaceMask mask = FACE_MASK.get(name);</span>
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">		if (mask == null)</span>
+<span class="nc" id="L66">			throw new IllegalArgumentException(&quot;Unknown face mask '&quot; + name + &quot;'; register it with FaceMask.of(name, shedding, intake) first.&quot;);</span>
+<span class="fc" id="L67">		return mask;</span>
+	}
+
+	/**
+	 * Returns the face mask with the given name, registering it when the name is first seen.
+	 *
+	 * @throws IllegalArgumentException if the name is already registered with different shedding or intake
+	 */
+	public static FaceMask of(String name, Double shedding, Double intake) {
+<span class="nc" id="L76">		Objects.requireNonNull(name, &quot;FaceMask name must not be null&quot;);</span>
+<span class="nc" id="L77">		Objects.requireNonNull(shedding, &quot;FaceMask shedding must not be null&quot;);</span>
+<span class="nc" id="L78">		Objects.requireNonNull(intake, &quot;FaceMask intake must not be null&quot;);</span>
+<span class="nc" id="L79">		FaceMask mask = FACE_MASK.computeIfAbsent(name, a -&gt; new FaceMask(name, shedding, intake));</span>
+<span class="nc bnc" id="L80" title="All 4 branches missed.">		if (mask.shedding != shedding || mask.intake != intake)</span>
+<span class="nc" id="L81">			throw new IllegalArgumentException(&quot;Face mask '&quot; + name + &quot;' is already registered with shedding=&quot; + mask.shedding</span>
+				+ &quot; and intake=&quot; + mask.intake + &quot;.&quot;);
+<span class="nc" id="L83">		return mask;</span>
+	}
+
+	public String getName() {
+<span class="nc" id="L87">		return name;</span>
+	}
+
+	public double getShedding() {
+<span class="nc" id="L91">		return shedding;</span>
+	}
+
+	public double getIntake() {
+<span class="nc" id="L95">		return intake;</span>
+	}
+
+	public static Collection&lt;FaceMask&gt; getAllStandardOptions() {
+<span class="fc" id="L99">		return STANDARD_OPTIONS;</span>
+	}
+
+	@Override
+	public boolean equals(Object o) {
+<span class="pc bpc" id="L104" title="2 of 4 branches missed.">		if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L105">		FaceMask faceMask = (FaceMask) o;</span>
+<span class="fc" id="L106">		return Objects.equals(name, faceMask.name);</span>
+	}
+
+	@Override
+	public int hashCode() {
+<span class="fc" id="L111">		return Objects.hashCode(name);</span>
+	}
+
+	@Override
+	public String toString() {
+<span class="fc" id="L116">		return name;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
