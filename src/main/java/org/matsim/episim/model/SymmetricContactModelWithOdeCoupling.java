@@ -36,13 +36,10 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -77,7 +74,8 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 	private final EpisimContainer<ActivityFacility> containerFake;
 
-	private static final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
+	// Pooled persons retain their reporting instance; never share them between simulations.
+	private final ThreadLocal<Deque<EpisimPerson>> personPool = ThreadLocal.withInitial(ArrayDeque::new);
 	public static final AtomicInteger personCounter = new AtomicInteger(0);  // Thread-safe counter
 	private Long odeDiseaseImportCount;
 
@@ -85,8 +83,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 	boolean odeInfTargetDistrictActive;
 
-	Set<Id<Person>> quarantinedAgents;
-	private int commuterQuarantineDay;
+	private final InterregionalIsolationPolicy isolationPolicy;
 
 	public enum CommuterQuarantineMode {
 		OFF,
@@ -99,11 +96,12 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		/* package */
 	SymmetricContactModelWithOdeCoupling(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
 										 EpisimReporting reporting, InfectionModel infectionModel, ProgressionModel progressionModel,
-										 EpisimConfigGroup episimConfigGroup, Scenario scenario) {
+										 EpisimConfigGroup episimConfigGroup, Scenario scenario, InterregionalIsolationPolicy isolationPolicy) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting, scenario);
 
 		this.progressionModel = progressionModel;
+		this.isolationPolicy = isolationPolicy;
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();
 
@@ -126,45 +124,6 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		}
 
 		this.odeInfTargetDistrictActive = episimConfig.getOdeInfTargetDistrict() != null && !episimConfig.getOdeInfTargetDistrict().equals("");
-
-
-
-
-		// COMMUTER QUARANTINE
-		CommuterQuarantineMode commuterQuarantineMode = episimConfig.getCommuterQuarantineMode();
-		LocalDate commuterQuarantineDate = LocalDate.parse(episimConfig.getCommuterQuarantineDate());
-		LocalDate startDate = episimConfig.getStartDate();
-		commuterQuarantineDay = (int) startDate.until(commuterQuarantineDate, ChronoUnit.DAYS);
-		List<Id<Person>> commutersList = null;
-		try {
-			commutersList = Files.lines(Path.of(episimConfig.getCommuterQuarantineInput()))
-				.skip(1)
-				.map(Id::createPersonId)
-				.collect(Collectors.toCollection(ArrayList::new));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-
-		int nToQuarantine = (int) (commutersList.size() * episimConfig.getCommuterQuarantineShare());
-
-		if(commuterQuarantineMode.equals(CommuterQuarantineMode.OFF)){
-			quarantinedAgents = new HashSet<>();
-		} else if (commuterQuarantineMode.equals(CommuterQuarantineMode.COMMUTERS)) {
-			quarantinedAgents = sample(commutersList, nToQuarantine, rnd);
-		} else if (commuterQuarantineMode.equals(CommuterQuarantineMode.GENERAL)) {
-			List<Id<Person>> fullPopulation = new ArrayList<>(scenario.getPopulation().getPersons().keySet());
-			quarantinedAgents = sample(fullPopulation, nToQuarantine, rnd);
-		} else {
-			throw new RuntimeException("not valid option for quarantinedAgentsMode");
-		}
-
-
-//		for(Id<Person> p : quarantinedAgents) {
-//			if(scenario.getPopulation().getPersons().get(Id.createPersonId(p)) == null){
-//				System.out.println("Hi");
-//			}
-//		}
-//		System.out.println();
 	}
 
 
@@ -278,7 +237,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 
 				try {
 					LocalDate date = LocalDate.parse(columns[dateIndex].trim());
-					int day = (int) startDate.until(date, ChronoUnit.DAYS);
+					int day = Math.toIntExact(startDate.until(date, ChronoUnit.DAYS) + 1);
 					double value = Double.parseDouble(columns[infectiousIndex].trim());
 					dayToInfectionShareMap.put(day, value);
 				} catch (Exception e) {
@@ -319,26 +278,14 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, containerReal, getRestrictions(), rnd)) {
+		// Isolation is independent of activity, region and ordinary quarantine status.
+		if (isolationPolicy.isIsolated(personLeavingContainer.getPersonId(), iteration)) {
 			return;
 		}
 
-
-		if (iteration >= commuterQuarantineDay) {
-			if (personLeavingContainer.getCommuterQuarantine() == null) {
-				personLeavingContainer.setCommuterQuarantine(
-					quarantinedAgents.contains(personLeavingContainer.getPersonId())
-				);
-			}
-
-			if (personLeavingContainer.getCommuterQuarantine()) {
-				return;
-			}
+		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, containerReal, getRestrictions(), rnd)) {
+			return;
 		}
-//		// we jerry-rigged a way to quarantine commuters after a certain date.
-//		if(iteration >= commuterQuarantineDay && quarantinedAgents.contains(personLeavingContainer.getPersonId())) {
-//			return;
-//		}
 
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
@@ -439,7 +386,8 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 		for (EpisimPerson contactPerson : container.getPersons()) {
 
 			// no contact with self, especially no tracing
-			if (personLeavingContainer == contactPerson) {
+			if (personLeavingContainer == contactPerson
+				|| isolationPolicy.isIsolated(contactPerson.getPersonId(), iteration)) {
 				continue;
 			}
 
@@ -627,7 +575,7 @@ public final class SymmetricContactModelWithOdeCoupling extends AbstractContactM
 					iterator.remove();  // Properly remove from the list
 				}
 			}
-			containerFake.getPersons().clear();
+			containerFake.clearPersons();
 			containerFake.setMaxGroupSize(0);  // Optional, in case scaling persists
 			container = null;
 

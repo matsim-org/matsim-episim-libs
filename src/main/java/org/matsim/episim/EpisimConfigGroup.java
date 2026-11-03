@@ -295,6 +295,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return threads;
 	}
 
+	/**
+	 * Special contact isolation in the ODE-coupled contact model. COMMUTERS selects
+	 * interregional travelers; GENERAL selects the same number from all persons.
+	 * Selected persons have no contacts at any activity, including home and transit.
+	 * Schedules, occupancy, imported infections and disease progression are unchanged.
+	 */
 	@StringGetter(COMMUTER_QUARANTINE_MODE)
 	public CommuterQuarantineMode getCommuterQuarantineMode() {
 		return commuterQuarantineMode;
@@ -305,6 +311,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.commuterQuarantineMode = commuterQuarantineMode;
 	}
 
+	/**
+	 * One person ID per line after a header. The list defines eligibility (e.g. all
+	 * interregional travelers or work travelers), not the activities to suppress.
+	 * Duplicate and non-population IDs do not count towards the selected number.
+	 */
 	@StringGetter(COMMUTER_QUARANTINE_INPUT)
 	public String getCommuterQuarantineInput() {
 		return commuterQuarantineInput;
@@ -315,6 +326,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.commuterQuarantineInput = commuterQuarantineInput;
 	}
 
+	/** First calendar date of contact isolation, inclusive, with no end date. */
 	@StringGetter(COMMUTER_QUARANTINE_DATE)
 	public String getCommuterQuarantineDate() {
 		return commuterQuarantineDate;
@@ -325,6 +337,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.commuterQuarantineDate = commuterQuarantineDate;
 	}
 
+	/**
+	 * Fraction in [0, 1] of unique, present traveler IDs. Both modes select
+	 * floor(eligible travelers * share) people. Zero share is equivalent to OFF.
+	 */
 	@StringGetter(COMMUTER_QUARANTINE_SHARE)
 	public double getCommuterQuarantineShare() {
 		return commuterQuarantineShare;

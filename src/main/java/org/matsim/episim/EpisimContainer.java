@@ -262,10 +262,13 @@ public class EpisimContainer<T> {
 		this.actToOdeContacts = actToOdeContacts;
 	}
 
-	void clearPersons() {
+	/** Clear all person bookkeeping, including when reusing a synthetic container. */
+	public void clearPersons() {
 		this.persons.clear();
 		this.personsAsList.clear();
 		this.containerEnterTimes.clear();
+		this.personActivities.clear();
+		this.contagiousCounter = 0;
 	}
 
 	/**
